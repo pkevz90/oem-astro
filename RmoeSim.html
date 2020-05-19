@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+	<!-- <link rel="stylesheet" href="SupportLibraries/bootstrapcss/bootstrap.min.css"> -->
+	<!-- <script src="SupportLibraries/chartpack/dist/chart.bundle.min.js"></script> -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
+	<!-- <script src="SupportLibraries/mathjs/dist/math.min.js"></script> -->
+	<script src="SupportLibraries/rmoeMain.js"></script>
+    <title>RMOE</title>
+	<style>
+		.navbar {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1f3a52;
+        }
+        body {
+            min-height: 300px;
+            background: #06090c;
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#111b24', endColorstr='#0c4161',GradientType=0 );
+            height: 100%;
+            font-family: "open_sansregular";
+                color: rgb(201, 203, 206);
+            overflow-x: hidden;
+            /* Panel opening and closing animation time - 200mx */
+            transition: transform .2s;
+            -webkit-transition: -webkit-transform .2s;
+        }
+        
+        li {
+            float: left;
+        }
+        li p {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 5vh;
+        }
+        #sliderDiv {
+            padding: 0% 2.5%;
+        }
+		.slider {
+			width: 100%;
+		}
+		.slidercontainer {
+            font-size: 2.2vh;
+            background-color: #1f3a52;
+			/* background-color: rgb(100,100,100); */
+			opacity: 0.75;
+		}
+		.slidercontainer:hover {
+			opacity: 1;
+		}
+        .inplanecontainer {
+            padding: 0.5% 1%;
+        }
+        #setup:hover:not(.active) {
+            cursor: pointer;
+		}
+		@media screen and (min-width: 1200px) {
+			.navbar #playButton {
+				display: none;
+			}
+		}
+	</style>
+  </head>
+  <body">
+    <ul class="navbar">
+        <li><p id="navTitle">Relative Motion Orbital Elements</p></li>
+        <li><p id="playButton">Play</p></li>
+    </ul>
+	<div class="row sticky-top" id="sliderDiv">
+		<div class="col-xl-2 col-md-6 slidercontainer">
+			<p>Ae: <span>0</span> km</p>
+			<input type="range" class="slider" min="0" max="15" value="0" step="0.01">
+		</div>
+		<div class="col-xl-2 col-md-6 slidercontainer">
+			<p>Xd: <span>0</span> km</p>
+			<input type="range" class="slider" min="-15" max="15" value="0" step="0.01">
+		</div>
+		<div class="col-xl-2 col-md-6 slidercontainer">
+			<p>Yd: <span>0</span> km</p>
+			<input type="range" class="slider" min="-15" max="15" value="0" step="0.01">
+		</div>
+		<div class="col-xl-2 col-md-6 slidercontainer">
+			<p>Beta: <span>0</span> deg</p>
+			<input type="range" class="slider" min="0" max="360" value="0" step="0.05">
+		</div>
+		<div class="col-xl-2 col-md-6 slidercontainer">
+			<p>Zmax: <span>0</span> km</p>
+			<input type="range" class="slider" min="0" max="15" value="0" step="0.05">
+		</div>
+		<div class="col-xl-2 col-md-6 slidercontainer">
+			<p>M: <span>0</span> deg</p>
+			<input type="range" class="slider" min="0" max="360" value="0" step="0.05">
+		</div>
+	</div>
+	<div class="row">
+        <div class="col-8 inplanecontainer">
+            <canvas id="ChartCnvs3" width="12" height="7"></canvas>
+        </div>
+		<div class="col-4 inplanecontainer">
+            <div><canvas id="ChartCnvs1" width="12" height="7"></canvas></div>
+            <div><canvas id="ChartCnvs2" width="12" height="7"></canvas></div>
+		</div>
+    </div>
+    
+    <!-- <script src="SupportLibraries/jqpackage/dist/jquery.slim.min.js"></script>
+	<script src="SupportLibraries/bootstrapjs/bootstrap.min.js"></script> -->
+	
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+   
+  </body>
+</html>
