@@ -117,7 +117,7 @@ window.addEventListener('DOMContentLoaded', function () {
     // X[2][0] = 1;
     if (X[0] !== false){
         drawOneBurnTrajectory(state1,X[0],tf,a);
-        recordStats(X,tf);
+        recordStats(X,tf,a);
     }
     else {
         console.log('not possible')
@@ -246,14 +246,15 @@ function drawImpulsiveTraj() {
 	globalChartRef.update();
 }
 
-function recordStats(X,tf) {
-    console.log(X,tf)
+function recordStats(X,tf,a) {
     let $spanList = $('table span');
-    $spanList[0].textContent = (X[1][2]*tf/60).toFixed(2);
-    $spanList[1].textContent = (Math.cos(X[1][0])).toFixed(3);
-    $spanList[2].textContent = (Math.sin(X[1][0])).toFixed(3);
-    $spanList[6].textContent = (X[0][2]*tf/60).toFixed(2);
-    $spanList[7].textContent = (Math.cos(X[0][0])).toFixed(3);
-    $spanList[8].textContent = (Math.sin(X[0][0])).toFixed(3);
+    $spanList[0].textContent = Number(a*1000).toExponential(1);
+    $spanList[1].textContent = (tf/3600).toFixed(2);
+    $spanList[2].textContent = (X[1][2]*tf/60).toFixed(2);
+    $spanList[3].textContent = (Math.cos(X[1][0])).toFixed(3);
+    $spanList[4].textContent = (Math.sin(X[1][0])).toFixed(3);
+    $spanList[8].textContent = (X[0][2]*tf/60).toFixed(2);
+    $spanList[9].textContent = (Math.cos(X[0][0])).toFixed(3);
+    $spanList[10].textContent = (Math.sin(X[0][0])).toFixed(3);
 
 }
