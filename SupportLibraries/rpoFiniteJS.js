@@ -106,7 +106,7 @@ function createGraph() {
 window.addEventListener('DOMContentLoaded', function () {
     createGraph();
     state1 = {x: 0, y: 0, z: 0, xd: 0, yd: 0.0, zd: 0};
-    state2 = {x: 5, y: -8, z: 0, xd: 0, yd: 0, zd: 0};
+    state2 = {x: -10, y: 2, z: 0, xd: 0, yd: 0, zd: 0};
     tf = 43200; a = 0.00000009; tf = 15000;
     // let S = proxOpsJacobianTwoBurn(state1,a,0.1,0,0.25,0.2, 0,0.25,3600,2*Math.PI/86164);
     // let X2 = hcwFiniteBurnTwoBurn(state1, state2, undefined, tf, a);
