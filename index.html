@@ -3,10 +3,48 @@
     <head>
         <!-- <link rel="stylesheet" href="SupportLibraries/bootstrapcss/bootstrap.min.css"> -->
         <style>
+            .navbar {
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                background-color: #1f3a52;
+            }
+            body {
+                min-height: 300px;
+                background: #06090c;
+                filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#111b24', endColorstr='#0c4161',GradientType=0 );
+                height: 100%;
+                font-family: "open_sansregular";
+                    color: rgb(201, 203, 206);
+                overflow-x: hidden;
+                /* Panel opening and closing animation time - 200mx */
+                transition: transform .2s;
+                -webkit-transition: -webkit-transform .2s;
+            }
             ul a {
                 display: block;
                 font-size: 2em;
                 padding: 2.5% 0;
+            }
+            .flexDiv {
+                display: flex;
+                justify-content: space-around;
+                margin-top: 5%;
+            }
+            .flexDiv a {
+                text-decoration: none;
+                width: 20%;
+                background-color: rgba(201, 203, 206,0.25);
+                border-radius: 2%;
+            }
+            .flexDiv a div {
+                color: white;
+                cursor: pointer;
+                text-align: center;
+            }
+            .flexDiv a div p {
+                padding: 1% 2%;
             }
         </style>
     </head>
@@ -17,12 +55,32 @@
           
         <!-- <script src="SupportLibraries/jqpackage/dist/jquery.min.js"></script> -->
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-	    
-        <ul>
-            <a href="WaypointPlannerOwWiki.html">Waypoint Planner</a>
-            <a href="RmoeSim.html">Relative Orbital Elements</a>
-            <a href="ReachabilityOwWiki.html">Reachability</a>
-            <a href="Capstone1v1OwWiki.html">1v1 Capstone</a>
-        </ul>
+	    <div class="flexDiv">
+            <a href="WaypointPlannerOwWiki.html">
+                <div>
+                    <h1>Waypoint Planner</h1>
+                    <p>Plan out RPO trajectories with an arbitrary number of waypoints. Allows for utilization of different techniques, as well as implementation of Sun/Moon vectors</p>
+                </div>
+            </a>
+            
+            <a href="RmoeSim.html">
+                <div>
+                    <h1>Relative Orbital Elements</h1>
+                    <p>Demonstrate how relative orbital elements (ROE's) can be used to describe arbitary states within the RIC frame.</p>
+                </div>
+            </a>
+            <a href="ReachabilityOwWiki.html">
+                <div>
+                    <h1>Reachability</h1>
+                    <p>Explore how the possible realm of trajectories changes based upon both the size of the maneuver, as well as the available acceleration.</p>
+                </div>
+            </a>
+            <a href="Capstone1v1OwWiki.html">
+                <div>
+                    <h1>533 TRS 1v1 Capstone</h1>
+                    <p>Pit two equivalent RSO's agaisnt each other.</p>
+                </div>
+            </a>
+        </div>
     </body>
 </html>
