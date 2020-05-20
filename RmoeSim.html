@@ -11,7 +11,9 @@
 	<!-- <script src="SupportLibraries/chartpack/dist/chart.bundle.min.js"></script> -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
-	<!-- <script src="SupportLibraries/mathjs/dist/math.min.js"></script> -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>   
+    <!-- <script src="SupportLibraries/mathjs/dist/math.min.js"></script> -->
 	<script src="SupportLibraries/rmoeMain.js"></script>
     <title>RMOE</title>
 	<style>
@@ -34,7 +36,15 @@
             transition: transform .2s;
             -webkit-transition: -webkit-transform .2s;
         }
-        
+        .content{
+            position: absolute;
+            padding: 0 5%;
+            top: 20%;
+            width: 100%;
+            display: none;
+            background-color: #06090c;
+            z-index: 2;
+        }
         li {
             float: left;
         }
@@ -57,6 +67,7 @@
             background-color: #1f3a52;
 			/* background-color: rgb(100,100,100); */
 			opacity: 0.75;
+            z-index: 1;
 		}
 		.slidercontainer:hover {
 			opacity: 1;
@@ -78,7 +89,27 @@
     <ul class="navbar">
         <li><p id="navTitle">Relative Motion Orbital Elements</p></li>
         <li><p id="playButton">Play</p></li>
+        <li style="float: right" id="setup"><p>Setup & Instructions &#9776;</p></li>
     </ul>
+    <div class="content">
+        <div class="row">
+            <div class="col-md-8" id="instructions">
+                <h1><b>Instructions</b></h1>
+                <h4><u>Editing Initial State</u></h4>
+                <p>
+                    The sliders at the top of the screen control the initial state of the RSO below. Together, the six sliders give allow for any arbitrary state.
+                </p>
+                <h4><u>Play Scene</u></h4>
+                <p>
+                    The [P] key can be pressed to play the scene out. Press the key again to revert back to editing mode
+                </p>
+            </div>
+            <div class="col-md-4" id="equations">
+                <h1><b>Equations</b></h1>
+                
+            </div>
+        </div>
+	</div>
 	<div class="row sticky-top" id="sliderDiv">
 		<div class="col-xl-2 col-md-6 slidercontainer">
 			<p>Ae: <span>0</span> km</p>
@@ -120,6 +151,11 @@
 	
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
-   
+    <script>
+        $('#setup').on('click',() => {
+            $('.sliderDiv').slideToggle(250);
+            $('.content').slideToggle(250);
+        });
+    </script>
   </body>
 </html>
