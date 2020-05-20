@@ -410,9 +410,10 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, n, tf, a0) {
     let v1 = v[0], yErr,S,dX = 1,F;
     let dv1 = math.subtract(v1,state.slice(3,6));
     // [alpha - in plane angle, phi - out of plane angle, tB - total burn time %]
-    let X = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf]];
+    let Xest, X = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf]];
+    Xest = X;
     if (X[2] > 1) {
-        return false;
+        return [false,0];
     }
     let errCount = 0;
     while (math.norm(math.squeeze(dX)) > 1e-6){
@@ -424,11 +425,11 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, n, tf, a0) {
         X = math.add(X,dX)
         if (errCount > 30) {
             console.log(X)
-            return false;
+            return [false,0];
         }
         errCount++;
     }
-    return X;
+    return [X, Xest];
 }
 
 function hcwFiniteBurnTwoBurn(stateInit, stateFinal, n, tf, a0) {

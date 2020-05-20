@@ -19,12 +19,58 @@
 	
 	<title>Finite Burn</title>
 	<style>
+		table {
+			width: 100%;
+		}
+		table tr td,th {
+			padding: 1% 5%;
+			text-align: center;
+			font-size: 1.1em;
+		}
+		th {
+			font-size: 1.5em;
+			font-weight: bold;
+		}
+		.navbar {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1f3a52;
+        }
+        li {
+            float: left;
+        }
+        li p {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 2vw;
+        }
+        #setup:hover:not(.active) {
+            cursor: pointer;
+        }
+        body {
+            min-height: 300px;
+            background: #06090c;
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#111b24', endColorstr='#0c4161',GradientType=0 );
+            height: 100%;
+            font-family: "open_sansregular";
+            color: rgb(201, 203, 206);
+            overflow-x: hidden;
+            /* Panel opening and closing animation time - 200mx */
+            transition: transform .2s;
+            -webkit-transition: -webkit-transform .2s;
+        }
 		.slider {
 			width: 100%;
 		}
 		.slidercontainer {
 			font-size: 1.1em;
-			background-color: rgb(50, 80, 100);
+			background-color: #1f3a52;
+			padding: 0 4%;
 			opacity: 0.5;
 		}
 		.slidercontainer:hover {
@@ -40,36 +86,94 @@
 			margin-left: 5%;
 			margin-right: 5%;
 		}
+		.hidden {
+			display: none;
+		}
 	</style>
   </head>
-  <body class="p-3 mb-2 bg-dark text-white">
-    <nav class="navbar navbar-expand-lg navbar-dark">
-	  <img src="SupportLibraries/533d.png" width="50" height="50" alt="">
-	  <a class="navbar-brand" href="#" style="padding-left: 20px">533 Finite Burn Calculator</a>
-	  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-		<span class="navbar-toggler-icon"></span>
-	  </button>
-	  <div class="collapse navbar-collapse" id="navbarNavDropdown">
-		<ul class="navbar-nav">
-		  <li class="nav-item">
-			<a class="nav-link" href="#" id="Play">Sim Conditions</a>
-		  </li>
-		</ul>
-	  </div>
-	</nav>
-	<div class="row sticky-top" id="sliderFinDiv">
-		<!-- <div class="col-6 slidercontainer"> -->
-		<div class="col-lg slidercontainer">
-			<p>Time: <span>2</span> hrs</p>
-			<input type="range" class="slider" min="0" max="12" value="2" step="0.01">
+  <body>
+    <ul class="navbar">
+        <li><p id="navTitle">Finite Burn</p></li>
+        <li style="float: right" id="setup"><p>Setup & Instructions &#9776;</p></li>
+	</ul>
+	<div class="row">
+		<div class="col-lg-3">
+			<div class="slidercontainer">
+				<p>Time: <span>2</span> hrs</p>
+				<input type="range" class="slider" min="0" max="12" value="2" step="0.01">
+			</div>
+			<div class="slidercontainer">
+				<p>Acceleration: <span>&#8734</span> m/s<sup>2</sup></p>
+				<input type="range" class="slider" min="-8" max="0" value="0" step="0.005">
+			</div>
+			<table>
+				<tr>
+					<th colspan="2">Impulsive Estimate</th>
+				</tr>
+				<tr>
+					<td>Burn 1 Duration</td>
+					<td><span>3600</span> min</td>	
+				</tr>
+				<tr>
+					<td>Burn 1 Radial</td>
+					<td><span>1</span></td>	
+				</tr>
+				<tr>
+					<td>Burn 1 In-Track</td>
+					<td><span>0</span></td>	
+				</tr>
+			</table>
+			<table class="hidden">
+				<tr>
+					<td>Burn 2 Duration</td>
+					<td><span>3600</span> min</td>	
+				</tr>
+				<tr>
+					<td>Burn 2 Radial</td>
+					<td><span>1</span></td>	
+				</tr>
+				<tr>
+					<td>Burn 2 In-Track</td>
+					<td><span>0</span></td>	
+				</tr>
+			</table>
+			<table>
+				<tr>
+					<th colspan="2">Finite Estimate</th>
+				</tr>
+				<tr>
+					<td>Burn 1 Duration</td>
+					<td><span>3600</span> min</td>	
+				</tr>
+				<tr>
+					<td>Burn 1 Radial</td>
+					<td><span>1</span></td>	
+				</tr>
+				<tr>
+					<td>Burn 1 In-Track</td>
+					<td><span>0</span></td>	
+				</tr>
+			</table>
+			<table class="hidden">
+				<tr>
+					<td>Burn 2 Duration</td>
+					<td><span>3600</span> min</td>	
+				</tr>
+				<tr>
+					<td>Burn 2 Radial</td>
+					<td><span>1</span></td>	
+				</tr>
+				<tr>
+					<td>Burn 2 In-Track</td>
+					<td><span>0</span></td>	
+				</tr>
+			</table>
 		</div>
-		<div class="col-lg slidercontainer">
-			<p>Acceleration: <span>&#8734</span> m/s<sup>2</sup></p>
-			<input type="range" class="slider" min="-8" max="0" value="0" step="0.005">
+		<div class="col-lg-9">
+			<div style="width: 90%; margin: 2.5% auto">
+				<canvas id="ChartCnvs3" width="12" height="7"></canvas>
+			</div>
 		</div>
-	</div>
-	<div style="width: 75%; margin: auto">
-		<canvas id="ChartCnvs3" width="12" height="7"></canvas>
 	</div>
     
     <!-- Optional JavaScript -->

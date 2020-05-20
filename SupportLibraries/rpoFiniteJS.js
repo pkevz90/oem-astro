@@ -105,9 +105,9 @@ function createGraph() {
 
 window.addEventListener('DOMContentLoaded', function () {
     createGraph();
-    state1 = {x: 6.9, y: 8.5, z: 0, xd: 0.0006, yd: 0.0005, zd: 0};
-    state2 = {x: 10, y: 0, z: 0, xd: 0, yd: 0, zd: 0};
-    a = 0.000000002; tf = 43200; a = 0.0000002; tf = 15000;
+    state1 = {x: 0, y: 0, z: 0, xd: 0, yd: 0.0, zd: 0};
+    state2 = {x: 5, y: -8, z: 0, xd: 0, yd: 0, zd: 0};
+    tf = 43200; a = 0.00000009; tf = 15000;
     // let S = proxOpsJacobianTwoBurn(state1,a,0.1,0,0.25,0.2, 0,0.25,3600,2*Math.PI/86164);
     // let X2 = hcwFiniteBurnTwoBurn(state1, state2, undefined, tf, a);
     // console.log(X2)
@@ -115,8 +115,9 @@ window.addEventListener('DOMContentLoaded', function () {
     showReach(state1,a,tf);
     // console.log(state2)
     // X[2][0] = 1;
-    if (X !== false){
-        drawOneBurnTrajectory(state1,X,tf,a);
+    if (X[0] !== false){
+        drawOneBurnTrajectory(state1,X[0],tf,a);
+        recordStats(X,tf);
     }
     else {
         console.log('not possible')
@@ -243,4 +244,16 @@ function drawImpulsiveTraj() {
     });
 	
 	globalChartRef.update();
+}
+
+function recordStats(X,tf) {
+    console.log(X,tf)
+    let $spanList = $('table span');
+    $spanList[0].textContent = (X[1][2]*tf/60).toFixed(2);
+    $spanList[1].textContent = (Math.cos(X[1][0])).toFixed(3);
+    $spanList[2].textContent = (Math.sin(X[1][0])).toFixed(3);
+    $spanList[6].textContent = (X[0][2]*tf/60).toFixed(2);
+    $spanList[7].textContent = (Math.cos(X[0][0])).toFixed(3);
+    $spanList[8].textContent = (Math.sin(X[0][0])).toFixed(3);
+
 }
