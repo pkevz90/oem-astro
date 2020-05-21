@@ -149,8 +149,10 @@ function flyBy(X,event){
 			y: globalChartRef.config.data.datasets[trajSet].data[len].y,
 		})
 		calculateTrajecories();
-		drawSunMoonVectors(julianDateCalc(startTime),Number(maneuverListSpans[chosenWaypoint*5].innerText)*3600);
-	}
+		if (dataPoints.workingRso === 1){
+			drawSunMoonVectors(julianDateCalc(startTime),Number(maneuverListSpans[chosenWaypoint*5].innerText)*3600);
+		}
+		}
 }
 function burnCalc(X,Y,event,wheelDir){
 	let trajSet = (dataPoints.workingRso-1)*2;
