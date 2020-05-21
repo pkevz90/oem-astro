@@ -5,6 +5,8 @@ function handleHover(valueX,valueY){
     }
     let trajSet = (dataPoints.workingRso-1)*2;
     if (dragPoint){
+        console.log(trajSet,chosenWaypoint);
+        
         globalChartRef.config.data.datasets[trajSet].data[chosenWaypoint].x = valueX;
         globalChartRef.config.data.datasets[trajSet].data[chosenWaypoint].y = valueY;
         globalChartRef.config.data.datasets[dataPoints.chosenWaypoint].data[0].y = valueY;
@@ -31,6 +33,8 @@ function handleClick(valueX,valueY){
     
     let oldChosen = chosenWaypoint;
     if (checkClose(valueX,valueY)){
+        console.log(oldChosen, chosenWaypoint);
+        
         if (oldChosen === chosenWaypoint) {
             dragPoint = true;
         }
@@ -169,21 +173,22 @@ function handleKeyPress(k) {
 }
 
 function setSelectedWaypoint(index){
-    if (dataPoints.workingRso !== 1) {
-        return;
-    }
+    
     let trajSet = (dataPoints.workingRso-1)*2;
     chosenWaypoint = index;
 	if (index === 'last'){
 		index = globalChartRef.config.data.datasets[trajSet].data.length-1;
 		chosenWaypoint = index;
-	}
+    }
 	calcPassiveTraj();
 	globalChartRef.config.data.datasets[dataPoints.chosenWaypoint].data = [];
 	globalChartRef.config.data.datasets[dataPoints.chosenWaypoint].data.push({
 		x: globalChartRef.config.data.datasets[trajSet].data[index].x,
 		y: globalChartRef.config.data.datasets[trajSet].data[index].y,
     })
+    if (dataPoints.workingRso !== 1) {
+        return;
+    }
     $("tr").removeClass("selectedTableRow");
     $("#burnTableBody tr:nth-child(" + (chosenWaypoint+1) + ")").addClass("selectedTableRow");
     drawSunMoonVectors(julianDateCalc(startTime),Number(maneuverListSpans[chosenWaypoint*5].innerText)*3600);
@@ -196,8 +201,13 @@ function checkClose(X,Y) {
         xPoint = globalChartRef.config.data.datasets[trajSet].data[ii].x;
         yPoint = globalChartRef.config.data.datasets[trajSet].data[ii].y;
         // console.log(math.norm([xPoint-X,yPoint-Y]))
+        console.log(math.norm([xPoint-X,yPoint-Y]));
+        
+        console.log(xPoint,X,yPoint,Y,ii);
         if (math.norm([xPoint-X,yPoint-Y]) < 2) {
             setSelectedWaypoint(ii);
+            
+            console.log(chosenWaypoint);
             return true;
         }
     }

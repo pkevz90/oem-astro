@@ -7,7 +7,7 @@ function calculateTrajecories(){
 	globalChartRef.config.data.datasets[trajSet].data = [];
 	let vxOld = 0, vyOld = 0; 
 	for (var ii = 0; ii < (numWaypoints-1); ii++){
-		console.log(trajSet,ii);
+		// console.log(trajSet,ii);
 		t = globalChartRef.config.data.datasets[trajSet-1].data[ii+1].time;
 		r1 = [[globalChartRef.config.data.datasets[trajSet-1].data[ii].y],[globalChartRef.config.data.datasets[trajSet-1].data[ii].x]];
 		r2 = [[globalChartRef.config.data.datasets[trajSet-1].data[ii+1].y],[globalChartRef.config.data.datasets[trajSet-1].data[ii+1].x]];
