@@ -25,16 +25,17 @@ function handleTechnique(tactic,X,Y,event,wheelDir) {
 	}
 }
 function nmcBuilder(X,Y,event){
+	let trajSet = (dataPoints.workingRso-1)*2;
 	if (tacticArray.length === 0){
 		if (event === 'click'){
-			let len = globalChartRef.config.data.datasets[0].data.length-1;
-			let B0 = Math.atan2(globalChartRef.config.data.datasets[0].data[len].x-X,-globalChartRef.config.data.datasets[0].data[len].y*2);
-			let ae = (globalChartRef.config.data.datasets[0].data[len].x-X)/Math.sin(B0);
+			let len = globalChartRef.config.data.datasets[trajSet].data.length-1;
+			let B0 = Math.atan2(globalChartRef.config.data.datasets[trajSet].data[len].x-X,-globalChartRef.config.data.datasets[trajSet].data[len].y*2);
+			let ae = (globalChartRef.config.data.datasets[trajSet].data[len].x-X)/Math.sin(B0);
 			
 			tacticArray.push(X); tacticArray.push(B0); tacticArray.push(ae);
 			// console.log(globalChartRef.config.data.datasets[0].data[len].x,X,ae,B0);
 			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
-			globalChartRef.config.data.datasets[0].data.push({
+			globalChartRef.config.data.datasets[trajSet].data.push({
 				x: 0,
 				y: 0,
 				time: 0,
@@ -65,7 +66,7 @@ function nmcBuilder(X,Y,event){
 			tactic = undefined;
 			return;
 		}
-		let len = globalChartRef.config.data.datasets[0].data.length-1;
+		let len = globalChartRef.config.data.datasets[trajSet].data.length-1;
 		let B = Math.atan2(X-tacticArray[0],-Y*2);
 		if (B*tacticArray[1] < 0) {
 			if (B < 0){
@@ -78,23 +79,24 @@ function nmcBuilder(X,Y,event){
 			}
 		}
 		
-		globalChartRef.config.data.datasets[0].data[len].x = tacticArray[2]*Math.sin(B)+tacticArray[0];
-		globalChartRef.config.data.datasets[0].data[len].y = -tacticArray[2]/2*Math.cos(B);
-		globalChartRef.config.data.datasets[0].data[len].time = (B-tacticArray[1])/(2*Math.PI/86164);
-		console.log(globalChartRef.config.data.datasets[0].data[len].time)
+		globalChartRef.config.data.datasets[trajSet].data[len].x = tacticArray[2]*Math.sin(B)+tacticArray[0];
+		globalChartRef.config.data.datasets[trajSet].data[len].y = -tacticArray[2]/2*Math.cos(B);
+		globalChartRef.config.data.datasets[trajSet].data[len].time = (B-tacticArray[1])/(2*Math.PI/86164);
+		// console.log(globalChartRef.config.data.datasets[0].data[len].time)
 		calculateTrajecories();
 	}
 }
 function flyBy(X,event){
+	let trajSet = (dataPoints.workingRso-1)*2;
 	if (event === 'start') {
-		let len = globalChartRef.config.data.datasets[0].data.length;
-		if (globalChartRef.config.data.datasets[0].data[len-1].y === 0) {
+		let len = globalChartRef.config.data.datasets[trajSet].data.length;
+		if (globalChartRef.config.data.datasets[trajSet].data[len-1].y === 0) {
 			tactic = undefined;
 			showNoteBar('No drift occurs while perched on V-Bar');
 			return;
 		}
 		showNoteBar('Fly-By: Choose End Point');
-		globalChartRef.config.data.datasets[0].data.push({
+		globalChartRef.config.data.datasets[trajSet].data.push({
             x: 0,
             y: 0,
             time: 0,
@@ -115,13 +117,13 @@ function flyBy(X,event){
         globalChartRef.update();
 	}
 	else {
-		let len = globalChartRef.config.data.datasets[0].data.length-1;
-		if (globalChartRef.config.data.datasets[0].data[len-1].y*(X-globalChartRef.config.data.datasets[0].data[len-1].x) > 0){
+		let len = globalChartRef.config.data.datasets[trajSet].data.length-1;
+		if (globalChartRef.config.data.datasets[trajSet].data[len-1].y*(X-globalChartRef.config.data.datasets[trajSet].data[len-1].x) > 0){
 			// Fly-By must occur in proper direction
 			showNoteBar('Drift must occur in proper direction');
 			return;
 		}
-		let t = Math.abs((X-globalChartRef.config.data.datasets[0].data[len-1].x)/(1.5*globalChartRef.config.data.datasets[0].data[len-1].y*2*Math.PI/86164));
+		let t = Math.abs((X-globalChartRef.config.data.datasets[trajSet].data[len-1].x)/(1.5*globalChartRef.config.data.datasets[trajSet].data[len-1].y*2*Math.PI/86164));
 		if (t === 0){
 			// time of 0 seconds will return a singularity in the HCW equations
 			return;
@@ -138,24 +140,25 @@ function flyBy(X,event){
 			x: X,
 			y: axisLimits*3/4
 		});
-		globalChartRef.config.data.datasets[0].data[len].x = X;
-		globalChartRef.config.data.datasets[0].data[len].y = globalChartRef.config.data.datasets[0].data[len-1].y;
-		globalChartRef.config.data.datasets[0].data[len].time = t;
-		globalChartRef.config.data.datasets[2].data = [];
-		globalChartRef.config.data.datasets[2].data.push({
-			x: globalChartRef.config.data.datasets[0].data[len].x,
-			y: globalChartRef.config.data.datasets[0].data[len].y,
+		globalChartRef.config.data.datasets[trajSet].data[len].x = X;
+		globalChartRef.config.data.datasets[trajSet].data[len].y = globalChartRef.config.data.datasets[trajSet].data[len-1].y;
+		globalChartRef.config.data.datasets[trajSet].data[len].time = t;
+		globalChartRef.config.data.datasets[dataPoints.chosenWaypoint].data = [];
+		globalChartRef.config.data.datasets[dataPoints.chosenWaypoint].data.push({
+			x: globalChartRef.config.data.datasets[trajSet].data[len].x,
+			y: globalChartRef.config.data.datasets[trajSet].data[len].y,
 		})
 		calculateTrajecories();
 		drawSunMoonVectors(julianDateCalc(startTime),Number(maneuverListSpans[chosenWaypoint*5].innerText)*3600);
 	}
 }
 function burnCalc(X,Y,event,wheelDir){
+	let trajSet = (dataPoints.workingRso-1)*2;
 	if (event === 'start') {
 		tacticArray.push(7200);
         tacticArray.push(0);
         tacticArray.push(0);
-        globalChartRef.config.data.datasets[0].data.push({
+        globalChartRef.config.data.datasets[trajSet].data.push({
             x: 0,
             y: 0,
             time: 7200,
@@ -186,7 +189,7 @@ function burnCalc(X,Y,event,wheelDir){
 			tacticArray[0] += 3600;
 		}
 	}
-	let len = globalChartRef.config.data.datasets[0].data.length-1;
+	let len = globalChartRef.config.data.datasets[trajSet].data.length-1;
 	let t = tacticArray[0];
 	
 	if (X === undefined || Y === undefined) {
@@ -197,17 +200,17 @@ function burnCalc(X,Y,event,wheelDir){
 		tacticArray[1] = X;
 		tacticArray[2] = Y;
 	}
-	let pos = [[globalChartRef.config.data.datasets[0].data[len-1].y],[globalChartRef.config.data.datasets[0].data[len-1].x]];
-	let vel = [[globalChartRef.config.data.datasets[0].data[len-1].dy],[globalChartRef.config.data.datasets[0].data[len-1].dx]];
+	let pos = [[globalChartRef.config.data.datasets[trajSet].data[len-1].y],[globalChartRef.config.data.datasets[trajSet].data[len-1].x]];
+	let vel = [[globalChartRef.config.data.datasets[trajSet].data[len-1].dy],[globalChartRef.config.data.datasets[trajSet].data[len-1].dx]];
 	let az = Math.atan2(Y-pos[0],X-pos[1]);
 	let dV = 0.00005*math.norm([Y-pos[0],X-pos[1]]);
 	globalChartRef.config.options.title.text = 'Delta-V: ' + (dV*1000).toFixed(2) + ' m/s -- Drift Time: ' + (t/3600).toFixed(2) + 'hrs';
 	dV = [[dV*Math.sin(az)],[dV*Math.cos(az)]];
 	vel = math.add(vel,dV);
 	let r = math.add(math.multiply(PhiRR(t),pos),math.multiply(PhiRV(t),vel));
-	globalChartRef.config.data.datasets[0].data[len].x = r[1][0];
-	globalChartRef.config.data.datasets[0].data[len].y = r[0][0];
-	globalChartRef.config.data.datasets[0].data[len].time = t;
+	globalChartRef.config.data.datasets[trajSet].data[len].x = r[1][0];
+	globalChartRef.config.data.datasets[trajSet].data[len].y = r[0][0];
+	globalChartRef.config.data.datasets[trajSet].data[len].time = t;
 	globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
 	globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 		x: pos[1][0],
