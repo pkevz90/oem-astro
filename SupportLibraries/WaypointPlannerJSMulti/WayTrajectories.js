@@ -43,15 +43,15 @@ function calculateTrajecories(){
 	annotateBurnHistory();
 	globalChartRef.update();
 }
-function playTrajectory(){
-	let numWaypoints = globalChartRef.config.data.datasets[0].data.length;
-	let r1, r2, r, v1,t, PRR, PRV;
+function playTrajectory(index){
+	let numWaypoints = globalChartRef.config.data.datasets[index].data.length;
+	let r1, r2, r, v1, t;
 	var dt = 100;
-	globalChartRef.config.data.datasets[1].data = []; let traj = [];
+	globalChartRef.config.data.datasets[index+1].data = []; let traj = [];
 	for (var ii = 0; ii < (numWaypoints-1); ii++){
-		t = globalChartRef.config.data.datasets[0].data[ii+1].time;
-		r1 = [[globalChartRef.config.data.datasets[0].data[ii].y],[globalChartRef.config.data.datasets[0].data[ii].x]];
-		r2 = [[globalChartRef.config.data.datasets[0].data[ii+1].y],[globalChartRef.config.data.datasets[0].data[ii+1].x]];
+		t = globalChartRef.config.data.datasets[index].data[ii+1].time;
+		r1 = [[globalChartRef.config.data.datasets[index].data[ii].y],[globalChartRef.config.data.datasets[index].data[ii].x]];
+		r2 = [[globalChartRef.config.data.datasets[index].data[ii+1].y],[globalChartRef.config.data.datasets[index].data[ii+1].x]];
 
 		v1 = math.multiply(math.inv(PhiRV(t)),math.subtract(r2,math.multiply(PhiRR(t),r1)));
 		for (var kk = 0; kk < t; kk += dt){

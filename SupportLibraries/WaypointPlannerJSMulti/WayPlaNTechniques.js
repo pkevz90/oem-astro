@@ -33,8 +33,7 @@ function nmcBuilder(X,Y,event){
 			
 			tacticArray.push(X); tacticArray.push(B0); tacticArray.push(ae);
 			// console.log(globalChartRef.config.data.datasets[0].data[len].x,X,ae,B0);
-			globalChartRef.config.data.datasets[3].data = [];
-			globalChartRef.config.options.title.text = '';
+			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
 			globalChartRef.config.data.datasets[0].data.push({
 				x: 0,
 				y: 0,
@@ -48,12 +47,12 @@ function nmcBuilder(X,Y,event){
 			globalChartRef.update();
 			return;
 		}
-		globalChartRef.config.data.datasets[3].data = [];
-		globalChartRef.config.data.datasets[3].data.push({
+		globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
+		globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 			x: X,
 			y: -axisLimits*3/4
 		});
-		globalChartRef.config.data.datasets[3].data.push({
+		globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 			x: X,
 			y: axisLimits*3/4
 		});
@@ -112,7 +111,7 @@ function flyBy(X,event){
         tactic = undefined;
         tacticArray = [];
         tooltipOpen = false;
-        globalChartRef.config.data.datasets[3].data = [];
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
         globalChartRef.update();
 	}
 	else {
@@ -130,12 +129,12 @@ function flyBy(X,event){
 		if (X === undefined){
 			X = 0;
 		}
-		globalChartRef.config.data.datasets[3].data = [];
-		globalChartRef.config.data.datasets[3].data.push({
+		globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
+		globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 			x: X,
 			y: -axisLimits*3/4
 		});
-		globalChartRef.config.data.datasets[3].data.push({
+		globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 			x: X,
 			y: axisLimits*3/4
 		});
@@ -173,8 +172,7 @@ function burnCalc(X,Y,event,wheelDir){
 		tactic = undefined;
         tacticArray = [];
         tooltipOpen = false;
-        globalChartRef.config.data.datasets[3].data = [];
-        globalChartRef.config.options.title.text = '';
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
 		globalChartRef.update();
 		return;
 	}
@@ -210,12 +208,12 @@ function burnCalc(X,Y,event,wheelDir){
 	globalChartRef.config.data.datasets[0].data[len].x = r[1][0];
 	globalChartRef.config.data.datasets[0].data[len].y = r[0][0];
 	globalChartRef.config.data.datasets[0].data[len].time = t;
-	globalChartRef.config.data.datasets[3].data = [];
-	globalChartRef.config.data.datasets[3].data.push({
+	globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
+	globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 		x: pos[1][0],
 		y: pos[0][0],
 	})
-	globalChartRef.config.data.datasets[3].data.push({
+	globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 		x: X,
 		y: Y,
 	})
@@ -292,12 +290,12 @@ function fmcBuilder(X,Y,eventType,wheelDir){
 	if (eventType === 'hover' || eventType === 'wheel'){
 		if (tacticArray.length === 0){
 			// No data given, user selecting in-track center
-			globalChartRef.config.data.datasets[3].data = [];
-			globalChartRef.config.data.datasets[3].data.push({
+			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
+			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 				x: X,
 				y: -axisLimits*3/4
 			});
-			globalChartRef.config.data.datasets[3].data.push({
+			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 				x: X,
 				y: axisLimits*3/4
 			});
@@ -354,7 +352,7 @@ function buildSensor(X,Y,event){
 			tacticArray.push(math.norm([Y,X]));
 		}
 		else{
-			globalChartRef.config.data.datasets[3].data = [];
+			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
 			numSensors++;
 			tactic = undefined;
 			tacticArray = [];
@@ -362,12 +360,12 @@ function buildSensor(X,Y,event){
 	}
 	else{
 		if (tacticArray.length === 0){
-			globalChartRef.config.data.datasets[3].data = [];
-			globalChartRef.config.data.datasets[3].data.push({
+			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
+			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 				x: 0,
 				y: 0,
 			})
-			globalChartRef.config.data.datasets[3].data.push({
+			globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
 				x: X,
 				y: Y,
 			})
@@ -433,7 +431,7 @@ function dskBuilder(Yvalue,event){
     else if (event === 'click'){
         tacticArray = [];
         tactic = undefined;
-        globalChartRef.config.data.datasets[3].data = [];
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
         globalChartRef.update();
         return;
     }
@@ -451,12 +449,12 @@ function dskBuilder(Yvalue,event){
 				showNoteBar('Results in NMC');
             }
         }
-        globalChartRef.config.data.datasets[3].data = [];
-        globalChartRef.config.data.datasets[3].data.push({
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
             x: -axisLimits,
             y: Yvalue
         });
-        globalChartRef.config.data.datasets[3].data.push({
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
             x: axisLimits,
             y: Yvalue
         });
@@ -488,7 +486,7 @@ function htBuilder(Xvalue,Yvalue,click){
     if (click){
         tacticArray = [];
         tactic = '';
-        globalChartRef.config.data.datasets[3].data = [];
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
         globalChartRef.update();
         return;
     }
@@ -500,12 +498,12 @@ function htBuilder(Xvalue,Yvalue,click){
         globalChartRef.config.data.datasets[0].data[len].x = X-1.5*xd*Math.PI;
 	    globalChartRef.config.data.datasets[0].data[len].y = Yvalue;
         globalChartRef.config.data.datasets[0].data[len].time = 43082;
-        globalChartRef.config.data.datasets[3].data = [];
-        globalChartRef.config.data.datasets[3].data.push({
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data = [];
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
             x: -axisLimits,
             y: Yvalue
         });
-        globalChartRef.config.data.datasets[3].data.push({
+        globalChartRef.config.data.datasets[dataPoints.techniquePlot].data.push({
             x: axisLimits,
             y: Yvalue
         });

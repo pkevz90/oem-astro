@@ -122,17 +122,25 @@ function handleKeyPress(k) {
             playBool = false;
             return;
         }
-            wholeTraj = playTrajectory(); playFrame = 0;
-            globalChartRef.config.data.datasets[4].data = [];
-            idInterval = setInterval(() => { 
+        wholeTrajBlue = playTrajectory(0); 
+        wholeTrajRed = playTrajectory(2);
+        playFrame = 0;
+        globalChartRef.config.data.datasets[dataPoints.passiveTrajectory].data = [];
+        idInterval = setInterval(() => { 
             globalChartRef.config.data.datasets[1].data.push({
-                x: wholeTraj[playFrame][0],
-                y: wholeTraj[playFrame][1],
+                x: wholeTrajBlue[playFrame][0],
+                y: wholeTrajBlue[playFrame][1],
             });
+            if (playFrame < wholeTrajRed.length-1){
+                globalChartRef.config.data.datasets[3].data.push({
+                    y: wholeTrajRed[playFrame][1],
+                    x: wholeTrajRed[playFrame][0],
+                });
+            }
             drawSunMoonVectors(julianDateCalc(startTime),playFrame*playDt);
             playFrame++;
             globalChartRef.update();
-            if (playFrame === wholeTraj.length || !playBool){
+            if (playFrame === wholeTrajBlue.length || !playBool){
                 clearInterval(idInterval);
                 setSelectedWaypoint('last');
                 calculateTrajecories();
