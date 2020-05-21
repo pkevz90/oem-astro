@@ -69,7 +69,9 @@ function handleKeyPress(k) {
             return;
         }
         globalChartRef.config.data.datasets[trajSet].data.pop();
-        document.getElementById("burnTableBody").deleteRow(globalChartRef.config.data.datasets[0].data.length);
+        if (dataPoints.workingRso === 1){
+            document.getElementById("burnTableBody").deleteRow(globalChartRef.config.data.datasets[0].data.length);
+        }
         tooltipOpen = false;
         if (chosenWaypoint === globalChartRef.config.data.datasets[trajSet].data.length){
             setSelectedWaypoint('last');
