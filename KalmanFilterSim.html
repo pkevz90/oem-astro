@@ -20,30 +20,42 @@
 	<script src="SupportLibraries/p5.min.js"></script>
     <title>Kalman Filter Sim</title>
 	<style>
-		.slider {
-			width: 100%;
-		}
-		.slidercontainer {
-			font-size: 150%;
-			background-color: rgb(100,100,100);
-			opacity: 0.5;
-		}
-		.slidercontainer:hover {
-			opacity: 1;
-		}
-        .inplanecontainer {
-            padding: 5% 0;
+		.navbar {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1f3a52;
+        }
+        li {
+            float: left;
+        }
+        li p {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 2vw;
+        }
+        body {
+            min-height: 300px;
+            background: #06090c;
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#111b24', endColorstr='#0c4161',GradientType=0 );
+            height: 100%;
+            font-family: "open_sansregular";
+            color: rgb(201, 203, 206);
+            overflow-x: hidden;
+            /* Panel opening and closing animation time - 200mx */
+            transition: transform .2s;
+            -webkit-transition: -webkit-transform .2s;
         }
 	</style>
   </head>
-  <body class="p-3 mb-2 bg-dark text-white">
-    <nav class="navbar navbar-expand-lg navbar-dark">
-	  <img src="SupportLibraries/533d.png" width="50" height="50" alt="">
-	  <a class="navbar-brand" href="#" style="padding-left: 20px">533 Kalman Filter Sim</a>
-	  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-		<span class="navbar-toggler-icon"></span>
-	  </button>
-	</nav>
+  <body>
+    <ul class="navbar">
+        <li><p id="navTitle">Kalman Filter Demo</p></li>
+    </ul>
 	<div class="row">
         <div class="col-8 inplanecontainer">
             <canvas id="ChartCnvs" width="12" height="7"></canvas>
@@ -60,23 +72,23 @@
 				<tbody>
 					<tr>
 						<th>Radial</th>
-						<th><span id="radialAct">0</span> km</th>
-						<th><span id="radialEst">0</span> km</th>
+						<th><span>0</span> km</th>
+						<th><span>0</span> km</th>
 					</tr>
 					<tr>
 						<th>In-Track</th>
-						<th><span id="intrackAct">0</span> km</th>
-						<th><span id="intrackEst">0</span> km</th>
+						<th><span>0</span> km</th>
+						<th><span>0</span> km</th>
 					</tr>
 					<tr>
 						<th>Radial Rate</th>
-						<th><span id="radialrateAct">0</span> m/s</th>
-						<th><span id="radialrateEst">0</span> m/s</th>
+						<th><span>0</span> m/s</th>
+						<th><span>0</span> m/s</th>
 					</tr>
 					<tr>
 						<th>In-Track Rate</th>
-						<th><span id="intrackrateAct">0</span> m/s</th>
-						<th><span id="intrackrateEst">0</span> m/s</th>
+						<th><span>0</span> m/s</th>
+						<th><span>0</span> m/s</th>
 					</tr>
 				</tbody>
 			</table>

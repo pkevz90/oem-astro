@@ -1,6 +1,4 @@
-let globalChartRef, R, Q, P, H, K, x, xEst, zAct, zEst, dt, play = 0,rangaAmb = 0.3, angAmb = 0.05*Math.PI/180, angles = true, range = false;
-let rAct, rEst, iAct, iEst;
-
+let globalChartRef, R, Q, P, H, K, F, x, xEst, zAct, zEst, dt, play = 0,rangaAmb = 0.3, angAmb = 0.5*Math.PI/180, angles = true, range = false, radialBurn = false;
 function createGraph() {
     var config = {
         type: 'scatter',
@@ -94,31 +92,35 @@ function createGraph() {
 
 window.addEventListener('DOMContentLoaded', function () {
     createGraph();
-    P = [[1, 0, 0, 0],[0, 1, 0, 0],[0, 0, 1, 0],[0, 0, 0, 1]];
+    P = [[0.01, 0, 0, 0],[0, 0.01, 0, 0],[0, 0, 0.00000001, 0],[0, 0, 0, 0.00000001]];
     R = [[Math.pow(rangaAmb,2), 0],[0, Math.pow(angAmb,2)]];
     Q = [[Math.pow(0.00001,2),0,0,0],[0,Math.pow(0.00001,2),0,0],[0,0,Math.pow(0.00000001,2),0],[0,0,0,Math.pow(0.00000001,2)]]
-    x = [[-15],[0],[0],[30*2*Math.PI/86164]];
+    // x = [[-15],[0],[0],[30*2*Math.PI/86164]];
+    x = [[10],[0],[0],[-20*2*Math.PI/86164]];
     dt = 100;
-    xEst = [[-8],[0],[0],[10*2*Math.PI/86164]];
+    console.log(x);
+    
+    xEst = math.add(x,[[5*Math.random()-2.5],[5*Math.random()-2.5],[0.0001*Math.random()-0.00005],[0.0001*Math.random()-0.00005]])
     let onesP = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
-    rAct = document.getElementById("radialAct");
-    iAct = document.getElementById("intrackAct");
-    rEst = document.getElementById("radialEst");
-    iEst = document.getElementById("intrackEst");
-    rrAct = document.getElementById("radialrateAct");
-    irAct = document.getElementById("intrackrateAct");
-    rrEst = document.getElementById("radialrateEst");
-    irEst = document.getElementById("intrackrateEst");
+
     range = false;
     document.addEventListener('keypress', function(key){
         let k = key.key;
         if (k === 'r') {
             range = !range;
         }
+        else if (k === 'b') {
+            radialBurn = !radialBurn;
+        }
     });
     idInterval = setInterval(() => {
         F = Fmatrix(dt);
-        x = math.multiply(transitionMatrix(dt),x);
+        if (radialBurn) {
+            x = math.add(math.multiply(transitionMatrix(dt),x),[[0],[0],[0.0000001*dt],[0]]);
+        }
+        else {
+            x = math.multiply(transitionMatrix(dt),x);
+        }
         x[0][0] += Math.sqrt(Q[0][0]);
         x[1][0] += Math.sqrt(Q[1][1]);
         x[2][0] += Math.sqrt(Q[2][2]);
@@ -159,7 +161,9 @@ window.addEventListener('DOMContentLoaded', function () {
             P = math.multiply(math.subtract(onesP,math.multiply(K,H)),P);
         }
         let y = math.subtract(zAct,zEst);
-        // console.log(y[0],y[1])
+        // console.log(zAct, zEst,K,P,H);
+        // console.log(x,xEst);
+        
         xEst = math.add(xEst,math.multiply(K,y));
         globalChartRef.config.data.datasets[0].data.push({
             x: x[1][0],
@@ -169,16 +173,8 @@ window.addEventListener('DOMContentLoaded', function () {
             x: xEst[1][0],
             y: xEst[0][0],
         });
-        rAct.textContent = x[0][0].toFixed(2);
-        iAct.textContent = x[1][0].toFixed(2);
-        rEst.textContent = xEst[0][0].toFixed(2);
-        iEst.textContent = xEst[1][0].toFixed(2);
-        rrAct.textContent = (x[2][0]*1000).toFixed(2);
-        irAct.textContent = (x[3][0]*1000).toFixed(2);
-        rrEst.textContent = (xEst[2][0]*1000).toFixed(2);
-        irEst.textContent = (xEst[3][0]*1000).toFixed(2);
         globalChartRef.update();
-    },25);
+    },10);
 }, false);
 
 function Kmatrix(P,H,R) {
@@ -230,7 +226,7 @@ function transitionMatrix(dt,n) {
     return [[4-3*cnt, 0, snt/n, 2*(1-cnt)/n],[6*(snt-nt), 1, 2*(cnt-1)/n, (4*snt-3*nt)/n],[3*n*snt, 0, cnt, 2*snt],[6*n*(cnt-1), 0, -2*snt, 4*cnt-3]];
 }
 
-  function normalRandom()
+function normalRandom()
 {
 	var val, u, v, s, mul;
     spareRandom = null;
