@@ -7,7 +7,7 @@
 </head>
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js"></script>
-
+    <!-- <script src="https://raw.githubusercontent.com/mrdoob/three.js/master/examples/js/renderers/CSS3DRenderer.js"></script> -->
     <script>
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
@@ -21,22 +21,24 @@
 
         document.body.appendChild( renderer.domElement );
         const loader = new THREE.TextureLoader();
-        loader.load('world.png');
-        var geometry = new THREE.SphereGeometry( 1, 20, 20 );
-        var material = new THREE.MeshStandardMaterial( {
-            map: THREE.TextureLoader('2_no_clouds_8k.jpg')
+        var texture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/2_no_clouds_4k.jpg' );
+        var geometry = new THREE.SphereGeometry( 1, 40, 40 );
+        var material = new THREE.MeshPhongMaterial( {
+            map: texture
         } );
         var cube = new THREE.Mesh( geometry, material );
 
         scene.add( cube );
-        var light = new THREE.DirectionalLight('#ffffff', 1);
-        light.position.set(2,3,5);
+        var light = new THREE.AmbientLight( 0x404040,0.25 ); // soft white light
+        scene.add( light );
+        light = new THREE.DirectionalLight('#ffffff', 1);
+        light.position.set(2,1,1);
         scene.add(light);
         // Render Loop
         var render = function () {
             requestAnimationFrame( render );
 
-            cube.rotation.x += 0.01;
+            // cube.rotation.x += 0.01;
             cube.rotation.y += 0.01;
 
             // Render the scene
