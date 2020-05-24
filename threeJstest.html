@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js"></script>
+
+    <script>
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+        camera.position.z = 4;
+
+        var renderer = new THREE.WebGLRenderer({antialias: true});
+
+        renderer.setClearColor("#000000");
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        document.body.appendChild( renderer.domElement );
+        const loader = new THREE.TextureLoader();
+        loader.load('world.png');
+        var geometry = new THREE.SphereGeometry( 1, 20, 20 );
+        var material = new THREE.MeshStandardMaterial( {
+            map: THREE.TextureLoader('2_no_clouds_8k.jpg')
+        } );
+        var cube = new THREE.Mesh( geometry, material );
+
+        scene.add( cube );
+        var light = new THREE.DirectionalLight('#ffffff', 1);
+        light.position.set(2,3,5);
+        scene.add(light);
+        // Render Loop
+        var render = function () {
+            requestAnimationFrame( render );
+
+            cube.rotation.x += 0.01;
+            cube.rotation.y += 0.01;
+
+            // Render the scene
+            renderer.render(scene, camera);
+        };
+
+        render();
+    </script>
+</body>
+</html>
