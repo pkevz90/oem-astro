@@ -4,85 +4,126 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        .controls {
+            position: absolute;
+            float: left;
+            width: 20%;
+            height: 40%;
+            background-color: gray;
+            display: none;
+        }
+        .controlTitle {
+            position: absolute;
+            width: 20%;
+            float: left;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            z-index: 2;
+        }
+    </style>
 </head>
 <body>
+    <div class="controlTitle">Change Elements</div>
+    <div class="controls">
+        
+    </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js"></script> -->
-    <!-- <script src="https://raw.githubusercontent.com/mrdoob/three.js/master/examples/js/renderers/CSS3DRenderer.js"></script> -->
-    <!-- <script src="SupportLibraries/threeJstest.js"></script> -->
     <script type="module">
-        // import * as THREE from 'https://github.com/mrdoob/three.js/blob/dev/build/three.module.js';
         import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/build/three.module.js';
         import {OrbitControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/examples/jsm/controls/OrbitControls.js';
-
-        var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight);
-
-        var renderer = new THREE.WebGLRenderer({antialias: true});
-        renderer.setSize(window.innerWidth,window.innerHeight);
-        $('body').append(renderer.domElement);
-
-        window.addEventListener('resize',() => {
-            renderer.setSize(window.innerWidth,window.innerHeight);
-            camera.aspect = window.innerWidth/window.innerHeight;
-
-            camera.updateProjectionMatrix();
-        })
-
-        const loader = new THREE.TextureLoader();
-        var texture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/2_no_clouds_4k.jpg' );
-        var geometry = new THREE.SphereGeometry( 1, 64, 64 );
-        var material = new THREE.MeshLambertMaterial( {
-            map: texture
-        } );
-        var cube = new THREE.Mesh( geometry, material );
-        scene.add(cube);
-        var starTexture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/galaxy_starfield.png' );
-
-        var stars = new THREE.Mesh(
-            new THREE.SphereGeometry(90, 64, 64), 
-            new THREE.MeshBasicMaterial({
-                map: starTexture,     
-                side: THREE.BackSide
-            })
-        );
-        scene.add(stars);
-        var light = new THREE.PointLight(0xFFFFFF, 1, 500);
-        light.position.set(10,2,12);
-        scene.add(light);
-        var light1 = new THREE.AmbientLight( 0xFFFFFF,0.15 ); // soft white light
-        scene.add( light1 );
-        var material = new THREE.LineBasicMaterial({
-            color: 0x0000ff
-        });
-        var r = 2;
-        var points = [];
-        for (var ii = 0; ii < 2*3.1416; ii+=0.01) {
-            points.push( new THREE.Vector3( r*Math.cos(ii), r*Math.sin(ii), 0 ) );
-        }
-
-        var geometry = new THREE.BufferGeometry().setFromPoints( points );
-        console.log(geometry);
         
-        var line = new THREE.Line( geometry, material );
-        scene.add( line );
-
-
-        cube.position.z = 0;
-        camera.position.set( 0, 0, 10 );
-        var controls = new OrbitControls(camera,renderer.domElement);
-        // controls.addEventListener( 'change', render );
-        console.log(controls);
         
-        // controls.update();
+        var Earth, Sunlight, orbit, r = 2, scene, camera, renderer, controls;
+        setupScene();
+        drawEarth();
+        drawStars();
+        drawLightSources();
+        drawOrbit();
+
         var render = function() {
             renderer.render(scene,camera);
             controls.update();
             requestAnimationFrame(render);
-            cube.rotation.y += 0.005;
+            let points = [];
+            r += 0.001;
+            for (var ii = 0; ii < 2*3.1416; ii+=0.01) {
+                points.push( new THREE.Vector3( r*Math.cos(ii), r*Math.sin(ii), 0 ) );
+            }
+            orbit.geometry.setFromPoints(points);
+            // line.attributes.position.
+            Earth.rotation.y += 0.005;
         }
 
         render();
+
+        function setupScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight);
+            camera.position.set( 0, 0, 10 );
+            renderer = new THREE.WebGLRenderer({antialias: true});
+            renderer.setSize(window.innerWidth,window.innerHeight);
+            $('body').append(renderer.domElement);
+            window.addEventListener('resize',() => {
+                renderer.setSize(window.innerWidth,window.innerHeight);
+                camera.aspect = window.innerWidth/window.innerHeight;
+
+                camera.updateProjectionMatrix();
+            })
+            
+            controls = new OrbitControls(camera,renderer.domElement);
+        }
+
+        function drawOrbit(orbitParams, orbitVar) {
+            var points = [];
+            for (var ii = 0; ii < 2*3.1416; ii+=0.01) {
+                points.push( new THREE.Vector3( r*Math.cos(ii), r*Math.sin(ii), 0 ) );
+            }
+            if (orbitVar === undefined){ 
+                var material = new THREE.LineBasicMaterial({
+                    color: 0x0000ff
+                });
+                var geometry = new THREE.BufferGeometry().setFromPoints( points );
+                orbit = new THREE.Line( geometry, material );
+            }
+            else {
+                // Edit orbitVar
+            }
+            scene.add(orbit);
+        }
+
+        function drawEarth(){
+            var texture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/2_no_clouds_4k.jpg' );
+            var geometry = new THREE.SphereGeometry( 1, 64, 64 );
+            var material = new THREE.MeshLambertMaterial( {
+                map: texture
+            } );
+            Earth = new THREE.Mesh( geometry, material );
+            scene.add(Earth);
+            Earth.position.z = 0;
+        }
+        
+        function drawStars(){
+            var starTexture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/galaxy_starfield.png' );
+
+            var stars = new THREE.Mesh(
+                new THREE.SphereGeometry(90, 64, 64), 
+                new THREE.MeshBasicMaterial({
+                    map: starTexture,     
+                    side: THREE.BackSide
+                })
+            );
+            scene.add(stars);
+        }
+
+        function drawLightSources() {
+            var Sunlight = new THREE.PointLight(0xFFFFFF, 1, 500);
+            Sunlight.position.set(10,2,12);
+            scene.add(Sunlight);
+            var light1 = new THREE.AmbientLight( 0xFFFFFF,0.15 ); // soft white light
+            scene.add( light1 );
+        }
     </script>
 </body>
 </html>
