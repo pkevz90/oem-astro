@@ -76,7 +76,7 @@
             i: 63.4,
             raan: 0,
             arg: 270,
-            tA: 0
+            mA: 0
         }
 
         var Earth, Sunlight, orbit = undefined, r = 2, scene, camera, renderer, controls;
@@ -92,8 +92,10 @@
             requestAnimationFrame(render);
             // line.attributes.position.
             // orbitParams.raan += 0.1;
-            // orbitParams.arg += 0.1;
+            orbitParams.mA += 68.5*180/Math.PI*Math.sqrt(398600.4418/Math.pow(orbitParams.a,3));;
+            console.log(orbitParams.mA)
             Earth.rotation.y += 0.005;
+            drawOrbit(orbitParams) 
         }
 
         render();
@@ -116,16 +118,17 @@
         }
 
         function drawOrbit(orbitParams) {
-            let coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, orbitParams.tA*Math.PI/180]
+            let tA = Eccentric2True(orbitParams.e,solveKeplersEquation(orbitParams.mA*Math.PI/180,orbitParams.e))
+            let coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, tA]
             let period = 2*Math.PI*Math.sqrt(Math.pow(orbitParams.a,3)/398600.4418);
             let r;
             var points = [];
             
             for (var ii = 0; ii <= 200; ii++) {
-                coe = twoBodyProp(coe,period/199);
+                coe = twoBodyProp(coe,-0.6*period/199);
                 r = Coe2PosVel(coe);
                 
-                points.push( new THREE.Vector3( r[0][0][0]/6371, r[0][2][0]/6371, r[0][1][0]/6371 ));
+                points.push( new THREE.Vector3( -r[0][0][0]/6371, r[0][2][0]/6371, r[0][1][0]/6371 ));
             }
             if (orbit === undefined){ 
                 var material = new THREE.LineBasicMaterial({
@@ -183,7 +186,7 @@
                 i:      Number($('input')[2].value),
                 raan:   Number($('input')[3].value),
                 arg:    Number($('input')[4].value),
-                tA: 0
+                mA: 0
             }
             for (var ii = 0; ii < 5; ii++) {
                 $('.controls span')[ii].textContent = $('input')[ii].value;

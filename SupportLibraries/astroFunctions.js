@@ -56,9 +56,9 @@ function Coe2PosVel(coe) {
     let v = [[-constA*sTa],
             [(coe[1]+cTa)*constA],
             [0]];
-    let cRa = Math.cos(-coe[3]); let sRa = Math.sin(-coe[3]); 
-    let cAr = Math.cos(-coe[4]); let sAr = Math.sin(-coe[4]);
-    let cIn = Math.cos(-coe[2]); let sin = Math.sin(-coe[2]);
+    let cRa = Math.cos(coe[3]); let sRa = Math.sin(coe[3]); 
+    let cAr = Math.cos(coe[4]); let sAr = Math.sin(coe[4]);
+    let cIn = Math.cos(coe[2]); let sin = Math.sin(coe[2]);
     let R = [[cRa*cAr-sRa*sAr*cIn, -cRa*sAr-sRa*cAr*cIn, sRa*sin],
          [sRa*cAr+cRa*sAr*cIn, -sRa*sAr+cRa*cAr*cIn, -cRa*sin],
          [sAr*sin, cAr*sin, cIn]];
