@@ -71,15 +71,15 @@
         console.log(Coe2PosVel);
         
         var orbitParams = {
-            a: 26650,
-            e: 0.730,
-            i: 63.4,
+            a: 42164,
+            e: 0,
+            i: 15,
             raan: 0,
             arg: 270,
             mA: 0
         }
 
-        var Earth, Sunlight, orbit = undefined, r = 2, scene, camera, renderer, controls;
+        var Earth, sidTime = 0, Sunlight, stars, orbit = undefined, r = 2, scene, camera, renderer, controls, ecef = true;
         setupScene();
         drawEarth();
         drawStars();
@@ -92,9 +92,14 @@
             requestAnimationFrame(render);
             // line.attributes.position.
             // orbitParams.raan += 0.1;
-            orbitParams.mA += 68.5*180/Math.PI*Math.sqrt(398600.4418/Math.pow(orbitParams.a,3));;
-            console.log(orbitParams.mA)
-            Earth.rotation.y += 0.005;
+            orbitParams.mA += 68.56713*180/Math.PI*Math.sqrt(398600.4418/Math.pow(orbitParams.a,3));;
+            // console.log(orbitParams.mA)
+            sidTime += 68.56713/86164*360;
+            console.log(sidTime);
+            if (!ecef){
+                Earth.rotation.y += 0.005;
+            }
+            // stars.rotation.y += 0.005;
             drawOrbit(orbitParams) 
         }
 
@@ -123,12 +128,19 @@
             let period = 2*Math.PI*Math.sqrt(Math.pow(orbitParams.a,3)/398600.4418);
             let r;
             var points = [];
-            
             for (var ii = 0; ii <= 200; ii++) {
-                coe = twoBodyProp(coe,-0.6*period/199);
                 r = Coe2PosVel(coe);
+                r = r[0];
+                if (ecef) {
+                    // console.log(r);
+                    
+                    r = Eci2Ecef (sidTime-ii*0.6*period/199*360/86164, r)
+                    
+                }   
+                points.push( new THREE.Vector3( -r[0][0]/6371, r[2][0]/6371, r[1][0]/6371 )); 
+                coe = twoBodyProp(coe,-0.6*period/199);
+                // console.log(r);
                 
-                points.push( new THREE.Vector3( -r[0][0][0]/6371, r[0][2][0]/6371, r[0][1][0]/6371 ));
             }
             if (orbit === undefined){ 
                 var material = new THREE.LineBasicMaterial({
@@ -161,7 +173,7 @@
         function drawStars(){
             var starTexture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/galaxy_starfield.png' );
 
-            var stars = new THREE.Mesh(
+            stars = new THREE.Mesh(
                 new THREE.SphereGeometry(90, 64, 64), 
                 new THREE.MeshBasicMaterial({
                     map: starTexture,     
@@ -186,12 +198,14 @@
                 i:      Number($('input')[2].value),
                 raan:   Number($('input')[3].value),
                 arg:    Number($('input')[4].value),
-                mA: 0
+                mA: orbitParams.mA
             }
             for (var ii = 0; ii < 5; ii++) {
                 $('.controls span')[ii].textContent = $('input')[ii].value;
             }
             drawOrbit(orbitParams);
+            console.log(controls);
+            
         })
     </script>
 </body>
