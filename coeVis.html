@@ -44,23 +44,47 @@
             left: 35%;
             text-align: center;
             font-size: 1.5vw;
+            opacity: 0.5;
+        }
+        .timeStepDiv {
+            position: fixed;
+            bottom: 0%;
+            color: white;
+            /* width: 20%; */
+            right: 0%;
+            text-align: center;
+            padding-right: 1%;
+            font-size: 1.5vw;
+            opacity: 0.5;
+        }
+        .loadingScreen {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            color: black;
+            z-index: 3;
+            padding: auto auto;
         }
     </style>
 </head>
 <body>
-    <div class="controlTitle">Change Elements</div>
+    <div class="loadingScreen">
+        Loading...
+    </div>
+    <!-- <div class="controlTitle">Change Elements</div> -->
     <div class="controls">
         <div class="slidercontainer">
-			<p><em>a</em>: <span>7000</span> km</p>
-			<input type="range" class="slider" min="6600" max="50000" value="7000" step="1">
+			<p><em>a</em>: <span>42164</span> km</p>
+			<input type="range" class="slider" min="6600" max="50000" value="42164" step="1">
 		</div>
         <div class="slidercontainer">
-			<p><em>e</em>: <span>0</span></p>
+			<p><em>e</em>: <span>0.00</span></p>
             <input type="range" class="slider" min="0" max="0.9" value="0" step="0.01">
 		</div>
         <div class="slidercontainer">
-			<p><em>i</em>: <span>98</span> deg</p>
-			<input type="range" class="slider" min="0" max="180" value="98" step="0.01">
+			<p><em>i</em>: <span>0.0</span> deg</p>
+			<input type="range" class="slider" min="0" max="180" value="0" step="0.1">
 		</div>
         <div class="slidercontainer">
 			<p><em>&#937</em>: <span>0.0</span> deg</p>
@@ -74,24 +98,37 @@
     <div class="referenceDiv">
         Earth-Centered <span>Inertial</span>
     </div>
+    <div class="timeStepDiv">
+        Time Step: <span>60</span> sec
+    </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
     <script src="SupportLibraries/astroFunctions.js"></script>
     <script type="module">
         import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/build/three.module.js';
         import {OrbitControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/examples/jsm/controls/OrbitControls.js';
-        console.log(Coe2PosVel);
+        
+        var time = {
+            year: 2020,
+            month: 6,
+            day: 1,
+            hour: 0,
+            minute: 0,
+            second: 0
+        }
         
         var orbitParams = {
-            a: 7000,
+            a: 42164,
             e: 0,
-            i: 98,
+            i: 0,
             raan: 0,
             arg: 0,
             mA: 0
         }
 
-        var Earth, clouds, sidTime = 0,Sunlight, satPoint, orbit = undefined, r = 2, scene, camera, renderer, controls, ecef = false;
+        var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint, orbit = undefined, r = 2, scene, camera, renderer, controls, ecef = false, timeStep = 60;
+        var jdUTI0 = julianDateCalcStruct(time);
+        
         setupScene();
         drawEarth();
         drawStars();
@@ -99,20 +136,30 @@
         drawOrbit(orbitParams);
         drawAxis();
         // drawTube();
-        console.log(Earth);
-        
+
         var render = function() {
             renderer.render(scene,camera);
             controls.update();
             requestAnimationFrame(render);
             // line.attributes.position.
             // orbitParams.raan += 0.1;
-            orbitParams.mA += 68.5*180/Math.PI*Math.sqrt(398600.4418/Math.pow(orbitParams.a,3));;
+            orbitParams.mA += timeStep*180/Math.PI*Math.sqrt(398600.4418/Math.pow(orbitParams.a,3));;
             // console.log(orbitParams.mA)
-            sidTime += 68.56713/86164*360;
+            sidTime += timeStep/86164*360;
             if (!ecef){
-                Earth.rotation.y += 0.005;
-                clouds.rotation.y += 0.005;
+                Earth.rotation.y += timeStep/86164*2*Math.PI;
+                clouds.rotation.y += timeStep/86164*2*Math.PI;
+            }
+            else {
+                let curSun = Eci2Ecef (sidTime, sunVec);
+                console.log(sidTime);
+                
+                // console.log(Sunlight);
+                Sunlight.position.x = -100*curSun[0][0];
+                Sunlight.position.y = 100*curSun[2][0];
+                Sunlight.position.z = 100*curSun[1][0];
+                stars.rotation.y -= timeStep/86164*2*Math.PI;
+                // Sunlight.position = new THREE.Vector3(0,100,0);
             }
             drawOrbit(orbitParams) 
         }
@@ -206,13 +253,16 @@
 		    );	
             scene.add(clouds);
             Earth.position.z = 0;
+            sidTime = thetaGMST(jdUTI0);
+            Earth.rotation.y += Math.PI+sidTime*Math.PI/180;
+            clouds.rotation.y += Math.PI+sidTime*Math.PI/180;
         }
         
         function drawAxis() {
             var geometry = new THREE.BoxGeometry(2, 0.05, 0.05);
             var material = new THREE.MeshLambertMaterial();
             var eciX = new THREE.Mesh(geometry,material);
-            eciX.position.x = 1;
+            eciX.position.x = -1;
             geometry = new THREE.BoxGeometry(0.05, 2, 0.05);
             var eciY = new THREE.Mesh(geometry,material);
             eciY.position.y = 1;
@@ -243,7 +293,7 @@
         function drawStars(){
             var starTexture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/galaxy_starfield.png' );
 
-            var stars = new THREE.Mesh(
+            stars = new THREE.Mesh(
                 new THREE.SphereGeometry(90, 64, 64), 
                 new THREE.MeshBasicMaterial({
                     map: starTexture,     
@@ -254,8 +304,12 @@
         }
 
         function drawLightSources() {
-            var Sunlight = new THREE.PointLight(0xFFFFFF, 1, 500);
-            Sunlight.position.set(10,2,12);
+            Sunlight = new THREE.PointLight(0xFFFFFF, 1, 500);
+            sunVec = sunVectorCalc(jdUTI0);
+            console.log(sunVec);
+            console.log(math.norm(math.squeeze(sunVec)));
+            
+            Sunlight.position.set(-100*sunVec[0][0],100*sunVec[2][0],100*sunVec[1][0]);
             scene.add(Sunlight);
             var light1 = new THREE.AmbientLight( 0xFFFFFF,0.2 ); // soft white light
             scene.add( light1 );
@@ -281,13 +335,32 @@
             if (k.toLowerCase() === 'e') {
                 ecef = !ecef;
                 if (ecef) {
-                    $('.referenceDiv span')[0].textContent = 'Earth-Fixed'
+                    $('.referenceDiv span')[0].textContent = 'Earth-Fixed';
+                    Earth.rotation.y  = Math.PI;
+                    clouds.rotation.y = Math.PI;
                 }
                 else {
-                    $('.referenceDiv span')[0].textContent = 'Inertial'}
+                    $('.referenceDiv span')[0].textContent = 'Inertial';
+                    Earth.rotation.y  = sidTime*Math.PI/180+Math.PI;
+                    clouds.rotation.y = sidTime*Math.PI/180+Math.PI
+                    Sunlight.position.x = -100*sunVec[0][0];
+                    Sunlight.position.y = 100*sunVec[2][0];
+                    Sunlight.position.z = 100*sunVec[1][0];
+                }
             }
-            
+            if (k === '.' || k === '>') {
+                timeStep += 10;
+                $('.timeStepDiv span')[0].textContent = timeStep.toFixed(0);
+            }
+            if (k === ',' || k === '<') {
+                timeStep -= 10;
+                $('.timeStepDiv span')[0].textContent = timeStep.toFixed(0);
+            }
         
+        });
+
+        window.addEventListener('load', (event) => {
+            $('.loadingScreen').fadeOut(500);
         });
     </script>
 </body>
