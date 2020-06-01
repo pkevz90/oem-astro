@@ -29,7 +29,7 @@
         .controlTitle:hover {
             background-color: rgba(50,50,50,0.5);
         }
-        input {
+        .slider {
             width: 100%;
         }
         .slidercontainer {
@@ -151,9 +151,14 @@
     <div id="optionsList" style="text-align: center; display: none; position: fixed; right: 5%; top: 5%; width: 20%; z-index: 3; color: white;">
         <p class="pointer">Tail length: <span>50</span>%</p>
         <input type="range" class="slider" min="0" max="300" value="50" step="1">
-        <p class="pointer">Show ECI frame</p>
-        <p class="pointer">Show ECEF frame</p>
-        <p class="pointer">Color</p>
+        <p class="pointer" style="display: inline-block;">ECI frame</p>
+        <input type="checkbox">
+        <br>
+        <p class="pointer" style="display: inline-block;">ECEF frame</p>
+        <input type="checkbox">
+        <br>
+        <p class="pointer" style="display: inline-block;">Orbit Color</p>
+        <input type="color" value="#FFC300">
     </div>
     <!-- <div class="controlTitle">Change Elements</div> -->
     <div class="controls">
@@ -282,7 +287,7 @@
         function setupScene() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight);
-            camera.position.set( 0, 0, 10 );
+            camera.position.set( 10, 10, 10 );
             renderer = new THREE.WebGLRenderer({antialias: true});
             renderer.setSize(window.innerWidth,window.innerHeight);
             $('body').append(renderer.domElement);
