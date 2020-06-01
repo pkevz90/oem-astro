@@ -1,0 +1,36 @@
+<html lang="en">
+<head>
+  <meta name="viewport" content="transparent-background">
+  
+  <title>Hello, Prismatic!</title>
+  <script src="https://unpkg.com/@magicleap/prismatic"></script>
+</head>
+<body>
+  <ml-model
+    id="earth"
+    src="earth.glb"
+    style="position: absolute; left: 100px; top:100px; width: 300px; height: 300px;"
+    z-offset="-400px"
+    extractable="true"
+    spin="axes: 0 1 0; angle: 5deg; duration: 300s; track: 1">
+  </ml-model>
+
+  <ml-model
+    id="balloon"
+    src="balloon.glb"
+    style="position: absolute; right: 0%; top:70%; width: 300px; height: 200px;"
+    z-offset="200px"
+    rotation="0 0 15deg"
+    move-by="axes: -800px 200px -500px;
+      duration: 30s;
+      track: 1;"
+    rotate-by-angles="
+      angles: 0 0 -29deg;
+      duration: 25s;
+      track: 2;"
+    scale-to="axes: 0.4 0.4 0.4;
+      duration: 30s;
+      track: 3;">
+  </ml-model>
+</body>
+</html>

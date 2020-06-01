@@ -60,6 +60,17 @@
             font-size: 1.5vw;
             opacity: 0.5;
         }
+        .taDiv {
+            position: fixed;
+            bottom: 0%;
+            color: white;
+            /* width: 20%; */
+            left: 2%;
+            text-align: center;
+            padding-right: 1%;
+            font-size: 1.5vw;
+            opacity: 0.5;
+        }
         .loadingScreen {
             position: fixed;
             width: 100%;
@@ -82,13 +93,31 @@
         .orbitsPane {
             position: fixed;
             background-color: black;
-            right: 10%;
+            right: 25%;
             height: 5%;
             z-index: 3;
             font-size: 2vw;
             width: 20%;
+            opacity: 0.5;
+            text-align: center;
         }
         .orbitsPane p {
+            color: white;
+            margin: 0;
+            vertical-align: middle;
+        }
+        .optionsPane {
+            position: fixed;
+            background-color: black;
+            right: 5%;
+            height: 5%;
+            z-index: 3;
+            font-size: 2vw;
+            width: 20%;
+            opacity: 0.5;
+            text-align: center;
+        }
+        .optionsPane p {
             color: white;
             margin: 0;
             vertical-align: middle;
@@ -107,12 +136,24 @@
             Common Orbits
         </p>
     </div>
-    <div id="orbitList" style="display: none; position: fixed; right: 10%; top: 5%; width: 20%; z-index: 3; color: white;">
+    <div id="orbitList" style="text-align: center; display: none; position: fixed; right: 25%; top: 5%; width: 20%; z-index: 3; color: white;">
         <p class="pointer">ISS</p>
         <p class="pointer">GPS</p>
         <p class="pointer">Molniya</p>
         <p class="pointer">Sun-Synchronous</p>
         <p class="pointer">Geo-Stationary</p>
+    </div>
+    <div class="optionsPane pointer">
+        <p>
+            Options
+        </p>
+    </div>
+    <div id="optionsList" style="text-align: center; display: none; position: fixed; right: 5%; top: 5%; width: 20%; z-index: 3; color: white;">
+        <p class="pointer">Tail length: <span>50</span>%</p>
+        <input type="range" class="slider" min="0" max="300" value="50" step="1">
+        <p class="pointer">Show ECI frame</p>
+        <p class="pointer">Show ECEF frame</p>
+        <p class="pointer">Color</p>
     </div>
     <!-- <div class="controlTitle">Change Elements</div> -->
     <div class="controls">
@@ -154,15 +195,26 @@
     <div class="timeStepDiv">
         Time Step: <span>60</span> sec
     </div>
+    <!-- <div class="taDiv">
+        True Anomaly: <span>60</span> sec
+    </div> -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
     <script src="SupportLibraries/astroFunctions.js"></script>
     <script>
         $('.orbitsPane').on('mouseenter',()=>{
-            $('#orbitList').slideToggle(100); 
+            $('#orbitList').show(); 
+            $('#optionsList').hide(); 
         })
         $('#orbitList').on('mouseleave',()=>{
-            $('#orbitList').slideToggle(100); 
+            $('#orbitList').hide(); 
+        })
+        $('.optionsPane').on('mouseenter',()=>{
+            $('#optionsList').show(); 
+            $('#orbitList').hide(); 
+        })
+        $('#optionsList').on('mouseleave',()=>{
+            $('#optionsList').hide(); 
         })
     </script>
     <script type="module">
@@ -250,14 +302,14 @@
             let coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, tA]
             let r,r0;
             var points = [];
-            
+            let tailLength = Number($('#optionsList input')[0].value)/100;
             for (var ii = 0; ii <= 200; ii++) {
                 r = Coe2PosVel(coe);
                 r = r[0];
                 if (ecef) {
                     // console.log(r);
                     
-                    r = Eci2Ecef (sidTime-ii*0.5*period/199*360/86164, r)
+                    r = Eci2Ecef (sidTime-ii*tailLength*period/199*360/86164, r)
                     
                 }   
                 if (ii === 0) {r0 = r;}
@@ -265,18 +317,18 @@
                 
                 points.push( new THREE.Vector3( -r[0][0]/6371, r[2][0]/6371, r[1][0]/6371 )); 
                 
-                coe = twoBodyProp(coe,-0.5*period/199);
+                coe = twoBodyProp(coe,-tailLength*period/199);
                }
             if (orbit === undefined){ 
                 var material = new THREE.LineBasicMaterial({
-                    color: 0x1e90ff,
+                    color: 0xFFC300,
                     linewidth: 30
                 });
                 var geometry = new THREE.BufferGeometry().setFromPoints( points );
                 orbit = new THREE.Line( geometry, material );
                 var geometry = new THREE.SphereGeometry( 0.05, 6, 6 );
                 var material = new THREE.MeshBasicMaterial({
-                    color: 0x1e90ff});
+                    color: 0xFFC300});
                 satPoint = new THREE.Mesh( geometry, material );
                 // coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, tA]
                 // r = Coe2PosVel(coe);
@@ -376,17 +428,22 @@
             scene.add( light1 );
         }
     
-        $('input').on('input',()=>{
+        $('#optionsList input').on('input',()=>{
+            console.log($('#optionsList input')[0].value)
+            $('#optionsList span')[0].textContent = $('#optionsList input')[0].value;
+        })
+
+        $('.slidercontainer input').on('input',()=>{
             orbitParams = {
-                a:      Number($('input')[0].value),
-                e:      Number($('input')[1].value),
-                i:      Number($('input')[2].value),
-                raan:   Number($('input')[3].value),
-                arg:    Number($('input')[4].value),
+                a:      Number($('.slidercontainer input')[0].value),
+                e:      Number($('.slidercontainer input')[1].value),
+                i:      Number($('.slidercontainer input')[2].value),
+                raan:   Number($('.slidercontainer input')[3].value),
+                arg:    Number($('.slidercontainer input')[4].value),
                 mA:     orbitParams.mA
             }
             for (var ii = 0; ii < 5; ii++) {
-                $('.controls span')[ii].textContent = $('input')[ii].value;
+                $('.controls span')[ii].textContent = $('.slidercontainer input')[ii].value;
             }
             drawOrbit(orbitParams);
         })
@@ -482,13 +539,13 @@
                 default:
                     break;
             }
-            $('input')[0].value = orbitParams.a;
-            $('input')[1].value = orbitParams.e;
-            $('input')[2].value = orbitParams.i;
-            $('input')[3].value = orbitParams.raan;
-            $('input')[4].value = orbitParams.arg;
+            $('.slidercontainer input')[0].value = orbitParams.a;
+            $('.slidercontainer input')[1].value = orbitParams.e;
+            $('.slidercontainer input')[2].value = orbitParams.i;
+            $('.slidercontainer input')[3].value = orbitParams.raan;
+            $('.slidercontainer input')[4].value = orbitParams.arg;
             for (var ii = 0; ii < 5; ii++) {
-                $('.controls span')[ii].textContent = $('input')[ii].value;
+                $('.controls span')[ii].textContent = $('.slidercontainer input')[ii].value;
             }
         })
     </script>
