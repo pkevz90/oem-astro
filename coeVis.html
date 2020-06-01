@@ -36,6 +36,9 @@
             padding: 1.5% 10%;
             font-size: 1.5vw;
         }
+        .slidercontainer p {
+            height: 5%;
+        }
         .referenceDiv {
             position: fixed;
             bottom: 0%;
@@ -62,25 +65,75 @@
             width: 100%;
             height: 100%;
             background-color: white;
+            z-index: 4;
+            padding: 40% 40%;
+        }
+        .loadingScreen div {
             color: black;
+        }
+        .drop-down {
+            position: absolute;
+            background-color: darkgrey;
+            color: black;
+            top: 10%;
+            width: 85%;
+            display: none;
+        }
+        .orbitsPane {
+            position: fixed;
+            background-color: black;
+            right: 10%;
+            height: 5%;
             z-index: 3;
-            padding: auto auto;
+            font-size: 2vw;
+            width: 20%;
+        }
+        .orbitsPane p {
+            color: white;
+            margin: 0;
+            vertical-align: middle;
+        }
+        .pointer {
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <div class="loadingScreen">
-        Loading...
+        <div>Loading...</div>
+    </div>
+    <div class="orbitsPane pointer">
+        <p>
+            Common Orbits
+        </p>
+    </div>
+    <div id="orbitList" style="display: none; position: fixed; right: 10%; top: 5%; width: 20%; z-index: 3; color: white;">
+        <p class="pointer">ISS</p>
+        <p class="pointer">GPS</p>
+        <p class="pointer">Molniya</p>
+        <p class="pointer">Sun-Synchronous</p>
+        <p class="pointer">Geo-Stationary</p>
     </div>
     <!-- <div class="controlTitle">Change Elements</div> -->
     <div class="controls">
         <div class="slidercontainer">
 			<p><em>a</em>: <span>42164</span> km</p>
-			<input type="range" class="slider" min="6600" max="50000" value="42164" step="1">
+            <input type="range" class="slider" min="6600" max="50000" value="42164" step="1">
+            <div class="drop-down">
+                <p>Semi-Major Axis</p>
+                <p>Orbital Period</p>
+                <p>Mean Motion</p>
+            </div>
 		</div>
         <div class="slidercontainer">
 			<p><em>e</em>: <span>0.00</span></p>
             <input type="range" class="slider" min="0" max="0.9" value="0" step="0.01">
+            <div class="drop-down">
+                <p>Eccentricity</p>
+                <p>Apogee Radius</p>
+                <p>Perigee Radius</p>
+                <p>Semi-Latus Rectum</p>
+            </div>
 		</div>
         <div class="slidercontainer">
 			<p><em>i</em>: <span>0.0</span> deg</p>
@@ -104,6 +157,14 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
     <script src="SupportLibraries/astroFunctions.js"></script>
+    <script>
+        $('.orbitsPane').on('mouseenter',()=>{
+            $('#orbitList').slideToggle(100); 
+        })
+        $('#orbitList').on('mouseleave',()=>{
+            $('#orbitList').slideToggle(100); 
+        })
+    </script>
     <script type="module">
         import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/build/three.module.js';
         import {OrbitControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/examples/jsm/controls/OrbitControls.js';
@@ -152,7 +213,7 @@
             }
             else {
                 let curSun = Eci2Ecef (sidTime, sunVec);
-                console.log(sidTime);
+                // console.log(sidTime);
                 
                 // console.log(Sunlight);
                 Sunlight.position.x = -100*curSun[0][0];
@@ -362,6 +423,74 @@
         window.addEventListener('load', (event) => {
             $('.loadingScreen').fadeOut(500);
         });
+
+        
+        $('#orbitList p').on('click',(a)=>{
+            let orbit = a.target.innerHTML;
+            switch (orbit) {
+                case 'ISS':
+                    orbitParams = {
+                        a: 6784.2389,
+                        e: 0.0002297,
+                        i: 51.6444,
+                        raan: 0,
+                        arg: 0,
+                        mA: orbitParams.mA
+                    }
+                    break;
+                case 'GPS':
+                    orbitParams = {
+                        a: 26561.7437,
+                        e: 0,
+                        i: 55,
+                        raan: 0,
+                        arg: 0,
+                        mA: orbitParams.mA
+                    }
+                    break;
+                case 'Molniya':
+                    
+                    orbitParams = {
+                        a: 26561.7437,
+                        e: 0.74,
+                        i: 63.4,
+                        raan: 0,
+                        arg: 270,
+                        mA: orbitParams.mA
+                    }
+                    break;
+                case 'Sun-Synchronous':
+                    orbitParams = {
+                        a: 6784.2389,
+                        e: 0.0002297,
+                        i: 98,
+                        raan: 0,
+                        arg: 0,
+                        mA: orbitParams.mA
+                    }
+                    break;
+                case 'Geo-Stationary':
+                    orbitParams = {
+                        a: 42164,
+                        e: 0,
+                        i: 0,
+                        raan: 0,
+                        arg: 0,
+                        mA: orbitParams.mA
+                    }
+                    break;
+                default:
+                    break;
+            }
+            $('input')[0].value = orbitParams.a;
+            $('input')[1].value = orbitParams.e;
+            $('input')[2].value = orbitParams.i;
+            $('input')[3].value = orbitParams.raan;
+            $('input')[4].value = orbitParams.arg;
+            for (var ii = 0; ii < 5; ii++) {
+                $('.controls span')[ii].textContent = $('input')[ii].value;
+            }
+        })
     </script>
 </body>
 </html>
