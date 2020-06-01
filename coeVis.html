@@ -223,7 +223,8 @@
         })
     </script>
     <script type="module">
-        import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/build/three.module.js';
+        import * as THREE from './SupportLibraries/three.js-master/build/three.module.js';
+        // import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/build/three.module.js';
         import {OrbitControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/examples/jsm/controls/OrbitControls.js';
         
         var time = {
@@ -354,8 +355,8 @@
         }
 
         function drawEarth(){
-            var texture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/2_no_clouds_4k.jpg' );
-            var cloudsTexture = new THREE.TextureLoader().load('https://pkevz90.github.io/pkevz.github.io/fair_clouds_4k.png');
+            var texture = new THREE.TextureLoader().load( './SupportLibraries/Media/2_no_clouds_4k.jpg' );
+            var cloudsTexture = new THREE.TextureLoader().load('./SupportLibraries/Media/fair_clouds_4k.png');
             var geometry = new THREE.SphereGeometry( 1, 64, 64 );
             var material = new THREE.MeshLambertMaterial( {
                 map: texture
@@ -409,7 +410,7 @@
         }
         
         function drawStars(){
-            var starTexture = new THREE.TextureLoader().load( 'https://pkevz90.github.io/pkevz.github.io/galaxy_starfield.png' );
+            var starTexture = new THREE.TextureLoader().load( './SupportLibraries/Media/galaxy_starfield.png' );
 
             stars = new THREE.Mesh(
                 new THREE.SphereGeometry(90, 64, 64), 
