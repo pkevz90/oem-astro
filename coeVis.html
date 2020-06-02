@@ -206,6 +206,8 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
     <script src="SupportLibraries/astroFunctions.js"></script>
+    <script src="./SupportLibraries/three.js-master/build/three.js"></script>
+    <script src="./SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
     <script>
         $('.orbitsPane').on('mouseenter',()=>{
             $('#orbitList').show(); 
@@ -223,11 +225,7 @@
         })
     </script>
     <script type="module">
-        import * as THREE from './SupportLibraries/three.js-master/build/three.module.js';
-        // import * as THREE from 'https://github.com/pkevz90/pkevz.github.io/blob/master/SupportLibraries/three.js-master/build/three.module.js';
-        // import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/build/three.module.js';
-        import {OrbitControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r115/examples/jsm/controls/OrbitControls.js';
-        
+
         var time = {
             year: 2020,
             month: 6,
@@ -300,7 +298,7 @@
                 camera.updateProjectionMatrix();
             })
             
-            controls = new OrbitControls(camera,renderer.domElement);
+            controls = new THREE.OrbitControls(camera,renderer.domElement);
         }
 
         function drawOrbit(orbitParams) {
