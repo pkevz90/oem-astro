@@ -1,7 +1,6 @@
 var http = require('http');
 var fs = require('fs');
 var url = require('url');
-var mongo = require('mongodb');
 http.createServer(function (req, res) {
     var q = url.parse(req.url, true);
     if (q.pathname === '/') {q.pathname = '/index.html'}
