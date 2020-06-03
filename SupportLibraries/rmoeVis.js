@@ -9,7 +9,7 @@ var time = {
 
 var orbitParams = {
     a: 10,
-    xd: 10,
+    xd: 0,
     yd: 0,
     b: 0,
     zmax: 10,
@@ -26,14 +26,33 @@ drawStars();
 drawLightSources();
 drawRIC();
 drawOrbit(orbitParams);
+// var curve = new THREE.EllipseCurve(
+// 	-scale*42164/6371,  0,            // ax, aY
+// 	0.005, 0.01,           // xRadius, yRadius
+// 	0,  Math.PI,  // aStartAngle, aEndAngle
+// 	false,            // aClockwise
+// 	0                 // aRotation
+// );
+
+// var points = curve.getPoints( 50 );
+// var geometry = new THREE.BufferGeometry().setFromPoints( points );
+
+// var material = new THREE.LineBasicMaterial( { color : 0xff0000 } );
+
+// // Create the final object to add to the scene
+// var ellipse = new THREE.Line( geometry, material );
+// scene.add(ellipse)
 // drawAxes();
 // drawTube();
 
 var render = function() {
     let n = 2*Math.PI/86164;
     orbitParams.b += timeStep/86164*2*Math.PI;
+    if (orbitParams.b > 2*Math.PI) {orbitParams.b -= 2*Math.PI}
+    $('.controls span')[3].textContent = (orbitParams.b*180/Math.PI).toFixed(1);
     orbitParams.M += timeStep/86164*2*Math.PI;
     orbitParams.yd -= 1.5*n*orbitParams.xd*timeStep;
+    $('.controls span')[2].textContent = orbitParams.yd.toFixed(1);
     sidTime += timeStep/86164*360;
     let curSun = Eci2Ecef (sidTime, sunVec);
     Sunlight.position.x = -100*curSun[0][0];
@@ -58,7 +77,6 @@ function setupScene() {
     window.addEventListener('resize',() => {
         renderer.setSize(window.innerWidth,window.innerHeight);
         camera.aspect = window.innerWidth/window.innerHeight;
-
         camera.updateProjectionMatrix();
     })
     
@@ -68,7 +86,7 @@ function setupScene() {
 }
 
 function drawOrbit(orbitParams) {
-    let r,v,rf;
+    let r,v,rf, itAng, ctAng, rAng;
     let n = 2*Math.PI/86164;
     r = [[-orbitParams.a/2*Math.cos(orbitParams.b)+orbitParams.xd],
          [orbitParams.a*Math.sin(orbitParams.b)+orbitParams.yd],
@@ -85,7 +103,15 @@ function drawOrbit(orbitParams) {
         // console.log(r,v);
         
         rf = math.add(math.multiply(PhiRR3d(t),r),math.multiply(PhiRV3d(t),v));
-        points.push( new THREE.Vector3( -scale*42164/6371-scale*rf[0][0]/6371, scale*rf[2][0]/6371, scale*rf[1][0]/6371)); 
+        rAng = 42164+rf[0][0];
+        itAng = rf[1][0]/rAng;
+        ctAng = rf[2][0]/rAng;
+        // console.log(Math.sin(itAng)*rAng);
+        rAng = -scale*rAng/6371;
+        // console.log(Math.sin(itAng)*rAng);
+        
+        // points.push( new THREE.Vector3( -scale*42164/6371-scale*rf[0][0]/6371, scale*rf[2][0]/6371, scale*rf[1][0]/6371)); 
+        points.push( new THREE.Vector3( rAng*Math.cos(itAng)*Math.cos(ctAng), -rAng*Math.sin(ctAng), -rAng*Math.sin(itAng))); 
 
        }
     if (orbit === undefined){ 
@@ -136,6 +162,20 @@ function drawEarth(){
     sidTime = thetaGMST(jdUTI0);
     Earth.rotation.y += Math.PI+sidTime*Math.PI/180;
     clouds.rotation.y += Math.PI+sidTime*Math.PI/180;
+    points = [];
+    for (var kk = 0; kk <= 2000; kk++) {
+        points.push( new THREE.Vector3( -scale*42164/6371*Math.sin(kk*2*Math.PI/200), 0, scale*42164/6371*Math.cos(kk*2*Math.PI/200))); 
+    }
+    var material = new THREE.LineDashedMaterial({
+        color: 0xFFFFFF,
+        linewidth: 1,
+        dashSize: 3,
+        gapSize: 2
+    });
+    var geometry = new THREE.BufferGeometry().setFromPoints( points );
+    Line = new THREE.Line( geometry, material );
+    Line.computeLineDistances();
+    scene.add(Line);
 }
 
 function drawRIC() {
@@ -223,15 +263,16 @@ $('#optionsList input').on('input',()=>{
 $('.slidercontainer input').on('input',()=>{
     orbitParams = {
         a:      Number($('.slidercontainer input')[0].value),
-        e:      Number($('.slidercontainer input')[1].value),
-        i:      Number($('.slidercontainer input')[2].value),
-        raan:   Number($('.slidercontainer input')[3].value),
-        arg:    Number($('.slidercontainer input')[4].value),
-        mA:     orbitParams.mA
+        xd:     Number($('.slidercontainer input')[1].value),
+        yd:     orbitParams.yd,
+        b:      orbitParams.b,
+        zmax:   Number($('.slidercontainer input')[2].value),
+        M:      Number($('.slidercontainer input')[3].value)*Math.PI/180+orbitParams.b,
     }
-    for (var ii = 0; ii < 5; ii++) {
-        $('.controls span')[ii].textContent = $('.slidercontainer input')[ii].value;
-    }
+    $('.controls span')[0].textContent = $('.slidercontainer input')[0].value;
+    $('.controls span')[1].textContent = $('.slidercontainer input')[1].value;
+    $('.controls span')[4].textContent = $('.slidercontainer input')[2].value;
+    $('.controls span')[5].textContent = $('.slidercontainer input')[3].value;
     drawOrbit(orbitParams);
 })
 
