@@ -26,23 +26,6 @@ drawStars();
 drawLightSources();
 drawRIC();
 drawOrbit(orbitParams);
-// var curve = new THREE.EllipseCurve(
-// 	-scale*42164/6371,  0,            // ax, aY
-// 	0.5, 0.1,           // xRadius, yRadius
-// 	0,  Math.PI,  // aStartAngle, aEndAngle
-// 	false,            // aClockwise
-// 	0                 // aRotation
-// );
-
-// var points = curve.getPoints( 50 );
-// var geometry = new THREE.BufferGeometry().setFromPoints( points );
-
-// var material = new THREE.MeshBasicMaterial( { color : 0xff0000 } );
-// // Create the final object to add to the scene
-// var ellipse = new THREE.Mesh( geometry, material );
-// scene.add(ellipse)
-// drawAxes();
-// drawTube();
 
 var render = function() {
     let n = 2*Math.PI/86164;
@@ -97,28 +80,26 @@ function drawOrbit(orbitParams) {
         v =  [[orbitParams[orbitNum].a*n/2*Math.sin(orbitParams[orbitNum].b)],
             [orbitParams[orbitNum].a*n*Math.cos(orbitParams[orbitNum].b)-1.5*n*orbitParams[orbitNum].xd],
             [orbitParams[orbitNum].zmax*n*Math.cos(orbitParams[orbitNum].M)]];
-        // console.log(orbitParams[0].b);
         
         var points = [];
         // let tailLength = Number($('#optionsList input')[0].value)/100;
         
         for (var ii = 0; ii <= 200; ii++) {
             t = -ii*86164*tailLength/200;
-            // console.log(r,v);
-            
-            rf = math.add(math.multiply(PhiRR3d(t),r),math.multiply(PhiRV3d(t),v));
+            if (ii === 0) {rf = r}
+            else {
+                rf = [[-orbitParams[orbitNum].a/2*Math.cos(orbitParams[orbitNum].b+t*n)+orbitParams[orbitNum].xd],
+                [orbitParams[orbitNum].a*Math.sin(orbitParams[orbitNum].b+t*n)+orbitParams[orbitNum].yd-1.5*orbitParams[orbitNum].xd*n*t],
+                [orbitParams[orbitNum].zmax*Math.sin(orbitParams[orbitNum].M+t*n)]];   
+            }
             rAng = 42164+rf[0][0];
             itAng = rf[1][0]/rAng;
             ctAng = rf[2][0]/rAng;
-            // console.log(Math.sin(itAng)*rAng);
             rAng = -scale*rAng/6371;
-            // console.log(Math.sin(itAng)*rAng);
             
-            // points.push( new THREE.Vector3( -scale*42164/6371-scale*rf[0][0]/6371, scale*rf[2][0]/6371, scale*rf[1][0]/6371)); 
             points.push( new THREE.Vector3( rAng*Math.cos(itAng)*Math.cos(ctAng), -rAng*Math.sin(ctAng), -rAng*Math.sin(itAng))); 
 
         }
-        // console.log(orbit);
         
         if (orbit[orbitNum] === undefined){
             var geometry = new THREE.SphereGeometry( 0.00035, 6, 6 );
@@ -130,15 +111,13 @@ function drawOrbit(orbitParams) {
             satPoint[orbitNum].position.z = scale*r[1][0]/6371;
 
             var curve = new THREE.CatmullRomCurve3(points);
-            var geometry = new THREE.TubeGeometry(curve, 100, 0.0001, 8, true);
+            var geometry = new THREE.TubeGeometry(curve, 50, 0.0001, 4, true);
             orbit[orbitNum] = new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color: 0xFFC300}));
 
             scene.add(satPoint[orbitNum]);
             scene.add(orbit[orbitNum]);
         }
         else {
-            // Edit orbitVar
-            // orbit.geometry.setFromPoints(points);
             var curve = new THREE.CatmullRomCurve3(points);
             orbit[orbitNum].geometry = new THREE.TubeGeometry(curve, 100, 0.0001, 8, false);
            
