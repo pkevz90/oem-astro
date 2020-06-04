@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relative Orbital Elements</title>
+    <style>
+        .controls {
+            /* position: absolute; */
+            float: left;
+            width: 100%;
+            /* height: 40%; */
+            background-color: rgba(50,50,50,0.5);
+            /* display: none; */
+            color: white;
+        }
+        .sideBar {
+            position: fixed;
+            background-color: rgba(0,0,0,0);
+            width: 20%;
+            height: 100%;
+            padding-top: 1%;
+        }
+        .slider {
+            width: 100%;
+        }
+        .controlTitle {
+            width: 100%;
+            height: 5%;
+            float: left;
+            color: white;
+            text-align: center;
+            background-color: rgba(50,50,50,0.5);
+            font-weight: bold;
+            z-index: 2;
+            font-size: 2vw;
+        }
+        .slidercontainer {
+            padding: 1.5% 10%;
+            font-size: 1.5vw;
+        }
+        .slidercontainer p {
+            margin: 1%;
+        }
+        .referenceDiv {
+            position: fixed;
+            bottom: 0%;
+            color: white;
+            width: 30%;
+            left: 35%;
+            text-align: center;
+            font-size: 1.5vw;
+            opacity: 0.5;
+        }
+        .timeStepDiv {
+            position: fixed;
+            bottom: 0%;
+            color: white;
+            /* width: 20%; */
+            right: 0%;
+            text-align: center;
+            padding-right: 1%;
+            font-size: 1.5vw;
+            opacity: 0.5;
+        }
+        .addButton {
+            float: right;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 2%;
+            border-radius: 10%;
+        }
+        .addButton:hover {
+            background-color: rgba(50,50,50,0.75);
+        }
+        .pointer {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="sideBar">
+        <div class="controlTitle pointer">Satellite 1</div>
+        <div class="controls">
+            <div class="slidercontainer">
+                <p><em>a<sub>e</sub></em>: <span>10.0</span> km</p>
+                <input type="range" class="slider" min="0" max="40" value="10" step="0.1">
+            </div>
+            <div class="slidercontainer">
+                <p><em>x<sub>d</sub></em>: <span>0.0</span> km</p>
+                <input type="range" class="slider" min="-40" max="40" value="0" step="0.01">
+            </div>
+            <div class="slidercontainer">
+                <p><em>y<sub>d</sub></em>: <span>0.0</span> km</p>
+            </div>
+            <div class="slidercontainer">
+                <p><em>&#946</em>: <span>0.0</span> deg</p>
+            </div>
+            <div class="slidercontainer">
+                <p><em>z<sub>max</sub></em>: <span>10.0</span> km</p>
+                <input type="range" class="slider" min="0" max="30" value="10" step="0.1">
+            </div>
+            <div class="slidercontainer">
+                <p><em>&#947</em>: <span>0.0</span> deg</p>
+                <input type="range" class="slider" min="0" max="360" value="0" step="0.1">
+            </div>
+        </div>
+        <div class="addButton pointer">+</div>
+    </div>
+    
+    <div class="timeStepDiv">
+        Time Step: <span>60</span> sec
+    </div>
+    <!-- <div class="taDiv">
+        True Anomaly: <span>60</span> sec
+    </div> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
+    <script src="./SupportLibraries/astroFunctions.js"></script>
+    <script src="./SupportLibraries/three.js-master/build/three.js"></script>
+    <script src="./SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
+    <script src="./SupportLibraries/rmoeVis.js"></script>
+    <script>
+        $('.slidercontainer').on('mouseenter',(a,b)=>{
+            // console.log(a);
+            // $(a.currentTarget).hide();
+            
+        })
+        $('.controlTitle').on('click',(a)=>{
+            if (!$(a.target).next().is(":hidden")) {
+                $(a.target).next().slideUp(250);
+                return;
+            }
+            $('.controls').slideUp(250);
+            $(a.target).next().slideDown(250);
+        })
+        $('.addButton').on('click',()=>{
+            let len = $('.controlTitle').length;
+            $('.controls').slideUp(250);
+            let cl = $('.controlTitle').last().clone();
+            cl.hide();
+            cl.on('click',(a)=>{
+                if (!$(a.target).next().is(":hidden")) {
+                    $(a.target).next().slideUp(250);
+                    return;
+                }
+                $('.controls').slideUp(250);
+                $(a.target).next().slideDown(250);
+            })
+            cl[0].innerText = "Satellite " + (len+1);
+            $('.addButton').before(cl);
+            $('.controlTitle').last().slideDown(250);
+            cl = $('.controls').last().clone();
+            $('.addButton').before(cl);
+            orbitParams[len] = {
+                a: orbitParams[len-1].a,
+                xd: orbitParams[len-1].xd,
+                yd: orbitParams[len-1].yd,
+                b: orbitParams[len-1].b,
+                zmax: orbitParams[len-1].zmax,
+                M: orbitParams[len-1].M,
+            }
+            cl.find('.slidercontainer').on('input',sliderInput);
+        })
+    </script>
+</body>
+</html>

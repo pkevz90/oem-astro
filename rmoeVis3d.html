@@ -185,9 +185,6 @@
 			<input type="range" class="slider" min="0" max="360" value="0" step="0.1">
 		</div>
     </div>
-    <div class="referenceDiv">
-        Earth-Centered <span>Inertial</span>
-    </div>
     <div class="timeStepDiv">
         Time Step: <span>60</span> sec
     </div>
@@ -203,6 +200,11 @@
         $('.orbitsPane').on('mouseenter',()=>{
             $('#orbitList').show(); 
             $('#optionsList').hide(); 
+        })
+        $('.slidercontainer').on('mouseenter',(a,b)=>{
+            // console.log(a);
+            // $(a.currentTarget).hide();
+            
         })
         $('#orbitList').on('mouseleave',()=>{
             $('#orbitList').hide(); 

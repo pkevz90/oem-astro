@@ -7,16 +7,16 @@ var time = {
     second: 0
 }
 
-var orbitParams = {
+var orbitParams = [{
     a: 10,
     xd: 0,
     yd: 0,
     b: 0,
     zmax: 10,
     M: 0
-};
+}];
 
-var Earth, clouds, sidTime = 0, stopRotate, Sunlight, stars, sunVec, satPoint, orbit = undefined, r = 2, scene, scale = 10, camera, renderer, controls, ecef = false, timeStep = 60;
+var Earth, clouds, sidTime = 0, stopRotate, Sunlight, stars, sunVec, satPoint = [], orbit = [], r = 2, scene, scale = 10, camera, renderer, controls, ecef = false, timeStep = 60;
 var ECI = [], ECEF = [], RIC = [], pari = [];
 var jdUTI0 = julianDateCalcStruct(time);
 
@@ -28,7 +28,7 @@ drawRIC();
 drawOrbit(orbitParams);
 // var curve = new THREE.EllipseCurve(
 // 	-scale*42164/6371,  0,            // ax, aY
-// 	0.005, 0.01,           // xRadius, yRadius
+// 	0.5, 0.1,           // xRadius, yRadius
 // 	0,  Math.PI,  // aStartAngle, aEndAngle
 // 	false,            // aClockwise
 // 	0                 // aRotation
@@ -37,22 +37,23 @@ drawOrbit(orbitParams);
 // var points = curve.getPoints( 50 );
 // var geometry = new THREE.BufferGeometry().setFromPoints( points );
 
-// var material = new THREE.LineBasicMaterial( { color : 0xff0000 } );
-
+// var material = new THREE.MeshBasicMaterial( { color : 0xff0000 } );
 // // Create the final object to add to the scene
-// var ellipse = new THREE.Line( geometry, material );
+// var ellipse = new THREE.Mesh( geometry, material );
 // scene.add(ellipse)
 // drawAxes();
 // drawTube();
 
 var render = function() {
     let n = 2*Math.PI/86164;
-    orbitParams.b += timeStep/86164*2*Math.PI;
-    if (orbitParams.b > 2*Math.PI) {orbitParams.b -= 2*Math.PI}
-    $('.controls span')[3].textContent = (orbitParams.b*180/Math.PI).toFixed(1);
-    orbitParams.M += timeStep/86164*2*Math.PI;
-    orbitParams.yd -= 1.5*n*orbitParams.xd*timeStep;
-    $('.controls span')[2].textContent = orbitParams.yd.toFixed(1);
+    for (var ii = 0; ii < orbitParams.length; ii++){
+        orbitParams[ii].b += timeStep/86164*2*Math.PI;
+        if (orbitParams[ii].b > 2*Math.PI) {orbitParams[ii].b -= 2*Math.PI}
+        // $('.controls span')[3].textContent = (orbitParams[0].b*180/Math.PI).toFixed(1);
+        orbitParams[ii].M += timeStep/86164*2*Math.PI;
+        orbitParams[ii].yd -= 1.5*n*orbitParams[ii].xd*timeStep;
+        // $('.controls span')[2].textContent = orbitParams[0].yd.toFixed(1);
+    }
     sidTime += timeStep/86164*360;
     let curSun = Eci2Ecef (sidTime, sunVec);
     Sunlight.position.x = -100*curSun[0][0];
@@ -88,57 +89,65 @@ function setupScene() {
 function drawOrbit(orbitParams) {
     let r,v,rf, itAng, ctAng, rAng;
     let n = 2*Math.PI/86164;
-    r = [[-orbitParams.a/2*Math.cos(orbitParams.b)+orbitParams.xd],
-         [orbitParams.a*Math.sin(orbitParams.b)+orbitParams.yd],
-         [orbitParams.zmax*Math.sin(orbitParams.M)]];
-    v =  [[orbitParams.a*n/2*Math.sin(orbitParams.b)],
-         [orbitParams.a*n*Math.cos(orbitParams.b)-1.5*n*orbitParams.xd],
-         [orbitParams.zmax*n*Math.cos(orbitParams.M)]];
+    tailLength = 0.5; let numObjects = $('.controls').length;
+    for (var orbitNum = 0; orbitNum < numObjects; orbitNum++) {
+        r = [[-orbitParams[orbitNum].a/2*Math.cos(orbitParams[orbitNum].b)+orbitParams[orbitNum].xd],
+            [orbitParams[orbitNum].a*Math.sin(orbitParams[orbitNum].b)+orbitParams[orbitNum].yd],
+            [orbitParams[orbitNum].zmax*Math.sin(orbitParams[orbitNum].M)]];
+        v =  [[orbitParams[orbitNum].a*n/2*Math.sin(orbitParams[orbitNum].b)],
+            [orbitParams[orbitNum].a*n*Math.cos(orbitParams[orbitNum].b)-1.5*n*orbitParams[orbitNum].xd],
+            [orbitParams[orbitNum].zmax*n*Math.cos(orbitParams[orbitNum].M)]];
+        // console.log(orbitParams[0].b);
+        
+        var points = [];
+        // let tailLength = Number($('#optionsList input')[0].value)/100;
+        
+        for (var ii = 0; ii <= 200; ii++) {
+            t = -ii*86164*tailLength/200;
+            // console.log(r,v);
+            
+            rf = math.add(math.multiply(PhiRR3d(t),r),math.multiply(PhiRV3d(t),v));
+            rAng = 42164+rf[0][0];
+            itAng = rf[1][0]/rAng;
+            ctAng = rf[2][0]/rAng;
+            // console.log(Math.sin(itAng)*rAng);
+            rAng = -scale*rAng/6371;
+            // console.log(Math.sin(itAng)*rAng);
+            
+            // points.push( new THREE.Vector3( -scale*42164/6371-scale*rf[0][0]/6371, scale*rf[2][0]/6371, scale*rf[1][0]/6371)); 
+            points.push( new THREE.Vector3( rAng*Math.cos(itAng)*Math.cos(ctAng), -rAng*Math.sin(ctAng), -rAng*Math.sin(itAng))); 
+
+        }
+        // console.log(orbit);
+        
+        if (orbit[orbitNum] === undefined){
+            var geometry = new THREE.SphereGeometry( 0.00035, 6, 6 );
+            var material = new THREE.MeshBasicMaterial({
+                color: 0xFFC300});
+            satPoint[orbitNum] = new THREE.Mesh( geometry, material );
+            satPoint[orbitNum].position.x = -scale*42164/6371-scale*r[0][0]/6371;
+            satPoint[orbitNum].position.y = scale*r[2][0]/6371;
+            satPoint[orbitNum].position.z = scale*r[1][0]/6371;
+
+            var curve = new THREE.CatmullRomCurve3(points);
+            var geometry = new THREE.TubeGeometry(curve, 100, 0.0001, 8, true);
+            orbit[orbitNum] = new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color: 0xFFC300}));
+
+            scene.add(satPoint[orbitNum]);
+            scene.add(orbit[orbitNum]);
+        }
+        else {
+            // Edit orbitVar
+            // orbit.geometry.setFromPoints(points);
+            var curve = new THREE.CatmullRomCurve3(points);
+            orbit[orbitNum].geometry = new THREE.TubeGeometry(curve, 100, 0.0001, 8, false);
+           
+            satPoint[orbitNum].position.x = -scale*42164/6371-scale*r[0][0]/6371;
+            satPoint[orbitNum].position.y = scale*r[2][0]/6371;
+            satPoint[orbitNum].position.z = scale*r[1][0]/6371;
+        }
+    }
     
-    var points = [];
-    // let tailLength = Number($('#optionsList input')[0].value)/100;
-    tailLength = 0.5;
-    for (var ii = 0; ii <= 200; ii++) {
-        t = -ii*86164*tailLength/200;
-        // console.log(r,v);
-        
-        rf = math.add(math.multiply(PhiRR3d(t),r),math.multiply(PhiRV3d(t),v));
-        rAng = 42164+rf[0][0];
-        itAng = rf[1][0]/rAng;
-        ctAng = rf[2][0]/rAng;
-        // console.log(Math.sin(itAng)*rAng);
-        rAng = -scale*rAng/6371;
-        // console.log(Math.sin(itAng)*rAng);
-        
-        // points.push( new THREE.Vector3( -scale*42164/6371-scale*rf[0][0]/6371, scale*rf[2][0]/6371, scale*rf[1][0]/6371)); 
-        points.push( new THREE.Vector3( rAng*Math.cos(itAng)*Math.cos(ctAng), -rAng*Math.sin(ctAng), -rAng*Math.sin(itAng))); 
-
-       }
-    if (orbit === undefined){ 
-        var material = new THREE.LineBasicMaterial({
-            color: 0xFFC300,
-            linewidth: 30
-        });
-        var geometry = new THREE.BufferGeometry().setFromPoints( points );
-        orbit = new THREE.Line( geometry, material );
-        var geometry = new THREE.SphereGeometry( 0.00035, 6, 6 );
-        var material = new THREE.MeshBasicMaterial({
-            color: 0xFFC300});
-        satPoint = new THREE.Mesh( geometry, material );
-        satPoint.position.x = -scale*42164/6371-scale*r[0][0]/6371;
-        satPoint.position.y = scale*r[2][0]/6371;
-        satPoint.position.z = scale*r[1][0]/6371;
-
-        scene.add(satPoint);
-        scene.add(orbit);
-    }
-    else {
-        // Edit orbitVar
-        orbit.geometry.setFromPoints(points);
-        satPoint.position.x = -scale*42164/6371-scale*r[0][0]/6371;
-        satPoint.position.y = scale*r[2][0]/6371;
-        satPoint.position.z = scale*r[1][0]/6371;
-    }
 }
 
 function drawEarth(){
@@ -179,12 +188,12 @@ function drawEarth(){
 }
 
 function drawRIC() {
-    var geometry = new THREE.PlaneGeometry( scale*0.00312, scale*0.00624);
-    var material = new THREE.MeshBasicMaterial( {color: 0xffffff, opacity: 0.0625, transparent: true, side: THREE.DoubleSide});
-    var plane = new THREE.Mesh( geometry, material );
-    plane.position.x = -scale*42164/6371;
-    plane.rotation.x = Math.PI/2;
-    scene.add( plane );
+    var geometry = new THREE.RingGeometry( scale*42124/6371, 42204*scale/6371, 200 );
+    var material = new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide, opacity: 0.0625, transparent: true } );
+    var mesh = new THREE.Mesh( geometry, material );
+    scene.add( mesh );
+    mesh.rotateX(Math.PI/2)
+
     var curve = new THREE.CatmullRomCurve3([
         new THREE.Vector3( -scale*42164/6371, 0, 0 ),
         new THREE.Vector3( -scale*42164/6371-scale*0.00156, 0, 0 ),
@@ -204,6 +213,8 @@ function drawRIC() {
     ]);
     var geometry = new THREE.TubeGeometry(curve, 4, 0.00025, 8, true);
     curveMesh = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial());
+    console.log(curveMesh,curve);
+    
     scene.add(curveMesh);
     var geometry = new THREE.ConeGeometry( .000625, 0.0025, 32 ).rotateX(Math.PI/2);
     var material = new THREE.MeshLambertMaterial( {color: 0xffffff} );
@@ -260,22 +271,26 @@ $('#optionsList input').on('input',()=>{
     })
 })
 
-$('.slidercontainer input').on('input',()=>{
-    orbitParams = {
-        a:      Number($('.slidercontainer input')[0].value),
-        xd:     Number($('.slidercontainer input')[1].value),
-        yd:     orbitParams.yd,
-        b:      orbitParams.b,
-        zmax:   Number($('.slidercontainer input')[2].value),
-        M:      Number($('.slidercontainer input')[3].value)*Math.PI/180+orbitParams.b,
+$('.slidercontainer input').on('input',sliderInput)
+function sliderInput(a) {
+    let p = $(a.target).parent().parent();
+    let ii = $('.controls').index(p);
+    
+    
+    orbitParams[ii] = {
+        a:      Number($('.slidercontainer input')[0+ii*4].value),
+        xd:     Number($('.slidercontainer input')[1+ii*4].value),
+        yd:     orbitParams[ii].yd,
+        b:      orbitParams[ii].b,
+        zmax:   Number($('.slidercontainer input')[2+ii*4].value),
+        M:      Number($('.slidercontainer input')[3+ii*4].value)*Math.PI/180+orbitParams[ii].b,
     }
-    $('.controls span')[0].textContent = $('.slidercontainer input')[0].value;
-    $('.controls span')[1].textContent = $('.slidercontainer input')[1].value;
-    $('.controls span')[4].textContent = $('.slidercontainer input')[2].value;
-    $('.controls span')[5].textContent = $('.slidercontainer input')[3].value;
+    $('.controls span')[0+ii*6].textContent = $('.slidercontainer input')[0+ii*4].value;
+    $('.controls span')[1+ii*6].textContent = $('.slidercontainer input')[1+ii*4].value;
+    $('.controls span')[4+ii*6].textContent = $('.slidercontainer input')[2+ii*4].value;
+    $('.controls span')[5+ii*6].textContent = $('.slidercontainer input')[3+ii*4].value;
     drawOrbit(orbitParams);
-})
-
+}
 document.addEventListener('keypress', function(key){
     let k = key.key;
     if (k.toLowerCase() === 'e') {
@@ -308,70 +323,3 @@ document.addEventListener('keypress', function(key){
 window.addEventListener('load', (event) => {
     $('.loadingScreen').fadeOut(500);
 });
-
-$('#orbitList p').on('click',(a)=>{
-    let orbit = a.target.innerHTML;
-    switch (orbit) {
-        case 'ISS':
-            orbitParams = {
-                a: 6784.2389,
-                e: 0.0002297,
-                i: 51.6444,
-                raan: 0,
-                arg: 0,
-                mA: orbitParams.mA
-            }
-            break;
-        case 'GPS':
-            orbitParams = {
-                a: 26561.7437,
-                e: 0,
-                i: 55,
-                raan: 0,
-                arg: 0,
-                mA: orbitParams.mA
-            }
-            break;
-        case 'Molniya':
-            
-            orbitParams = {
-                a: 26561.7437,
-                e: 0.74,
-                i: 63.4,
-                raan: 0,
-                arg: 270,
-                mA: orbitParams.mA
-            }
-            break;
-        case 'Sun-Synchronous':
-            orbitParams = {
-                a: 6784.2389,
-                e: 0.0002297,
-                i: 98,
-                raan: 0,
-                arg: 0,
-                mA: orbitParams.mA
-            }
-            break;
-        case 'Geo-Stationary':
-            orbitParams = {
-                a: 42164,
-                e: 0,
-                i: 0,
-                raan: 0,
-                arg: 0,
-                mA: orbitParams.mA
-            }
-            break;
-        default:
-            break;
-    }
-    $('.slidercontainer input')[0].value = orbitParams.a;
-    $('.slidercontainer input')[1].value = orbitParams.e;
-    $('.slidercontainer input')[2].value = orbitParams.i;
-    $('.slidercontainer input')[3].value = orbitParams.raan;
-    $('.slidercontainer input')[4].value = orbitParams.arg;
-    for (var ii = 0; ii < 5; ii++) {
-        $('.controls span')[ii].textContent = $('.slidercontainer input')[ii].value;
-    }
-})
