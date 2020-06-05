@@ -80,7 +80,8 @@
 </head>
 <body>
     <div class="sideBar">
-        <div class="controlTitle pointer">Satellite 1</div>
+        <div class="controlTitle pointer"><span>Satellite 1</span>
+            <input type="color" value="#FFC300"></div>
         <div class="controls">
             <div class="slidercontainer">
                 <p><em>a<sub>e</sub></em>: <span>10.0</span> km</p>
@@ -111,22 +112,39 @@
     <div class="timeStepDiv">
         Time Step: <span>60</span> sec
     </div>
-    <!-- <div class="taDiv">
-        True Anomaly: <span>60</span> sec
-    </div> -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
     <script src="./SupportLibraries/astroFunctions.js"></script>
-    <script src="./SupportLibraries/three.js-master/build/three.js"></script>
+    <script src="./SupportLibraries/three.js-master/build/three.min.js"></script>
     <script src="./SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
     <script src="./SupportLibraries/rmoeVis.js"></script>
     <script>
+        function changeColor (a) {
+            
+            let p = $(a.target).parent();
+            let ii = $('.controlTitle').index(p);
+            let c = hexToRgb(a.target.value);
+            
+            orbit[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
+            satPoint[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
+        }
+        function hexToRgb(hex) {
+            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
         $('.slidercontainer').on('mouseenter',(a,b)=>{
             // console.log(a);
             // $(a.currentTarget).hide();
             
         })
         $('.controlTitle').on('click',(a)=>{
+            if ($(a.target).is('span')) {
+                a.target = $(a.target).parent();
+            }
             if (!$(a.target).next().is(":hidden")) {
                 $(a.target).next().slideUp(250);
                 return;
@@ -140,6 +158,9 @@
             let cl = $('.controlTitle').last().clone();
             cl.hide();
             cl.on('click',(a)=>{
+                if ($(a.target).is('span')) {
+                    a.target = $(a.target).parent();
+                }
                 if (!$(a.target).next().is(":hidden")) {
                     $(a.target).next().slideUp(250);
                     return;
@@ -147,7 +168,7 @@
                 $('.controls').slideUp(250);
                 $(a.target).next().slideDown(250);
             })
-            cl[0].innerText = "Satellite " + (len+1);
+            cl.find('span')[0].innerText = "Satellite " + (len+1);
             $('.addButton').before(cl);
             $('.controlTitle').last().slideDown(250);
             cl = $('.controls').last().clone();
@@ -161,7 +182,9 @@
                 M: orbitParams[len-1].M,
             }
             cl.find('.slidercontainer').on('input',sliderInput);
+            cl.prev().find('input').on('input',changeColor);
         })
+        $('.controlTitle input').on('input',changeColor);
     </script>
 </body>
 </html>

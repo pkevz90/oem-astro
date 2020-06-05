@@ -178,10 +178,10 @@ function drawRIC() {
         new THREE.Vector3( -scale*42164/6371-scale*0.00156, 0, 0 ),
     ]);
     var geometry = new THREE.TubeGeometry(curve, 4, 0.00025, 8, true);
-    var curveMesh = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial());
+    var curveMesh = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: 0x73f5f0} ));
     scene.add(curveMesh);
     var geometry = new THREE.ConeGeometry( .000625, 0.0025, 32 )
-    var material = new THREE.MeshLambertMaterial( {color: 0xffffff} );
+    var material = new THREE.MeshLambertMaterial( {color: 0x73f5f0} );
     var cone = new THREE.Mesh( geometry, material );
     cone.position.x = -scale*42164/6371;
     cone.position.y = scale*0.00156*0.758;
@@ -191,12 +191,12 @@ function drawRIC() {
         new THREE.Vector3( -scale*42164/6371, scale*0.00156, 0 ),
     ]);
     var geometry = new THREE.TubeGeometry(curve, 4, 0.00025, 8, true);
-    curveMesh = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial());
+    curveMesh = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: 0x73f5f0} ));
     console.log(curveMesh,curve);
     
     scene.add(curveMesh);
     var geometry = new THREE.ConeGeometry( .000625, 0.0025, 32 ).rotateX(Math.PI/2);
-    var material = new THREE.MeshLambertMaterial( {color: 0xffffff} );
+    var material = new THREE.MeshLambertMaterial( {color: 0x73f5f0} );
     var cone = new THREE.Mesh( geometry, material );
     cone.position.x = -scale*42164/6371;
     cone.position.z = scale*0.00156*0.758;
@@ -206,11 +206,11 @@ function drawRIC() {
         new THREE.Vector3( -scale*42164/6371,0,scale*0.00156 ),
     ]);
     var geometry = new THREE.TubeGeometry(curve, 4, 0.00025, 8, true);
-    curveMesh = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial());
+    curveMesh = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: 0x73f5f0} ));
     
     scene.add(curveMesh);
     var geometry = new THREE.ConeGeometry( .000625, 0.0025, 32 ).rotateZ(Math.PI/2);
-    var material = new THREE.MeshLambertMaterial( {color: 0xffffff} );
+    var material = new THREE.MeshLambertMaterial( {color: 0x73f5f0} );
     var cone = new THREE.Mesh( geometry, material );
     cone.position.x = -scale*42164/6371-scale*0.00156*0.758;
     // cone.position.z = scale*0.0156*0.758;
