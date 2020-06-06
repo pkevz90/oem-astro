@@ -118,7 +118,7 @@ function setSelectedWaypoint(index, side){
 function checkClose(X,Y) {
     let xPoint, yPoint;
     let turn = Number(document.getElementById('turn').querySelector("span").textContent)-1;
-    for (var ii = turn; ii < globalChartRef.config.data.datasets[0].data.length; ii++) {
+    for (var ii = turn; ii < globalChartRef.config.data.datasets[0].data.length-1; ii++) {
         xPoint = globalChartRef.config.data.datasets[0].data[ii].x;
         yPoint = globalChartRef.config.data.datasets[0].data[ii].y;
         // console.log(math.norm([xPoint-X,yPoint-Y]))
@@ -127,7 +127,7 @@ function checkClose(X,Y) {
             return true;
         }
     }
-    for (var ii = turn; ii < globalChartRef.config.data.datasets[3].data.length; ii++) {
+    for (var ii = turn; ii < globalChartRef.config.data.datasets[3].data.length-1; ii++) {
         xPoint = globalChartRef.config.data.datasets[3].data[ii].x;
         yPoint = globalChartRef.config.data.datasets[3].data[ii].y;
         // console.log(math.norm([xPoint-X,yPoint-Y]))
