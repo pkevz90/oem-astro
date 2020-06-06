@@ -32,7 +32,7 @@ var render = function() {
     for (var ii = 0; ii < orbitParams.length; ii++){
         orbitParams[ii].b += timeStep/86164*2*Math.PI;
         if (orbitParams[ii].b > 2*Math.PI) {orbitParams[ii].b -= 2*Math.PI}
-        // $('.controls span')[3].textContent = (orbitParams[0].b*180/Math.PI).toFixed(1);
+        $('.controls span')[3+ii*6].textContent = (orbitParams[ii].b*180/Math.PI).toFixed(1);
         orbitParams[ii].M += timeStep/86164*2*Math.PI;
         orbitParams[ii].yd -= 1.5*n*orbitParams[ii].xd*timeStep;
         // $('.controls span')[2].textContent = orbitParams[0].yd.toFixed(1);
@@ -84,8 +84,8 @@ function drawOrbit(orbitParams) {
         var points = [];
         // let tailLength = Number($('#optionsList input')[0].value)/100;
         
-        for (var ii = 0; ii <= 200; ii++) {
-            t = -ii*86164*tailLength/200;
+        for (var ii = 0; ii <= 100; ii++) {
+            t = -ii*86164*tailLength/100;
             if (ii === 0) {rf = r}
             else {
                 rf = [[-orbitParams[orbitNum].a/2*Math.cos(orbitParams[orbitNum].b+t*n)+orbitParams[orbitNum].xd],
@@ -150,28 +150,53 @@ function drawEarth(){
     sidTime = thetaGMST(jdUTI0);
     Earth.rotation.y += Math.PI+sidTime*Math.PI/180;
     clouds.rotation.y += Math.PI+sidTime*Math.PI/180;
-    points = [];
-    for (var kk = 0; kk <= 2000; kk++) {
-        points.push( new THREE.Vector3( -scale*42164/6371*Math.sin(kk*2*Math.PI/200), 0, scale*42164/6371*Math.cos(kk*2*Math.PI/200))); 
-    }
-    var material = new THREE.LineDashedMaterial({
-        color: 0xFFFFFF,
-        linewidth: 1,
-        dashSize: 3,
-        gapSize: 2
-    });
-    var geometry = new THREE.BufferGeometry().setFromPoints( points );
-    Line = new THREE.Line( geometry, material );
-    Line.computeLineDistances();
-    scene.add(Line);
 }
 
 function drawRIC() {
-    var geometry = new THREE.RingGeometry( scale*42124/6371, 42204*scale/6371, 200 );
-    var material = new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide, opacity: 0.0625, transparent: true } );
-    var mesh = new THREE.Mesh( geometry, material );
-    scene.add( mesh );
-    mesh.rotateX(Math.PI/2)
+    var material = new THREE.LineBasicMaterial({
+        color: 0xFFFFFF,
+        transparent: true,
+        opacity: 0.5,
+        linewidth: 1
+    });
+    let alt, Line, points;
+    for (var ii = 0; ii < 9; ii++){
+        points = [];
+        alt = 42124+ii*10;
+        for (var kk = 0; kk <= 2000; kk++) {
+            points.push( new THREE.Vector3( -scale*alt/6371*Math.sin(kk*2*Math.PI/2000), 0, scale*alt/6371*Math.cos(kk*2*Math.PI/2000))); 
+        }
+        
+        var geometry = new THREE.BufferGeometry().setFromPoints( points );
+        Line = new THREE.Line( geometry, material );
+        Line.computeLineDistances();
+        scene.add(Line);
+    }
+    let alt1 = 42124, alt2 = 42204;
+    for (var ii = 0; ii < 3600; ii++){
+        points = [];
+        points.push( new THREE.Vector3( -scale*alt1/6371*Math.sin(ii/10*Math.PI/180), 0, scale*alt1/6371*Math.cos(ii/10*Math.PI/180))); 
+        points.push( new THREE.Vector3( -scale*alt2/6371*Math.sin(ii/10*Math.PI/180), 0, scale*alt2/6371*Math.cos(ii/10*Math.PI/180))); 
+       
+        
+        var geometry = new THREE.BufferGeometry().setFromPoints( points );
+        Line = new THREE.Line( geometry, material );
+        Line.computeLineDistances();
+        scene.add(Line);
+    }
+    
+
+    // var geometry = new THREE.RingGeometry( scale*42124/6371, 42204*scale/6371, 3600, 20 );
+    // var wireframe = new THREE.EdgesGeometry( geometry,0 );
+    // var material = new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide, opacity: 0.625, transparent: false } );
+    // var mesh = new THREE.Mesh( geometry, material );
+    // var mesh = new THREE.Mesh( wireframe, material );
+    // var mesh = new THREE.LineSegments( wireframe, material );
+    // var line = new THREE.LineSegments( wireframe );
+    // scene.add( mesh );
+    // scene.add(line);
+    // line.rotateX(Math.PI/2)
+    // mesh.rotateX(Math.PI/2)
 
     var curve = new THREE.CatmullRomCurve3([
         new THREE.Vector3( -scale*42164/6371, 0, 0 ),
@@ -192,7 +217,7 @@ function drawRIC() {
     ]);
     var geometry = new THREE.TubeGeometry(curve, 4, 0.00025, 8, true);
     curveMesh = new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color: 0x73f5f0} ));
-    console.log(curveMesh,curve);
+    // console.log(curveMesh,curve);
     
     scene.add(curveMesh);
     var geometry = new THREE.ConeGeometry( .000625, 0.0025, 32 ).rotateX(Math.PI/2);
