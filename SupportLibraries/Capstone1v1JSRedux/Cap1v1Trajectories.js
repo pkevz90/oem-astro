@@ -75,6 +75,10 @@ function calcTrajectoryHistory() {
 		for (var kk = 0; kk < t; kk += calcDt){
 			r = math.add(math.multiply(PhiRR(kk),r1),math.multiply(PhiRV(kk),v1));
 			graySat[2].push([r[0],r[1]]);
+			globalChartRef.config.data.datasets[14].data.push({
+				x: r[1],
+				y: r[0]
+			});
 		}
 	}
 	calcData();
@@ -89,7 +93,6 @@ function calcData(curTime = 0) {
 	if (graySat[3] !== undefined) {
 		gray2R = graySat[3][Math.floor(curTime*3600/calcDt)];
 	}
-	console.log(gray1R);
 	
 	setCurrentPoints(9,blueR,10,redR,13,gray1R);
 	let curSun = drawSunVectors(curTime*3600,[redR[0][0],redR[1][0]]);

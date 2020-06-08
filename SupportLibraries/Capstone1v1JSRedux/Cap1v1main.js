@@ -58,7 +58,7 @@ function createGraph() {
 				borderDash: [10,10], borderColor: 'rgba(255,255,255,0.5)',
 			},{
                 // label: "Current Gray",
-                data: [{x: 0, y: 0}], showLine: false, fill: false, showLine: false, pointRadius: 15,
+                data: [{x: 0, y: 0}], showLine: false, fill: false, pointRadius: 15,
 				pointStyle: 'square', backgroundColor: 'rgba(150,150,150,1)',
             },{
                 // label: "Gray Trajectory",
@@ -215,7 +215,6 @@ function setCurrentPoints(blueIndex,bluePoint,redIndex,redPoint,gray1Index,gray1
 	globalChartRef.config.data.datasets[redIndex].data[0].x = redPoint[1];
 	globalChartRef.config.data.datasets[redIndex].data[0].y = redPoint[0];
 	if (gray1Point !== undefined) {
-		console.log('hey');
 		globalChartRef.config.data.datasets[gray1Index].data[0].x = gray1Point[1];
 		globalChartRef.config.data.datasets[gray1Index].data[0].y = gray1Point[0];
 	}

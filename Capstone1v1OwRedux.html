@@ -320,7 +320,6 @@
                             [Number($inputs[8].value)*Math.sin(Number($inputs[11].value)*Math.PI/180)+Number($inputs[10].value)],
                             [Number($inputs[8].value)*n/2*Math.sin(Number($inputs[11].value)*Math.PI/180)],
                             [Number($inputs[8].value)*n*Math.cos(Number($inputs[11].value)*Math.PI/180)-1.5*Number($inputs[9].value)*n]];
-            console.log($('.setup-container').eq(2).children().first().is(':hidden'))
             graySat = [false,false,undefined,undefined];
             if (!$('.setup-container').eq(2).children().first().is(':hidden')) {
                 graySat[0] = [[-Number($inputs[16].value)/2*Math.cos(Number($inputs[19].value)*Math.PI/180)+Number($inputs[17].value)],
