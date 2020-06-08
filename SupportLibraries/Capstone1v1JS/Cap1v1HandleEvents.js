@@ -91,8 +91,8 @@ function handleKeyPress(k) {
 function setAxisZoomPos() {
     globalChartRef.config.options.scales.xAxes[0].ticks.min = axisCenter[0]-axisLimits;
     globalChartRef.config.options.scales.xAxes[0].ticks.max = axisCenter[0]+axisLimits;
-    globalChartRef.config.options.scales.yAxes[0].ticks.min = axisCenter[1]-axisLimits*3/4;
-    globalChartRef.config.options.scales.yAxes[0].ticks.max = axisCenter[1]+axisLimits*3/4;
+    globalChartRef.config.options.scales.yAxes[0].ticks.min = axisCenter[1]-axisLimits*0.5;
+    globalChartRef.config.options.scales.yAxes[0].ticks.max = axisCenter[1]+axisLimits*0.5;
     globalChartRef.update()
 }
 

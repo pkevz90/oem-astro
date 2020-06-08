@@ -135,7 +135,7 @@ function createGraph() {
 					},
                     type: "linear",
                     display: true,
-                    scaleLabel: {display: true, labelString: 'In-Track', fontColor: 'rgba(255,255,255,1)',
+                    scaleLabel: {display: true, labelString: 'In-Track [km]', fontColor: 'rgba(255,255,255,1)',
 						fontSize: 30
                     },
 					ticks: {min: -axisLimits, max: axisLimits, fontSize: 20,
@@ -146,10 +146,10 @@ function createGraph() {
 					gridLines: {zeroLineColor: '#ffcc33', color: 'rgba(255,255,255,0.25)'
 					},
                     display: true,
-                    scaleLabel: {display: true, labelString: 'Radial', fontColor: 'rgba(255,255,255,1)',
+                    scaleLabel: {display: true, labelString: 'Radial [km]', fontColor: 'rgba(255,255,255,1)',
 						fontSize: 30
                     },
-					ticks: { min: -axisLimits*0.75, max: axisLimits*0.75, fontColor: 'rgba(255,255,255,1)',
+					ticks: { min: -axisLimits*0.5, max: axisLimits*0.5, fontColor: 'rgba(255,255,255,1)',
 						fontSize: 20,
 					}
                 }]
