@@ -151,6 +151,20 @@
         .controlTitle:hover {
             background-color: rgba(50,50,50,0.75);
         }
+        .instruction-screen {
+            position: fixed;
+            top: 8%;
+            width: 90%;
+            height: 100%;
+            display: none;
+            z-index: 4;
+            background-color: black;
+            padding-left: 5%;
+            font-size: 1.5vw;
+        }
+        .instruction-screen p,h2,h4 {
+            color: white;
+        }
 	</style>
   </head>
   <body>
@@ -158,6 +172,24 @@
         <li style="padding-left: 2%; font-size: 2.5vw;"><p id="navTitle" >1v1 Simulator</p></li>
         <li class="pointer" id="setup" style="float: right; padding-right: 2%; font-size: 2vw;"><p>Instructions &#9776;</p></li>
     </ul>
+    <div class="instruction-screen">
+        <h2>How to Play</h2>
+        <h4><u>Goal</u></h4>
+        <p>Move blue satellite into an advantageous position with respect to the Sun vector and the red satellite. Success will be defined by the specific mission.
+        </p>
+        <br>
+        <h4><u>Planning Manuevers</u></h4>
+        <p>User is able to plan a maneuver on their RSO every 3 hours for 15 hours</p>
+        <ol>
+            <li>Double-click on the desired waypoint to undergo a maneuver</li>
+            <li>The mouse position relative to the waypoint will decide the magnitue and direction of the maneuver</li>
+            <li>Real-time maneuver data will be displayed on the left of the screen for each time</li>
+            <li>Click again to lock in chosen maneuver</li>
+            <li>Maneuver magnitude will not go above referee defined maximum</li>
+            <li>Alternatively, user can press [E] and manually enter maneuvers</li>
+        </ol>
+        <p>The slider will allow user to view satellite/Sun positions at any scenario time</p>
+    </div>
     <div class="setup-screen">
         <div class="setup-container">
             <p class="container-title" style="color: rgb(100,150,255)">Blue Satellite</p>
@@ -304,6 +336,9 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script>
         var graySat;
+        $('#setup').on('click',()=>{
+            $('.instruction-screen').slideToggle(250);
+        })
         $('.start-button').on('click',()=>{
             $('.setup-screen').fadeOut(500);
             let n = 2*Math.PI/86164;

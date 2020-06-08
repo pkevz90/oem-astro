@@ -20,6 +20,7 @@ var Earth, clouds, sidTime = 0, stopRotate, Sunlight, stars, sunVec, satPoint = 
 var ECI = [], ECEF = [], RIC = [], pari = [];
 var jdUTI0 = julianDateCalcStruct(time);
 
+var $orbitsControls = $('.controls span');
 setupScene();
 drawEarth();
 drawStars();
@@ -32,9 +33,10 @@ var render = function() {
     for (var ii = 0; ii < orbitParams.length; ii++){
         orbitParams[ii].b += timeStep/86164*2*Math.PI;
         if (orbitParams[ii].b > 2*Math.PI) {orbitParams[ii].b -= 2*Math.PI}
-        $('.controls span')[3+ii*6].textContent = (orbitParams[ii].b*180/Math.PI).toFixed(1);
+        $orbitsControls[3+ii*6].textContent = (orbitParams[ii].b*180/Math.PI).toFixed(1);
         orbitParams[ii].M += timeStep/86164*2*Math.PI;
         orbitParams[ii].yd -= 1.5*n*orbitParams[ii].xd*timeStep;
+        $orbitsControls[2+ii*6].textContent = (orbitParams[ii].yd/42164*180/Math.PI).toFixed(2);
         // $('.controls span')[2].textContent = orbitParams[0].yd.toFixed(1);
     }
     sidTime += timeStep/86164*360;
