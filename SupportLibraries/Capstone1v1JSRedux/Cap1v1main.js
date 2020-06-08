@@ -58,7 +58,7 @@ function createGraph() {
 				borderDash: [10,10], borderColor: 'rgba(255,255,255,0.5)',
 			},{
                 // label: "Current Gray",
-                data: [{x: 0, y: 0}], showLine: false, fill: false, pointRadius: 15,
+                data: [], showLine: false, fill: false, pointRadius: 15,
 				pointStyle: 'square', backgroundColor: 'rgba(150,150,150,1)',
             },{
                 // label: "Gray Trajectory",
@@ -178,6 +178,14 @@ function createGraph() {
 
 function startGame() {
 	createGraph();
+	console.log(graySat);
+	
+	if ((graySat[0] !== false) || (graySat[1] !== false)) {
+		globalChartRef.config.data.datasets[13].data = [{
+			x: 0,
+			y: 0
+		}];
+	}
 	burns2waypoints(blueInitState, blueBurns, 0, 10800);
 	burns2waypoints(redInitState, redBurns, 3, 10800);
 	drawSunVectors(0);
