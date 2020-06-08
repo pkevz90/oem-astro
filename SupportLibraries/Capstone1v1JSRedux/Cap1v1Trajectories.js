@@ -75,10 +75,12 @@ function calcTrajectoryHistory() {
 		for (var kk = 0; kk < t; kk += calcDt){
 			r = math.add(math.multiply(PhiRR(kk),r1),math.multiply(PhiRV(kk),v1));
 			graySat[2].push([r[0],r[1]]);
-			globalChartRef.config.data.datasets[14].data.push({
-				x: r[1],
-				y: r[0]
-			});
+			if ((kk % (3*calcDt)) === 0) {
+				globalChartRef.config.data.datasets[14].data.push({
+					x: r[1],
+					y: r[0]
+				});
+			}
 		}
 	}
 	calcData();
