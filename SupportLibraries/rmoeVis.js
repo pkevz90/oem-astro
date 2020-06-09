@@ -310,29 +310,18 @@ function sliderInput(a) {
 }
 document.addEventListener('keypress', function(key){
     let k = key.key;
-    if (k.toLowerCase() === 'e') {
-        ecef = !ecef;
-        if (ecef) {
-            $('.referenceDiv span')[0].textContent = 'Earth-Fixed';
-            Earth.rotation.y  = Math.PI;
-            clouds.rotation.y = Math.PI;
-        }
-        else {
-            $('.referenceDiv span')[0].textContent = 'Inertial';
-            Earth.rotation.y  = sidTime*Math.PI/180+Math.PI;
-            clouds.rotation.y = sidTime*Math.PI/180+Math.PI
-            Sunlight.position.x = -100*sunVec[0][0];
-            Sunlight.position.y = 100*sunVec[2][0];
-            Sunlight.position.z = 100*sunVec[1][0];
-        }
-    }
     if (k === '.' || k === '>') {
         timeStep += 10;
         $('.timeStepDiv span')[0].textContent = timeStep.toFixed(0);
     }
-    if (k === ',' || k === '<') {
+    else if (k === ',' || k === '<') {
         timeStep -= 10;
         $('.timeStepDiv span')[0].textContent = timeStep.toFixed(0);
+    }
+    else if (k.toLowerCase() === 's') {
+        stars.visible = !stars.visible;
+        console.log(stars.visible);
+        
     }
 
 });
