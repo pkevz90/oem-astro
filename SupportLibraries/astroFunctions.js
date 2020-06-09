@@ -168,8 +168,8 @@ function twoBodyProp(coe,dt) {
     return coe;
 }
 
-function RotMat(axis,theta,degrees) {
-    if (degrees !== undefined){
+function RotMat(axis,theta,degrees=false) {
+    if (degrees){
         theta *= Math.PI/180;
     }
     let cs = Math.cos(theta), sn = Math.sin(theta);
@@ -186,39 +186,25 @@ function RotMat(axis,theta,degrees) {
 
 function Eci2Ecef (siderealTime, eciPos) {
     let R = RotMat(3,-siderealTime,'degrees');
-    // console.log(R,eciPos)
-
     return math.multiply(R,eciPos);
 }
 
-function PhiRR(t,n){
-	if (n === undefined){
-		n = 2*Math.PI/86164;
-	}
+function PhiRR(t,n = 2*Math.PI/86164){
 	let nt = n*t;
 	return [[4-3*Math.cos(nt),0],[6*(Math.sin(nt)-nt), 1]];
 }
 
-function PhiRV(t,n){
-	if (n === undefined){
-		n = 2*Math.PI/86164;
-	}
+function PhiRV(t,n = 2*Math.PI/86164){
 	let nt = n*t;
 	return [[Math.sin(nt)/n, 2*(1-Math.cos(nt))/n],[(Math.cos(nt)-1)*2/n, (4*Math.sin(nt)-3*nt)/n]];
 }
 
-function PhiVR(t,n){
-	if (n === undefined){
-		n = 2*Math.PI/86164;
-	}
+function PhiVR(t,n = 2*Math.PI/86164){
 	let nt = n*t;
 	return [[3*n*Math.sin(nt), 0],[6*n*(Math.cos(nt)-1), 0]];
 }
 
-function PhiVV(t,n){
-	if (n === undefined){
-		n = 2*Math.PI/86164;
-	}
+function PhiVV(t,n = 2*Math.PI/86164){
 	let nt = n*t;
 	return [[Math.cos(nt), 2*Math.sin(nt)],[-2*Math.sin(nt), 4*Math.cos(nt)-3]];
 }

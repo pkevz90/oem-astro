@@ -13,7 +13,8 @@ var orbitParams = [{
     yd: 0,
     b: 0,
     zmax: 10,
-    M: 0
+    M: 0,
+    shown: true
 }];
 
 var Earth, clouds, sidTime = 0, stopRotate, Sunlight, stars, sunVec, satPoint = [], orbit = [], r = 2, scene, scale = 10, camera, renderer, controls, ecef = false, timeStep = 60;
@@ -30,14 +31,16 @@ drawOrbit(orbitParams);
 
 var render = function() {
     let n = 2*Math.PI/86164;
-    for (var ii = 0; ii < orbitParams.length; ii++){
+    for (let ii = 0; ii < orbitParams.length; ii++){
         orbitParams[ii].b += timeStep/86164*2*Math.PI;
         if (orbitParams[ii].b > 2*Math.PI) {orbitParams[ii].b -= 2*Math.PI}
-        $orbitsControls[3+ii*6].textContent = (orbitParams[ii].b*180/Math.PI).toFixed(1);
         orbitParams[ii].M += timeStep/86164*2*Math.PI;
         orbitParams[ii].yd -= 1.5*n*orbitParams[ii].xd*timeStep;
-        $orbitsControls[2+ii*6].textContent = (orbitParams[ii].yd/42164*180/Math.PI).toFixed(2);
-        // $('.controls span')[2].textContent = orbitParams[0].yd.toFixed(1);
+
+        if (orbitParams[ii].shown){
+            $orbitsControls[2+ii*6].textContent = (orbitParams[ii].yd/42164*180/Math.PI).toFixed(2);
+            $orbitsControls[3+ii*6].textContent = (orbitParams[ii].b*180/Math.PI).toFixed(1);
+        }
     }
     sidTime += timeStep/86164*360;
     let curSun = Eci2Ecef (sidTime, sunVec);
@@ -72,22 +75,23 @@ function setupScene() {
 }
 
 function drawOrbit(orbitParams) {
-    let r,v,rf, itAng, ctAng, rAng;
+    let r,v,rf, itAng, ctAng, rAng, cosB, sinB;
     let n = 2*Math.PI/86164;
     tailLength = 0.5; let numObjects = $('.controls').length;
     for (var orbitNum = 0; orbitNum < numObjects; orbitNum++) {
-        r = [[-orbitParams[orbitNum].a/2*Math.cos(orbitParams[orbitNum].b)+orbitParams[orbitNum].xd],
-            [orbitParams[orbitNum].a*Math.sin(orbitParams[orbitNum].b)+orbitParams[orbitNum].yd],
+        cosB = Math.cos(orbitParams[orbitNum].b);
+        sinB = Math.sin(orbitParams[orbitNum].b);
+        r = [[-orbitParams[orbitNum].a/2*cosB+orbitParams[orbitNum].xd],
+            [orbitParams[orbitNum].a*sinB+orbitParams[orbitNum].yd],
             [orbitParams[orbitNum].zmax*Math.sin(orbitParams[orbitNum].M)]];
-        v =  [[orbitParams[orbitNum].a*n/2*Math.sin(orbitParams[orbitNum].b)],
-            [orbitParams[orbitNum].a*n*Math.cos(orbitParams[orbitNum].b)-1.5*n*orbitParams[orbitNum].xd],
+        v =  [[orbitParams[orbitNum].a*n/2*sinB],
+            [orbitParams[orbitNum].a*n*cosB-1.5*n*orbitParams[orbitNum].xd],
             [orbitParams[orbitNum].zmax*n*Math.cos(orbitParams[orbitNum].M)]];
         
         var points = [];
-        // let tailLength = Number($('#optionsList input')[0].value)/100;
         
-        for (var ii = 0; ii <= 100; ii++) {
-            t = -ii*86164*tailLength/100;
+        for (var ii = 0; ii <= 50; ii++) {
+            t = -ii*86164*tailLength/50;
             if (ii === 0) {rf = r}
             else {
                 rf = [[-orbitParams[orbitNum].a/2*Math.cos(orbitParams[orbitNum].b+t*n)+orbitParams[orbitNum].xd],
@@ -113,7 +117,7 @@ function drawOrbit(orbitParams) {
             satPoint[orbitNum].position.z = scale*r[1][0]/6371;
 
             var curve = new THREE.CatmullRomCurve3(points);
-            var geometry = new THREE.TubeGeometry(curve, 50, 0.0001, 4, true);
+            var geometry = new THREE.TubeGeometry(curve, 25, 0.0001, 4, true);
             orbit[orbitNum] = new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color: 0xFFC300}));
 
             scene.add(satPoint[orbitNum]);
@@ -134,14 +138,14 @@ function drawOrbit(orbitParams) {
 function drawEarth(){
     var texture = new THREE.TextureLoader().load( './SupportLibraries/Media/2_no_clouds_4k.jpg' );
     var cloudsTexture = new THREE.TextureLoader().load('./SupportLibraries/Media/fair_clouds_4k.png');
-    var geometry = new THREE.SphereGeometry( scale*1, 64, 64 );
+    var geometry = new THREE.SphereGeometry( scale*1, 32, 32 );
     var material = new THREE.MeshLambertMaterial( {
         map: texture
     } );
     Earth = new THREE.Mesh( geometry, material );
     scene.add(Earth);
     clouds = new THREE.Mesh(
-        new THREE.SphereGeometry(scale*1.003, 64, 64),			
+        new THREE.SphereGeometry(scale*1.003, 32, 32),			
         new THREE.MeshPhongMaterial({
             map:  cloudsTexture,
             transparent: true
@@ -149,9 +153,8 @@ function drawEarth(){
     );	
     scene.add(clouds);
     Earth.position.z = 0;
-    sidTime = thetaGMST(jdUTI0);
-    Earth.rotation.y += Math.PI+sidTime*Math.PI/180;
-    clouds.rotation.y += Math.PI+sidTime*Math.PI/180;
+    Earth.rotation.y += Math.PI;
+    clouds.rotation.y += Math.PI;
 }
 
 function drawRIC() {
@@ -170,7 +173,15 @@ function drawRIC() {
         }
         
         var geometry = new THREE.BufferGeometry().setFromPoints( points );
-        Line = new THREE.Line( geometry, material );
+        if (ii === 4) {
+            Line = new THREE.Line( geometry, new THREE.LineBasicMaterial({
+                color: 0xFFFFFF,
+                linewidth: 1
+            }) );
+        }
+        else {
+            Line = new THREE.Line( geometry, material );
+        }
         Line.computeLineDistances();
         scene.add(Line);
     }

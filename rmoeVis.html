@@ -114,7 +114,7 @@
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
-    <script src="./SupportLibraries/astroFunctions.js"></script>
+    <script src="./SupportLibraries/astroFunctions.min.js"></script>
     <script src="./SupportLibraries/three.js-master/build/three.min.js"></script>
     <script src="./SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
     <script src="./SupportLibraries/rmoeVis.js"></script>
@@ -136,37 +136,49 @@
                 b: parseInt(result[3], 16)
             } : null;
         }
-        $('.slidercontainer').on('mouseenter',(a,b)=>{
-            // console.log(a);
-            // $(a.currentTarget).hide();
-            
-        })
         $('.controlTitle').on('click',(a)=>{
+            orbitParams.forEach((el)=>{
+                el.shown = false;
+            })
             if ($(a.target).is('span')) {
                 a.target = $(a.target).parent();
             }
+            let ind = $('.controlTitle').index(a.target);
+            orbitParams[ind].shown = true;
+            
             if (!$(a.target).next().is(":hidden")) {
                 $(a.target).next().slideUp(250);
                 return;
             }
             $('.controls').slideUp(250);
             $(a.target).next().slideDown(250);
+
         })
         $('.addButton').on('click',()=>{
             let len = $('.controlTitle').length;
             $('.controls').slideUp(250);
             let cl = $('.controlTitle').last().clone();
             cl.hide();
+            orbitParams.forEach((el)=>{
+                el.shown = false;
+            })
             cl.on('click',(a)=>{
+                orbitParams.forEach((el)=>{
+                    el.shown = false;
+                })
                 if ($(a.target).is('span')) {
                     a.target = $(a.target).parent();
                 }
+                let ind = $('.controlTitle').index(a.target);
+                orbitParams[ind].shown = true;
+                
                 if (!$(a.target).next().is(":hidden")) {
                     $(a.target).next().slideUp(250);
                     return;
                 }
                 $('.controls').slideUp(250);
                 $(a.target).next().slideDown(250);
+
             })
             cl.find('span')[0].innerText = "Satellite " + (len+1);
             $('.addButton').before(cl);
@@ -180,6 +192,7 @@
                 b: orbitParams[len-1].b,
                 zmax: orbitParams[len-1].zmax,
                 M: orbitParams[len-1].M,
+                shown: true
             }
             cl.find('.slidercontainer').on('input',sliderInput);
             cl.prev().find('input').on('input',changeColor);
