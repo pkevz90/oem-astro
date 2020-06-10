@@ -165,15 +165,15 @@ function drawRIC() {
         linewidth: 1
     });
     let alt, Line, points;
-    for (var ii = 0; ii < 9; ii++){
+    for (var ii = 0; ii < 5; ii++){
         points = [];
-        alt = 42124+ii*10;
+        alt = 42124+ii*20;
         for (var kk = 0; kk <= 2000; kk++) {
             points.push( new THREE.Vector3( -scale*alt/6371*Math.sin(kk*2*Math.PI/2000), 0, scale*alt/6371*Math.cos(kk*2*Math.PI/2000))); 
         }
         
         var geometry = new THREE.BufferGeometry().setFromPoints( points );
-        if (ii === 4) {
+        if (ii === 2) {
             Line = new THREE.Line( geometry, new THREE.LineBasicMaterial({
                 color: 0xFFFFFF,
                 linewidth: 1
@@ -186,7 +186,7 @@ function drawRIC() {
         scene.add(Line);
     }
     let alt1 = 42124, alt2 = 42204;
-    for (var ii = 0; ii < 3600; ii++){
+    for (var ii = 0; ii < 3600; ii+=2.5){
         points = [];
         points.push( new THREE.Vector3( -scale*alt1/6371*Math.sin(ii/10*Math.PI/180), 0, scale*alt1/6371*Math.cos(ii/10*Math.PI/180))); 
         points.push( new THREE.Vector3( -scale*alt2/6371*Math.sin(ii/10*Math.PI/180), 0, scale*alt2/6371*Math.cos(ii/10*Math.PI/180))); 
@@ -198,19 +198,6 @@ function drawRIC() {
         scene.add(Line);
     }
     
-
-    // var geometry = new THREE.RingGeometry( scale*42124/6371, 42204*scale/6371, 3600, 20 );
-    // var wireframe = new THREE.EdgesGeometry( geometry,0 );
-    // var material = new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide, opacity: 0.625, transparent: false } );
-    // var mesh = new THREE.Mesh( geometry, material );
-    // var mesh = new THREE.Mesh( wireframe, material );
-    // var mesh = new THREE.LineSegments( wireframe, material );
-    // var line = new THREE.LineSegments( wireframe );
-    // scene.add( mesh );
-    // scene.add(line);
-    // line.rotateX(Math.PI/2)
-    // mesh.rotateX(Math.PI/2)
-
     var curve = new THREE.CatmullRomCurve3([
         new THREE.Vector3( -scale*42164/6371, 0, 0 ),
         new THREE.Vector3( -scale*42164/6371-scale*0.00156, 0, 0 ),
@@ -301,6 +288,7 @@ function sliderInput(a) {
         b:      orbitParams[ii].b,
         zmax:   Number($('.slidercontainer input')[2+ii*4].value),
         M:      Number($('.slidercontainer input')[3+ii*4].value)*Math.PI/180+orbitParams[ii].b,
+        shown:  true
     }
     $('.controls span')[0+ii*6].textContent = $('.slidercontainer input')[0+ii*4].value;
     $('.controls span')[1+ii*6].textContent = $('.slidercontainer input')[1+ii*4].value;

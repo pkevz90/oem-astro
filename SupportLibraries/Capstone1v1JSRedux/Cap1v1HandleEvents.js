@@ -84,6 +84,12 @@ function handleKeyPress(k) {
 	        calcTrajectoryHistory();
             globalChartRef.update();
             break;
+        case 'p':
+            out = JSON.stringify(Object.assign({},blueBurns));
+            xhttp.open("POST", "http://192.168.1.12:8080/team1", true);
+            xhttp.send(out);
+            
+            break;
     }
     setAxisZoomPos();
 }
@@ -117,8 +123,9 @@ function setSelectedWaypoint(index, side){
 
 function checkClose(X,Y) {
     let xPoint, yPoint;
-    turn = 0;
     // let turn = Number(document.getElementById('turn').querySelector("span").textContent)-1;
+    let turn = Number($('#turn-button p span')[0].textContent)-1;
+    
     for (var ii = turn; ii < globalChartRef.config.data.datasets[0].data.length-1; ii++) {
         xPoint = globalChartRef.config.data.datasets[0].data[ii].x;
         yPoint = globalChartRef.config.data.datasets[0].data[ii].y;

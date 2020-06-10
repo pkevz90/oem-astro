@@ -170,6 +170,7 @@
   <body>
     <ul class="navbar">
         <li style="padding-left: 2%; font-size: 2.5vw;"><p id="navTitle" >1v1 Simulator</p></li>
+        <li class="pointer" id="turn-button" style="padding-left: 30%; font-size: 2vw;"><p>Turn <span>1</span></p></li>
         <li class="pointer" id="setup" style="float: right; padding-right: 2%; font-size: 2vw;"><p>Instructions &#9776;</p></li>
     </ul>
     <div class="instruction-screen">
@@ -335,9 +336,25 @@
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script>
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState === 4) {
+                if (xhttp.status === 0) {
+                    console.log('bad');
+                    return;
+                }
+                redBurns = Object.values(JSON.parse(this.response));
+			    burns2waypoints(redInitState,redBurns,3,10800);
+            }
+        };
         var graySat;
         $('#setup').on('click',()=>{
             $('.instruction-screen').slideToggle(250);
+        })
+        $('#turn-button').on('click',()=>{
+            let turn = $('#turn-button p span')[0].textContent;
+            turn++;
+            $('#turn-button p span')[0].textContent = turn;
         })
         $('.start-button').on('click',()=>{
             $('.setup-screen').fadeOut(500);
