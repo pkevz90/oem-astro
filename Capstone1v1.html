@@ -1,18 +1,19 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.min.js"></script>
 
-	<script src="SupportLibraries/astroFunctions.js"></script>
-	<script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1main.js"></script>
-	<script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1Trajectories.js"></script>
-	<script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1HandleEvents.js"></script>
-	<title>Capstone 1v1</title>
-	<style>
+    <!-- <script src="SupportLibraries/astroFunctions.js"></script> -->
+    <script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1Trajectories.js"></script>
+    <script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1HandleEvents.js"></script>
+    <script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1main.js"></script>
+    <title>RPO 1v1</title>
+    <style>
         .navbar {
             list-style-type: none;
             margin: 0;
@@ -20,10 +21,11 @@
             overflow: hidden;
             background-color: #1f3a52;
         }
+
         body {
             min-height: 300px;
             background: #06090c;
-            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#111b24', endColorstr='#0c4161',GradientType=0 );
+            filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#111b24', endColorstr='#0c4161', GradientType=0);
             height: 100%;
             font-family: "open_sansregular";
             color: rgb(201, 203, 206);
@@ -32,40 +34,47 @@
             transition: transform .2s;
             -webkit-transition: -webkit-transform .2s;
         }
+
         li {
             display: inline-block;
         }
+
         li p {
             display: block;
             color: white;
             padding: 2% 0;
             margin: 0;
         }
+
         .pointer {
             cursor: pointer;
         }
+
         #setup:hover {
             font-weight: bold;
         }
+
         .sideBar {
             position: fixed;
-            background-color: rgba(0,0,0,0);
+            background-color: rgba(0, 0, 0, 0);
             width: 20%;
             height: 100%;
             padding-top: 4%;
             right: 0%;
         }
+
         .controlTitle {
             width: 100%;
             height: auto;
             color: white;
             text-align: center;
-            background-color: rgba(50,50,50,0.35);
+            background-color: rgba(50, 50, 50, 0.35);
             font-weight: bold;
             padding: 2% 0;
             z-index: 2;
             font-size: 2vw;
         }
+
         .setup-screen {
             position: fixed;
             background-color: black;
@@ -75,36 +84,43 @@
             display: flex;
             justify-content: space-around;
         }
+
         .setup-container {
             width: 20%;
             height: 100%;
             z-index: 3;
         }
+
         .container-title {
             text-align: center;
             font-weight: bold;
             width: 100%;
             font-size: 2vw;
         }
+
         .container-title2 {
             text-align: center;
             font-weight: bold;
             width: 100%;
             font-size: 1.5vw;
         }
+
         .rmoe-input {
             width: 20%;
             text-align: center;
             font-size: 1.5vw;
         }
+
         .rmoe-slider {
             width: 80%;
             padding: 0 5%;
         }
+
         .add-button:hover {
-            background-color: rgba(255,255,255,0.25);
+            background-color: rgba(255, 255, 255, 0.25);
             cursor: pointer;
         }
+
         .start-button {
             position: absolute;
             bottom: 10%;
@@ -118,39 +134,47 @@
             font-weight: bold;
             z-index: 3;
         }
+
         .start-button:hover {
-            background-color: rgba(255,255,255,0.25);
+            background-color: rgba(255, 255, 255, 0.25);
             cursor: pointer;
         }
+
         .side-data {
-            background-color: rgba(50,50,50,0.35);
+            background-color: rgba(50, 50, 50, 0.35);
             padding: 0;
         }
+
         #dataContainer {
             font-size: 1.6vw;
             text-align: center;
             padding: 2% 0;
         }
-        .slider-contain{
+
+        .slider-contain {
             position: absolute;
             top: 5%;
             width: 100%;
             height: auto;
-        } 
+        }
+
         .slider-contain p {
             display: inline-block;
             width: 20%;
             margin-left: 10%;
             font-size: 2vw;
         }
+
         .slider-contain input {
             display: inline-block;
             width: 50%;
             margin: 0%;
         }
+
         .controlTitle:hover {
-            background-color: rgba(50,50,50,0.75);
+            background-color: rgba(50, 50, 50, 0.75);
         }
+
         .instruction-screen {
             position: fixed;
             top: 8%;
@@ -162,21 +186,37 @@
             padding-left: 5%;
             font-size: 1.5vw;
         }
-        .instruction-screen p,h2,h4 {
+
+        .instruction-screen p,
+        h2,
+        h4 {
             color: white;
         }
-	</style>
-  </head>
-  <body>
+
+        .selected {
+            background-color: rgba(50, 50, 50, 0.85);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
     <ul class="navbar">
-        <li style="padding-left: 2%; font-size: 2.5vw;"><p id="navTitle" >1v1 Simulator</p></li>
-        <li class="pointer" id="turn-button" style="padding-left: 30%; font-size: 2vw;"><p>Turn <span>1</span></p></li>
-        <li class="pointer" id="setup" style="float: right; padding-right: 2%; font-size: 2vw;"><p>Instructions &#9776;</p></li>
+        <li style="padding-left: 2%; font-size: 2.5vw;">
+            <p id="navTitle">1v1 Simulator</p>
+        </li>
+        <li class="pointer" id="turn-button" style="margin-left: 30%; font-size: 2vw;">
+            <p>Turn <span>1</span></p>
+        </li>
+        <li class="pointer" id="setup" style="float: right; padding-right: 2%; font-size: 2vw;">
+            <p>Instructions &#9776;</p>
+        </li>
     </ul>
     <div class="instruction-screen">
-        <h2>How to Play</h2>
+        <h2>How to Play Test</h2>
         <h4><u>Goal</u></h4>
-        <p>Move blue satellite into an advantageous position with respect to the Sun vector and the red satellite. Success will be defined by the specific mission.
+        <p>Move blue satellite into an advantageous position with respect to the Sun vector and the red satellite.
+            Success will be defined by the specific mission.
         </p>
         <br>
         <h4><u>Planning Manuevers</u></h4>
@@ -200,9 +240,11 @@
             <p class="container-title2"><em>Y<sub>d</sub></em> :<input class="rmoe-input" value="10.0"> km</p>
             <p class="container-title2"><em>&#946</em>: <input class="rmoe-input" value="0.0"> <sup>o</sup></p>
             <p class="container-title2"><u>Scenario Parameters</u></p>
-            <p class="container-title2">&#916V/burn: <input class="rmoe-input" value="0.5"> m/s</p>
-            <p class="container-title2">Required CATS: < <input class="rmoe-input" value="90"> <sup>o</sup></p>
-            <p class="container-title2">Range: <input class="rmoe-input" value="10"> to <input class="rmoe-input" value="15"> km</p>
+            <p class="container-title2">Scenario Length: <input class="rmoe-input" value="15"> hrs</p>
+            <p class="container-title2">&#916V Available: <input class="rmoe-input" value="2.5"> m/s</p>
+            <p class="container-title2">Required CATS: <input class="rmoe-input" value="90"> <sup>o</sup></p>
+            <p class="container-title2">Range: <input class="rmoe-input" value="10"> to <input class="rmoe-input"
+                    value="15"> km</p>
         </div>
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,150,100)">Red Satellite</p>
@@ -211,10 +253,6 @@
             <p class="container-title2"><em>X<sub>d</em></sub> :<input class="rmoe-input" value="0.0"> km</p>
             <p class="container-title2"><em>Y<sub>d</sub></em> :<input class="rmoe-input" value="-10.0"> km</p>
             <p class="container-title2"><em>&#946</em>: <input class="rmoe-input" value="0.0"> <sup>o</sup></p>
-            <p class="container-title2"><u>Scenario Parameters</u></p>
-            <p class="container-title2">&#916V/burn: <input class="rmoe-input" value="0.5"> m/s</p>
-            <p class="container-title2">Required CATS: < <input class="rmoe-input" value="90"> <sup>o</sup></p>
-            <p class="container-title2">Range: <input class="rmoe-input" value="10"> to <input class="rmoe-input" value="15"> km</p>
         </div>
         <div class="setup-container">
             <div style="display: none;">
@@ -225,7 +263,9 @@
                 <p class="container-title2"><em>Y<sub>d</sub></em> :<input class="rmoe-input" value="0.0"> km</p>
                 <p class="container-title2"><em>&#946</em>: <input class="rmoe-input" value="0.0"> <sup>o</sup></p>
             </div>
-            <div class="add-button" style="margin: 100% 40%; padding: 5%; text-align: center; border: 1px solid white; border-radius: 50%;">+</div>
+            <div class="add-button"
+                style="margin: 100% 40%; padding: 5%; text-align: center; border: 1px solid white; border-radius: 50%;">
+                +</div>
         </div>
         <div class="setup-container">
             <div style="display: none;">
@@ -236,7 +276,9 @@
                 <p class="container-title2"><em>Y<sub>d</sub></em> :<input class="rmoe-input" value="0.0"> km</p>
                 <p class="container-title2"><em>&#946</em>: <input class="rmoe-input" value="0.0"> <sup>o</sup></p>
             </div>
-            <div class="add-button" style="margin: 100% 40%; padding: 5%; text-align: center; border: 1px solid white; border-radius: 50%;">+</div>
+            <div class="add-button"
+                style="margin: 100% 40%; padding: 5%; text-align: center; border: 1px solid white; border-radius: 50%;">
+                +</div>
         </div>
         <div class="start-button">Start</div>
     </div>
@@ -244,90 +286,92 @@
         <div class="controlTitle pointer"><span>Engagement Data</span></div>
         <div class="side-data" id="dataContainer">
             <p class="dropdown-item">Current Range: <span>0.00</span> km</p>
-            <p class="dropdown-item">Minimum Range: <span>0.00</span> km @ T +<span>0.0</span> hrs</p>
+            <p class="dropdown-item">Close Approach: <span>0.00</span> km @ T +<span>0.0</span> hrs</p>
             <p class="dropdown-item">CATS Angle: <span>0.00</span> degrees</p>
+            <p class="dropdown-item">Blue &#916V: <span>0.00</span> m/s</p>
+            <p class="dropdown-item">Red &#916V: <span>0.00</span> m/s</p>
         </div>
         <div class="controlTitle pointer"><span style="color:rgb(100,150,255)">Blue Satellite</span></div>
         <div class="side-data" id="dataContainer" style="display: none;">
             <table class="table" id="burnTable" style="margin-top: 3%;">
-				<thead>
-					<tr>
-						<th>Time [hrs]</th>
-						<th>Radial [m/s]</th>
-						<th>In-Track [m/s]</th>
-					</tr>
-				</thead>
-				
-				<tbody id="burnTableBody">
-					<tr>
-						<th>+0</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-					<tr>
-						<th>+3</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-					<tr>
-						<th>+6</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-					<tr>
-						<th>+9</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-					<tr>
-						<th>+12</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-				</tbody>
-			</table >
+                <thead>
+                    <tr>
+                        <th>Time [hrs]</th>
+                        <th>Radial [m/s]</th>
+                        <th>In-Track [m/s]</th>
+                    </tr>
+                </thead>
+
+                <tbody class="pointer" id="burnTableBody">
+                    <tr>
+                        <th>+0</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <th>+3</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <th>+6</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <th>+9</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <th>+12</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         <div class="controlTitle pointer"><span style="color:rgb(255,100,50)">Red Satellite</span></div>
-        <div class="side-data" id="dataContainer"  style="display: none;">
+        <div class="side-data" id="dataContainer" style="display: none;">
             <table class="table" id="burnTable" style="margin-top: 3%;">
-				<thead>
-					<tr>
-						<th>Time [hrs]</th>
-						<th>Radial [m/s]</th>
-						<th>In-Track [m/s]</th>
-					</tr>
-				</thead>
-				<tbody id="burnTableBody">
-					<tr>
-						<th>+0</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-					<tr>
-						<th>+3</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-					<tr>
-						<th>+6</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-					<tr>
-						<th>+9</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-					<tr>
-						<th>+12</th>
-						<td>0.00</td>
-						<td>0.00</td>
-					</tr>
-				</tbody>
-			</table >
+                <thead>
+                    <tr>
+                        <th>Time [hrs]</th>
+                        <th>Radial [m/s]</th>
+                        <th>In-Track [m/s]</th>
+                    </tr>
+                </thead>
+                <tbody class="pointer" id="burnTableBody">
+                    <tr>
+                        <th>+0</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <th>+3</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <th>+6</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <th>+9</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <th>+12</th>
+                        <td>0.00</td>
+                        <td>0.00</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
-    <div style="width:100%; height:auto; margin: auto">
+    <div style="width:95%; height:auto; margin: auto; padding-top: 2.5%">
         <canvas id="ChartCnvs" width="51" height="23"></canvas>
     </div>
     <div class="slider-contain">
@@ -336,64 +380,66 @@
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script>
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (xhttp.readyState === 4) {
-                if (xhttp.status === 0) {
-                    console.log('bad');
-                    return;
-                }
-                redBurns = Object.values(JSON.parse(this.response));
-			    burns2waypoints(redInitState,redBurns,3,10800);
-            }
-        };
-        var graySat;
-        $('#setup').on('click',()=>{
+        var teamNum, $turn = $('#turn-button p span')[0];
+        createGraph();
+        $.get("./start", (data, status) => {
+            teamNum = data;
+        });
+        $('#setup').on('click', () => {
             $('.instruction-screen').slideToggle(250);
         })
-        $('#turn-button').on('click',()=>{
+        $('#turn-button').on('click', () => {
             let turn = $('#turn-button p span')[0].textContent;
             turn++;
+            setSelectedWaypoint(turn - 1, 'blue');
             $('#turn-button p span')[0].textContent = turn;
         })
-        $('.start-button').on('click',()=>{
+        $('.start-button').on('click', () => {
             $('.setup-screen').fadeOut(500);
-            let n = 2*Math.PI/86164;
+            let n = 2 * Math.PI / 86164;
             let $inputs = $('.setup-container').find('input');
-            
-            blueBurns = [[0,0],[0,0],[0,0],[0,0],[0,0]];
-            blueInitState = [[-Number($inputs[0].value)/2*Math.cos(Number($inputs[3].value)*Math.PI/180)+Number($inputs[1].value)],
-                             [Number($inputs[0].value)*Math.sin(Number($inputs[3].value)*Math.PI/180)+Number($inputs[2].value)],
-                             [Number($inputs[0].value)*n/2*Math.sin(Number($inputs[3].value)*Math.PI/180)],
-                             [Number($inputs[0].value)*n*Math.cos(Number($inputs[3].value)*Math.PI/180)-1.5*Number($inputs[1].value)*n]];
-            
-            redBurns = [[0,0],[0,0],[0,0],[0,0],[0,0]];
-            redInitState = [[-Number($inputs[8].value)/2*Math.cos(Number($inputs[11].value)*Math.PI/180)+Number($inputs[9].value)],
-                            [Number($inputs[8].value)*Math.sin(Number($inputs[11].value)*Math.PI/180)+Number($inputs[10].value)],
-                            [Number($inputs[8].value)*n/2*Math.sin(Number($inputs[11].value)*Math.PI/180)],
-                            [Number($inputs[8].value)*n*Math.cos(Number($inputs[11].value)*Math.PI/180)-1.5*Number($inputs[9].value)*n]];
-            graySat = [false,false,undefined,undefined];
-            if (!$('.setup-container').eq(2).children().first().is(':hidden')) {
-                graySat[0] = [[-Number($inputs[16].value)/2*Math.cos(Number($inputs[19].value)*Math.PI/180)+Number($inputs[17].value)],
-                              [Number($inputs[16].value)*Math.sin(Number($inputs[19].value)*Math.PI/180)+Number($inputs[18].value)],
-                              [Number($inputs[16].value)*n/2*Math.sin(Number($inputs[19].value)*Math.PI/180)],
-                              [Number($inputs[16].value)*n*Math.cos(Number($inputs[19].value)*Math.PI/180)-1.5*Number($inputs[17].value)*n]];
-            }
-            if (!$('.setup-container').eq(2).children().eq(1).is(':hidden')) {
-                graySat[1] = [[-Number($inputs[20].value)/2*Math.cos(Number($inputs[23].value)*Math.PI/180)+Number($inputs[21].value)],
-                              [Number($inputs[20].value)*Math.sin(Number($inputs[23].value)*Math.PI/180)+Number($inputs[22].value)],
-                              [Number($inputs[20].value)*n/2*Math.sin(Number($inputs[23].value)*Math.PI/180)],
-                              [Number($inputs[20].value)*n*Math.cos(Number($inputs[23].value)*Math.PI/180)-1.5*Number($inputs[21].value)*n]];
-            }
-            console.log(graySat);
-            
+
+            let blueInit = [
+                [-Number($inputs[0].value) / 2 * Math.cos(Number($inputs[3].value) * Math.PI / 180) +
+                    Number($inputs[1].value)
+                ],
+                [Number($inputs[0].value) * Math.sin(Number($inputs[3].value) * Math.PI / 180) + Number(
+                    $inputs[2].value)],
+                [Number($inputs[0].value) * n / 2 * Math.sin(Number($inputs[3].value) * Math.PI / 180)],
+                [Number($inputs[0].value) * n * Math.cos(Number($inputs[3].value) * Math.PI / 180) - 1.5 *
+                    Number($inputs[1].value) * n
+                ]
+            ]
+            let redInit = [
+                [-Number($inputs[9].value) / 2 * Math.cos(Number($inputs[12].value) * Math.PI / 180) +
+                    Number($inputs[10].value)
+                ],
+                [Number($inputs[9].value) * Math.sin(Number($inputs[12].value) * Math.PI / 180) + Number(
+                    $inputs[11].value)],
+                [Number($inputs[9].value) * n / 2 * Math.sin(Number($inputs[12].value) * Math.PI / 180)],
+                [Number($inputs[9].value) * n * Math.cos(Number($inputs[12].value) * Math.PI / 180) - 1.5 *
+                    Number($inputs[10].value) * n
+                ]
+            ];
+            app.players.blue = new Satellite(blueInit, 'blue', {
+                way: 0,
+                traj: 1,
+                cur: 9
+            });
+            app.players.red = new Satellite(redInit, 'red', {
+                way: 3,
+                traj: 4,
+                cur: 10
+            });
+            app.deltaVAvail = Number($inputs[5].value);
+            app.reqCats = Number($inputs[6].value);
             startGame();
         })
-        $('.add-button').on('click',(a)=>{
+        $('.add-button').on('click', (a) => {
             $(a.target).hide();
             $(a.target).prev().fadeIn();
         })
-        $('.controlTitle').on('click',(a)=>{
+        $('.controlTitle').on('click', (a) => {
             if ($(a.target).is('span')) {
                 a.target = $(a.target).parent();
             }
@@ -404,18 +450,54 @@
             $('.side-data').slideUp(250);
             $(a.target).next().slideDown(250);
         })
-        $('.slider-contain input').on('input',(a)=>{
+        $('.slider-contain input').on('input', (a) => {
             $(a.target).prev().find('span')[0].textContent = a.target.value;
-            calcData(Number(a.target.value));
+            app.currentTime = Number(a.target.value)
+            calcData(app.currentTime);
         })
-        var burnRows, dataRows;
-        {
+        $('tr').on('click', (a) => {
+            let ii = 0;
+            while (!$(a.target).is('tr')) {
+                a.target = $(a.target).parent();
+                console.log(a.target);
+                ii++;
+                if (ii > 5) {
+                    break;
+                }
+            }
+            ii = $('tr').index(a.target);
+            if ((ii === 0) || (ii === 6)) {
+                return;
+            }
+            setSelectedWaypoint((ii > 6) ? ii - 7 : ii - 1, (ii > 6) ? 'red' : 'blue');
+            app.tactic = 'burn';
+            globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
+                x: 0,
+                y: 0
+            }, {
+                x: 0,
+                y: 0
+            }];
+
+        })
+        var burnRows, dataRows; {
             let $tableRows = $('td');
-            burnRows = {blue: $tableRows.splice(0,10), red: $tableRows}
+            app.spans.manRows = {
+                blue: $tableRows.splice(0, 10),
+                red: $tableRows
+            }
             $tableRows = $('.side-data span');
-            dataRows = {curRange: $tableRows.splice(0,1), minRange: $tableRows.splice(0,2), cats: $tableRows}
+            app.spans.scenData = {
+                curRange: $tableRows.splice(0, 1),
+                minRange: $tableRows.splice(0, 2),
+                cats: $tableRows.splice(0, 1),
+                totalDv: {
+                    blue: $tableRows.splice(0, 1),
+                    red: $tableRows.splice(0, 1)
+                }
+            }
         }
-        
     </script>
-  </body>
+</body>
+
 </html>

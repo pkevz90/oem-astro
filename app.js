@@ -20,6 +20,8 @@ var burns = {
 };
 const server = http.createServer(function (req, res) {
     var q = url.parse(req.url, true);
+    console.log(q.pathname);
+    
     if (q.pathname === '/') {q.pathname = '/index.html'}
     if (q.pathname.substring(1,5) === 'team') {
       let data = [];
@@ -27,7 +29,7 @@ const server = http.createServer(function (req, res) {
         data = `${chunk}`;
       });
       req.on('end', () => {
-        burns['1'] = JSON.parse(data);
+        burns[q.pathname.substring(5,6)] = JSON.parse(data);
       })
       outstring = handleBurnRequests(q.pathname);
       res.write(outstring);

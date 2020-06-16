@@ -1,32 +1,41 @@
-function handleHover(valueX,valueY){
-    if (tactic === 'burn') {
-        burnCalc(valueX,valueY);
+function handleHover(valueX, valueY) {
+    if (app.tactic === 'burn') {
+        burnCalc(valueX, valueY);
+    } else if (app.tactic === 'target') {
+        targetCalc(valueX, valueY);
     }
 }
 
-function handleClick(valueX,valueY,shiftcntl){
-    // console.log(valueX,valueY)
-    if (tactic === 'burn') {
-        chosenWaypoint = undefined;
-	    globalChartRef.config.data.datasets[8].data = [];
-        burnCalc(valueX,valueY,true);
+function handleClick(valueX, valueY) {
+    if (app.tactic === 'burn') {
+        app.chosenWaypoint = undefined;
+        globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
+        burnCalc(valueX, valueY, true);
+        return;
+    } else if (app.tactic === 'target') {
+        app.chosenWaypoint = undefined;
+        globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
+        targetCalc(valueX, valueY, true);
         return;
     }
-    if (chosenWaypoint !== undefined) {
-        if(checkPointClose(valueX,valueY,
-            globalChartRef.config.data.datasets[chosenWaypoint[1]].data[chosenWaypoint[0]].x,
-            globalChartRef.config.data.datasets[chosenWaypoint[1]].data[chosenWaypoint[0]].y)){
-                tactic = 'burn';
-                globalChartRef.config.data.datasets[6].data.push({x: 0, y: 0});
-                globalChartRef.config.data.datasets[6].data.push({x: 0, y: 0});
-                // console.log('b')
-                globalChartRef.update();
-                return;
-
+    if (app.chosenWaypoint !== undefined) {
+        if (checkPointClose(valueX, valueY,
+                globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].x,
+                globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].y)) {
+            app.tactic = 'burn';
+            globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
+                x: 0,
+                y: 0
+            }, {
+                x: 0,
+                y: 0
+            }];
+            globalChartRef.update();
+            return;
         }
 
     }
-    if (checkClose(valueX,valueY)){
+    if (checkClose(valueX, valueY)) {
         globalChartRef.update();
         return;
     }
@@ -36,119 +45,122 @@ function handleKeyPress(k) {
     k = k.toLowerCase();
     switch (k) {
         case '=':
-            axisLimits -= 1;
+            app.axisLimits -= 1;
             break;
         case '-':
-            if (axisLimits < 5) {return;}
-            axisLimits += 1;
+            if (app.axisLimits < 5) {
+                return;
+            }
+            app.axisLimits += 1;
             break;
         case 'a':
-            axisCenter[0] += 1;
+            app.axisCenter[0] += 1;
             break;
         case 'd':
-            axisCenter[0] -= 1;
+            app.axisCenter[0] -= 1;
             break;
         case 'w':
-            axisCenter[1] += 1;
+            app.axisCenter[1] += 1;
             break;
         case 's':
-            axisCenter[1] -= 1;
+            app.axisCenter[1] -= 1;
             break;
         case 'e':
-            if (chosenWaypoint === undefined) {
+            if (app.chosenWaypoint === undefined) {
                 return;
             }
             let newR = Number(window.prompt('Enter new radial burn [m/s]: '));
             let newI = Number(window.prompt('Enter new radial burn [m/s]: '));
-            // console.log(newR,newI,math.norm([newR, newI]),maxDv)
-            let nNew = math.norm([newR, newI]);
-            if (nNew > maxDv) {
-                newR = newR*maxDv/nNew;
-                newI = newI*maxDv/nNew;
-                window.alert('Burn scaled to max delta-V')
-            }
-            if (chosenWaypoint[1] === 0) {
-                blueBurns[chosenWaypoint[0]][0] = newR;
-                blueBurns[chosenWaypoint[0]][1] = newI;
-                burns2waypoints(blueInitState, blueBurns, 0, 10800)
-                burnRows[(chosenWaypoint[0])*5+2].textContent = newI.toFixed(2);
-                burnRows[(chosenWaypoint[0])*5+1].textContent = newR.toFixed(2);
-            }
-            else {
-                redBurns[chosenWaypoint[0]][0] = newR;
-                redBurns[chosenWaypoint[0]][1] = newI;
-                burns2waypoints(redInitState, redBurns, 3, 10800)
-                burnRows[(chosenWaypoint[0])*5+3].textContent = newR.toFixed(2);
-                burnRows[(chosenWaypoint[0])*5+4].textContent = newI.toFixed(2);
-            }
-	        calcTrajectoryHistory();
+
+            let sat = (app.chosenWaypoint[1] === app.dataLoc.blueWay) ? 'blue' : 'red';
+            app.burns[sat][app.chosenWaypoint[0]][0] = newR;
+            app.burns[sat][app.chosenWaypoint[0]][1] = newI;
+            app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (newR).toFixed(2);
+            app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (newI).toFixed(2);
+            burns2waypoints(app.initStates[sat], app.burns[sat], app.dataLoc[sat + 'Way'], app.timeBetween);
             globalChartRef.update();
             break;
-        case 'p':
-            out = JSON.stringify(Object.assign({},blueBurns));
-            xhttp.open("POST", "http://192.168.1.12:8080/team1", true);
-            xhttp.send(out);
-            
-            break;
+        case 't':
+            if (app.chosenWaypoint === undefined) {
+                return;
+            }
+            app.tactic = 'target';
+            let totalDv = 0;
+            app.players[(app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red'].burns.forEach((burn, element) => {
+                if (element < app.chosenWaypoint[0]) {
+                    totalDv += math.norm(burn);
+                } else if (element > app.chosenWaypoint[0]) {
+                    app.players[(app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red'].burns[element] = [0, 0];
+                }
+            })
+            app.tacticData = [10800, app.deltaVAvail - totalDv];
+            globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
+                x: 0,
+                y: 0
+            }, {
+                x: 0,
+                y: 0
+            }];
+            app.players[(app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red'].calculateTrajecory();
+            calcData(app.currentTime);
     }
     setAxisZoomPos();
 }
 
 function setAxisZoomPos() {
-    globalChartRef.config.options.scales.xAxes[0].ticks.min = axisCenter[0]-axisLimits;
-    globalChartRef.config.options.scales.xAxes[0].ticks.max = axisCenter[0]+axisLimits;
-    globalChartRef.config.options.scales.yAxes[0].ticks.min = axisCenter[1]-axisLimits*0.5;
-    globalChartRef.config.options.scales.yAxes[0].ticks.max = axisCenter[1]+axisLimits*0.5;
+    globalChartRef.config.options.scales.xAxes[0].ticks.min = app.axisCenter[0] - app.axisLimits;
+    globalChartRef.config.options.scales.xAxes[0].ticks.max = app.axisCenter[0] + app.axisLimits;
+    globalChartRef.config.options.scales.yAxes[0].ticks.min = app.axisCenter[1] - app.axisLimits * 0.5;
+    globalChartRef.config.options.scales.yAxes[0].ticks.max = app.axisCenter[1] + app.axisLimits * 0.5;
     globalChartRef.update()
 }
 
-function setSelectedWaypoint(index, side){ 
-    let sideIndex = 0;
-    if (side === 'red') {
-        sideIndex = 3;
-    }
+function setSelectedWaypoint(index, side) {
+    let sideIndex = app.players[side].dataLoc.way;
+
     if (sideIndex === 0) {
-        // blueRows[index+1].classList.add("selected");
+        $('tr').removeClass('selected');
+        $($('tr')[index + 1]).toggleClass('selected')
+    } else {
+        $('tr').removeClass('selected');
+        $($('tr')[index + 7]).toggleClass('selected')
     }
-    else {
-        // redRows[index+1].classList.add("selected");
-    }
-    chosenWaypoint = [index,sideIndex];
-	globalChartRef.config.data.datasets[8].data = [];
-	globalChartRef.config.data.datasets[8].data.push({
-		x: globalChartRef.config.data.datasets[sideIndex].data[index].x,
-		y: globalChartRef.config.data.datasets[sideIndex].data[index].y,
-	})
+    app.chosenWaypoint = [index, sideIndex];
+    let xPoint = globalChartRef.config.data.datasets[sideIndex].data[index].x,
+        yPoint = globalChartRef.config.data.datasets[sideIndex].data[index].y;
+    globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [{
+        x: xPoint,
+        y: yPoint
+    }];
+    globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
+        x: xPoint,
+        y: yPoint
+    }, {
+        x: xPoint + app.players[side].burns[index][1] * 10,
+        y: yPoint + app.players[side].burns[index][0] * 10
+    }];
+    globalChartRef.update();
 }
 
-function checkClose(X,Y) {
+function checkClose(X, Y) {
     let xPoint, yPoint;
-    // let turn = Number(document.getElementById('turn').querySelector("span").textContent)-1;
-    let turn = Number($('#turn-button p span')[0].textContent)-1;
-    
-    for (var ii = turn; ii < globalChartRef.config.data.datasets[0].data.length-1; ii++) {
-        xPoint = globalChartRef.config.data.datasets[0].data[ii].x;
-        yPoint = globalChartRef.config.data.datasets[0].data[ii].y;
-        // console.log(math.norm([xPoint-X,yPoint-Y]))
-        if (math.norm([xPoint-X,yPoint-Y]) < 2) {
-            setSelectedWaypoint(ii,'blue');
-            return true;
-        }
-    }
-    for (var ii = turn; ii < globalChartRef.config.data.datasets[3].data.length-1; ii++) {
-        xPoint = globalChartRef.config.data.datasets[3].data[ii].x;
-        yPoint = globalChartRef.config.data.datasets[3].data[ii].y;
-        // console.log(math.norm([xPoint-X,yPoint-Y]))
-        if (math.norm([xPoint-X,yPoint-Y]) < 2) {
-            setSelectedWaypoint(ii,'red');
-            return true;
+    let turn = Number($turn.textContent) - 1;
+
+    for (sat in app.players) {
+        for (var ii = turn; ii < globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data.length; ii++) {
+            xPoint = globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data[ii].x;
+            yPoint = globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data[ii].y;
+            if (math.norm([xPoint - X, yPoint - Y]) < 2) {
+                setSelectedWaypoint(ii, sat);
+                return true;
+            }
         }
     }
     return false;
 }
 
-function checkPointClose(X1,Y1,X2,Y2) {
-    if (math.norm([X1-X2,Y1-Y2]) < 2) {
+function checkPointClose(X1, Y1, X2, Y2) {
+    if (math.norm([X1 - X2, Y1 - Y2]) < 2) {
         return true;
     }
 }
