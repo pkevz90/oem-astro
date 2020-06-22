@@ -1,5 +1,5 @@
 let globalChartRef,
-    dragPoint, state1, state2,a,tf;
+    dragPoint, state1, state2,a,tf, $spanList = $('table span');
 
 function createGraph() {
     var config = {
@@ -338,8 +338,6 @@ function drawImpulsiveTraj() {
 	globalChartRef.update();
 }
 function recordStats(X,tf,a) {
-    let $spanList = $('table span');
-    // console.log(X);
     
     $spanList[0].textContent = Number(a*1000).toExponential(1);
     $spanList[1].textContent = (tf/3600).toFixed(2);
