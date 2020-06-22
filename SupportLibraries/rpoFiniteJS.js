@@ -33,7 +33,7 @@ function createGraph() {
                 fill: false,
 				showLine: true,
 				pointRadius: 0,
-				borderColor: 'rgba(255,200,120,0.25)'
+				borderColor: 'rgba(255,200,120,0.45)'
             },{
                 // label: "Points",
                 data: [],
@@ -160,8 +160,9 @@ function performOneBurnAnalysis() {
     let X = hcwFiniteBurnOneBurn(state1, state2, undefined, tf, a);
     drawStartEnd();
     showReach(state1,a,tf);
+    // console.log(X);
     if (X[0] !== false){
-        drawOneBurnTrajectory(state1,X[0],tf,a);
+        drawOneBurnTrajectory(state1,X[1],tf,a);
         recordStats(X,tf,a);
     }
     else {
@@ -173,6 +174,8 @@ function performOneBurnAnalysis() {
 function performTwoBurnAnalysis() {
     let S = proxOpsJacobianTwoBurn(state1,a,0.1,0,0.25,0.2, 0,0.25,3600,2*Math.PI/86164);
     let X2 = hcwFiniteBurnTwoBurn(state1, state2, undefined, tf, a);
+    
+    
     showReach(state1,a,tf);
     if (X2[0] !== false){
         drawOneBurnTrajectory(state1,X2[0],tf,a);
@@ -336,14 +339,16 @@ function drawImpulsiveTraj() {
 }
 function recordStats(X,tf,a) {
     let $spanList = $('table span');
+    // console.log(X);
+    
     $spanList[0].textContent = Number(a*1000).toExponential(1);
     $spanList[1].textContent = (tf/3600).toFixed(2);
-    $spanList[2].textContent = (X[1][2]*tf/60).toFixed(2);
-    $spanList[3].textContent = (Math.cos(X[1][0])).toFixed(3);
-    $spanList[4].textContent = (Math.sin(X[1][0])).toFixed(3);
-    $spanList[8].textContent = (X[0][2]*tf/60).toFixed(2);
-    $spanList[9].textContent = (Math.cos(X[0][0])).toFixed(3);
-    $spanList[10].textContent = (Math.sin(X[0][0])).toFixed(3);
+    $spanList[2].textContent = (X[0][2]*tf/60).toFixed(2);
+    $spanList[3].textContent = (Math.cos(X[0][0])).toFixed(3);
+    $spanList[4].textContent = (Math.sin(X[0][0])).toFixed(3);
+    $spanList[8].textContent = (X[1][2]*tf/60).toFixed(2);
+    $spanList[9].textContent = (Math.cos(X[1][0])).toFixed(3);
+    $spanList[10].textContent = (Math.sin(X[1][0])).toFixed(3);
 
 }
 function handleHover(valueX,valueY){

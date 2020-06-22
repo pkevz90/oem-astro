@@ -410,7 +410,8 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, n, tf, a0) {
     let v1 = v[0], yErr,S,dX = 1,F;
     let dv1 = math.subtract(v1,state.slice(3,6));
     // [alpha - in plane angle, phi - out of plane angle, tB - total burn time %]
-    let X = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf]];
+    let Xret = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf]];
+    let X = Xret.slice();
     if (X[2] > 1) {
         return false;
     }
@@ -420,7 +421,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, n, tf, a0) {
         yErr = [[stateFinal[0][0]-F.x],[stateFinal[1][0]-F.y],[stateFinal[2][0]-F.z]];
         S = proxOpsJacobianOneBurn(stateInit,a0,X[0][0],X[1][0],X[2][0],tf,n);
         dX = math.multiply(math.inv(S),yErr);
-        console.log(X,F)
+        // console.log(X,F)
         X = math.add(X,dX)
         if (errCount > 30) {
             console.log(X)
@@ -428,7 +429,8 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, n, tf, a0) {
         }
         errCount++;
     }
-    return X;
+    
+    return [Xret,X];
 }
 
 function hcwFiniteBurnTwoBurn(stateInit, stateFinal, n, tf, a0) {

@@ -12,7 +12,7 @@
 	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script> -->
 	<!-- <script src="SupportLibraries/mathjs/dist/math.min.js"></script> -->
 	<script src="SupportLibraries/rpoFiniteJS.js"></script>
-	<script src="SupportLibraries/astroFunctions.min.js"></script>
+	<script src="SupportLibraries/astroFunctions.js"></script>
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.min.js"></script>
@@ -93,8 +93,7 @@
   </head>
   <body>
     <ul class="navbar">
-        <li><p id="navTitle">Finite Burn</p></li>
-        <li style="float: right" id="setup"><p>Setup & Instructions &#9776;</p></li>
+        <li><p id="navTitle">Finite Burn Visualizer</p></li>
 	</ul>
 	<div class="row">
 		<div class="col-lg-3">
@@ -105,6 +104,9 @@
 			<div class="slidercontainer">
 				<p>Acceleration: <span>1e-4</span> m/s<sup>2</sup></p>
 				<input type="range" class="slider" min="-7" max="-2" value="-4" step="0.005">
+			</div>
+			<div class="slidercontainer">
+				Click and drag final point to change final position. Impulsive trajectory is subdued. Finite trajectory is split into burn and coast phases, with orange being burn, and blue being coast.
 			</div>
 			<table>
 				<tr>
