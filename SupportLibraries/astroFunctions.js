@@ -28,12 +28,6 @@ function julianDateCalc(time) {
         1721013.5+((s/60+min)/60+h)/24;
 }
 
-function julianDateCalcStruct(time) {
-    // Good
-    return 367*time.year-Math.floor(7*(time.year+Math.floor((time.month+9)/12))/4)+Math.floor(275*time.month/9)+time.day+
-        1721013.5+((time.second/60+time.minute)/60+time.hour)/24;
-}
-
 function moonVectorCalc(JDTBD) {
     T = (JDTBD-2451545)/36525;
 
@@ -65,10 +59,9 @@ function Coe2PosVel(coe) {
     let cRa = Math.cos(coe[3]); let sRa = Math.sin(coe[3]); 
     let cAr = Math.cos(coe[4]); let sAr = Math.sin(coe[4]);
     let cIn = Math.cos(coe[2]); let sin = Math.sin(coe[2]);
-    let R = [[cRa*cAr-sRa*sAr*cIn, -cRa*sAr-sRa*cAr*cIn, sRa*sin],
+    R = [[cRa*cAr-sRa*sAr*cIn, -cRa*sAr-sRa*cAr*cIn, sRa*sin],
          [sRa*cAr+cRa*sAr*cIn, -sRa*sAr+cRa*cAr*cIn, -cRa*sin],
          [sAr*sin, cAr*sin, cIn]];
-    // R = math.transpose(R);
     return [math.multiply(R,r),math.multiply(R,v)];
 }
 
@@ -168,8 +161,8 @@ function twoBodyProp(coe,dt) {
     return coe;
 }
 
-function RotMat(axis,theta,degrees=false) {
-    if (degrees){
+function RotMat(axis,theta,degrees) {
+    if (degrees !== undefined){
         theta *= Math.PI/180;
     }
     let cs = Math.cos(theta), sn = Math.sin(theta);
@@ -186,25 +179,39 @@ function RotMat(axis,theta,degrees=false) {
 
 function Eci2Ecef (siderealTime, eciPos) {
     let R = RotMat(3,-siderealTime,'degrees');
+    // console.log(R,eciPos)
+
     return math.multiply(R,eciPos);
 }
 
-function PhiRR(t,n = 2*Math.PI/86164){
+function PhiRR(t,n){
+	if (n === undefined){
+		n = 2*Math.PI/86164;
+	}
 	let nt = n*t;
 	return [[4-3*Math.cos(nt),0],[6*(Math.sin(nt)-nt), 1]];
 }
 
-function PhiRV(t,n = 2*Math.PI/86164){
+function PhiRV(t,n){
+	if (n === undefined){
+		n = 2*Math.PI/86164;
+	}
 	let nt = n*t;
 	return [[Math.sin(nt)/n, 2*(1-Math.cos(nt))/n],[(Math.cos(nt)-1)*2/n, (4*Math.sin(nt)-3*nt)/n]];
 }
 
-function PhiVR(t,n = 2*Math.PI/86164){
+function PhiVR(t,n){
+	if (n === undefined){
+		n = 2*Math.PI/86164;
+	}
 	let nt = n*t;
 	return [[3*n*Math.sin(nt), 0],[6*n*(Math.cos(nt)-1), 0]];
 }
 
-function PhiVV(t,n = 2*Math.PI/86164){
+function PhiVV(t,n){
+	if (n === undefined){
+		n = 2*Math.PI/86164;
+	}
 	let nt = n*t;
 	return [[Math.cos(nt), 2*Math.sin(nt)],[-2*Math.sin(nt), 4*Math.cos(nt)-3]];
 }
@@ -403,10 +410,9 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, n, tf, a0) {
     let v1 = v[0], yErr,S,dX = 1,F;
     let dv1 = math.subtract(v1,state.slice(3,6));
     // [alpha - in plane angle, phi - out of plane angle, tB - total burn time %]
-    let Xest, X = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf]];
-    Xest = X;
+    let X = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf]];
     if (X[2] > 1) {
-        return [false,0];
+        return false;
     }
     let errCount = 0;
     while (math.norm(math.squeeze(dX)) > 1e-6){
@@ -418,11 +424,11 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, n, tf, a0) {
         X = math.add(X,dX)
         if (errCount > 30) {
             console.log(X)
-            return [false,0];
+            return false;
         }
         errCount++;
     }
-    return [X, Xest];
+    return X;
 }
 
 function hcwFiniteBurnTwoBurn(stateInit, stateFinal, n, tf, a0) {
