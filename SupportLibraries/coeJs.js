@@ -103,7 +103,7 @@ function drawOrbit(orbitParams) {
     if (orbit === undefined){ 
         var material = new THREE.LineBasicMaterial({
             color: 0xFFC300,
-            linewidth: 30
+            linewidth: 2
         });
         var geometry = new THREE.BufferGeometry().setFromPoints( points );
         orbit = new THREE.Line( geometry, material );
