@@ -28,6 +28,12 @@ function julianDateCalc(time) {
         1721013.5+((s/60+min)/60+h)/24;
 }
 
+function julianDateCalcStruct(time) {
+    // Good
+    return 367*time.year-Math.floor(7*(time.year+Math.floor((time.month+9)/12))/4)+Math.floor(275*time.month/9)+time.day+
+        1721013.5+((time.second/60+time.minute)/60+time.hour)/24;
+}
+
 function moonVectorCalc(JDTBD) {
     T = (JDTBD-2451545)/36525;
 
