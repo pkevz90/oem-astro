@@ -72,12 +72,13 @@ function handleKeyPress(k) {
             let newR = Number(window.prompt('Enter new radial burn [m/s]: '));
             let newI = Number(window.prompt('Enter new radial burn [m/s]: '));
 
-            let sat = (app.chosenWaypoint[1] === app.dataLoc.blueWay) ? 'blue' : 'red';
-            app.burns[sat][app.chosenWaypoint[0]][0] = newR;
-            app.burns[sat][app.chosenWaypoint[0]][1] = newI;
+            let sat = (app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red';
+            app.players[sat].burns[app.chosenWaypoint[0]][0] = newR;
+            app.players[sat].burns[app.chosenWaypoint[0]][1] = newI;
             app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (newR).toFixed(2);
             app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (newI).toFixed(2);
-            burns2waypoints(app.initStates[sat], app.burns[sat], app.dataLoc[sat + 'Way'], app.timeBetween);
+            app.players[sat].calculateTrajecory();
+            calcData();
             globalChartRef.update();
             break;
         case 't':
@@ -147,6 +148,7 @@ function checkClose(X, Y) {
     let turn = Number($turn.textContent) - 1;
 
     for (sat in app.players) {
+        if (app.players[sat].name.substr(0,4) === 'gray') {continue;}
         for (var ii = turn; ii < globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data.length; ii++) {
             xPoint = globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data[ii].x;
             yPoint = globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data[ii].y;

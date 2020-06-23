@@ -1,8 +1,4 @@
 function calculateTrajecory() {
-	let numPoints = 50;
-	app.calcDt = app.timeBetween / (numPoints + 1);
-	globalChartRef.config.data.datasets[this.dataLoc.way].data = [];
-	globalChartRef.config.data.datasets[this.dataLoc.traj].data = [];
 	r = [
 		[this.initState[0][0]],
 		[this.initState[1][0]]
@@ -11,6 +7,28 @@ function calculateTrajecory() {
 		[this.initState[2][0]],
 		[this.initState[3][0]]
 	];
+	let pRR = PhiRR(app.calcDt),
+		pRV = PhiRV(app.calcDt),
+		pVR = PhiVR(app.calcDt),
+		pVV = PhiVV(app.calcDt);
+	
+	if (this.name.substr(0,4) === 'gray') {
+		let totalTime = app.timeBetween*app.players.blue.burns.length;
+		for (let t = 0; t <= totalTime; t += app.calcDt) {
+			let r1 = r;
+			r = math.add(math.multiply(pRR, r), math.multiply(pRV, v));
+			v = math.add(math.multiply(pVR, r1), math.multiply(pVV, v));
+			globalChartRef.config.data.datasets[this.dataLoc.traj].data.push({
+				x: r[1][0],
+				y: r[0][0]
+			});
+		}
+		return;
+	}
+	let numPoints = 50;
+	app.calcDt = app.timeBetween / (numPoints + 1);
+	globalChartRef.config.data.datasets[this.dataLoc.way].data = [];
+	globalChartRef.config.data.datasets[this.dataLoc.traj].data = [];
 	globalChartRef.config.data.datasets[this.dataLoc.way].data.push({
 		x: r[1][0],
 		y: r[0][0],
@@ -21,10 +39,6 @@ function calculateTrajecory() {
 		x: r[1][0],
 		y: r[0][0]
 	});
-	let pRR = PhiRR(app.calcDt),
-		pRV = PhiRV(app.calcDt),
-		pVR = PhiVR(app.calcDt),
-		pVV = PhiVV(app.calcDt);
 	this.burns.forEach((burn, index) => {
 		v = math.add(v, math.dotDivide(math.transpose([burn]), 1000));
 		for (let ii = 0; ii <= numPoints; ii++) {
@@ -50,30 +64,21 @@ function calculateTrajecory() {
 }
 
 function calcData(curTime = 0) {
-	let redR = globalChartRef.config.data.datasets[app.players.red.dataLoc.traj].data[Math.floor(curTime * 3600 / app.calcDt)];
-	redR = [
-		[redR.y],
-		[redR.x]
-	];
-	let blueR = globalChartRef.config.data.datasets[app.players.blue.dataLoc.traj].data[Math.floor(curTime * 3600 / app.calcDt)];
-	blueR = [
-		[blueR.y],
-		[blueR.x]
-	];
-
+	let redR, blueR;
 	drawSunVectors(curTime);
-	setCurrentPoints(blueR, redR);
+	let curPoints = setCurrentPoints(curTime);
 
-	let curSun = math.squeeze(drawSunVectors(curTime * 3600, [redR[0][0], redR[1][0]])),
-		relVector = [blueR[0] - redR[0], blueR[1] - redR[1]],
+	let curSun = math.squeeze(drawSunVectors(curTime * 3600, [curPoints.redR[0][0], curPoints.redR[1][0]])),
+		relVector = [curPoints.blueR[0] - curPoints.redR[0], curPoints.blueR[1] - curPoints.redR[1]],
 		catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
 
 	// Update Data
-	app.spans.scenData.curRange[0].textContent = math.norm([redR[0][0] - blueR[0][0], redR[1][0] - blueR[1][0]]).toFixed(2);
+	app.spans.scenData.curRange[0].textContent = math.norm([curPoints.redR[0][0] - curPoints.blueR[0][0], curPoints.redR[1][0] - curPoints.blueR[1][0]]).toFixed(2);
 	app.spans.scenData.cats[0].textContent = (catsAngle * 180 / Math.PI).toFixed(2);
 
 	for (var sat in app.players) {
 		let total = 0;
+		if (app.players[sat].name.substr(0,4) === 'gray') {continue;}
 		app.players[sat].burns.forEach(element => {
 			total += math.norm(element);
 		});
@@ -81,9 +86,9 @@ function calcData(curTime = 0) {
 	}
 
 	if (catsAngle > Math.PI / 2 && math.norm(relVector) >= 10 && math.norm(relVector) <= 15) {
-		drawViewpoint([redR[0][0], redR[1][0]], Math.atan2(relVector[0], relVector[1]), math.norm(relVector), 'red');
+		drawViewpoint([curPoints.redR[0][0], curPoints.redR[1][0]], Math.atan2(relVector[0], relVector[1]), math.norm(relVector), 'red');
 	} else if (catsAngle < Math.PI / 2 && math.norm(relVector) >= 10 && math.norm(relVector) <= 15) {
-		drawViewpoint([blueR[0][0], blueR[1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), 'blue');
+		drawViewpoint([curPoints.blueR[0][0], curPoints.blueR[1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), 'blue');
 	} else {
 		globalChartRef.config.data.datasets[app.dataLoc.view].data = [];
 		globalChartRef.update();

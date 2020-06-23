@@ -9,9 +9,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.min.js"></script>
 
     <!-- <script src="SupportLibraries/astroFunctions.js"></script> -->
+    <script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1main.js"></script>
     <script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1Trajectories.js"></script>
     <script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1HandleEvents.js"></script>
-    <script src="SupportLibraries/Capstone1v1JSRedux/Cap1v1main.js"></script>
     <title>RPO 1v1</title>
     <style>
         .navbar {
@@ -109,6 +109,8 @@
             width: 20%;
             text-align: center;
             font-size: 1.5vw;
+            background-color: black;
+            color: white;
         }
 
         .rmoe-slider {
@@ -131,6 +133,17 @@
             text-align: center;
             font-size: 3vw;
             border-radius: 10px;
+            font-weight: bold;
+            z-index: 3;
+        }
+        .sun-angle {
+            position: absolute;
+            bottom: 40%;
+            width: 20%;
+            left: 30%;
+            height: auto;
+            text-align: center;
+            font-size: 2vw;
             font-weight: bold;
             z-index: 3;
         }
@@ -280,6 +293,7 @@
                 style="margin: 100% 40%; padding: 5%; text-align: center; border: 1px solid white; border-radius: 50%;">
                 +</div>
         </div>
+        <div class="sun-angle">Initial Sun <input class="rmoe-input" id="sun" value="90"><sup>o</sup></div>
         <div class="start-button">Start</div>
     </div>
     <div class="sideBar">
@@ -398,6 +412,10 @@
             $('.setup-screen').fadeOut(500);
             let n = 2 * Math.PI / 86164;
             let $inputs = $('.setup-container').find('input');
+            app.initSunVector = [
+                [15*Math.cos($('#sun')[0].value*Math.PI/180)],
+                [15*Math.sin($('#sun')[0].value*Math.PI/180)]
+            ];
 
             let blueInit = [
                 [-Number($inputs[0].value) / 2 * Math.cos(Number($inputs[3].value) * Math.PI / 180) +
@@ -409,7 +427,7 @@
                 [Number($inputs[0].value) * n * Math.cos(Number($inputs[3].value) * Math.PI / 180) - 1.5 *
                     Number($inputs[1].value) * n
                 ]
-            ]
+            ];
             let redInit = [
                 [-Number($inputs[9].value) / 2 * Math.cos(Number($inputs[12].value) * Math.PI / 180) +
                     Number($inputs[10].value)
@@ -431,8 +449,63 @@
                 traj: 4,
                 cur: 10
             });
+            let init;
+            if ($('.setup-container').eq(2).find('div').eq(0).is(':visible')) {
+                init = [
+                    [-Number($inputs[13].value) / 2 * Math.cos(Number($inputs[16].value) * Math.PI / 180) +
+                        Number($inputs[14].value)
+                    ],
+                    [Number($inputs[13].value) * Math.sin(Number($inputs[16].value) * Math.PI / 180) + Number(
+                        $inputs[15].value)],
+                    [Number($inputs[13].value) * n / 2 * Math.sin(Number($inputs[16].value) * Math.PI / 180)],
+                    [Number($inputs[13].value) * n * Math.cos(Number($inputs[16].value) * Math.PI / 180) - 1.5 *
+                        Number($inputs[14].value) * n
+                    ]
+                ];
+                app.players.gray1 = new Satellite(init,'gray1',{traj: 14, cur: 13})
+            }
+            if ($('.setup-container').eq(3).find('div').eq(0).is(':visible')) {
+                init = [
+                    [-Number($inputs[17].value) / 2 * Math.cos(Number($inputs[20].value) * Math.PI / 180) +
+                        Number($inputs[18].value)
+                    ],
+                    [Number($inputs[17].value) * Math.sin(Number($inputs[20].value) * Math.PI / 180) + Number(
+                        $inputs[19].value)],
+                    [Number($inputs[17].value) * n / 2 * Math.sin(Number($inputs[20].value) * Math.PI / 180)],
+                    [Number($inputs[17].value) * n * Math.cos(Number($inputs[20].value) * Math.PI / 180) - 1.5 *
+                        Number($inputs[18].value) * n
+                    ]
+                ];
+                app.players.gray2 = new Satellite(init,'gray2',{traj: 16, cur: 15})
+            }
             app.deltaVAvail = Number($inputs[5].value);
             app.reqCats = Number($inputs[6].value);
+            setInterval(() => {
+                out = JSON.stringify(Object.assign({}, app.players.blue.burns));
+                $.post("./team" + teamNum, out, (data, status) => {
+                    let turn = Number($turn.textContent) - 1;
+                    let tempBurns = Object.values(JSON.parse(data));
+                    change = false;
+                    let sat = 'red';
+                    for (let ii = 0; ii < turn; ii++) {
+                        if ((app.players.red.burns[ii][0] === tempBurns[ii][0]) && (app.players
+                                .red.burns[ii][1] === tempBurns[ii][1])) {
+                            continue;
+                        } else {
+                            app.players.red.burns[ii] = tempBurns[ii];
+                            change = true;
+                            app.spans.manRows[sat][ii * 2].textContent = (tempBurns[ii][0])
+                                .toFixed(2);
+                            app.spans.manRows[sat][ii * 2 + 1].textContent = (tempBurns[ii][1])
+                                .toFixed(2);
+                        }
+                    }
+                    if (change) {
+                        app.players.red.calculateTrajecory();
+                        calcData(app.currentTime);
+                    }
+                });
+            }, 2500);
             startGame();
         })
         $('.add-button').on('click', (a) => {

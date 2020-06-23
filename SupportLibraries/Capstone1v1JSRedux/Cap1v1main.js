@@ -1,17 +1,21 @@
 let globalChartRef;
 
-function Satellite(initState, name, dataLoc) {
-	this.name = name;
-	this.initState = initState;
-	this.burns = [
-		[0, 0],
-		[0, 0],
-		[0, 0],
-		[0, 0],
-		[0, 0]
-	];
-	this.calculateTrajecory = calculateTrajecory;
-	this.dataLoc = dataLoc;
+class Satellite {
+	constructor(initState, name, dataLoc) {
+		this.name = name;
+		this.initState = initState;
+		if (name !== 'gray') {
+			this.burns = [
+				[0, 0],
+				[0, 0],
+				[0, 0],
+				[0, 0],
+				[0, 0]
+			];
+		} 
+		this.calculateTrajecory = calculateTrajecory;
+		this.dataLoc = dataLoc;
+	}
 }
 let app = {
 	players: {
@@ -176,15 +180,30 @@ function createGraph() {
 				borderDash: [10, 10],
 				borderColor: 'rgba(255,255,255,0.5)',
 			}, {
-				// label: "Current Gray",
+				// label: "Current Gray1",
 				data: [],
 				showLine: false,
 				fill: false,
 				pointRadius: 15,
-				pointStyle: 'square',
+				pointStyle: 'rect',
 				backgroundColor: 'rgba(150,150,150,1)',
 			}, {
-				// label: "Gray Trajectory",
+				// label: "Gray Trajectory1",
+				data: [],
+				fill: false,
+				showLine: true,
+				pointRadius: 0,
+				borderColor: 'rgba(150,150,150,1)',
+			}, {
+				// label: "Current Gray2",
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 15,
+				pointStyle: 'rect',
+				backgroundColor: 'rgba(150,150,150,1)',
+			}, {
+				// label: "Gray Trajectory2",
 				data: [],
 				fill: false,
 				showLine: true,
@@ -280,8 +299,9 @@ function createGraph() {
 }
 
 function startGame() {
-	app.players.blue.calculateTrajecory();
-	app.players.red.calculateTrajecory();
+	for (sat in app.players) {
+		app.players[sat].calculateTrajecory();
+	}
 	calcData();
 	// app.updateApp()
 	document.addEventListener('keydown', function (element) {
@@ -312,24 +332,27 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 	return SunVector;
 }
 
-function setCurrentPoints(bluePoint, redPoint) {
-	globalChartRef.config.data.datasets[app.players.blue.dataLoc.cur].data = [{
-		x: bluePoint[1],
-		y: bluePoint[0]
-	}];
-
-	globalChartRef.config.data.datasets[app.players.red.dataLoc.cur].data = [{
-		x: redPoint[1],
-		y: redPoint[0]
-	}];
+function setCurrentPoints(curTime) {
+	var points = {};
+	for (sat in app.players) {
+		points[sat+'R'] = [
+			[globalChartRef.config.data.datasets[app.players[sat].dataLoc.traj].data[Math.floor(curTime * 3600 / app.calcDt)].y],
+			[globalChartRef.config.data.datasets[app.players[sat].dataLoc.traj].data[Math.floor(curTime * 3600 / app.calcDt)].x]
+		];
+		globalChartRef.config.data.datasets[app.players[sat].dataLoc.cur].data = [{
+			x: points[sat+'R'][1],
+			y: points[sat+'R'][0]
+		}];
+	}
 
 	globalChartRef.config.data.datasets[app.dataLoc.relLine].data = [{
-		x: redPoint[1],
-		y: redPoint[0]
+		x: points['redR'][1],
+		y: points['redR'][0]
 	}, {
-		x: bluePoint[1],
-		y: bluePoint[0]
+		x: points['blueR'][1],
+		y: points['blueR'][0]
 	}]
+	return points;
 }
 
 function drawViewpoint(pos, az, range, color = 'red') {
