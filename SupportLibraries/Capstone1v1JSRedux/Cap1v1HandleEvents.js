@@ -77,6 +77,15 @@ function handleKeyPress(k) {
             app.players[sat].burns[app.chosenWaypoint[0]][1] = newI;
             app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (newR).toFixed(2);
             app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (newI).toFixed(2);
+            let xPoint = globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].x,
+                yPoint = globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].y;
+            globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
+                x: xPoint,
+                y: yPoint
+            }, {
+                x: xPoint + newI * 10,
+                y: yPoint + newR * 10
+            }];
             app.players[sat].calculateTrajecory();
             calcData();
             globalChartRef.update();
