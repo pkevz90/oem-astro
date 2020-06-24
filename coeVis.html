@@ -223,6 +223,87 @@
         $('#optionsList').on('mouseleave',()=>{
             $('#optionsList').hide(); 
         })
+        var editTarget;
+        function changeColor (a) {
+            
+            let p = $(a.target).parent();
+            let ii = $('.controlTitle').index(p);
+            let c = hexToRgb(a.target.value);
+            
+            orbit[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
+            satPoint[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
+        }
+        function hexToRgb(hex) {
+            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+        $('.controlTitle').on('click',(a)=>{
+            orbitParams.forEach((el)=>{
+                el.shown = false;
+            })
+            if ($(a.target).is('span')) {
+                a.target = $(a.target).parent();
+            }
+            let ind = $('.controlTitle').index(a.target);
+            orbitParams[ind].shown = true;
+            
+            if (!$(a.target).next().is(":hidden")) {
+                $(a.target).next().slideUp(250);
+                return;
+            }
+            $('.controls').slideUp(250);
+            $(a.target).next().slideDown(250);
+
+        })
+        $('.addButton').on('click',()=>{
+            let len = $('.controlTitle').length;
+            $('.controls').slideUp(250);
+            let cl = $('.controlTitle').last().clone();
+            cl.hide();
+            orbitParams.forEach((el)=>{
+                el.shown = false;
+            })
+            cl.on('click',(a)=>{
+                orbitParams.forEach((el)=>{
+                    el.shown = false;
+                })
+                if ($(a.target).is('span')) {
+                    a.target = $(a.target).parent();
+                }
+                let ind = $('.controlTitle').index(a.target);
+                orbitParams[ind].shown = true;
+                
+                if (!$(a.target).next().is(":hidden")) {
+                    $(a.target).next().slideUp(250);
+                    return;
+                }
+                $('.controls').slideUp(250);
+                $(a.target).next().slideDown(250);
+
+            })
+            cl.find('span')[0].innerText = "Satellite " + (len+1);
+            $('.addButton').before(cl);
+            $('.controlTitle').last().slideDown(250);
+            cl = $('.controls').last().clone();
+            $('.addButton').before(cl);
+            orbitParams[len] = {
+                a: orbitParams[len-1].a,
+                xd: orbitParams[len-1].xd,
+                yd: orbitParams[len-1].yd,
+                b: orbitParams[len-1].b,
+                zmax: orbitParams[len-1].zmax,
+                M: orbitParams[len-1].M,
+                shown: true
+            }
+            cl.find('.slidercontainer').on('input',sliderInput);
+            cl.prev().find('input').on('input',changeColor);
+            $orbitsControls = $('.controls span');
+        })
+        $('.controlTitle input').on('input',changeColor);
     </script>
     <script src="./SupportLibraries/coeJs.js"></script>
 </body>
