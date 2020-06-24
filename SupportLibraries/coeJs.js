@@ -295,67 +295,76 @@ window.addEventListener('load', (event) => {
 
 $('#orbitList p').on('click', (a) => {
     let orbit = a.target.innerHTML;
+    let kk;
+    $('.controls').each(index => {
+        if ($('.controls').eq(index).is(':visible')) {
+            kk = index;
+        }
+    });
+    console.log(kk)
     switch (orbit) {
         case 'ISS':
-            orbitParams = {
+            orbitParams[kk] = {
                 a: 6784.2389,
                 e: 0.0002297,
                 i: 51.6444,
                 raan: 0,
                 arg: 0,
-                mA: orbitParams.mA
+                mA: orbitParams[kk].mA
             }
             break;
         case 'GPS':
-            orbitParams = {
+            orbitParams[kk] = {
                 a: 26561.7437,
                 e: 0,
                 i: 55,
                 raan: 0,
                 arg: 0,
-                mA: orbitParams.mA
+                mA: orbitParams[kk].mA
             }
             break;
         case 'Molniya':
 
-            orbitParams = {
+            orbitParams[kk] = {
                 a: 26561.7437,
                 e: 0.74,
                 i: 63.4,
                 raan: 0,
                 arg: 270,
-                mA: orbitParams.mA
+                mA: orbitParams[kk].mA
             }
             break;
         case 'Sun-Synchronous':
-            orbitParams = {
+            orbitParams[kk] = {
                 a: 6784.2389,
                 e: 0.0002297,
                 i: 98,
                 raan: 0,
                 arg: 0,
-                mA: orbitParams.mA
+                mA: orbitParams[kk].mA
             }
             break;
         case 'Geo-Stationary':
-            orbitParams = {
+            orbitParams[kk] = {
                 a: 42164,
                 e: 0,
                 i: 0,
                 raan: 0,
                 arg: 0,
-                mA: orbitParams.mA
+                mA: orbitParams[kk].mA
             }
             break;
         default:
             break;
     }
-    $('.slidercontainer input')[0].value = orbitParams.a;
-    $('.slidercontainer input')[1].value = orbitParams.e;
-    $('.slidercontainer input')[2].value = orbitParams.i;
-    $('.slidercontainer input')[3].value = orbitParams.raan;
-    $('.slidercontainer input')[4].value = orbitParams.arg;
-    for (var ii = 0; ii < 5; ii++) {
-        $('.controls span')[ii].textContent = $('.slidercontainer input')[ii].value;
-    }
+    $('.slidercontainer input')[0+kk*6].value = orbitParams[kk].a;
+    $('.slidercontainer input')[1+kk*6].value = orbitParams[kk].e;
+    $('.slidercontainer input')[2+kk*6].value = orbitParams[kk].i;
+    $('.slidercontainer input')[3+kk*6].value = orbitParams[kk].raan;
+    $('.slidercontainer input')[4+kk*6].value = orbitParams[kk].arg;
+    $('.controls span')[0+kk*6].textContent = $('.slidercontainer input')[0+kk*6].value;
+    $('.controls span')[1+kk*6].textContent = $('.slidercontainer input')[1+kk*6].value;
+    $('.controls span')[2+kk*6].textContent = $('.slidercontainer input')[2+kk*6].value;
+    $('.controls span')[3+kk*6].textContent = $('.slidercontainer input')[3+kk*6].value;
+    $('.controls span')[4+kk*6].textContent = $('.slidercontainer input')[4+kk*6].value;
 })
