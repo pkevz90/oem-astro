@@ -84,10 +84,10 @@ function setupScene() {
 
 function drawOrbit(orbitParams) {
     let r, r0;
-    orbitParams.forEach(orbit => {
-        let tA = Eccentric2True(orbit.e, solveKeplersEquation(orbit.mA * Math.PI / 180, orbit.e))
-        let period = 2 * Math.PI * Math.sqrt(Math.pow(orbit.a, 3) / 398600.4418);
-        let coe = [orbit.a, orbit.e, orbit.i * Math.PI / 180, orbit.raan * Math.PI / 180, orbit.arg * Math.PI / 180, tA]
+    orbitParams.forEach((orbitP,index) => {
+        let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
+        let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
+        let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, orbitP.raan * Math.PI / 180, orbitP.arg * Math.PI / 180, tA]
 
         var points = [];
         let tailLength = Number($('#optionsList input')[0].value) / 100;
@@ -106,32 +106,32 @@ function drawOrbit(orbitParams) {
 
             coe = twoBodyProp(coe, -tailLength * period / 199);
         }
-        if (orbit === undefined) {
+        if (orbit[index] === undefined) {
             var material = new THREE.LineBasicMaterial({
                 color: 0xFFC300,
                 linewidth: 2
             });
             var geometry = new THREE.BufferGeometry().setFromPoints(points);
-            orbit = new THREE.Line(geometry, material);
+            orbit[index] = new THREE.Line(geometry, material);
             var geometry = new THREE.SphereGeometry(0.05, 6, 6);
             var material = new THREE.MeshBasicMaterial({
                 color: 0xFFC300
             });
-            satPoint = new THREE.Mesh(geometry, material);
+            satPoint[index] = new THREE.Mesh(geometry, material);
             // coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, tA]
             // r = Coe2PosVel(coe);
-            satPoint.position.x = -r0[0][0] / 6371;
-            satPoint.position.y = r0[2][0] / 6371;
-            satPoint.position.z = r0[1][0] / 6371;
+            satPoint[index].position.x = -r0[0][0] / 6371;
+            satPoint[index].position.y = r0[2][0] / 6371;
+            satPoint[index].position.z = r0[1][0] / 6371;
 
-            scene.add(satPoint);
-            scene.add(orbit);
+            scene.add(satPoint[index]);
+            scene.add(orbit[index]);
         } else {
             // Edit orbitVar
-            orbit.geometry.setFromPoints(points);
-            satPoint.position.x = -r0[0][0] / 6371;
-            satPoint.position.y = r0[2][0] / 6371;
-            satPoint.position.z = r0[1][0] / 6371;
+            orbit[index].geometry.setFromPoints(points);
+            satPoint[index].position.x = -r0[0][0] / 6371;
+            satPoint[index].position.y = r0[2][0] / 6371;
+            satPoint[index].position.z = r0[1][0] / 6371;
         }
     })
 
@@ -241,21 +241,25 @@ $('#optionsList input').on('input', () => {
         item.visible = $('#optionsList input')[2].checked
     })
 })
-
-$('.slidercontainer input').on('input', () => {
-    orbitParams = {
-        a: Number($('.slidercontainer input')[0].value),
-        e: Number($('.slidercontainer input')[1].value),
-        i: Number($('.slidercontainer input')[2].value),
-        raan: Number($('.slidercontainer input')[3].value),
-        arg: Number($('.slidercontainer input')[4].value),
-        mA: orbitParams.mA
-    }
-    for (var ii = 0; ii < 5; ii++) {
-        $('.controls span')[ii].textContent = $('.slidercontainer input')[ii].value;
-    }
+function sliderInput(a) {
+    let p = $(a.target).parent().parent();
+    let ii = $('.controls').index(p);
+    orbitParams[ii] = {
+        a: Number($('.slidercontainer input')[0+ii*6].value),
+        e: Number($('.slidercontainer input')[1+ii*6].value),
+        i: Number($('.slidercontainer input')[2+ii*6].value),
+        raan: Number($('.slidercontainer input')[3+ii*6].value),
+        arg: Number($('.slidercontainer input')[4+ii*6].value),
+        mA: orbitParams[ii].mA
+    };
+    $('.controls span')[0+ii*6].textContent = $('.slidercontainer input')[0+ii*6].value;
+    $('.controls span')[1+ii*6].textContent = $('.slidercontainer input')[1+ii*6].value;
+    $('.controls span')[2+ii*6].textContent = $('.slidercontainer input')[2+ii*6].value;
+    $('.controls span')[3+ii*6].textContent = $('.slidercontainer input')[3+ii*6].value;
+    $('.controls span')[4+ii*6].textContent = $('.slidercontainer input')[4+ii*6].value;
     drawOrbit(orbitParams);
-})
+}
+$('.slidercontainer input').on('input', sliderInput);
 
 document.addEventListener('keypress', function (key) {
     let k = key.key;

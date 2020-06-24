@@ -292,12 +292,11 @@
             $('.addButton').before(cl);
             orbitParams[len] = {
                 a: orbitParams[len-1].a,
-                xd: orbitParams[len-1].xd,
-                yd: orbitParams[len-1].yd,
-                b: orbitParams[len-1].b,
-                zmax: orbitParams[len-1].zmax,
-                M: orbitParams[len-1].M,
-                shown: true
+                e: orbitParams[len-1].e,
+                i: orbitParams[len-1].i,
+                raan: orbitParams[len-1].raan,
+                arg: orbitParams[len-1].arg,
+                mA: orbitParams[len-1].mA
             }
             cl.find('.slidercontainer').on('input',sliderInput);
             cl.prev().find('input').on('input',changeColor);
