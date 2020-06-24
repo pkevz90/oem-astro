@@ -8,9 +8,9 @@ var time = {
 }
 
 var orbitParams = {
-    a: 42164,
+    a: 8000,
     e: 0,
-    i: 0,
+    i: 45,
     raan: 0,
     arg: 0,
     mA: 0

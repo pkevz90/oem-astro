@@ -6,38 +6,41 @@
     <title>Classical Orbital Elements</title>
     <style>
         .controls {
-            position: absolute;
+            /* position: absolute; */
             float: left;
-            width: 20%;
+            width: 100%;
             /* height: 40%; */
-            top: 6.25%;
             background-color: rgba(50,50,50,0.5);
             /* display: none; */
             color: white;
         }
-        .controlTitle {
-            position: absolute;
+        .sideBar {
+            position: fixed;
+            background-color: rgba(0,0,0,0);
             width: 20%;
+            height: 100%;
+            padding-top: 1%;
+        }
+        .slider {
+            width: 100%;
+        }
+        .controlTitle {
+            width: 100%;
             height: 5%;
             float: left;
             color: white;
             text-align: center;
+            background-color: rgba(50,50,50,0.5);
             font-weight: bold;
             z-index: 2;
             font-size: 2vw;
-        }
-        .controlTitle:hover {
-            background-color: rgba(50,50,50,0.5);
-        }
-        .slider {
-            width: 100%;
         }
         .slidercontainer {
             padding: 1.5% 10%;
             font-size: 1.5vw;
         }
         .slidercontainer p {
-            height: 5%;
+            margin: 1%;
         }
         .referenceDiv {
             position: fixed;
@@ -60,16 +63,15 @@
             font-size: 1.5vw;
             opacity: 0.5;
         }
-        .taDiv {
-            position: fixed;
-            bottom: 0%;
+        .addButton {
+            float: right;
+            border: 1px solid white;
             color: white;
-            /* width: 20%; */
-            left: 2%;
-            text-align: center;
-            padding-right: 1%;
-            font-size: 1.5vw;
-            opacity: 0.5;
+            padding: 1% 2%;
+            border-radius: 10%;
+        }
+        .addButton:hover {
+            background-color: rgba(50,50,50,0.75);
         }
         .loadingScreen {
             position: fixed;
@@ -161,38 +163,36 @@
         <input type="color" value="#FFC300">
     </div>
     <!-- <div class="controlTitle">Change Elements</div> -->
-    <div class="controls">
-        <div class="slidercontainer">
-			<p><em>a</em>: <span>42164</span> km</p>
-            <input type="range" class="slider" min="6600" max="50000" value="42164" step="1">
-            <div class="drop-down">
-                <p>Semi-Major Axis</p>
-                <p>Orbital Period</p>
-                <p>Mean Motion</p>
+    <div class="sideBar">
+        <div class="controlTitle pointer"><span>Satellite 1</span>
+            <input type="color" value="#FFC300"></div>
+        <div class="controls">
+            <div class="slidercontainer">
+                <p><em>a</em>: <span>8000</span> km</p>
+                <input type="range" class="slider" min="6700" max="60000" value="8000" step="0.1">
             </div>
-		</div>
-        <div class="slidercontainer">
-			<p><em>e</em>: <span>0.00</span></p>
-            <input type="range" class="slider" min="0" max="0.9" value="0" step="0.01">
-            <div class="drop-down">
-                <p>Eccentricity</p>
-                <p>Apogee Radius</p>
-                <p>Perigee Radius</p>
-                <p>Semi-Latus Rectum</p>
+            <div class="slidercontainer">
+                <p><em>e</em>: <span>0.00</span></p>
+                <input type="range" class="slider" min="0" max="0.9" value="0" step="0.01">
             </div>
-		</div>
-        <div class="slidercontainer">
-			<p><em>i</em>: <span>0.0</span> deg</p>
-			<input type="range" class="slider" min="0" max="180" value="0" step="0.1">
-		</div>
-        <div class="slidercontainer">
-			<p><em>&#937</em>: <span>0.0</span> deg</p>
-			<input type="range" class="slider" min="0" max="360" value="0" step="0.1">
-		</div>
-        <div class="slidercontainer">
-			<p><em>&#969</em>: <span>0.0</span> deg</p>
-			<input type="range" class="slider" min="0" max="360" value="0" step="0.1">
-		</div>
+            <div class="slidercontainer">
+                <p><em>i</em>: <span>45.0</span><sup>o</sup></p>
+                <input type="range" class="slider" min="0" max="180" value="45" step="0.1">
+            </div>
+            <div class="slidercontainer">
+                <p><em>&#937</em>: <span>0.0</span><sup>o</sup></p>
+                <input type="range" class="slider" min="0" max="360" value="0" step="0.1">
+            </div>
+            <div class="slidercontainer">
+                <p><em>&#969</em>: <span>0.0</span><sup>o</sup></p>
+                <input type="range" class="slider" min="0" max="360" value="0" step="0.1">
+            </div>
+            <div class="slidercontainer">
+                <p><em>&#957</em>: <span>0.0</span> deg</p>
+                <input type="range" class="slider" min="0" max="360" value="0" step="0.1">
+            </div>
+        </div>
+        <div class="addButton pointer">+</div>
     </div>
     <div class="referenceDiv">
         Earth-Centered <span>Inertial</span>
