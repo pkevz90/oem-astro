@@ -138,8 +138,8 @@ function drawOrbit(orbitParams) {
 }
 
 function drawEarth() {
-    var texture = new THREE.TextureLoader().load('./SupportLibraries/Media/2_no_clouds_4k.jpg');
-    var cloudsTexture = new THREE.TextureLoader().load('./SupportLibraries/Media/fair_clouds_4k.png');
+    var texture = new THREE.TextureLoader().load('.//Media/2_no_clouds_4k.jpg');
+    var cloudsTexture = new THREE.TextureLoader().load('./Media/fair_clouds_4k.png');
     var geometry = new THREE.SphereGeometry(1, 64, 64);
     var material = new THREE.MeshLambertMaterial({
         map: texture
@@ -208,7 +208,7 @@ function drawTube() {
 }
 
 function drawStars() {
-    var starTexture = new THREE.TextureLoader().load('./SupportLibraries/Media/galaxy_starfield.png');
+    var starTexture = new THREE.TextureLoader().load('./Media/galaxy_starfield.png');
 
     stars = new THREE.Mesh(
         new THREE.SphereGeometry(90, 64, 64),
