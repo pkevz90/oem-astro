@@ -73,16 +73,16 @@ function handleKeyPress(k) {
         axisLimits += 1;
         globalChartRef.config.options.scales.xAxes[0].ticks.min = -axisLimits;
         globalChartRef.config.options.scales.xAxes[0].ticks.max = axisLimits;
-        globalChartRef.config.options.scales.yAxes[0].ticks.min = -axisLimits*3/4;
-        globalChartRef.config.options.scales.yAxes[0].ticks.max = axisLimits*3/4;
+        globalChartRef.config.options.scales.yAxes[0].ticks.min = -axisLimits*3/5;
+        globalChartRef.config.options.scales.yAxes[0].ticks.max = axisLimits*3/5;
     }
     else if (k === '=' || k === '+'){
         //Zooom in
         axisLimits -= 1;
         globalChartRef.config.options.scales.xAxes[0].ticks.min = -axisLimits;
         globalChartRef.config.options.scales.xAxes[0].ticks.max = axisLimits;
-        globalChartRef.config.options.scales.yAxes[0].ticks.min = -axisLimits*3/4;;
-        globalChartRef.config.options.scales.yAxes[0].ticks.max = axisLimits*3/4;;
+        globalChartRef.config.options.scales.yAxes[0].ticks.min = -axisLimits*3/5;
+        globalChartRef.config.options.scales.yAxes[0].ticks.max = axisLimits*3/5;
     }else if (k === 'n'){
         tactic = 'nmc';
         showNoteBar('Natural Motion Circumnavigation');
