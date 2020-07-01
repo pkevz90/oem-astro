@@ -180,6 +180,7 @@ function burnCalc(xMouse, yMouse, click = false) {
 		app.players[sat].burns[app.chosenWaypoint[0]] = [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)];
 		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (distance / 10 * Math.sin(az)).toFixed(2);
 		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (distance / 10 * Math.cos(az)).toFixed(2);
+		showNoteBar('R: ' + (distance / 10 * Math.sin(az)).toFixed(2) + ' m/s, I: ' + (distance / 10 * Math.cos(az)).toFixed(2) + ' m/s');
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
 			x: xPoint,
 			y: yPoint

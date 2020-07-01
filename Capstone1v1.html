@@ -5,16 +5,235 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <script src="./SupportLibraries/Chart.bundle.min.js"></script>
-    <script src="./SupportLibraries/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.min.js"></script>
 
     <!-- <script src="SupportLibraries/astroFunctions.js"></script> -->
-    <script src="./js/Cap1v1main.js"></script>
-    <script src="./js/Cap1v1Trajectories.js"></script>
-    <script src="./js/Cap1v1HandleEvents.js"></script>
+    <script src="js/Cap1v1main.js"></script>
+    <script src="js/Cap1v1Trajectories.js"></script>
+    <script src="js/Cap1v1HandleEvents.js"></script>
     <title>RPO 1v1</title>
+    <style>
+        .navbar {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1f3a52;
+        }
 
-    <link rel="stylesheet" type="text/css" href="css/Capstone1v1.css">
+        body {
+            min-height: 300px;
+            background: #06090c;
+            filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#111b24', endColorstr='#0c4161', GradientType=0);
+            height: 100%;
+            font-family: "open_sansregular";
+            color: rgb(201, 203, 206);
+            overflow-x: hidden;
+            /* Panel opening and closing animation time - 200mx */
+            transition: transform .2s;
+            -webkit-transition: -webkit-transform .2s;
+        }
+
+        li {
+            display: inline-block;
+        }
+
+        li p {
+            display: block;
+            color: white;
+            padding: 2% 0;
+            margin: 0;
+        }
+
+        .pointer {
+            cursor: pointer;
+        }
+
+        #setup:hover {
+            font-weight: bold;
+        }
+
+        .sideBar {
+            position: fixed;
+            background-color: rgba(0, 0, 0, 0);
+            width: 20%;
+            height: 100%;
+            padding-top: 4%;
+            right: 0%;
+        }
+
+        .controlTitle {
+            width: 100%;
+            height: auto;
+            color: white;
+            text-align: center;
+            background-color: rgba(50, 50, 50, 0.35);
+            font-weight: bold;
+            padding: 2% 0;
+            z-index: 2;
+            font-size: 2vw;
+        }
+
+        .setup-screen {
+            position: fixed;
+            background-color: black;
+            z-index: 2;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .setup-container {
+            width: 20%;
+            height: 100%;
+            z-index: 3;
+        }
+
+        .container-title {
+            text-align: center;
+            font-weight: bold;
+            width: 100%;
+            font-size: 2vw;
+        }
+
+        .container-title2 {
+            text-align: center;
+            font-weight: bold;
+            width: 100%;
+            font-size: 1.5vw;
+        }
+
+        .rmoe-input {
+            width: 20%;
+            text-align: center;
+            font-size: 1.5vw;
+            background-color: black;
+            color: white;
+        }
+
+        .rmoe-slider {
+            width: 80%;
+            padding: 0 5%;
+        }
+
+        .add-button:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            cursor: pointer;
+        }
+
+        .start-button {
+            position: absolute;
+            bottom: 10%;
+            width: 20%;
+            left: 40%;
+            height: auto;
+            border: 1px solid white;
+            text-align: center;
+            font-size: 3vw;
+            border-radius: 10px;
+            font-weight: bold;
+            z-index: 3;
+        }
+        .sun-angle {
+            position: absolute;
+            bottom: 40%;
+            width: 20%;
+            left: 30%;
+            height: auto;
+            text-align: center;
+            font-size: 2vw;
+            font-weight: bold;
+            z-index: 3;
+        }
+
+        .start-button:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            cursor: pointer;
+        }
+
+        .side-data {
+            background-color: rgba(50, 50, 50, 0.35);
+            padding: 0;
+        }
+
+        #dataContainer {
+            font-size: 1.6vw;
+            text-align: center;
+            padding: 2% 0;
+        }
+
+        .slider-contain {
+            position: absolute;
+            top: 5%;
+            width: 100%;
+            height: auto;
+        }
+
+        .slider-contain p {
+            display: inline-block;
+            width: 20%;
+            margin-left: 10%;
+            font-size: 2vw;
+        }
+
+        .slider-contain input {
+            display: inline-block;
+            width: 50%;
+            margin: 0%;
+        }
+
+        .controlTitle:hover {
+            background-color: rgba(50, 50, 50, 0.75);
+        }
+
+        .instruction-screen {
+            position: fixed;
+            top: 8%;
+            width: 90%;
+            height: 100%;
+            display: none;
+            z-index: 4;
+            background-color: black;
+            padding-left: 5%;
+            font-size: 1.5vw;
+        }
+
+        .instruction-screen p,
+        h2,
+        h4 {
+            color: white;
+        }
+
+        .selected {
+            background-color: rgba(50, 50, 50, 0.85);
+            font-weight: bold;
+        }
+        .team-number {
+            position: fixed;
+            bottom: 1%;
+            left: 2%;
+            color: white;
+            background-color: rgba(0, 0, 0, 0);
+
+        }
+        .noteBar {
+            background-color: rgba(25,25,50,0.5);
+            position: fixed;
+            bottom: 5%;
+            left: 25%;
+            margin: auto;
+            width: 50%;
+            display: none;
+        }
+        .noteBar p {
+            color: white;
+            font-weight: 900;
+            text-align: center;
+            font-size: 3vw;
+        }
+    </style>
 </head>
 
 <body>
@@ -196,197 +415,12 @@
         <p>Time: T +<span>0.00</span> hrs</p>
         <input type="range" class="slider" min="0" max="15" value="0" step="0.01">
     </div>
+    <div class="team-number">Team #</div>
+    <div class="noteBar">
+        <p>Test</p>
+    </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <script>
-        var teamNum, $turn = $('#turn-button p span')[0];
-        createGraph();
-        $.get("./start", (data, status) => {
-            teamNum = data;
-        });
-        $('#setup').on('click', () => {
-            $('.instruction-screen').slideToggle(250);
-        })
-        $('#turn-button').on('click', () => {
-            let turn = $('#turn-button p span')[0].textContent;
-            turn++;
-            setSelectedWaypoint(turn - 1, 'blue');
-            $('#turn-button p span')[0].textContent = turn;
-        })
-        $('.start-button').on('click', () => {
-            $('.setup-screen').fadeOut(500);
-            let n = 2 * Math.PI / 86164;
-            let $inputs = $('.setup-container').find('input');
-            app.initSunVector = [
-                [15*Math.cos($('#sun')[0].value*Math.PI/180)],
-                [15*Math.sin($('#sun')[0].value*Math.PI/180)]
-            ];
-
-            let blueInit = [
-                [-Number($inputs[0].value) / 2 * Math.cos(Number($inputs[3].value) * Math.PI / 180) +
-                    Number($inputs[1].value)
-                ],
-                [Number($inputs[0].value) * Math.sin(Number($inputs[3].value) * Math.PI / 180) + Number(
-                    $inputs[2].value)],
-                [Number($inputs[0].value) * n / 2 * Math.sin(Number($inputs[3].value) * Math.PI / 180)],
-                [Number($inputs[0].value) * n * Math.cos(Number($inputs[3].value) * Math.PI / 180) - 1.5 *
-                    Number($inputs[1].value) * n
-                ]
-            ];
-            let redInit = [
-                [-Number($inputs[9].value) / 2 * Math.cos(Number($inputs[12].value) * Math.PI / 180) +
-                    Number($inputs[10].value)
-                ],
-                [Number($inputs[9].value) * Math.sin(Number($inputs[12].value) * Math.PI / 180) + Number(
-                    $inputs[11].value)],
-                [Number($inputs[9].value) * n / 2 * Math.sin(Number($inputs[12].value) * Math.PI / 180)],
-                [Number($inputs[9].value) * n * Math.cos(Number($inputs[12].value) * Math.PI / 180) - 1.5 *
-                    Number($inputs[10].value) * n
-                ]
-            ];
-            app.players.blue = new Satellite(blueInit, 'blue', {
-                way: 0,
-                traj: 1,
-                cur: 9
-            });
-            app.players.red = new Satellite(redInit, 'red', {
-                way: 3,
-                traj: 4,
-                cur: 10
-            });
-            let init;
-            if ($('.setup-container').eq(2).find('div').eq(0).is(':visible')) {
-                init = [
-                    [-Number($inputs[13].value) / 2 * Math.cos(Number($inputs[16].value) * Math.PI / 180) +
-                        Number($inputs[14].value)
-                    ],
-                    [Number($inputs[13].value) * Math.sin(Number($inputs[16].value) * Math.PI / 180) + Number(
-                        $inputs[15].value)],
-                    [Number($inputs[13].value) * n / 2 * Math.sin(Number($inputs[16].value) * Math.PI / 180)],
-                    [Number($inputs[13].value) * n * Math.cos(Number($inputs[16].value) * Math.PI / 180) - 1.5 *
-                        Number($inputs[14].value) * n
-                    ]
-                ];
-                app.players.gray1 = new Satellite(init,'gray1',{traj: 14, cur: 13})
-            }
-            if ($('.setup-container').eq(3).find('div').eq(0).is(':visible')) {
-                init = [
-                    [-Number($inputs[17].value) / 2 * Math.cos(Number($inputs[20].value) * Math.PI / 180) +
-                        Number($inputs[18].value)
-                    ],
-                    [Number($inputs[17].value) * Math.sin(Number($inputs[20].value) * Math.PI / 180) + Number(
-                        $inputs[19].value)],
-                    [Number($inputs[17].value) * n / 2 * Math.sin(Number($inputs[20].value) * Math.PI / 180)],
-                    [Number($inputs[17].value) * n * Math.cos(Number($inputs[20].value) * Math.PI / 180) - 1.5 *
-                        Number($inputs[18].value) * n
-                    ]
-                ];
-                app.players.gray2 = new Satellite(init,'gray2',{traj: 16, cur: 15})
-            }
-            app.deltaVAvail = Number($inputs[5].value);
-            app.reqCats = Number($inputs[6].value);
-            setInterval(() => {
-                out = JSON.stringify(Object.assign({}, app.players.blue.burns));
-                $.post("./team" + teamNum, out, (data, status) => {
-                    let turn = Number($turn.textContent) - 1;
-                    let tempBurns = Object.values(JSON.parse(data));
-                    change = false;
-                    let sat = 'red';
-                    for (let ii = 0; ii < turn; ii++) {
-                        if ((app.players.red.burns[ii][0] === tempBurns[ii][0]) && (app.players
-                                .red.burns[ii][1] === tempBurns[ii][1])) {
-                            continue;
-                        } else {
-                            app.players.red.burns[ii] = tempBurns[ii];
-                            change = true;
-                            app.spans.manRows[sat][ii * 2].textContent = (tempBurns[ii][0])
-                                .toFixed(2);
-                            app.spans.manRows[sat][ii * 2 + 1].textContent = (tempBurns[ii][1])
-                                .toFixed(2);
-                        }
-                    }
-                    if (change) {
-                        app.players.red.calculateTrajecory();
-                        calcData(app.currentTime);
-                    }
-                });
-            }, 2500);
-            startGame();
-        })
-        $('.add-button').on('click', (a) => {
-            $(a.target).hide();
-            $(a.target).prev().fadeIn();
-        })
-        $('.controlTitle').on('click', (a) => {
-            if ($(a.target).is('span')) {
-                a.target = $(a.target).parent();
-            }
-            if (!$(a.target).next().is(":hidden")) {
-                $(a.target).next().slideUp(250);
-                return;
-            }
-            $('.side-data').slideUp(250);
-            $(a.target).next().slideDown(250);
-        })
-        $('.slider-contain input').on('input', (a) => {
-            $(a.target).prev().find('span')[0].textContent = a.target.value;
-            app.currentTime = Number(a.target.value)
-            calcData(app.currentTime);
-        })
-        $('tr').on('click', (a) => {
-            let ii = 0;
-            while (!$(a.target).is('tr')) {
-                a.target = $(a.target).parent();
-                console.log(a.target);
-                ii++;
-                if (ii > 5) {
-                    break;
-                }
-            }
-            ii = $('tr').index(a.target);
-            if ((ii === 0) || (ii === 6)) {
-                return;
-            }
-            let sat = (ii > 6) ? 'red' : 'blue';
-            if (app.chosenWaypoint === undefined) {
-                app.tactic = '';
-            } else if ((app.chosenWaypoint[0] === (ii-1)) && (sat === 'blue')) {
-                console.log(1)
-                app.tactic = 'burn';
-            } else if ((app.chosenWaypoint[0] === (ii-7)) && (sat === 'red')) {
-                console.log(2)
-                app.tactic = 'burn';
-            } else {
-                console.log(3)
-                app.tactic = '';
-            }
-            setSelectedWaypoint((ii > 6) ? ii - 7 : ii - 1, sat);
-            globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
-                x: 0,
-                y: 0
-            }, {
-                x: 0,
-                y: 0
-            }];
-
-        })
-        var burnRows, dataRows; {
-            let $tableRows = $('td');
-            app.spans.manRows = {
-                blue: $tableRows.splice(0, 10),
-                red: $tableRows
-            }
-            $tableRows = $('.side-data span');
-            app.spans.scenData = {
-                curRange: $tableRows.splice(0, 1),
-                minRange: $tableRows.splice(0, 2),
-                cats: $tableRows.splice(0, 1),
-                totalDv: {
-                    blue: $tableRows.splice(0, 1),
-                    red: $tableRows.splice(0, 1)
-                }
-            }
-        }
-    </script>
+    <script src="js/jquery1v1.js"></script>
 </body>
 
 </html>
