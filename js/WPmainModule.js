@@ -167,8 +167,8 @@ function createGraph() {
 						fontSize: 20,
                     },
 					ticks: {
-						min: -20,
-						max: 20,
+						min: -25,
+						max: 25,
 						fontSize: 20,
 						reverse: true,
 						fontColor: 'rgba(255,255,255,1)',

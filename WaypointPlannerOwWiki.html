@@ -21,7 +21,8 @@
 	<style>
         #burnTable {
             position: relative;
-            color: rgb(201, 203, 206);;
+            color: rgb(201, 203, 206);
+            width: 100%;
         }
 		td {
 			text-align: center;
@@ -29,13 +30,12 @@
         }
         .selectedTableRow {
             background-color: rgb(25,25,25);
-            /* font-size: 1.2vw; */
             font-weight: bold;
             color: white;
         }
         #maneuverBar {
             overflow-y: auto;
-            padding: 0% 5%;
+            padding: 0% 0% 0% 2.5%;
             margin-top: 5%;
             font-size: 2vh;
             max-height: 500px;
@@ -185,7 +185,7 @@
 		
 	</div>
     <div id="main" class="row">
-        <div id="maneuverBar" class="col-xl-4">
+        <div id="maneuverBar" class="col-xl-3">
             <table class="table" id="burnTable">
                 <thead>
                     <tr>
@@ -212,9 +212,9 @@
                 </tbody>
             </table>
         </div>
-        <div class="col-xl-8">
+        <div class="col-xl-9">
             <div style="width:95%; height:auto; margin: 2% auto" id="main">
-                <canvas id="ChartCnvs" width="28" height="19.5"></canvas>
+                <canvas id="ChartCnvs" width="28" height="16"></canvas>
             </div>
         </div>
     </div>  
