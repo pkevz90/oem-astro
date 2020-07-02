@@ -75,8 +75,8 @@ function handleKeyPress(k) {
             let sat = (app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red';
             app.players[sat].burns[app.chosenWaypoint[0]][0] = newR;
             app.players[sat].burns[app.chosenWaypoint[0]][1] = newI;
-            app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (newR).toFixed(2);
-            app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (newI).toFixed(2);
+            app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (newR).toFixed(3);
+            app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (newI).toFixed(3);
             let xPoint = globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].x,
                 yPoint = globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].y;
             globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
