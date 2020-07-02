@@ -242,19 +242,24 @@ function showDeltaVLimit(sat,avail) {
 	let dV = avail.availDv;
 	let angle, nodes = 50, rBurn, iBurn;
 	let initState = globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data[app.chosenWaypoint[0]];
-	initState = [[initState.y],
-				 [initState.x],
-				 [initState.dRad],
-				 [initState.dIt]];
-
-	console.log(initState);
-	
-	
+	let r = [[initState.y],
+			 [initState.x]];
+	let v = [[initState.dRad],
+			 [initState.dIt]];
+	let vNew, r2;
+	let pRR = PhiRR(avail.time),
+		pRV = PhiRV(avail.time),
 	for (let ii = 0; ii <= 50; ii++) {
 		angle = 2*Math.PI * ii / nodes;
 		rBurn = dV * Math.cos(angle);
 		iBurn = dV * Math.sin(angle);
-		console.log(ii)
+		vNew = [[v[0][0]+rBurn],
+				[v[1][0]+iBurn]]
+		r2 = math.add(math.multiply(pRR, r), math.multiply(pRV, vNew));
+		globalChartRef.config.data.datasets[app.dataLoc.targetLim].data.push[{
+			x: r2[1][0],
+			y: r2[0][0]
+		}];
 	}
 }
 
