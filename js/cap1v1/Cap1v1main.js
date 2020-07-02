@@ -51,7 +51,8 @@ let app = {
 		view: 11,
 		relLine: 12,
 		curGray: 13,
-		grayTraj: 14
+		grayTraj: 14,
+		targetLim: 17
 	},
 	updateApp: function () {
 		for (var sat in app.players) {
@@ -209,6 +210,15 @@ function createGraph() {
 				showLine: true,
 				pointRadius: 0,
 				borderColor: 'rgba(150,150,150,1)',
+			}, {
+				// label: "Targeting Limits",
+				
+                data: [],
+                fill: true,
+                showLine: true,
+				pointRadius: 0,
+				lineTension: 0,
+				backgroundColor: 'rgba(255,255,255,0.5)'
 			}]
 		},
 		options: {

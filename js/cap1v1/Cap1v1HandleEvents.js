@@ -103,7 +103,15 @@ function handleKeyPress(k) {
                     app.players[(app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red'].burns[element] = [0, 0];
                 }
             })
-            app.tacticData = [10800, app.deltaVAvail - totalDv];
+            app.tacticData = {
+                time: 10800, 
+                availDv: app.deltaVAvail - totalDv
+            };
+            console.log('start');
+            
+            showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData)
+            console.log('finish');
+            
             globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
                 x: 0,
                 y: 0

@@ -212,11 +212,11 @@ function targetCalc(xMouse, yMouse, click = false) {
 				[globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].dRad],
 				[globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].dIt]
 			],
-			v1f = math.multiply(math.inv(PhiRV(app.tacticData[0])), math.subtract(r2, math.multiply(PhiRR(app.tacticData[0]), r1))),
+			v1f = math.multiply(math.inv(PhiRV(app.tacticData.time)), math.subtract(r2, math.multiply(PhiRR(app.tacticData.time), r1))),
 			dV = math.subtract(v1f, v10);
 		
-		if ((1000 * math.norm(math.squeeze(dV))) > app.tacticData[1]) {
-			let newNorm = app.tacticData[1] / 1000;
+		if ((1000 * math.norm(math.squeeze(dV))) > app.tacticData.availDv) {
+			let newNorm = app.tacticData.availDv / 1000;
 			let newR = dV[0][0] / math.norm(math.squeeze(dV)) * newNorm;
 			let newI = dV[1][0] / math.norm(math.squeeze(dV)) * newNorm;
 			dV = [[newR],[newI]];
@@ -235,6 +235,26 @@ function targetCalc(xMouse, yMouse, click = false) {
 		app.players[sat].calculateTrajecory();
 		calcData(app.currentTime);
 
+	}
+}
+
+function showDeltaVLimit(sat,avail) {
+	let dV = avail.availDv;
+	let angle, nodes = 50, rBurn, iBurn;
+	let initState = globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data[app.chosenWaypoint[0]];
+	initState = [[initState.y],
+				 [initState.x],
+				 [initState.dRad],
+				 [initState.dIt]];
+
+	console.log(initState);
+	
+	
+	for (let ii = 0; ii <= 50; ii++) {
+		angle = 2*Math.PI * ii / nodes;
+		rBurn = dV * Math.cos(angle);
+		iBurn = dV * Math.sin(angle);
+		console.log(ii)
 	}
 }
 
