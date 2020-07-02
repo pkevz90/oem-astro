@@ -1,12 +1,12 @@
 var teamNum, $turn = $('#turn-button p span')[0];
 createGraph();
-$.get("./start", (data, status) => {
-    teamNum = data;
-    console.log('Server connected: Assigned team ' + data)
-    $('.team-number')[0].textContent = 'Team ' + teamNum;
-}).fail(() => {
-    $('.team-number')[0].textContent = '';
-});
+// $.get("./start", (data, status) => {
+//     teamNum = data;
+//     console.log('Server connected: Assigned team ' + data)
+//     $('.team-number')[0].textContent = 'Team ' + teamNum;
+// }).fail(() => {
+//     $('.team-number')[0].textContent = '';
+// });
 $('#setup').on('click', () => {
     $('.instruction-screen').slideToggle(250);
 })
@@ -88,39 +88,39 @@ $('.start-button').on('click', () => {
     }
     app.deltaVAvail = Number($inputs[5].value);
     app.reqCats = Number($inputs[6].value);
-    setInterval(() => {
-        let outData = {
-            teamName: teamNum,
-            burns: JSON.stringify(app.players.blue.burns)
-        };
-        // outData = JSON.stringify(outData);
-        console.log(outData)
-        $.post("./data", outData, (data, status) => {
-            let turn = Number($turn.textContent) - 1;
-            let tempBurns = Object.values(JSON.parse(data));
-            console.log(tempBurns)
-            change = false;
-            let sat = 'red';
-            for (let ii = 0; ii < turn; ii++) {
-                console.log(app.players.red.burns[ii][0],tempBurns[ii][0],app.players.red.burns[ii][1],tempBurns[ii][1])
-                if ((app.players.red.burns[ii][0] === tempBurns[ii][0]) && (app.players
-                        .red.burns[ii][1] === tempBurns[ii][1])) {
-                    continue;
-                } else {
-                    app.players.red.burns[ii] = tempBurns[ii];
-                    change = true;
-                    app.spans.manRows[sat][ii * 2].textContent = (tempBurns[ii][0])
-                        .toFixed(2);
-                    app.spans.manRows[sat][ii * 2 + 1].textContent = (tempBurns[ii][1])
-                        .toFixed(2);
-                }
-            }
-            if (change) {
-                app.players.red.calculateTrajecory();
-                calcData(app.currentTime);
-            }
-        });
-    }, 2500);
+    // setInterval(() => {
+    //     let outData = {
+    //         teamName: teamNum,
+    //         burns: JSON.stringify(app.players.blue.burns)
+    //     };
+    //     // outData = JSON.stringify(outData);
+    //     console.log(outData)
+    //     $.post("./data", outData, (data, status) => {
+    //         let turn = Number($turn.textContent) - 1;
+    //         let tempBurns = Object.values(JSON.parse(data));
+    //         console.log(tempBurns)
+    //         change = false;
+    //         let sat = 'red';
+    //         for (let ii = 0; ii < turn; ii++) {
+    //             console.log(app.players.red.burns[ii][0],tempBurns[ii][0],app.players.red.burns[ii][1],tempBurns[ii][1])
+    //             if ((app.players.red.burns[ii][0] === tempBurns[ii][0]) && (app.players
+    //                     .red.burns[ii][1] === tempBurns[ii][1])) {
+    //                 continue;
+    //             } else {
+    //                 app.players.red.burns[ii] = tempBurns[ii];
+    //                 change = true;
+    //                 app.spans.manRows[sat][ii * 2].textContent = (tempBurns[ii][0])
+    //                     .toFixed(2);
+    //                 app.spans.manRows[sat][ii * 2 + 1].textContent = (tempBurns[ii][1])
+    //                     .toFixed(2);
+    //             }
+    //         }
+    //         if (change) {
+    //             app.players.red.calculateTrajecory();
+    //             calcData(app.currentTime);
+    //         }
+    //     });
+    // }, 2500);
     startGame();
 })
 $('.add-button').on('click', (a) => {
