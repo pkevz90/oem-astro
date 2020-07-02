@@ -200,14 +200,17 @@ var burnRows, dataRows; {
 
 function showNoteBar(s) {
     $(".noteBar").stop();
+    $(".noteBar").stop();
     $('.noteBar').hide();
     $('.noteBar p')[0].textContent = s;
     $('.noteBar').css('bottom','0%');
-    $('.noteBar').css('opacity','0.75');
+    $('.noteBar').css('opacity','1');
     $('.noteBar').show();
     $('.noteBar').animate({
+        opacity: 0.99
+    },500);
+    $('.noteBar').animate({
         bottom: '-=100px',
-        opacity: 0
-    },1500);
+    },250);
     
 }
