@@ -214,7 +214,6 @@ function targetCalc(xMouse, yMouse, click = false) {
 			],
 			v1f = math.multiply(math.inv(PhiRV(app.tacticData[0])), math.subtract(r2, math.multiply(PhiRR(app.tacticData[0]), r1))),
 			dV = math.subtract(v1f, v10);
-		console.log(app.tacticData[1]);
 		
 		if ((1000 * math.norm(math.squeeze(dV))) > app.tacticData[1]) {
 			let newNorm = app.tacticData[1] / 1000;
