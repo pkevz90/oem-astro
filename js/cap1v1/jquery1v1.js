@@ -202,11 +202,12 @@ function showNoteBar(s) {
     $(".noteBar").stop();
     $('.noteBar').hide();
     $('.noteBar p')[0].textContent = s;
-    $('.noteBar').css('bottom','5%');
-    $('.noteBar').css('opacity','0.5');
+    $('.noteBar').css('bottom','0%');
+    $('.noteBar').css('opacity','0.75');
     $('.noteBar').show();
     $('.noteBar').animate({
-        bottom: '+=50px',
+        bottom: '-=100px',
         opacity: 0
     },1500);
+    
 }

@@ -203,12 +203,13 @@ h4 {
 
 }
 .noteBar {
-    background-color: rgba(25,25,50,0.5);
+    background-color: rgba(25,25,50,0.75);
     position: fixed;
-    bottom: 5%;
-    left: 25%;
+    bottom: 0%;
+    left: 0%;
+    height: 15%;
     margin: auto;
-    width: 50%;
+    width: 80%;
     display: none;
 }
 .noteBar p {
