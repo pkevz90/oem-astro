@@ -1,0 +1,39 @@
+- RPO 1v1
+    -- Fix targeting functionality
+    -- Make scenario customizable
+        --- Sun vector works
+        --- Positions work
+        --- range and cats req do not function
+        --- Changes in scenario length, number of burns
+    -- Iterate on user interface
+    -- Finite burn functionality
+
+- Mission Planner
+    -- Add targeting
+    -- Iterate on user interface
+    -- Add gray satellites
+    -- Pre-built scenarios
+
+- Classical Orbital Element Vis
+    -- Add more visualizations and quick scenarios
+        --- GPS constellation?
+        --- Molniya Constellation?
+        --- Iridium Constellation?
+            ---- Yikes
+        --- Starlink
+            ---- Double Yikes
+        --- Different satcom constellations
+    -- Fix axis representations
+    -- Ability to turn off stars
+    -- Add delete functionality (necessary to switch between scenarios)
+    -- Merge with RMOE Vis?
+
+- RMOE Vis
+    -- Add delete functionality (necessary to switch between scenarios)
+    -- Add ellipse visual to in-plane
+
+- Waypoint Planner
+    -- Add satellite point to play function
+    -- More precise physics?
+        --- Maybe just update to more precise physics once user stops changing burn
+    -- Continue to optimize
