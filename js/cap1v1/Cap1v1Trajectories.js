@@ -76,7 +76,7 @@ function calcData(curTime = 0) {
 	app.spans.scenData.curRange[0].textContent = math.norm([curPoints.redR[0][0] - curPoints.blueR[0][0], curPoints.redR[1][0] - curPoints.blueR[1][0]]).toFixed(2);
 	app.spans.scenData.cats[0].textContent = (catsAngle * 180 / Math.PI).toFixed(2);
 
-	for (var sat in app.players) {
+	for (let sat in app.players) {
 		let total = 0;
 		if (app.players[sat].name.substr(0,4) === 'gray') {continue;}
 		app.players[sat].burns.forEach(element => {
@@ -214,14 +214,18 @@ function targetCalc(xMouse, yMouse, click = false) {
 			],
 			v1f = math.multiply(math.inv(PhiRV(app.tacticData[0])), math.subtract(r2, math.multiply(PhiRR(app.tacticData[0]), r1))),
 			dV = math.subtract(v1f, v10);
-
+		console.log(app.tacticData[1]);
+		
 		if ((1000 * math.norm(math.squeeze(dV))) > app.tacticData[1]) {
-			return;
+			let newNorm = app.tacticData[1] / 1000;
+			let newR = dV[0][0] / math.norm(math.squeeze(dV)) * newNorm;
+			let newI = dV[1][0] / math.norm(math.squeeze(dV)) * newNorm;
+			dV = [[newR],[newI]];
 		}
+		let sat = (app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red';
 		app.players[sat].burns[app.chosenWaypoint[0]] = [dV[0][0] * 1000, dV[1][0] * 1000];
 		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (dV[0][0] * 1000).toFixed(2);
 		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (dV[1][0] * 1000).toFixed(2);
-
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
 			x: r1[1][0],
 			y: r1[0][0]
@@ -229,7 +233,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 			x: r1[1][0] + dV[1][0] * 10000,
 			y: r1[0][0] + dV[0][0] * 10000
 		}];
-		app.players[(app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red'].calculateTrajecory();
+		app.players[sat].calculateTrajecory();
 		calcData(app.currentTime);
 
 	}
