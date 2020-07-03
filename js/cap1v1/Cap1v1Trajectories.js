@@ -198,6 +198,8 @@ function targetCalc(xMouse, yMouse, click = false) {
 		app.tactic = '';
 		app.tacticData = undefined;
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [];
+		globalChartRef.config.data.datasets[app.dataLoc.targetLim].data = [];
+		globalChartRef.update();
 		return;
 	} else {
 		let r1 = [
@@ -239,7 +241,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 }
 
 function showDeltaVLimit(sat,avail) {
-	let dV = avail.availDv;
+	let dV = avail.availDv/1000;
 	let angle, nodes = 50, rBurn, iBurn;
 	let initState = globalChartRef.config.data.datasets[app.players[sat].dataLoc.way].data[app.chosenWaypoint[0]];
 	let r = [[initState.y],
@@ -248,19 +250,25 @@ function showDeltaVLimit(sat,avail) {
 			 [initState.dIt]];
 	let vNew, r2;
 	let pRR = PhiRR(avail.time),
-		pRV = PhiRV(avail.time),
+		pRV = PhiRV(avail.time);
+		console.log(avail.availDv);
+		
 	for (let ii = 0; ii <= 50; ii++) {
+		// console.log(ii);
+		
 		angle = 2*Math.PI * ii / nodes;
 		rBurn = dV * Math.cos(angle);
 		iBurn = dV * Math.sin(angle);
 		vNew = [[v[0][0]+rBurn],
 				[v[1][0]+iBurn]]
 		r2 = math.add(math.multiply(pRR, r), math.multiply(pRV, vNew));
-		globalChartRef.config.data.datasets[app.dataLoc.targetLim].data.push[{
+		
+		globalChartRef.config.data.datasets[app.dataLoc.targetLim].data.push({
 			x: r2[1][0],
 			y: r2[0][0]
-		}];
+		});
 	}
+	globalChartRef.update();
 }
 
 function PhiRR(t, n = 2 * Math.PI / 86164) {
