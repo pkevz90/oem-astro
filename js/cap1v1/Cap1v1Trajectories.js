@@ -196,9 +196,20 @@ function burnCalc(xMouse, yMouse, click = false) {
 function targetCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
-		app.tacticData = undefined;
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [];
-		globalChartRef.config.data.datasets[app.dataLoc.targetLim].data = [];
+		let ii = 0;
+		let inter = setInterval(() => {
+			showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {time: app.tacticData.time, availDv: app.tacticData.availDv*(5-ii)/5})
+			globalChartRef.update();
+			if (ii === 5) {
+				globalChartRef.config.data.datasets[app.dataLoc.targetLim].data = [];
+				app.chosenWaypoint = undefined;
+				app.tacticData = undefined;
+				clearInterval(inter);
+			}
+			globalChartRef.update();
+			ii++;
+		}, 10);
 		globalChartRef.update();
 		return;
 	} else {

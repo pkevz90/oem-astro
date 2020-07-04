@@ -13,7 +13,6 @@ function handleClick(valueX, valueY) {
         burnCalc(valueX, valueY, true);
         return;
     } else if (app.tactic === 'target') {
-        app.chosenWaypoint = undefined;
         globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
         targetCalc(valueX, valueY, true);
         return;
@@ -109,13 +108,13 @@ function handleKeyPress(k) {
             };
             let ii = 0;
             let inter = setInterval(() => {
-                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {time: app.tacticData.time, availDv: app.tacticData.availDv*ii/10})
+                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {time: app.tacticData.time, availDv: app.tacticData.availDv*ii/5})
                 globalChartRef.update();
-                if (ii === 10) {
+                if (ii === 5) {
                     clearInterval(inter);
                 }
                 ii++;
-            }, 5);
+            }, 10);
             
             
             globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
