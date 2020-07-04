@@ -107,10 +107,16 @@ function handleKeyPress(k) {
                 time: 10800, 
                 availDv: app.deltaVAvail - totalDv
             };
-            console.log('start');
+            let ii = 0;
+            let inter = setInterval(() => {
+                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {time: app.tacticData.time, availDv: app.tacticData.availDv*ii/10})
+                globalChartRef.update();
+                if (ii === 10) {
+                    clearInterval(inter);
+                }
+                ii++;
+            }, 5);
             
-            showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData)
-            console.log('finish');
             
             globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
                 x: 0,
