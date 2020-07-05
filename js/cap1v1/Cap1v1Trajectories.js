@@ -155,7 +155,9 @@ function plotBurnDirections() {
 function burnCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
+        app.chosenWaypoint = undefined;
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [];
+        globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
 		return;
 	} else {
 		let xPoint = globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].x,
@@ -197,6 +199,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [];
+        globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
 		let ii = 0;
 		let inter = setInterval(() => {
 			showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {time: app.tacticData.time, availDv: app.tacticData.availDv*(5-ii)/5})

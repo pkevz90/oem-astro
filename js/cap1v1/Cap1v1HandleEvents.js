@@ -8,12 +8,9 @@ function handleHover(valueX, valueY) {
 
 function handleClick(valueX, valueY) {
     if (app.tactic === 'burn') {
-        app.chosenWaypoint = undefined;
-        globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
         burnCalc(valueX, valueY, true);
         return;
     } else if (app.tactic === 'target') {
-        globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
         targetCalc(valueX, valueY, true);
         return;
     }
@@ -141,13 +138,9 @@ function setAxisZoomPos() {
 function setSelectedWaypoint(index, side) {
     let sideIndex = app.players[side].dataLoc.way;
 
-    if (sideIndex === 0) {
-        $('tr').removeClass('selected');
-        $($('tr')[index + 1]).toggleClass('selected')
-    } else {
-        $('tr').removeClass('selected');
-        $($('tr')[index + 7]).toggleClass('selected')
-    }
+    $('tr').removeClass('selected');
+    $($('tr')[index + ((sideIndex === 0) ? 1 : 7)]).toggleClass('selected')
+
     app.chosenWaypoint = [index, sideIndex];
     let xPoint = globalChartRef.config.data.datasets[sideIndex].data[index].x,
         yPoint = globalChartRef.config.data.datasets[sideIndex].data[index].y;
@@ -184,7 +177,5 @@ function checkClose(X, Y) {
 }
 
 function checkPointClose(X1, Y1, X2, Y2) {
-    if (math.norm([X1 - X2, Y1 - Y2]) < 2) {
-        return true;
-    }
+    return (math.norm([X1 - X2, Y1 - Y2]) < 2) ? true : false;
 }

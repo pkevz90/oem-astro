@@ -218,6 +218,7 @@ function createGraph() {
                 showLine: true,
 				pointRadius: 0,
 				lineTension: 0,
+				borderColor: 'rgba(255,255,255,0.5)',
 				backgroundColor: 'rgba(255,255,255,0.025)'
 			}]
 		},
