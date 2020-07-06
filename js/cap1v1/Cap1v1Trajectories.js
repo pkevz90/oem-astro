@@ -239,8 +239,8 @@ function targetCalc(xMouse, yMouse, click = false) {
 		}
 		let sat = (app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red';
 		app.players[sat].burns[app.chosenWaypoint[0]] = [dV[0][0] * 1000, dV[1][0] * 1000];
-		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (dV[0][0] * 1000).toFixed(2);
-		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (dV[1][0] * 1000).toFixed(2);
+		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (dV[0][0] * 1000).toFixed(3);
+		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (dV[1][0] * 1000).toFixed(3);
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
 			x: r1[1][0],
 			y: r1[0][0]

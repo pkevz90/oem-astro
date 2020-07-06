@@ -49,15 +49,13 @@ function handleKeyPress(k) {
             }
             app.axisLimits += 1;
             break;
-        case ',':
+        case (',' || '<'):
             if (app.tactic === 'target' && app.tacticData.targetPos > 1) {
                 app.tacticData.targetPos--;
                 showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData);
             }
             break;
-        case '.':
-            console.log(app.tactic);
-            
+        case ('.' || '>'):
             if (app.tactic === 'target') {
                 app.tacticData.targetPos++;
                 showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData);
