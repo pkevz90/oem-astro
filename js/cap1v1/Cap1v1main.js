@@ -212,7 +212,7 @@ function createGraph() {
 						display: true,
 						labelString: 'In-Track [km]',
 						fontColor: 'rgba(255,255,255,1)',
-						fontSize: 30
+						fontSize: 20
 					},
 					ticks: {
 						min: -app.axisLimits,
@@ -232,7 +232,7 @@ function createGraph() {
 						display: true,
 						labelString: 'Radial [km]',
 						fontColor: 'rgba(255,255,255,1)',
-						fontSize: 30
+						fontSize: 20
 					},
 					ticks: {
 						min: -app.axisLimits * 0.5,
