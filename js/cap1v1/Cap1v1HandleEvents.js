@@ -49,6 +49,13 @@ function handleKeyPress(k) {
             }
             app.axisLimits += 1;
             break;
+        case '<':
+            if (app.tactic === 'target' && app.tacticData.targetPos > 1) {
+                app.tacticData.targetPos--;
+            }
+            break;
+        case '>':
+            break;
         case 'a':
             app.axisCenter[0] += 1;
             break;
@@ -101,7 +108,8 @@ function handleKeyPress(k) {
             })
             app.tacticData = {
                 time: 10800, 
-                availDv: app.deltaVAvail - totalDv
+                availDv: app.deltaVAvail - totalDv,
+                targetPos: 1
             };
             let ii = 0;
             let inter = setInterval(() => {
