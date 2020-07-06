@@ -209,3 +209,18 @@ function checkClose(X, Y) {
 function checkPointClose(X1, Y1, X2, Y2) {
     return (math.norm([X1 - X2, Y1 - Y2]) < 2) ? true : false;
 }
+
+function setBottomInfo(type = 'state') {
+    switch (type) {
+        case 'state':
+            let curPoints = setCurrentPoints(app.currentTime, true);
+            console.log(curPoints);
+            
+            break;
+        case 'selected':
+            break;
+        case 'target':
+            break;
+    }
+
+}

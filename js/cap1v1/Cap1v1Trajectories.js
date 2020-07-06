@@ -85,8 +85,6 @@ function calcData(curTime = 0) {
 		app.spans.scenData.totalDv[sat][0].textContent = total.toFixed(2);
 	}
 
-	// if (catsAngle > Math.PI / 2 && math.norm(relVector) >= 10 && math.norm(relVector) <= 15) {
-	// 	drawViewpoint([curPoints.redR[0][0], curPoints.redR[1][0]], Math.atan2(relVector[0], relVector[1]), math.norm(relVector), 'red');
 	if (catsAngle < app.reqCats && math.norm(relVector) >= app.rangeReq[0] && math.norm(relVector) <= app.rangeReq[1]) {
 		drawViewpoint([curPoints.blueR[0][0], curPoints.blueR[1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), 'blue');
 	} else {

@@ -259,6 +259,7 @@ function startGame() {
 	document.addEventListener('keydown', function (element) {
 		handleKeyPress(element.key);
 	});
+	setBottomInfo();
 	globalChartRef.update();
 }
 
@@ -284,7 +285,7 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 	return SunVector;
 }
 
-function setCurrentPoints(curTime) {
+function setCurrentPoints(curTime, noPlot = false) {
 	var points = {};
 	for (sat in app.players) {
 		points[sat+'R'] = [
@@ -296,7 +297,7 @@ function setCurrentPoints(curTime) {
 			y: points[sat+'R'][0]
 		}];
 	}
-
+	if (noPlot) {return points}
 	globalChartRef.config.data.datasets[app.dataLoc.relLine].data = [{
 		x: points['redR'][1],
 		y: points['redR'][0]
