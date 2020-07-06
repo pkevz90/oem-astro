@@ -87,7 +87,8 @@ $('.start-button').on('click', () => {
         app.players.gray2 = new Satellite(init,'gray2',{traj: 16, cur: 15})
     }
     app.deltaVAvail = Number($inputs[5].value);
-    app.reqCats = Number($inputs[6].value);
+    app.reqCats = Number($inputs[6].value)*Math.PI/180;
+    app.rangeReq = [Number($inputs[7].value), Number($inputs[8].value)];
     // setInterval(() => {
     //     let outData = {
     //         teamName: teamNum,

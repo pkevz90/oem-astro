@@ -1,11 +1,12 @@
 - RPO 1v1
-    -- Fix targeting functionality
+    -- Fix targeting functionality (complete)
     -- Make scenario customizable
         --- Sun vector works
         --- Positions work
         --- range and cats req do not function
         --- Changes in scenario length, number of burns
     -- Iterate on user interface
+        --- Popup needs work
     -- Finite burn functionality
 
 - Mission Planner
