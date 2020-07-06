@@ -141,7 +141,8 @@ $('.controlTitle').on('click', (a) => {
 })
 $('.slider-contain input').on('input', (a) => {
     $(a.target).prev().find('span')[0].textContent = a.target.value;
-    app.currentTime = Number(a.target.value)
+    app.currentTime = Number(a.target.value);
+    setBottomInfo();
     calcData(app.currentTime);
 })
 $('tr').on('click', (a) => {

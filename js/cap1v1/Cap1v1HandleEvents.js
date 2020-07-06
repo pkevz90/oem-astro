@@ -214,10 +214,10 @@ function setBottomInfo(type = 'state') {
     switch (type) {
         case 'state':
             let curPoints = setCurrentPoints(app.currentTime, true);
-            console.log(curPoints);
-            
+            $('.info')[0].textContent = 'Blue R: ' + (curPoints.blueR[0][0]).toFixed(2) + ' km  I: ' + (curPoints.blueR[1][0]).toFixed(2) + 'km -- Red R: ' + (curPoints.redR[0][0]).toFixed(2) + ' km  I: ' + (curPoints.redR[1][0]).toFixed(2)
             break;
         case 'selected':
+            $('.info')[0].textContent = '[T] - Target burn, [click] - set burn direction & magnitude'
             break;
         case 'target':
             break;
