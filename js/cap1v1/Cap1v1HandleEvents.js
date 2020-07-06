@@ -52,13 +52,30 @@ function handleKeyPress(k) {
         case (',' || '<'):
             if (app.tactic === 'target' && app.tacticData.targetPos > 1) {
                 app.tacticData.targetPos--;
-                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData);
+                let ii = 0;
+                let inter = setInterval(() => {
+                    showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {targetPos: (app.tacticData.targetPos+1) - ii/5, availDv: app.tacticData.availDv})
+                    globalChartRef.update();
+                    if (ii === 5) {
+                        clearInterval(inter);
+                    }
+                    ii++;
+                }, 10);
             }
             break;
         case ('.' || '>'):
             if (app.tactic === 'target') {
                 app.tacticData.targetPos++;
-                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData);
+                // showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData);
+                let ii = 0;
+                let inter = setInterval(() => {
+                    showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {targetPos: (app.tacticData.targetPos-1) + ii/5, availDv: app.tacticData.availDv})
+                    globalChartRef.update();
+                    if (ii === 5) {
+                        clearInterval(inter);
+                    }
+                    ii++;
+                }, 10);
             }
                 
             break;
