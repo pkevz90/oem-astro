@@ -49,12 +49,20 @@ function handleKeyPress(k) {
             }
             app.axisLimits += 1;
             break;
-        case '<':
+        case ',':
             if (app.tactic === 'target' && app.tacticData.targetPos > 1) {
                 app.tacticData.targetPos--;
+                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData);
             }
             break;
-        case '>':
+        case '.':
+            console.log(app.tactic);
+            
+            if (app.tactic === 'target') {
+                app.tacticData.targetPos++;
+                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', app.tacticData);
+            }
+                
             break;
         case 'a':
             app.axisCenter[0] += 1;
@@ -107,13 +115,12 @@ function handleKeyPress(k) {
                 }
             })
             app.tacticData = {
-                time: 10800, 
                 availDv: app.deltaVAvail - totalDv,
                 targetPos: 1
             };
             let ii = 0;
             let inter = setInterval(() => {
-                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {time: app.tacticData.time, availDv: app.tacticData.availDv*ii/5})
+                showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {targetPos: app.tacticData.targetPos, availDv: app.tacticData.availDv*ii/5})
                 globalChartRef.update();
                 if (ii === 5) {
                     clearInterval(inter);

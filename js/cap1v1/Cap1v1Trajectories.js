@@ -228,7 +228,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 				[globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].dRad],
 				[globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].dIt]
 			],
-			v1f = math.multiply(math.inv(PhiRV(app.tacticData.time)), math.subtract(r2, math.multiply(PhiRR(app.tacticData.time), r1))),
+			v1f = math.multiply(math.inv(PhiRV(app.tacticData.targetPos*app.timeBetween)), math.subtract(r2, math.multiply(PhiRR(app.tacticData.targetPos*app.timeBetween), r1))),
 			dV = math.subtract(v1f, v10);
 		
 		if ((1000 * math.norm(math.squeeze(dV))) > app.tacticData.availDv) {
@@ -249,6 +249,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 			y: r1[0][0] + dV[0][0] * 10000
 		}];
 		app.players[sat].calculateTrajecory();
+		
 		calcData(app.currentTime);
 
 	}
@@ -264,8 +265,8 @@ function showDeltaVLimit(sat,avail) {
 	let v = [[initState.dRad],
 			 [initState.dIt]];
 	let vNew, r2;
-	let pRR = PhiRR(avail.time),
-		pRV = PhiRV(avail.time);
+	let pRR = PhiRR(avail.targetPos*app.timeBetween),
+		pRV = PhiRV(avail.targetPos*app.timeBetween);
 		// console.log(avail.availDv);
 		
 	for (let ii = 0; ii <= 50; ii++) {
