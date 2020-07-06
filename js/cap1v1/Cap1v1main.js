@@ -68,54 +68,32 @@ function createGraph() {
 		data: {
 			datasets: [{
 				// label: "Blue Waypoints",
-				data: [],
-				showLine: false,
-				fill: false,
-				pointRadius: 7,
-				borderColor: 'rgba(120,200,255,1)'
+				data: [], showLine: false, fill: false,
+				pointRadius: 7, borderColor: 'rgba(120,200,255,1)'
 			}, {
 				// label: "Blue Trajectory",
-				data: [],
-				showLine: true,
-				fill: false,
-				pointRadius: 0,
-				borderColor: 'rgba(120,200,255,1)'
+				data: [], showLine: true, fill: false,
+				pointRadius: 0, borderColor: 'rgba(120,200,255,1)'
 			}, {
 				// label: "Blue Former Trajectory",
-				data: [],
-				showLine: true,
-				fill: false,
-				pointRadius: 0,
-				borderColor: 'rgba(120,200,255,0.5)'
+				data: [], showLine: true, fill: false,
+				pointRadius: 0, borderColor: 'rgba(120,200,255,0.5)'
 			}, {
 				// label: "Red Waypoints",
-				data: [],
-				showLine: false,
-				fill: false,
-				pointRadius: 7,
+				data: [], showLine: false, fill: false, pointRadius: 7,
 				borderColor: 'rgba(255,200,120,1)'
 			}, {
 				// label: "Red Trajectory",
-				data: [],
-				showLine: true,
-				fill: false,
-				pointRadius: 0,
+				data: [], showLine: true, fill: false, pointRadius: 0,
 				borderColor: 'rgba(255,200,120,1)'
 			}, {
 				// label: "Red Former Trajectory",
-				data: [],
-				showLine: true,
-				fill: false,
-				pointRadius: 0,
+				data: [], showLine: true, fill: false, pointRadius: 0,
 				borderColor: 'rgba(60,100,255,0.5)'
 			}, {
 				// label: "Burn Directions",
-				data: [],
-				showLine: true,
-				fill: false,
-				pointRadius: 0,
-				borderWidth: 6,
-				borderColor: 'rgba(255,255,255,0.5)',
+				data: [], showLine: true, fill: false, pointRadius: 0,
+				borderWidth: 6, borderColor: 'rgba(255,255,255,0.5)',
 			}, {
 				// label: "Sun",
 				data: [{
@@ -125,17 +103,11 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false,
-				showLine: true,
-				pointRadius: 0,
-				borderWidth: 6,
+				fill: false, showLine: true, pointRadius: 0, borderWidth: 6,
 				borderColor: 'rgba(200,200,0,1)',
 			}, {
 				// label: "Selected Waypoint",
-				data: [],
-				fill: false,
-				showLine: false,
-				pointRadius: 5,
+				data: [],fill: false,showLine: false,pointRadius: 5,
 				backgroundColor: 'rgba(255,255,255,1)',
 			}, {
 				// label: "Current Blue",
@@ -143,10 +115,7 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false,
-				showLine: false,
-				pointRadius: 15,
-				pointStyle: 'triangle',
+				fill: false,showLine: false,pointRadius: 15,pointStyle: 'triangle',
 				backgroundColor: 'rgba(120,200,255,1)',
 			}, {
 				// label: "Current Red",
@@ -154,17 +123,11 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false,
-				showLine: false,
-				pointRadius: 15,
-				pointStyle: 'triangle',
+				fill: false,showLine: false,pointRadius: 15,pointStyle: 'triangle',
 				backgroundColor: 'rgba(255,200,120,1)',
 			}, {
 				// label: "Viewpoint",
-				data: [],
-				fill: true,
-				showLine: true,
-				pointRadius: 0,
+				data: [],fill: true,showLine: true,pointRadius: 0,
 				backgroundColor: 'rgba(255,200,120,0.25)',
 			}, {
 				// label: "Relative Line",
@@ -175,49 +138,27 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false,
-				showLine: true,
-				pointRadius: 0,
-				borderDash: [10, 10],
+				fill: false,showLine: true,pointRadius: 0,borderDash: [10, 10],
 				borderColor: 'rgba(255,255,255,0.5)',
 			}, {
 				// label: "Current Gray1",
-				data: [],
-				showLine: false,
-				fill: false,
-				pointRadius: 15,
-				pointStyle: 'rect',
+				data: [],showLine: false,fill: false,pointRadius: 15,pointStyle: 'rect',
 				backgroundColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Gray Trajectory1",
-				data: [],
-				fill: false,
-				showLine: true,
-				pointRadius: 0,
+				data: [],fill: false,showLine: true,pointRadius: 0,
 				borderColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Current Gray2",
-				data: [],
-				showLine: false,
-				fill: false,
-				pointRadius: 15,
-				pointStyle: 'rect',
+				data: [],showLine: false,fill: false,pointRadius: 15,pointStyle: 'rect',
 				backgroundColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Gray Trajectory2",
-				data: [],
-				fill: false,
-				showLine: true,
-				pointRadius: 0,
+				data: [],fill: false,showLine: true,pointRadius: 0,
 				borderColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Targeting Limits",
-				
-                data: [],
-                fill: true,
-                showLine: true,
-				pointRadius: 0,
-				lineTension: 0,
+                data: [],fill: true,showLine: true,pointRadius: 0,lineTension: 0,
 				borderColor: 'rgba(255,255,255,0.5)',
 				backgroundColor: 'rgba(255,255,255,0.025)'
 			}]
