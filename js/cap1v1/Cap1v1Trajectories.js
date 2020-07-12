@@ -155,7 +155,8 @@ function burnCalc(xMouse, yMouse, click = false) {
 		app.tactic = '';
         app.chosenWaypoint = undefined;
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [];
-        globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
+		globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
+		setBottomInfo();
 		return;
 	} else {
 		let xPoint = globalChartRef.config.data.datasets[app.chosenWaypoint[1]].data[app.chosenWaypoint[0]].x,
@@ -180,7 +181,7 @@ function burnCalc(xMouse, yMouse, click = false) {
 		app.players[sat].burns[app.chosenWaypoint[0]] = [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)];
 		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (distance / 10 * Math.sin(az)).toFixed(3);
 		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (distance / 10 * Math.cos(az)).toFixed(3);
-		showNoteBar('R: ' + (distance / 10 * Math.sin(az)).toFixed(3) + ' m/s, I: ' + (distance / 10 * Math.cos(az)).toFixed(3) + ' m/s');
+		setBottomInfo('R: ' + (distance / 10 * Math.sin(az)).toFixed(3) + ' m/s, I: ' + (distance / 10 * Math.cos(az)).toFixed(3) + ' m/s');
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
 			x: xPoint,
 			y: yPoint
@@ -198,6 +199,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 		app.tactic = '';
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [];
         globalChartRef.config.data.datasets[app.dataLoc.selectedWay].data = [];
+		setBottomInfo();
 		let ii = 0;
 		let inter = setInterval(() => {
 			showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {time: app.tacticData.time, availDv: app.tacticData.availDv*(5-ii)/5})
@@ -239,6 +241,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 		app.players[sat].burns[app.chosenWaypoint[0]] = [dV[0][0] * 1000, dV[1][0] * 1000];
 		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (dV[0][0] * 1000).toFixed(3);
 		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (dV[1][0] * 1000).toFixed(3);
+		setBottomInfo('R: ' + (dV[0][0] * 1000).toFixed(3) + ' m/s, I: ' + (dV[1][0] * 1000).toFixed(3) + ' m/s');
 		globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
 			x: r1[1][0],
 			y: r1[0][0]

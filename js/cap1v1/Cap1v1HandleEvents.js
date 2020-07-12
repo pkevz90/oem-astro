@@ -221,6 +221,8 @@ function setBottomInfo(type = 'state') {
             break;
         case 'target':
             break;
+        default:
+            $('.info')[0].textContent = type;
     }
 
 }
