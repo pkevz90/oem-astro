@@ -13,6 +13,27 @@ let tooltipOpen,
 	startTime,
 	maneuverListSpans,
 	firstClick = undefined;
+app = {
+	dataLoc: {
+		way: 0,
+		traj: 1,
+		chosen: 2,
+		tech: 3,
+		pass: 4,
+		sun: 5,
+		moon: 6,
+		burn: 7,
+		sensorStart: 8
+	},
+	dragPoint: false,
+	initSunVector: [[axisLimits*3/8],[0]],
+	playDt: 100,
+	numSensors: 0,
+	startTime: undefined,
+	maneuverListSpans: undefined,
+	firstClick: undefined,
+	axisLimits: 25
+};
 // console.log(math.inv([[2,-1,3],[2,-2,1],[1,1,1]]));
 function createGraph() {
     var config = {
@@ -105,7 +126,6 @@ function createGraph() {
         },
         options: {
 			onResize: function (element,a) {
-				// console.log(globalChartRef.config.options.scales.xAxes[0].scaleLabel)
 				setLabelSize(a.width);
             },
 			animation:{
@@ -131,8 +151,7 @@ function createGraph() {
 				}
 				handleHover(valueX,valueY);
 			},
-            onClick: function (element, dataAtClick) {
-				// console.log('click')
+            onClick: function (element) {
                 let scaleRef,
                     valueX,
                     valueY;
@@ -148,9 +167,6 @@ function createGraph() {
             },
             title: {
                 display: false,
-                text: "",
-				fontColor: 'rgba(255,255,255,1)',
-				fontSize: 40
             },
             scales: {
                 xAxes: [{
@@ -199,11 +215,6 @@ function createGraph() {
         }
     };
     
-    config.data.datasets.forEach(function (dataset) {
-        dataset.pointBorderWidth = 2;
-        dataset.pointHoverRadius = 12;
-    });
-    
     var ctx = document.getElementById('ChartCnvs').getContext('2d');
     globalChartRef = new Chart(ctx, config);
 }
@@ -225,15 +236,15 @@ window.addEventListener('DOMContentLoaded', function () {
 			return;
 		}
 		if (a.deltaY > 0){
-			if (globalChartRef.config.data.datasets[0].data[chosenWaypoint].time > 300){
-				globalChartRef.config.data.datasets[0].data[chosenWaypoint].time -= 300;
+			if (globalChartRef.config.data.datasets[app.data.way].data[chosenWaypoint].time > 300){
+				globalChartRef.config.data.datasets[app.data.way].data[chosenWaypoint].time -= 300;
 			}
 			else {
 				showNoteBar('Cannot have negative transfer time');
 			}
 		}
 		else{
-			globalChartRef.config.data.datasets[0].data[chosenWaypoint].time += 300;
+			globalChartRef.config.data.datasets[app.data.way].data[chosenWaypoint].time += 300;
 		}
 		calculateTrajecories();
 		drawSunMoonVectors(julianDateCalc(startTime),Number(maneuverListSpans[chosenWaypoint*5].innerText)*3600);
@@ -242,7 +253,6 @@ window.addEventListener('DOMContentLoaded', function () {
 		let k = key.key;
 		handleKeyPress(k);
 	});
-	// console.log(document.getElementById("Play"));
 	document.getElementById("start-time").addEventListener("change",(a)=>{
 		let v = a.srcElement.value;
 		startTime = [Number(v.substring(0,4)), Number(v.substring(5,7)), Number(v.substring(8,10)), Number(v.substring(11,13)), Number(v.substring(14,16))];
