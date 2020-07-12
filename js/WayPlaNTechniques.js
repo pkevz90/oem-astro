@@ -270,7 +270,6 @@ function fmcBuilder(X,Y,eventType,wheelDir){
 	}
 	// Runs on wheel command as well to make visuals smoother
 	if (eventType === 'hover' || eventType === 'wheel'){
-		console.log(tacticArray)
 		if (tacticArray.az0 === undefined){
 			// No data given, user selecting in-track center
 			globalChartRef.config.data.datasets[app.dataLoc.tech].data = [{
