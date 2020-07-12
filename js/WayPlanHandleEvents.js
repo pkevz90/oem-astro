@@ -105,24 +105,24 @@ function handleKeyPress(k) {
         app.tactic = 'ht';
     }
     else if (k === 'p'){
-        if (!playBool){
-            playBool = true;
+        if (!app.playBool){
+            app.playBool = true;
         }
         else{
-            playBool = false;
+            app.playBool = false;
             return;
         }
-            wholeTraj = playTrajectory(); playFrame = 0;
+            let wholeTraj = playTrajectory(), playFrame = 0;
             globalChartRef.config.data.datasets[app.dataLoc.pass].data = [];
-            idInterval = setInterval(() => { 
+            let idInterval = setInterval(() => { 
                 globalChartRef.config.data.datasets[app.dataLoc.traj].data.push({
                     x: wholeTraj[playFrame][0],
                     y: wholeTraj[playFrame][1],
                 });
-                drawSunMoonVectors(julianDateCalc(startTime),playFrame*app.playDt);
+                drawSunMoonVectors(julianDateCalc(app.startTime),playFrame*app.playDt);
                 playFrame++;
                 globalChartRef.update();
-                if (playFrame === wholeTraj.length || !playBool){
+                if (playFrame === wholeTraj.length || !app.playBool){
                     clearInterval(idInterval);
                     setSelectedWaypoint('last');
                     calculateTrajecories();

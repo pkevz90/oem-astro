@@ -1,10 +1,6 @@
 let globalChartRef;
 let tooltipOpen, 
-	tooltipIndex, 
-	passiveTime = 12, 
-	idInterval, 
-	wholeTraj, 
-	playFrame, playBool = false;
+	tooltipIndex;  
 let app = {
 	dataLoc: {
 		way: 0,
@@ -26,9 +22,11 @@ let app = {
 	maneuverListSpans: undefined,
 	firstClick: undefined,
 	tacticArray: {},
+	passiveTime: 12,
 	tactic: undefined,
 	chosenWaypoint: undefined,
-	numSensors: 0
+	numSensors: 0,
+	playBool: false
 };
 // console.log(math.inv([[2,-1,3],[2,-2,1],[1,1,1]]));
 function createGraph() {
