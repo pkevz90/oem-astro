@@ -359,7 +359,7 @@ function buildSensor(X,Y,event){
 			else if (azDel < -Math.PI) {
 				azDel = Math.PI + (azDel+Math.PI);
 			}
-			globalChartRef.config.data.datasets[app.dataLoc.sensorStart+numSensors].data = [{
+			globalChartRef.config.data.datasets[app.dataLoc.sensorStart+app.numSensors].data = [{
 				x: 0,
 				y: 0,
 			}];
@@ -368,12 +368,12 @@ function buildSensor(X,Y,event){
 			for (var ii = 0; ii <= numW*2; ii++){
 				azT = az+ii*azDel/numW;
 				
-				globalChartRef.config.data.datasets[app.dataLoc.sensorStart+numSensors].data.push({
+				globalChartRef.config.data.datasets[app.dataLoc.sensorStart+app.numSensors].data.push({
 					x: app.tacticArray.r*Math.cos(azT),
 					y: app.tacticArray.r*Math.sin(azT),
 				})
 			} 
-			globalChartRef.config.data.datasets[app.dataLoc.sensorStart+numSensors].data.push({
+			globalChartRef.config.data.datasets[app.dataLoc.sensorStart+app.numSensors].data.push({
 				x: 0,
 				y: 0,
 			})
