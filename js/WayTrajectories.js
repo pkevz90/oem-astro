@@ -29,7 +29,7 @@ function calculateTrajecories(){
 			y: r2[0]
 		});
 	}
-	if (chosenWaypoint !== undefined){
+	if (app.chosenWaypoint !== undefined){
 		calcPassiveTraj();
 	}
 	plotBurnDirections();
@@ -57,8 +57,8 @@ function playTrajectory(){
 function calcPassiveTraj(){
 	// Show passive trajectory
 	globalChartRef.config.data.datasets[app.dataLoc.pass].data = [];
-	let rPass = [[globalChartRef.config.data.datasets[app.dataLoc.way].data[chosenWaypoint].y],[globalChartRef.config.data.datasets[app.dataLoc.way].data[chosenWaypoint].x]];
-	let vPass = [[globalChartRef.config.data.datasets[app.dataLoc.way].data[chosenWaypoint].dy],[globalChartRef.config.data.datasets[app.dataLoc.way].data[chosenWaypoint].dx]];
+	let rPass = [[globalChartRef.config.data.datasets[app.dataLoc.way].data[app.chosenWaypoint].y],[globalChartRef.config.data.datasets[app.dataLoc.way].data[app.chosenWaypoint].x]];
+	let vPass = [[globalChartRef.config.data.datasets[app.dataLoc.way].data[app.chosenWaypoint].dy],[globalChartRef.config.data.datasets[app.dataLoc.way].data[app.chosenWaypoint].dx]];
 	let r2;
 	for (var jj = 0; jj <= passiveTime; jj+= 0.5){
 		r2 = math.add(math.multiply(PhiRR(jj*3600),rPass),math.multiply(PhiRV(jj*3600),vPass));

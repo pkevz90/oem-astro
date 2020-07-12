@@ -1,19 +1,11 @@
 let globalChartRef;
 let tooltipOpen, 
 	tooltipIndex, 
-	chosenWaypoint,
-	dragPoint, 
-	axisLimits = 25, 
-	tacticArray = {}, passiveTime = 12, 
-	tactic = undefined, 
+	passiveTime = 12, 
 	idInterval, 
 	wholeTraj, 
-	playFrame, playBool = false, 
-	initSunVector = [[axisLimits*3/8],[0]], playDt = 100, numSensors = 0,
-	startTime,
-	maneuverListSpans,
-	firstClick = undefined;
-app = {
+	playFrame, playBool = false;
+let app = {
 	dataLoc: {
 		way: 0,
 		traj: 1,
@@ -25,14 +17,18 @@ app = {
 		burn: 7,
 		sensorStart: 8
 	},
-	dragPoint: false,
-	initSunVector: [[axisLimits*3/8],[0]],
+	dragPoint: undefined,
+	axisLimits: 25,
+	initSunVector: [[25*3/8],[0]],
 	playDt: 100,
 	numSensors: 0,
 	startTime: undefined,
 	maneuverListSpans: undefined,
 	firstClick: undefined,
-	axisLimits: 25
+	tacticArray: {},
+	tactic: undefined,
+	chosenWaypoint: undefined,
+	numSensors: 0
 };
 // console.log(math.inv([[2,-1,3],[2,-2,1],[1,1,1]]));
 function createGraph() {
@@ -224,30 +220,30 @@ window.addEventListener('DOMContentLoaded', function () {
 	createGraph();
 	setLabelSize($('#ChartCnvs').width()); // Scale label size to browser window size
 	let v = document.getElementById("start-time").value;
-	startTime = [Number(v.substring(0,4)), Number(v.substring(5,7)), Number(v.substring(8,10)), Number(v.substring(11,13)), Number(v.substring(14,16))];
-	drawSunMoonVectors(julianDateCalc(startTime));
-	maneuverListSpans = document.getElementById("burnTable").querySelectorAll("span");
+	app.startTime = [Number(v.substring(0,4)), Number(v.substring(5,7)), Number(v.substring(8,10)), Number(v.substring(11,13)), Number(v.substring(14,16))];
+	drawSunMoonVectors(julianDateCalc(app.startTime));
+	app.maneuverListSpans = document.getElementById("burnTable").querySelectorAll("span");
 	annotateBurnHistory();
 	globalChartRef.update();
 	document.getElementById("ChartCnvs").addEventListener("wheel", function(a){
 		a.preventDefault();
-		if (tactic !== undefined) {
-			handleTechnique(tactic,undefined,undefined,'wheel',a.deltaY);
+		if (app.tactic !== undefined) {
+			handleTechnique(app.tactic,undefined,undefined,'wheel',a.deltaY);
 			return;
 		}
 		if (a.deltaY > 0){
-			if (globalChartRef.config.data.datasets[app.data.way].data[chosenWaypoint].time > 300){
-				globalChartRef.config.data.datasets[app.data.way].data[chosenWaypoint].time -= 300;
+			if (globalChartRef.config.data.datasets[app.dataLoc.way].data[app.chosenWaypoint].time > 300){
+				globalChartRef.config.data.datasets[app.dataLoc.way].data[app.chosenWaypoint].time -= 300;
 			}
 			else {
 				showNoteBar('Cannot have negative transfer time');
 			}
 		}
 		else{
-			globalChartRef.config.data.datasets[app.data.way].data[chosenWaypoint].time += 300;
+			globalChartRef.config.data.datasets[app.dataLoc.way].data[app.chosenWaypoint].time += 300;
 		}
 		calculateTrajecories();
-		drawSunMoonVectors(julianDateCalc(startTime),Number(maneuverListSpans[chosenWaypoint*5].innerText)*3600);
+		drawSunMoonVectors(julianDateCalc(app.startTime),Number(app.maneuverListSpans[app.chosenWaypoint*5].innerText)*3600);
 	});
 	document.addEventListener('keypress', function(key){
 		let k = key.key;
@@ -255,14 +251,14 @@ window.addEventListener('DOMContentLoaded', function () {
 	});
 	document.getElementById("start-time").addEventListener("change",(a)=>{
 		let v = a.srcElement.value;
-		startTime = [Number(v.substring(0,4)), Number(v.substring(5,7)), Number(v.substring(8,10)), Number(v.substring(11,13)), Number(v.substring(14,16))];
-    	drawSunMoonVectors(julianDateCalc(startTime));
+		app.startTime = [Number(v.substring(0,4)), Number(v.substring(5,7)), Number(v.substring(8,10)), Number(v.substring(11,13)), Number(v.substring(14,16))];
+    	drawSunMoonVectors(julianDateCalc(app.startTime));
 	});
 	document.getElementById("sunCheck").addEventListener("change",() => {
-		drawSunMoonVectors(julianDateCalc(startTime));
+		drawSunMoonVectors(julianDateCalc(app.startTime));
 	})
 	document.getElementById("moonCheck").addEventListener("change",() => {
-		drawSunMoonVectors(julianDateCalc(startTime));
+		drawSunMoonVectors(julianDateCalc(app.startTime));
 	})
 	document.getElementById("burnCheck").addEventListener("change",() => {
 		plotBurnDirections();
