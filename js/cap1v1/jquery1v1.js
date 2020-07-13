@@ -63,7 +63,7 @@ $('.start-button').on('click', () => {
                 Number($inputs[14].value) * n
             ]
         ];
-        app.players.gray1 = new Satellite(init,'gray1',{traj: 14, cur: 13})
+        app.players.gray1 = new Satellite(init,'gray1',{trajectory: globalChartRef.config.data.datasets[14], current: globalChartRef.config.data.datasets[13]})
     }
     if ($('.setup-container').eq(3).find('div').eq(0).is(':visible')) {
         init = [
@@ -77,7 +77,7 @@ $('.start-button').on('click', () => {
                 Number($inputs[18].value) * n
             ]
         ];
-        app.players.gray2 = new Satellite(init,'gray2',{traj: 16, cur: 15})
+        app.players.gray2 = new Satellite(init,'gray2',{trajectory: globalChartRef.config.data.datasets[16], current: globalChartRef.config.data.datasets[15]})
     }
     app.deltaVAvail = Number($inputs[5].value);
     app.reqCats = Number($inputs[6].value)*Math.PI/180;

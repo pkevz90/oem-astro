@@ -386,7 +386,7 @@ function setCurrentPoints(curTime, noPlot = false) {
 	return points;
 }
 
-function drawViewpoint(pos, az, range, color = 'red') {
+function drawViewpoint(pos, az, range) {
 	app.chartData.view.data = [{
 		x: pos[1],
 		y: pos[0]
