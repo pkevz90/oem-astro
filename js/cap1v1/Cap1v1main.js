@@ -12,7 +12,7 @@ class Satellite {
 				[0, 0],
 				[0, 0]
 			];
-		} 
+		}
 		this.calculateTrajecory = calculateTrajecory;
 		this.dataLoc = dataLoc;
 	}
@@ -42,17 +42,12 @@ let app = {
 		manRows: undefined,
 		scenData: undefined
 	},
+	chartData: undefined,
 	dataLoc: {
 		blueFormer: 2,
 		redFormer: 5,
-		burnDir: 6,
-		Sun: 7,
-		selectedWay: 8,
-		view: 11,
-		relLine: 12,
 		curGray: 13,
 		grayTraj: 14,
-		targetLim: 17
 	},
 	updateApp: function () {
 		for (var sat in app.players) {
@@ -68,32 +63,54 @@ function createGraph() {
 		data: {
 			datasets: [{
 				// label: "Blue Waypoints",
-				data: [], showLine: false, fill: false,
-				pointRadius: 7, borderColor: 'rgba(120,200,255,1)'
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 7,
+				borderColor: 'rgba(120,200,255,1)'
 			}, {
 				// label: "Blue Trajectory",
-				data: [], showLine: true, fill: false,
-				pointRadius: 0, borderColor: 'rgba(120,200,255,1)'
+				data: [],
+				showLine: true,
+				fill: false,
+				pointRadius: 0,
+				borderColor: 'rgba(120,200,255,1)'
 			}, {
 				// label: "Blue Former Trajectory",
-				data: [], showLine: true, fill: false,
-				pointRadius: 0, borderColor: 'rgba(120,200,255,0.5)'
+				data: [],
+				showLine: true,
+				fill: false,
+				pointRadius: 0,
+				borderColor: 'rgba(120,200,255,0.5)'
 			}, {
 				// label: "Red Waypoints",
-				data: [], showLine: false, fill: false, pointRadius: 7,
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 7,
 				borderColor: 'rgba(255,200,120,1)'
 			}, {
 				// label: "Red Trajectory",
-				data: [], showLine: true, fill: false, pointRadius: 0,
+				data: [],
+				showLine: true,
+				fill: false,
+				pointRadius: 0,
 				borderColor: 'rgba(255,200,120,1)'
 			}, {
 				// label: "Red Former Trajectory",
-				data: [], showLine: true, fill: false, pointRadius: 0,
+				data: [],
+				showLine: true,
+				fill: false,
+				pointRadius: 0,
 				borderColor: 'rgba(60,100,255,0.5)'
 			}, {
 				// label: "Burn Directions",
-				data: [], showLine: true, fill: false, pointRadius: 0,
-				borderWidth: 6, borderColor: 'rgba(255,255,255,0.5)',
+				data: [],
+				showLine: true,
+				fill: false,
+				pointRadius: 0,
+				borderWidth: 6,
+				borderColor: 'rgba(255,255,255,0.5)',
 			}, {
 				// label: "Sun",
 				data: [{
@@ -103,11 +120,18 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false, showLine: true, pointRadius: 0, borderWidth: 6, lineTension: 0,
+				fill: false,
+				showLine: true,
+				pointRadius: 0,
+				borderWidth: 6,
+				lineTension: 0,
 				borderColor: 'rgba(225,225,0,1)',
 			}, {
 				// label: "Selected Waypoint",
-				data: [],fill: false,showLine: false,pointRadius: 5,
+				data: [],
+				fill: false,
+				showLine: false,
+				pointRadius: 5,
 				backgroundColor: 'rgba(255,255,255,1)',
 			}, {
 				// label: "Current Blue",
@@ -115,7 +139,10 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false,showLine: false,pointRadius: 15,pointStyle: 'triangle',
+				fill: false,
+				showLine: false,
+				pointRadius: 15,
+				pointStyle: 'triangle',
 				backgroundColor: 'rgba(120,200,255,1)',
 			}, {
 				// label: "Current Red",
@@ -123,12 +150,18 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false,showLine: false,pointRadius: 15,pointStyle: 'triangle',
+				fill: false,
+				showLine: false,
+				pointRadius: 15,
+				pointStyle: 'triangle',
 				backgroundColor: 'rgba(255,200,120,1)',
 			}, {
 				// label: "Viewpoint",
-				data: [],fill: true,showLine: true,pointRadius: 0,
-				backgroundColor: 'rgba(255,200,120,0.25)',
+				data: [],
+				fill: true,
+				showLine: true,
+				pointRadius: 0,
+				backgroundColor: 'rgba(120,200,255,0.25)',
 			}, {
 				// label: "Relative Line",
 				data: [{
@@ -138,27 +171,49 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false,showLine: true,pointRadius: 0,borderDash: [10, 10],
+				fill: false,
+				showLine: true,
+				pointRadius: 0,
+				borderDash: [10, 10],
 				borderColor: 'rgba(255,255,255,0.5)',
 			}, {
 				// label: "Current Gray1",
-				data: [],showLine: false,fill: false,pointRadius: 15,pointStyle: 'rect',
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 15,
+				pointStyle: 'rect',
 				backgroundColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Gray Trajectory1",
-				data: [],fill: false,showLine: true,pointRadius: 0,
+				data: [],
+				fill: false,
+				showLine: true,
+				pointRadius: 0,
 				borderColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Current Gray2",
-				data: [],showLine: false,fill: false,pointRadius: 15,pointStyle: 'rect',
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 15,
+				pointStyle: 'rect',
 				backgroundColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Gray Trajectory2",
-				data: [],fill: false,showLine: true,pointRadius: 0,
+				data: [],
+				fill: false,
+				showLine: true,
+				pointRadius: 0,
 				borderColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Targeting Limits",
-                data: [],fill: true,showLine: true,pointRadius: 0,lineTension: 0, spanGaps: false,
+				data: [],
+				fill: true,
+				showLine: true,
+				pointRadius: 0,
+				lineTension: 0,
+				spanGaps: false,
 				borderColor: 'rgba(255,255,255,0.5)',
 				backgroundColor: 'rgba(255,255,255,0.025)'
 			}]
@@ -251,6 +306,14 @@ function createGraph() {
 }
 
 function startGame() {
+	app.chartData = {
+		burnDir: globalChartRef.config.data.datasets[6],
+		sun: globalChartRef.config.data.datasets[7],
+		selected: globalChartRef.config.data.datasets[8],
+		relative: globalChartRef.config.data.datasets[12],
+		targetLim: globalChartRef.config.data.datasets[17],
+		view: globalChartRef.config.data.datasets[11]
+	};
 	for (sat in app.players) {
 		app.players[sat].calculateTrajecory();
 	}
@@ -274,7 +337,7 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 	let SunVector = math.multiply(R, app.initSunVector);
 	let arrowLen = 1.25;
 	if (plot) {
-		globalChartRef.config.data.datasets[app.dataLoc.Sun].data = [{
+		app.chartData.sun.data = [{
 			x: origin[1],
 			y: origin[0]
 		}, {
@@ -283,15 +346,15 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 		}, undefined, {
 			x: SunVector[1][0] + origin[1],
 			y: SunVector[0][0] + origin[0]
-		},{
-			x: SunVector[1][0] + origin[1]-arrowLen*Math.cos(Math.PI/6-$('#sun')[0].value*Math.PI/180+Math.PI/2+t*n),
-			y: SunVector[0][0] + origin[0]-arrowLen*Math.sin(Math.PI/6-$('#sun')[0].value*Math.PI/180+Math.PI/2+t*n)
-		},undefined,{
+		}, {
+			x: SunVector[1][0] + origin[1] - arrowLen * Math.cos(Math.PI / 6 - $('#sun')[0].value * Math.PI / 180 + Math.PI / 2 + t * n),
+			y: SunVector[0][0] + origin[0] - arrowLen * Math.sin(Math.PI / 6 - $('#sun')[0].value * Math.PI / 180 + Math.PI / 2 + t * n)
+		}, undefined, {
 			x: SunVector[1][0] + origin[1],
 			y: SunVector[0][0] + origin[0]
-		},{
-			x: SunVector[1][0] + origin[1]-arrowLen*Math.cos(Math.PI/6+$('#sun')[0].value*Math.PI/180-Math.PI/2-t*n),
-			y: SunVector[0][0] + origin[0]+arrowLen*Math.sin(Math.PI/6+$('#sun')[0].value*Math.PI/180-Math.PI/2-t*n)
+		}, {
+			x: SunVector[1][0] + origin[1] - arrowLen * Math.cos(Math.PI / 6 + $('#sun')[0].value * Math.PI / 180 - Math.PI / 2 - t * n),
+			y: SunVector[0][0] + origin[0] + arrowLen * Math.sin(Math.PI / 6 + $('#sun')[0].value * Math.PI / 180 - Math.PI / 2 - t * n)
 		}];
 		globalChartRef.update();
 	}
@@ -301,17 +364,19 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 function setCurrentPoints(curTime, noPlot = false) {
 	var points = {};
 	for (sat in app.players) {
-		points[sat+'R'] = [
-			[globalChartRef.config.data.datasets[app.players[sat].dataLoc.traj].data[Math.floor(curTime * 3600 / app.calcDt)].y],
-			[globalChartRef.config.data.datasets[app.players[sat].dataLoc.traj].data[Math.floor(curTime * 3600 / app.calcDt)].x]
+		points[sat + 'R'] = [
+			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)].y],
+			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)].x]
 		];
-		globalChartRef.config.data.datasets[app.players[sat].dataLoc.cur].data = [{
-			x: points[sat+'R'][1],
-			y: points[sat+'R'][0]
+		app.players[sat].dataLoc.current.data = [{
+			x: points[sat + 'R'][1],
+			y: points[sat + 'R'][0]
 		}];
 	}
-	if (noPlot) {return points}
-	globalChartRef.config.data.datasets[app.dataLoc.relLine].data = [{
+	if (noPlot) {
+		return points
+	}
+	app.chartData.relative.data = [{
 		x: points['redR'][1],
 		y: points['redR'][0]
 	}, {
@@ -322,22 +387,21 @@ function setCurrentPoints(curTime, noPlot = false) {
 }
 
 function drawViewpoint(pos, az, range, color = 'red') {
-	globalChartRef.config.data.datasets[app.dataLoc.view].data = [{
+	app.chartData.view.data = [{
 		x: pos[1],
 		y: pos[0]
 	}];
 	range *= 1.5;
 	let angWidth = Math.PI / 9;
 	for (var ii = az - angWidth / 2; ii <= az + angWidth / 2; ii += 0.01) {
-		globalChartRef.config.data.datasets[app.dataLoc.view].data.push({
+		app.chartData.view.data.push({
 			x: pos[1] + range * Math.cos(ii),
 			y: pos[0] + range * Math.sin(ii)
 		});
 	}
-	globalChartRef.config.data.datasets[app.dataLoc.view].data.push({
+	app.chartData.view.data.push({
 		x: pos[1],
 		y: pos[0]
 	});
-	globalChartRef.config.data.datasets[app.dataLoc.view].backgroundColor = (color === 'red') ? 'rgba(255,200,120,0.25)' : 'rgba(120,200,255,0.25)';
 
 }
