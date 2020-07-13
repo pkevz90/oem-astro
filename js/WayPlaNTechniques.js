@@ -46,8 +46,10 @@ function nmcBuilder(X, Y, event) {
 				dy: 0,
 				deltaX: 0,
 				deltaY: 0,
-			})
+			});
+			
 			addBurnHistoryRow();
+			setSelectedWaypoint('last');
 			globalChartRef.update();
 			return;
 		}
@@ -82,7 +84,12 @@ function nmcBuilder(X, Y, event) {
 			y: -app.tacticArray.ae / 2 * Math.cos(B),
 			time: (B - app.tacticArray.b0) / (2 * Math.PI / 86164)
 		})
+		app.chartData.chosen.data = [{
+			x: app.chartData.waypoints.data[len].x,
+			y: app.chartData.waypoints.data[len].y,
+		}];
 		calculateTrajecories();
+		drawSunMoonVectors(julianDateCalc(app.startTime), Number(app.maneuverListSpans[app.chosenWaypoint * 5].innerText) * 3600);
 	}
 }
 
