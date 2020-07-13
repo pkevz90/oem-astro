@@ -103,8 +103,8 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false, showLine: true, pointRadius: 0, borderWidth: 6,
-				borderColor: 'rgba(200,200,0,1)',
+				fill: false, showLine: true, pointRadius: 0, borderWidth: 6, lineTension: 0,
+				borderColor: 'rgba(225,225,0,1)',
 			}, {
 				// label: "Selected Waypoint",
 				data: [],fill: false,showLine: false,pointRadius: 5,
@@ -158,7 +158,7 @@ function createGraph() {
 				borderColor: 'rgba(150,150,150,1)',
 			}, {
 				// label: "Targeting Limits",
-                data: [],fill: true,showLine: true,pointRadius: 0,lineTension: 0,
+                data: [],fill: true,showLine: true,pointRadius: 0,lineTension: 0, spanGaps: false,
 				borderColor: 'rgba(255,255,255,0.5)',
 				backgroundColor: 'rgba(255,255,255,0.025)'
 			}]
@@ -272,6 +272,7 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 			[st, ct]
 		];
 	let SunVector = math.multiply(R, app.initSunVector);
+	let arrowLen = 1.25;
 	if (plot) {
 		globalChartRef.config.data.datasets[app.dataLoc.Sun].data = [{
 			x: origin[1],
@@ -279,6 +280,18 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 		}, {
 			x: SunVector[1][0] + origin[1],
 			y: SunVector[0][0] + origin[0]
+		}, undefined, {
+			x: SunVector[1][0] + origin[1],
+			y: SunVector[0][0] + origin[0]
+		},{
+			x: SunVector[1][0] + origin[1]-arrowLen*Math.cos(Math.PI/6+t*n),
+			y: SunVector[0][0] + origin[0]-arrowLen*Math.sin(Math.PI/6+t*n)
+		},undefined,{
+			x: SunVector[1][0] + origin[1],
+			y: SunVector[0][0] + origin[0]
+		},{
+			x: SunVector[1][0] + origin[1]-arrowLen*Math.cos(Math.PI/6-t*n),
+			y: SunVector[0][0] + origin[0]+arrowLen*Math.sin(Math.PI/6-t*n)
 		}];
 		globalChartRef.update();
 	}

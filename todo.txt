@@ -1,4 +1,5 @@
 - RPO 1v1
+    -- Make sun vector an arrow
     -- Fix targeting functionality (complete)
     -- Make scenario customizable
         --- range and cats req do not function (complete)
