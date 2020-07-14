@@ -17,7 +17,11 @@ $('.start-button').on('click', () => {
         [15*Math.cos($('#sun')[0].value*Math.PI/180)],
         [15*Math.sin($('#sun')[0].value*Math.PI/180)]
     ];
-
+    app.scenLength = Number($('#sl')[0].value);
+    app.numBurns = Number($('#bp')[0].value);
+    sideData.scenario_data.numBurns = app.numBurns;
+    sideData.scenario_data.scenLength = app.scenLength;
+    $('.slider')[0].max = app.scenLength;
     let blueInit = [
         [-Number($inputs[0].value) / 2 * Math.cos(Number($inputs[3].value) * Math.PI / 180) +
             Number($inputs[1].value)
@@ -30,14 +34,14 @@ $('.start-button').on('click', () => {
         ]
     ];
     let redInit = [
-        [-Number($inputs[9].value) / 2 * Math.cos(Number($inputs[12].value) * Math.PI / 180) +
-            Number($inputs[10].value)
+        [-Number($inputs[8].value) / 2 * Math.cos(Number($inputs[11].value) * Math.PI / 180) +
+            Number($inputs[9].value)
         ],
-        [Number($inputs[9].value) * Math.sin(Number($inputs[12].value) * Math.PI / 180) + Number(
-            $inputs[11].value)],
-        [Number($inputs[9].value) * n / 2 * Math.sin(Number($inputs[12].value) * Math.PI / 180)],
-        [Number($inputs[9].value) * n * Math.cos(Number($inputs[12].value) * Math.PI / 180) - 1.5 *
-            Number($inputs[10].value) * n
+        [Number($inputs[8].value) * Math.sin(Number($inputs[11].value) * Math.PI / 180) + Number(
+            $inputs[10].value)],
+        [Number($inputs[8].value) * n / 2 * Math.sin(Number($inputs[11].value) * Math.PI / 180)],
+        [Number($inputs[8].value) * n * Math.cos(Number($inputs[11].value) * Math.PI / 180) - 1.5 *
+            Number($inputs[9].value) * n
         ]
     ];
     app.players.blue = new Satellite(blueInit, 'blue', {
@@ -79,9 +83,9 @@ $('.start-button').on('click', () => {
         ];
         app.players.gray2 = new Satellite(init,'gray2',{trajectory: globalChartRef.config.data.datasets[16], current: globalChartRef.config.data.datasets[15]})
     }
-    app.deltaVAvail = Number($inputs[5].value);
-    app.reqCats = Number($inputs[6].value)*Math.PI/180;
-    app.rangeReq = [Number($inputs[7].value), Number($inputs[8].value)];
+    app.deltaVAvail = Number($inputs[4].value);
+    app.reqCats = Number($inputs[5].value)*Math.PI/180;
+    app.rangeReq = [Number($inputs[6].value), Number($inputs[7].value)];
     startGame();
     
 })
@@ -106,43 +110,44 @@ $('.slider-contain input').on('input', (a) => {
     setBottomInfo();
     calcData(app.currentTime);
 })
-$('tr').on('click', (a) => {
-    let ii = 0;
-    while (!$(a.target).is('tr')) {
-        a.target = $(a.target).parent();
-        console.log(a.target);
-        ii++;
-        if (ii > 5) {
-            break;
-        }
-    }
-    ii = $('tr').index(a.target);
-    if ((ii === 0) || (ii === 6)) {
-        return;
-    }
-    let sat = (ii > 6) ? 'red' : 'blue';
-    if (app.chosenWaypoint === undefined) {
-        app.tactic = '';
-    } else if ((app.chosenWaypoint[0] === (ii-1)) && (sat === 'blue')) {
-        console.log(1)
-        app.tactic = 'burn';
-    } else if ((app.chosenWaypoint[0] === (ii-7)) && (sat === 'red')) {
-        console.log(2)
-        app.tactic = 'burn';
-    } else {
-        console.log(3)
-        app.tactic = '';
-    }
-    setSelectedWaypoint((ii > 6) ? ii - 7 : ii - 1, sat);
-    globalChartRef.config.data.datasets[app.dataLoc.burnDir].data = [{
-        x: 0,
-        y: 0
-    }, {
-        x: 0,
-        y: 0
-    }];
+// $('tr').on('click', (a) => {
+//     let ii = 0;
+//     while (!$(a.target).is('tr')) {
+//         a.target = $(a.target).parent();
+//         // console.log(a.target);
+//         ii++;
+//         if (ii > 5) {
+//             break;
+//         }
+//     }
+//     ii = $('tr').index(a.target);
+//     console.log(ii);
+//     if ((ii === 0) || (ii === 6)) {
+//         return;
+//     }
+//     let sat = (ii > 6) ? 'red' : 'blue';
+//     if (app.chosenWaypoint === undefined) {
+//         app.tactic = '';
+//     } else if ((app.chosenWaypoint[0] === (ii-1)) && (sat === 'blue')) {
+//         console.log(1)
+//         app.tactic = 'burn';
+//     } else if ((app.chosenWaypoint[0] === (ii-7)) && (sat === 'red')) {
+//         console.log(2)
+//         app.tactic = 'burn';
+//     } else {
+//         // console.log(3)
+//         app.tactic = '';
+//     }
+//     setSelectedWaypoint((ii > 6) ? ii - 7 : ii - 1, sat);
+//     app.chartData.burnDir.data = [{
+//         x: 0,
+//         y: 0
+//     }, {
+//         x: 0,
+//         y: 0
+//     }];
 
-})
+// })
 var burnRows, dataRows; {
     let $tableRows = $('td');
     app.spans.manRows = {

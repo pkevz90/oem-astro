@@ -11,9 +11,9 @@ function calculateTrajecory() {
 		pRV = PhiRV(app.calcDt),
 		pVR = PhiVR(app.calcDt),
 		pVV = PhiVV(app.calcDt);
-	
-	if (this.name.substr(0,4) === 'gray') {
-		let totalTime = app.timeBetween*app.players.blue.burns.length;
+
+	if (this.name.substr(0, 4) === 'gray') {
+		let totalTime = app.timeBetween * app.players.blue.burns.length;
 		for (let t = 0; t <= totalTime; t += app.calcDt) {
 			let r1 = r;
 			r = math.add(math.multiply(pRR, r), math.multiply(pRV, v));
@@ -26,7 +26,7 @@ function calculateTrajecory() {
 		return;
 	}
 	let numPoints = 50;
-	app.calcDt = app.timeBetween / (numPoints + 1);
+	app.calcDt = (app.scenLength / app.numBurns) * 3600 / (numPoints + 1);
 	this.dataLoc.waypoints.data = [];
 	this.dataLoc.trajectory.data = [];
 	this.dataLoc.waypoints.data.push({
@@ -77,10 +77,12 @@ function calcData(curTime = 0) {
 		curRange: math.norm([curPoints.redR[0][0] - curPoints.blueR[0][0], curPoints.redR[1][0] - curPoints.blueR[1][0]]),
 		curCats: catsAngle * 180 / Math.PI
 	});
-	
+
 	for (let sat in app.players) {
 		let total = 0;
-		if (app.players[sat].name.substr(0,4) === 'gray') {continue;}
+		if (app.players[sat].name.substr(0, 4) === 'gray') {
+			continue;
+		}
 		app.players[sat].burns.forEach(element => {
 			total += math.norm(element);
 		});
@@ -97,7 +99,7 @@ function calcData(curTime = 0) {
 		t2 = 0,
 		range1, range2, t0 = 0,
 		tf = app.players.red.dataLoc.trajectory.data.length * app.calcDt;
-	while (Math.abs(t1 - t2) > app.calcDt * 4) {
+	while (Math.abs(t1 - t2) > 60) {
 		t1 = (tf - t0) / 3 + t0;
 		t2 = (tf - t0) * 2 / 3 + t0;
 		redR = app.players.red.dataLoc.trajectory.data[Math.floor(t1 / app.calcDt)];
@@ -139,7 +141,7 @@ function calcData(curTime = 0) {
 function burnCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
-        app.chosenWaypoint = undefined;
+		app.chosenWaypoint = undefined;
 		app.chartData.burnDir.data = [];
 		app.chartData.selected.data = [];
 		setBottomInfo();
@@ -183,11 +185,14 @@ function targetCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
 		app.chartData.burnDir.data = [];
-        app.chartData.selected.data = [];
+		app.chartData.selected.data = [];
 		setBottomInfo();
 		let ii = 0;
 		let inter = setInterval(() => {
-			showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {time: app.tacticData.time, availDv: app.tacticData.availDv*(5-ii)/5})
+			showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {
+				time: app.tacticData.time,
+				availDv: app.tacticData.availDv * (5 - ii) / 5
+			})
 			globalChartRef.update();
 			if (ii === 5) {
 				app.chartData.targetLim.data = [];
@@ -213,14 +218,17 @@ function targetCalc(xMouse, yMouse, click = false) {
 				[app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].dRad],
 				[app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].dIt]
 			],
-			v1f = math.multiply(math.inv(PhiRV(app.tacticData.targetPos*app.timeBetween)), math.subtract(r2, math.multiply(PhiRR(app.tacticData.targetPos*app.timeBetween), r1))),
+			v1f = math.multiply(math.inv(PhiRV(app.tacticData.targetPos * app.scenLength / app.numBurns * 3600)), math.subtract(r2, math.multiply(PhiRR(app.tacticData.targetPos * app.scenLength / app.numBurns * 3600), r1))),
 			dV = math.subtract(v1f, v10);
-		
+			
 		if ((1000 * math.norm(math.squeeze(dV))) > app.tacticData.availDv) {
 			let newNorm = app.tacticData.availDv / 1000;
 			let newR = dV[0][0] / math.norm(math.squeeze(dV)) * newNorm;
 			let newI = dV[1][0] / math.norm(math.squeeze(dV)) * newNorm;
-			dV = [[newR],[newI]];
+			dV = [
+				[newR],
+				[newI]
+			];
 		}
 		let sat = app.chosenWaypoint[1];
 		app.players[sat].burns[app.chosenWaypoint[0]] = [dV[0][0] * 1000, dV[1][0] * 1000];
@@ -233,36 +241,39 @@ function targetCalc(xMouse, yMouse, click = false) {
 			y: r1[0][0] + dV[0][0] * 10000
 		}];
 		app.players[sat].calculateTrajecory();
-		
+
 		calcData(app.currentTime);
 
 	}
 }
 
-function showDeltaVLimit(sat,avail) {
+function showDeltaVLimit(sat, avail) {
 	app.chartData.targetLim.data = [];
-	let dV = avail.availDv/1000;
-	let angle, nodes = 50, rBurn, iBurn;
+	let dV = avail.availDv / 1000;
+	let angle, nodes = 50,
+		rBurn, iBurn;
 	let initState = app.players[sat].dataLoc.waypoints.data[app.chosenWaypoint[0]];
-	let r = [[initState.y],
-			 [initState.x]];
-	let v = [[initState.dRad],
-			 [initState.dIt]];
+	let r = [
+		[initState.y],
+		[initState.x]
+	];
+	let v = [
+		[initState.dRad],
+		[initState.dIt]
+	];
 	let vNew, r2;
-	let pRR = PhiRR(avail.targetPos*app.timeBetween),
-		pRV = PhiRV(avail.targetPos*app.timeBetween);
-		// console.log(avail.availDv);
-		
+	let pRR = PhiRR(avail.targetPos * app.scenLength / app.numBurns * 3600),
+		pRV = PhiRV(avail.targetPos * app.scenLength / app.numBurns * 3600);
 	for (let ii = 0; ii <= 50; ii++) {
-		// console.log(ii);
-		
-		angle = 2*Math.PI * ii / nodes;
+		angle = 2 * Math.PI * ii / nodes;
 		rBurn = dV * Math.cos(angle);
 		iBurn = dV * Math.sin(angle);
-		vNew = [[v[0][0]+rBurn],
-				[v[1][0]+iBurn]]
+		vNew = [
+			[v[0][0] + rBurn],
+			[v[1][0] + iBurn]
+		]
 		r2 = math.add(math.multiply(pRR, r), math.multiply(pRV, vNew));
-		
+
 		app.chartData.targetLim.data.push({
 			x: r2[1][0],
 			y: r2[0][0]

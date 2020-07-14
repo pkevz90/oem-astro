@@ -5,13 +5,7 @@ class Satellite {
 		this.name = name;
 		this.initState = initState;
 		if (name !== 'gray') {
-			this.burns = [
-				[0, 0],
-				[0, 0],
-				[0, 0],
-				[0, 0],
-				[0, 0]
-			];
+			this.burns = math.zeros(app.numBurns,2)._data;
 		}
 		this.calculateTrajecory = calculateTrajecory;
 		this.dataLoc = dataLoc;
@@ -32,10 +26,11 @@ let app = {
 	],
 	calcDt: 240,
 	burnChange: false,
-	timeBetween: 10800,
 	tactic: '',
 	tacticData: undefined,
 	deltaVAvail: undefined,
+	scenLength: undefined,
+	numBurns: undefined,
 	reqCats: undefined,
 	rangeReq: undefined,
 	spans: {
