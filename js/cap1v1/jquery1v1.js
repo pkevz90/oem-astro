@@ -57,28 +57,28 @@ $('.start-button').on('click', () => {
     let init;
     if ($('.setup-container').eq(2).find('div').eq(0).is(':visible')) {
         init = [
-            [-Number($inputs[13].value) / 2 * Math.cos(Number($inputs[16].value) * Math.PI / 180) +
-                Number($inputs[14].value)
+            [-Number($inputs[12].value) / 2 * Math.cos(Number($inputs[15].value) * Math.PI / 180) +
+                Number($inputs[13].value)
             ],
-            [Number($inputs[13].value) * Math.sin(Number($inputs[16].value) * Math.PI / 180) + Number(
-                $inputs[15].value)],
-            [Number($inputs[13].value) * n / 2 * Math.sin(Number($inputs[16].value) * Math.PI / 180)],
-            [Number($inputs[13].value) * n * Math.cos(Number($inputs[16].value) * Math.PI / 180) - 1.5 *
-                Number($inputs[14].value) * n
+            [Number($inputs[12].value) * Math.sin(Number($inputs[15].value) * Math.PI / 180) + Number(
+                $inputs[14].value)],
+            [Number($inputs[12].value) * n / 2 * Math.sin(Number($inputs[15].value) * Math.PI / 180)],
+            [Number($inputs[12].value) * n * Math.cos(Number($inputs[15].value) * Math.PI / 180) - 1.5 *
+                Number($inputs[13].value) * n
             ]
         ];
         app.players.gray1 = new Satellite(init,'gray1',{trajectory: globalChartRef.config.data.datasets[14], current: globalChartRef.config.data.datasets[13]})
     }
     if ($('.setup-container').eq(3).find('div').eq(0).is(':visible')) {
         init = [
-            [-Number($inputs[17].value) / 2 * Math.cos(Number($inputs[20].value) * Math.PI / 180) +
-                Number($inputs[18].value)
+            [-Number($inputs[16].value) / 2 * Math.cos(Number($inputs[19].value) * Math.PI / 180) +
+                Number($inputs[17].value)
             ],
-            [Number($inputs[17].value) * Math.sin(Number($inputs[20].value) * Math.PI / 180) + Number(
-                $inputs[19].value)],
-            [Number($inputs[17].value) * n / 2 * Math.sin(Number($inputs[20].value) * Math.PI / 180)],
-            [Number($inputs[17].value) * n * Math.cos(Number($inputs[20].value) * Math.PI / 180) - 1.5 *
-                Number($inputs[18].value) * n
+            [Number($inputs[16].value) * Math.sin(Number($inputs[19].value) * Math.PI / 180) + Number(
+                $inputs[18].value)],
+            [Number($inputs[16].value) * n / 2 * Math.sin(Number($inputs[19].value) * Math.PI / 180)],
+            [Number($inputs[16].value) * n * Math.cos(Number($inputs[19].value) * Math.PI / 180) - 1.5 *
+                Number($inputs[17].value) * n
             ]
         ];
         app.players.gray2 = new Satellite(init,'gray2',{trajectory: globalChartRef.config.data.datasets[16], current: globalChartRef.config.data.datasets[15]})
@@ -110,44 +110,7 @@ $('.slider-contain input').on('input', (a) => {
     setBottomInfo();
     calcData(app.currentTime);
 })
-// $('tr').on('click', (a) => {
-//     let ii = 0;
-//     while (!$(a.target).is('tr')) {
-//         a.target = $(a.target).parent();
-//         // console.log(a.target);
-//         ii++;
-//         if (ii > 5) {
-//             break;
-//         }
-//     }
-//     ii = $('tr').index(a.target);
-//     console.log(ii);
-//     if ((ii === 0) || (ii === 6)) {
-//         return;
-//     }
-//     let sat = (ii > 6) ? 'red' : 'blue';
-//     if (app.chosenWaypoint === undefined) {
-//         app.tactic = '';
-//     } else if ((app.chosenWaypoint[0] === (ii-1)) && (sat === 'blue')) {
-//         console.log(1)
-//         app.tactic = 'burn';
-//     } else if ((app.chosenWaypoint[0] === (ii-7)) && (sat === 'red')) {
-//         console.log(2)
-//         app.tactic = 'burn';
-//     } else {
-//         // console.log(3)
-//         app.tactic = '';
-//     }
-//     setSelectedWaypoint((ii > 6) ? ii - 7 : ii - 1, sat);
-//     app.chartData.burnDir.data = [{
-//         x: 0,
-//         y: 0
-//     }, {
-//         x: 0,
-//         y: 0
-//     }];
 
-// })
 var burnRows, dataRows; {
     let $tableRows = $('td');
     app.spans.manRows = {

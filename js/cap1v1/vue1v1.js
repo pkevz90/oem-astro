@@ -59,3 +59,15 @@ var sideData = new Vue({
         }
     }
 });
+
+var setupData = new Vue({
+    el: '#setup',
+    data: {
+        blue: {
+            ae: 0,
+            xd: 0,
+            yd: 0,
+            B: 0
+        }
+    }
+});

@@ -13,8 +13,7 @@ function calculateTrajecory() {
 		pVV = PhiVV(app.calcDt);
 
 	if (this.name.substr(0, 4) === 'gray') {
-		let totalTime = app.timeBetween * app.players.blue.burns.length;
-		for (let t = 0; t <= totalTime; t += app.calcDt) {
+		for (let t = 0; t <= app.scenLength * 3600; t += app.calcDt) {
 			let r1 = r;
 			r = math.add(math.multiply(pRR, r), math.multiply(pRV, v));
 			v = math.add(math.multiply(pVR, r1), math.multiply(pVV, v));
