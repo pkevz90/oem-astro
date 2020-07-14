@@ -73,16 +73,18 @@ function calcData(curTime = 0) {
 		catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
 
 	// Update Data
-	app.spans.scenData.curRange[0].textContent = math.norm([curPoints.redR[0][0] - curPoints.blueR[0][0], curPoints.redR[1][0] - curPoints.blueR[1][0]]).toFixed(2);
-	app.spans.scenData.cats[0].textContent = (catsAngle * 180 / Math.PI).toFixed(2);
-
+	Object.assign(sideData.scenario_data, {
+		curRange: math.norm([curPoints.redR[0][0] - curPoints.blueR[0][0], curPoints.redR[1][0] - curPoints.blueR[1][0]]),
+		curCats: catsAngle * 180 / Math.PI
+	});
+	
 	for (let sat in app.players) {
 		let total = 0;
 		if (app.players[sat].name.substr(0,4) === 'gray') {continue;}
 		app.players[sat].burns.forEach(element => {
 			total += math.norm(element);
 		});
-		app.spans.scenData.totalDv[sat][0].textContent = total.toFixed(2);
+		sideData.scenario_data[sat + 'Dv'] = total;
 	}
 
 	if (catsAngle < app.reqCats && math.norm(relVector) >= app.rangeReq[0] && math.norm(relVector) <= app.rangeReq[1]) {
@@ -126,8 +128,10 @@ function calcData(curTime = 0) {
 			t0 = t1;
 		}
 	}
-	app.spans.scenData.minRange[0].textContent = math.norm([redR[0][0] - blueR[0][0], redR[1][0] - blueR[1][0]]).toFixed(2);
-	app.spans.scenData.minRange[1].textContent = (t2 / 3600).toFixed(1);
+	Object.assign(sideData.scenario_data, {
+		closeApproach: math.norm([redR[0][0] - blueR[0][0], redR[1][0] - blueR[1][0]]),
+		closeTime: t2 / 3600
+	});
 	globalChartRef.update();
 }
 
@@ -139,6 +143,7 @@ function burnCalc(xMouse, yMouse, click = false) {
 		app.chartData.burnDir.data = [];
 		app.chartData.selected.data = [];
 		setBottomInfo();
+		globalChartRef.update();
 		return;
 	} else {
 		let xPoint = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].x,
@@ -161,8 +166,6 @@ function burnCalc(xMouse, yMouse, click = false) {
 		}
 		distance = (distance > 10 * maxDv) ? 10 * maxDv : distance;
 		app.players[sat].burns[app.chosenWaypoint[0]] = [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)];
-		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (distance / 10 * Math.sin(az)).toFixed(3);
-		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (distance / 10 * Math.cos(az)).toFixed(3);
 		setBottomInfo('R: ' + (distance / 10 * Math.sin(az)).toFixed(3) + ' m/s, I: ' + (distance / 10 * Math.cos(az)).toFixed(3) + ' m/s');
 		app.chartData.burnDir.data = [{
 			x: xPoint,
@@ -221,8 +224,6 @@ function targetCalc(xMouse, yMouse, click = false) {
 		}
 		let sat = app.chosenWaypoint[1];
 		app.players[sat].burns[app.chosenWaypoint[0]] = [dV[0][0] * 1000, dV[1][0] * 1000];
-		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (dV[0][0] * 1000).toFixed(3);
-		app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (dV[1][0] * 1000).toFixed(3);
 		setBottomInfo('R: ' + (dV[0][0] * 1000).toFixed(3) + ' m/s, I: ' + (dV[1][0] * 1000).toFixed(3) + ' m/s');
 		app.chartData.burnDir.data = [{
 			x: r1[1][0],

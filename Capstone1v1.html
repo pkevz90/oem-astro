@@ -9,6 +9,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.min.js"></script> -->
     <script src="SupportLibraries/Chart.bundle.min.js"></script>
     <script src="SupportLibraries/math.min.js"></script>
+    <script src="SupportLibraries/vue.js"></script>
+    <script src="SupportLibraries/jquery.min.js"></script>
 
     <!-- <script src="SupportLibraries/astroFunctions.js"></script> -->
     <script src="js/cap1v1/Cap1v1main.js"></script>
@@ -101,14 +103,16 @@
         <div class="sun-angle">Initial Sun <input class="rmoe-input" id="sun" value="90"><sup>o</sup></div>
         <div class="start-button">Start</div>
     </div>
-    <div class="sideBar">
+    <div class="sideBar" id="side-data">
         <div class="controlTitle pointer"><span>Engagement Data</span></div>
         <div class="side-data" id="dataContainer">
-            <p class="dropdown-item">Current Range: <span>0.00</span> km</p>
-            <p class="dropdown-item">Close Approach: <span>0.00</span> km @ T +<span>0.0</span> hrs</p>
-            <p class="dropdown-item">CATS Angle: <span>0.00</span> degrees</p>
-            <p class="dropdown-item">Blue &#916V: <span>0.00</span> m/s</p>
-            <p class="dropdown-item">Red &#916V: <span>0.00</span> m/s</p>
+            <p class="dropdown-item">Current Range: {{ scenario_data.curRange.toFixed(2) }} km</p>
+            <p class="dropdown-item">Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} hrs @ {{ scenario_data.closeTime.toFixed(2) }} hrs</p>
+            <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }} degrees</p>
+            <!-- <p class="dropdown-item">Slew Rate: {{ scenario_data.slewRate.toFixed(2) }} deg/s</p> -->
+            <!-- <p class="dropdown-item">Slew Rate: {{ 0 }} deg/s</p> -->
+            <p class="dropdown-item">Blue &#916V: {{ scenario_data.blueDv.toFixed(2) }} m/s</p>
+            <p class="dropdown-item">Red &#916V: {{ scenario_data.redDv.toFixed(2) }} m/s</p>
         </div>
         <div class="controlTitle pointer"><span style="color:rgb(100,150,255)">Blue Satellite</span></div>
         <div class="side-data" id="dataContainer" style="display: none;">
@@ -124,28 +128,28 @@
                 <tbody class="pointer" id="burnTableBody">
                     <tr>
                         <th>+0</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.blueBurns[0][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.blueBurns[0][1].toFixed(3) }}</td>
                     </tr>
                     <tr>
                         <th>+3</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.blueBurns[1][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.blueBurns[1][1].toFixed(3) }}</td>
                     </tr>
                     <tr>
                         <th>+6</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.blueBurns[2][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.blueBurns[2][1].toFixed(3) }}</td>
                     </tr>
                     <tr>
                         <th>+9</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.blueBurns[3][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.blueBurns[3][1].toFixed(3) }}</td>
                     </tr>
                     <tr>
                         <th>+12</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.blueBurns[4][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.blueBurns[4][1].toFixed(3) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -163,28 +167,28 @@
                 <tbody class="pointer" id="burnTableBody">
                     <tr>
                         <th>+0</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.redBurns[0][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.redBurns[0][1].toFixed(3) }}</td>
                     </tr>
                     <tr>
                         <th>+3</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.redBurns[1][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.redBurns[1][1].toFixed(3) }}</td>
                     </tr>
                     <tr>
                         <th>+6</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.redBurns[2][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.redBurns[2][1].toFixed(3) }}</td>
                     </tr>
                     <tr>
                         <th>+9</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.redBurns[3][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.redBurns[3][1].toFixed(3) }}</td>
                     </tr>
                     <tr>
                         <th>+12</th>
-                        <td>0.000</td>
-                        <td>0.000</td>
+                        <td>{{ scenario_data.redBurns[4][0].toFixed(3) }}</td>
+                        <td>{{ scenario_data.redBurns[4][1].toFixed(3) }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -204,7 +208,7 @@
     <div class="info">
         Test
     </div>
-    <script src="SupportLibraries/jquery.min.js"></script>
+    <script src="js/cap1v1/vue1v1.js"></script>
     <script src="js/cap1v1/jquery1v1.js"></script>
 </body>
 

@@ -46,8 +46,6 @@ let app = {
 	dataLoc: {
 		blueFormer: 2,
 		redFormer: 5,
-		curGray: 13,
-		grayTraj: 14,
 	},
 	updateApp: function () {
 		for (var sat in app.players) {
@@ -306,6 +304,8 @@ function createGraph() {
 }
 
 function startGame() {
+	sideData.scenario_data.blueBurns = app.players.blue.burns;
+	sideData.scenario_data.redBurns = app.players.red.burns;
 	app.chartData = {
 		burnDir: globalChartRef.config.data.datasets[6],
 		sun: globalChartRef.config.data.datasets[7],

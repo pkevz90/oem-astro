@@ -83,6 +83,7 @@ $('.start-button').on('click', () => {
     app.reqCats = Number($inputs[6].value)*Math.PI/180;
     app.rangeReq = [Number($inputs[7].value), Number($inputs[8].value)];
     startGame();
+    
 })
 $('.add-button').on('click', (a) => {
     $(a.target).hide();

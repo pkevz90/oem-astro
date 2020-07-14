@@ -13,7 +13,7 @@ body {
     height: 100%;
     font-family: "open_sansregular";
     color: rgb(201, 203, 206);
-    overflow-x: hidden;
+    overflow: hidden;
     /* Panel opening and closing animation time - 200mx */
     transition: transform .2s;
     -webkit-transition: -webkit-transform .2s;
