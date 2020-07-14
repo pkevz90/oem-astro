@@ -12,14 +12,7 @@ var sideData = new Vue({
             redBurns: [[0,0],[0,0],[0,0],[0,0],[0,0]],
             scenLength: 15,
             numBurns: 5
-        },
-        items: [
-            {
-                message: 'hey'
-            },{
-                message: 'goodbye'
-            }
-        ],
+        }
         
     },
     methods: {
@@ -61,13 +54,41 @@ var sideData = new Vue({
 });
 
 var setupData = new Vue({
-    el: '#setup',
+    el: '#setup-data',
     data: {
         blue: {
-            ae: 0,
-            xd: 0,
-            yd: 0,
-            B: 0
+            ae: (0).toFixed(1),
+            xd: (0).toFixed(1),
+            yd: (10).toFixed(1),
+            B:  (0).toFixed(1)
+        },
+        red: {
+            ae: (0).toFixed(1),
+            xd: (0).toFixed(1),
+            yd: (-10).toFixed(1),
+            B:  (0).toFixed(1)
+        },
+        gray1: {
+            exist: false,
+            ae: (0).toFixed(1),
+            xd: (0).toFixed(1),
+            yd: (0).toFixed(1),
+            B:  (0).toFixed(1)
+        },
+        gray2: {
+            exist: false,
+            ae: (0).toFixed(1),
+            xd: (0).toFixed(1),
+            yd: (0).toFixed(1),
+            B:  (0).toFixed(1)
+        },
+        scenario_start: {
+            dVavail: (2.5).toFixed(1),
+            reqCats: (90).toFixed(0),
+            rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+            initSun: (90).toFixed(0),
+            bp: (5).toFixed(0),
+            sl: (15).toFixed(0),
         }
     }
 });

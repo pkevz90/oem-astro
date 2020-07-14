@@ -312,3 +312,12 @@ function PhiVV(t, n = 2 * Math.PI / 86164) {
 		[-2 * Math.sin(nt), 4 * Math.cos(nt) - 3]
 	];
 }
+
+function stateFromRoe(roe, n = 2 * Math.PI / 86164) {
+	return [
+        [-roe.ae / 2 * Math.cos(roe.B * Math.PI / 180) + roe.xd],
+        [roe.ae * Math.sin(roe.B * Math.PI / 180) + roe.yd],
+        [roe.ae * n / 2 * Math.sin(roe.B * Math.PI / 180)],
+        [roe.ae * n * Math.cos(roe.B * Math.PI / 180) - 1.5 * roe.xd * n]
+    ];
+} 

@@ -51,36 +51,35 @@
         </ol>
         <p>The slider will allow user to view satellite/Sun positions at any scenario time</p>
     </div>
-    <div class="setup-screen" id="setup">
+    <div class="setup-screen" id="setup-data">
         <div class="setup-container">
             <p class="container-title" style="color: rgb(100,150,255)">Blue Satellite</p>
             <p class="container-title2"><u>Initial State</u></p>
-            <p class="container-title2"><em>Ae</em>: <input class="rmoe-input" value="0.0"> km</p>
-            <p class="container-title2"><em>R<sub>c</em></sub> :<input class="rmoe-input" value="0.0"> km</p>
-            <p class="container-title2"><em>I<sub>c</sub></em> :<input class="rmoe-input" value="10.0"> km</p>
-            <p class="container-title2"><em>&#946</em>: <input class="rmoe-input" value="0.0"> <sup>o</sup></p>
+            <p class="container-title2"><em>Ae</em>: <input v-model="blue.ae"> km</p>
+            <p class="container-title2"><em>R<sub>c</em></sub> :<input v-model="blue.xd"> km</p>
+            <p class="container-title2"><em>I<sub>c</sub></em> :<input v-model="blue.yd" placeholder="10.0"> km</p>
+            <p class="container-title2"><em>&#946</em>: <input v-model="blue.B"> <sup>o</sup></p>
             <p class="container-title2"><u>Success Parameters</u></p>
-            <p class="container-title2">&#916V Available: <input class="rmoe-input" value="2.5"> m/s</p>
-            <p class="container-title2">Required CATS: <input class="rmoe-input" value="90"> <sup>o</sup></p>
-            <p class="container-title2">Range: <input class="rmoe-input" value="10"> to <input class="rmoe-input"
-                    value="15"> km</p>
+            <p class="container-title2">&#916V Available: <input v-model="scenario_start.dVavail"> m/s</p>
+            <p class="container-title2">Required CATS: <input v-model="scenario_start.reqCats"> <sup>o</sup></p>
+            <p class="container-title2">Range: <input v-model="scenario_start.rangeReq[0]"> to <input v-model="scenario_start.rangeReq[1]">
         </div>
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,150,100)">Red Satellite</p>
             <p class="container-title2"><u>Initial State</u></p>
-            <p class="container-title2"><em>Ae</em>: <input class="rmoe-input" value="0.0"> km</p>
-            <p class="container-title2"><em>R<sub>c</em></sub> :<input class="rmoe-input" value="0.0"> km</p>
-            <p class="container-title2"><em>I<sub>c</sub></em> :<input class="rmoe-input" value="-10.0"> km</p>
-            <p class="container-title2"><em>&#946</em>: <input class="rmoe-input" value="0.0"> <sup>o</sup></p>
+            <p class="container-title2"><em>Ae</em>: <input v-model="red.ae"> km</p>
+            <p class="container-title2"><em>R<sub>c</em></sub> :<input v-model="red.xd"> km</p>
+            <p class="container-title2"><em>I<sub>c</sub></em> :<input v-model="red.yd" placeholder="-10.0"> km</p>
+            <p class="container-title2"><em>&#946</em>: <input v-model="red.B"> <sup>o</sup></p>
         </div>
         <div class="setup-container">
             <div style="display: none;">
                 <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #1</p>
                 <p class="container-title2"><u>Initial State</u></p>
-                <p class="container-title2"><em>Ae</em>: <input class="rmoe-input" value="0.0"> km</p>
-                <p class="container-title2"><em>R<sub>c</em></sub> :<input class="rmoe-input" value="0.0"> km</p>
-                <p class="container-title2"><em>I<sub>c</sub></em> :<input class="rmoe-input" value="0.0"> km</p>
-                <p class="container-title2"><em>&#946</em>: <input class="rmoe-input" value="0.0"> <sup>o</sup></p>
+                <p class="container-title2"><em>Ae</em>: <input v-model="gray1.ae"> km</p>
+                <p class="container-title2"><em>R<sub>c</em></sub> :<input v-model="gray1.xd"> km</p>
+                <p class="container-title2"><em>I<sub>c</sub></em> :<input v-model="gray1.yd"> km</p>
+                <p class="container-title2"><em>&#946</em>: <input v-model="gray1.B"> <sup>o</sup></p>
             </div>
             <div class="add-button"
                 style="margin: 100% 40%; padding: 5%; text-align: center; border: 1px solid white; border-radius: 50%;">
@@ -90,19 +89,19 @@
             <div style="display: none;">
                 <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #2</p>
                 <p class="container-title2"><u>Initial State</u></p>
-                <p class="container-title2"><em>Ae</em>: <input class="rmoe-input" value="0.0"> km</p>
-                <p class="container-title2"><em>R<sub>c</em></sub> :<input class="rmoe-input" value="0.0"> km</p>
-                <p class="container-title2"><em>I<sub>c</sub></em> :<input class="rmoe-input" value="0.0"> km</p>
-                <p class="container-title2"><em>&#946</em>: <input class="rmoe-input" value="0.0"> <sup>o</sup></p>
+                <p class="container-title2"><em>Ae</em>: <input v-model="gray2.ae"> km</p>
+                <p class="container-title2"><em>R<sub>c</em></sub> :<input v-model="gray2.xd"> km</p>
+                <p class="container-title2"><em>I<sub>c</sub></em> :<input v-model="gray2.yd"> km</p>
+                <p class="container-title2"><em>&#946</em>: <input v-model="gray2.B"> <sup>o</sup></p>
             </div>
             <div class="add-button"
                 style="margin: 100% 40%; padding: 5%; text-align: center; border: 1px solid white; border-radius: 50%;">
                 +</div>
         </div>
         <div class="sun-angle">
-            Initial Sun <input class="rmoe-input" id="sun" value="90"><sup>o</sup> 
-            <br>Burns/Player <input class="rmoe-input" id="bp" value="5">
-            <br>Scenario Length <input class="rmoe-input" id="sl" value="15"> hrs
+            Initial Sun <input v-model="scenario_start.initSun"><sup>o</sup> 
+            <br>Burns/Player <input v-model="scenario_start.bp">
+            <br>Scenario Length <input v-model="scenario_start.sl"> hrs
         </div>
         <div class="start-button">Start</div>
     </div>

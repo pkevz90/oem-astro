@@ -342,14 +342,14 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 			x: SunVector[1][0] + origin[1],
 			y: SunVector[0][0] + origin[0]
 		}, {
-			x: SunVector[1][0] + origin[1] - arrowLen * Math.cos(Math.PI / 6 - $('#sun')[0].value * Math.PI / 180 + Math.PI / 2 + t * n),
-			y: SunVector[0][0] + origin[0] - arrowLen * Math.sin(Math.PI / 6 - $('#sun')[0].value * Math.PI / 180 + Math.PI / 2 + t * n)
+			x: SunVector[1][0] + origin[1] - arrowLen * Math.cos(Math.PI / 6 - Number(setupData.scenario_start.initSun) * Math.PI / 180 + Math.PI / 2 + t * n),
+			y: SunVector[0][0] + origin[0] - arrowLen * Math.sin(Math.PI / 6 - Number(setupData.scenario_start.initSun) * Math.PI / 180 + Math.PI / 2 + t * n)
 		}, undefined, {
 			x: SunVector[1][0] + origin[1],
 			y: SunVector[0][0] + origin[0]
 		}, {
-			x: SunVector[1][0] + origin[1] - arrowLen * Math.cos(Math.PI / 6 + $('#sun')[0].value * Math.PI / 180 - Math.PI / 2 - t * n),
-			y: SunVector[0][0] + origin[0] + arrowLen * Math.sin(Math.PI / 6 + $('#sun')[0].value * Math.PI / 180 - Math.PI / 2 - t * n)
+			x: SunVector[1][0] + origin[1] - arrowLen * Math.cos(Math.PI / 6 + Number(setupData.scenario_start.initSun) * Math.PI / 180 - Math.PI / 2 - t * n),
+			y: SunVector[0][0] + origin[0] + arrowLen * Math.sin(Math.PI / 6 + Number(setupData.scenario_start.initSun) * Math.PI / 180 - Math.PI / 2 - t * n)
 		}];
 		globalChartRef.update();
 	}
