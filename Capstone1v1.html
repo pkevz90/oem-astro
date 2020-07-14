@@ -109,8 +109,6 @@
             <p class="dropdown-item">Current Range: {{ scenario_data.curRange.toFixed(2) }} km</p>
             <p class="dropdown-item">Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} hrs @ {{ scenario_data.closeTime.toFixed(2) }} hrs</p>
             <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }} degrees</p>
-            <!-- <p class="dropdown-item">Slew Rate: {{ scenario_data.slewRate.toFixed(2) }} deg/s</p> -->
-            <!-- <p class="dropdown-item">Slew Rate: {{ 0 }} deg/s</p> -->
             <p class="dropdown-item">Blue &#916V: {{ scenario_data.blueDv.toFixed(2) }} m/s</p>
             <p class="dropdown-item">Red &#916V: {{ scenario_data.redDv.toFixed(2) }} m/s</p>
         </div>
@@ -198,13 +196,10 @@
         <canvas id="ChartCnvs" width="51" height="23"></canvas>
     </div>
     <div class="slider-contain">
-        <p>Time: T +<span>0.00</span> hrs</p>
+        <p>Time: <span>00:00</span></p>
         <input type="range" class="slider" min="0" max="15" value="0" step="0.01">
     </div>
     <div class="team-number"></div>
-    <div class="noteBar">
-        <p>Test</p>
-    </div>
     <div class="info">
         Test
     </div>

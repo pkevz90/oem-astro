@@ -101,7 +101,7 @@ $('.controlTitle').on('click', (a) => {
     $(a.target).next().slideDown(250);
 })
 $('.slider-contain input').on('input', (a) => {
-    $(a.target).prev().find('span')[0].textContent = a.target.value;
+    $(a.target).prev().find('span')[0].textContent = hrsToTime(a.target.value);
     app.currentTime = Number(a.target.value);
     setBottomInfo();
     calcData(app.currentTime);
@@ -159,6 +159,9 @@ var burnRows, dataRows; {
             red: $tableRows.splice(0, 1)
         }
     }
+}
+function hrsToTime(hrs) {
+	return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60*(hrs-Math.floor(hrs)))).slice(-2);
 }
 
 function showNoteBar(s) {

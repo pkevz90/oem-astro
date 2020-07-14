@@ -405,3 +405,4 @@ function drawViewpoint(pos, az, range) {
 	});
 
 }
+
