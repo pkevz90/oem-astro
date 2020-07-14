@@ -76,10 +76,7 @@ li p {
 }
 
 .container-title {
-    text-align: center;
-    font-weight: bold;
-    width: 100%;
-    font-size: 2vw;
+    font-size: 2vw !important;
 }
 
 .setup-container p {
