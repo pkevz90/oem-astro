@@ -1,4 +1,7 @@
 function handleHover(valueX, valueY) {
+    if (app.transition) {
+        return;
+    }
     if (app.tactic === 'burn') {
         burnCalc(valueX, valueY);
     } else if (app.tactic === 'target') {
@@ -54,7 +57,10 @@ function handleKeyPress(k) {
                 app.tacticData.targetPos--;
                 let ii = 0;
                 let inter = setInterval(() => {
-                    showDeltaVLimit(app.chosenWaypoint[1], {targetPos: (app.tacticData.targetPos+1) - ii/5, availDv: app.tacticData.availDv})
+                    showDeltaVLimit(app.chosenWaypoint[1], {
+                        targetPos: (app.tacticData.targetPos + 1) - ii / 5,
+                        availDv: app.tacticData.availDv
+                    })
                     globalChartRef.update();
                     if (ii === 5) {
                         clearInterval(inter);
@@ -68,7 +74,10 @@ function handleKeyPress(k) {
                 app.tacticData.targetPos++;
                 let ii = 0;
                 let inter = setInterval(() => {
-                    showDeltaVLimit(app.chosenWaypoint[1], {targetPos: (app.tacticData.targetPos-1) + ii/5, availDv: app.tacticData.availDv})
+                    showDeltaVLimit(app.chosenWaypoint[1], {
+                        targetPos: (app.tacticData.targetPos - 1) + ii / 5,
+                        availDv: app.tacticData.availDv
+                    })
                     globalChartRef.update();
                     if (ii === 5) {
                         clearInterval(inter);
@@ -76,7 +85,7 @@ function handleKeyPress(k) {
                     ii++;
                 }, 10);
             }
-                
+
             break;
         case 'a':
             app.axisCenter[0] += 1;
@@ -133,16 +142,23 @@ function handleKeyPress(k) {
                 targetPos: 1
             };
             let ii = 0;
+            let timeDelta = (app.tacticData.targetPos + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
+            app.transition = !app.transition;
             let inter = setInterval(() => {
-                showDeltaVLimit(app.chosenWaypoint[1], {targetPos: app.tacticData.targetPos, availDv: app.tacticData.availDv*ii/5})
-                globalChartRef.update();
+                showDeltaVLimit(app.chosenWaypoint[1], {
+                    targetPos: app.tacticData.targetPos,
+                    availDv: app.tacticData.availDv * ii / 5
+                });
+                app.currentTime += timeDelta / 6;
+                calcData(app.currentTime);
                 if (ii === 5) {
+                    app.transition = !app.transition;
                     clearInterval(inter);
                 }
                 ii++;
-            }, 10);
-            
-            
+            }, 15);
+
+
             app.chartData.burnDir.data = [{
                 x: 0,
                 y: 0
@@ -191,7 +207,9 @@ function checkClose(X, Y) {
     let turn = Number($turn.textContent) - 1;
 
     for (sat in app.players) {
-        if (app.players[sat].name.substr(0,4) === 'gray') {continue;}
+        if (app.players[sat].name.substr(0, 4) === 'gray') {
+            continue;
+        }
         for (var ii = turn; ii < app.players[sat].dataLoc.waypoints.data.length; ii++) {
             xPoint = app.players[sat].dataLoc.waypoints.data[ii].x;
             yPoint = app.players[sat].dataLoc.waypoints.data[ii].y;

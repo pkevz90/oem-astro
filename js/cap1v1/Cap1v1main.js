@@ -31,6 +31,7 @@ let app = {
 	deltaVAvail: undefined,
 	scenLength: undefined,
 	numBurns: undefined,
+	transition: false,
 	reqCats: undefined,
 	rangeReq: undefined,
 	spans: {
