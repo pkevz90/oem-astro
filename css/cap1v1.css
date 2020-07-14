@@ -98,6 +98,13 @@ input {
     width: 80%;
     padding: 0 5%;
 }
+.add-button {
+    margin: 100% 40%; 
+    padding: 5%; 
+    text-align: center; 
+    border: 1px solid white; 
+    border-radius: 50%;
+}
 
 .add-button:hover {
     background-color: rgba(255, 255, 255, 0.25);
