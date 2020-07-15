@@ -51,19 +51,24 @@ function handleKeyPress(k) {
             break;
         case (',' || '<'):
             if (app.tactic === 'target' && app.tacticData.targetPos > 1) {
-                app.tacticData.targetPos--;
+                let {x, y} = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]+app.tacticData.targetPos];
+                let oldTarget = app.tacticData.targetPos + 0;
                 let ii = 0;
-                let timeDelta = (app.tacticData.targetPos + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
+                let timeDelta = (app.tacticData.targetPos - 1 + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
+                app.tactic = '';
                 let inter = setInterval(() => {
                     showDeltaVLimit(app.chosenWaypoint[1], {
-                        targetPos: (app.tacticData.targetPos + 1) - ii / 5,
+                        targetPos: oldTarget - ii / 5,
                         availDv: app.tacticData.availDv
                     })
+                    app.tacticData.targetPos -= 1 / 6;
                     app.currentTime += timeDelta / 6;
                     $('.slider')[0].value = app.currentTime;
                     $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
-                    calcData(app.currentTime);
+                    targetCalc(x,y);
                     if (ii === 5) {
+                        app.tactic = 'target';
+                        app.tacticData.targetPos = Math.round(app.tacticData.targetPos);
                         clearInterval(inter);
                     }
                     ii++;
@@ -71,21 +76,27 @@ function handleKeyPress(k) {
             }
             break;
         case ('.' || '>'):
-            if (app.tactic === 'target') {
-                app.tacticData.targetPos++;
+            if (app.tactic === 'target' && (app.tacticData.targetPos + 1 + app.chosenWaypoint[0]) < app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data.length) {
+                let {x, y} = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]+app.tacticData.targetPos];
+                let oldTarget = app.tacticData.targetPos + 0;
                 let ii = 0;
-                let timeDelta = (app.tacticData.targetPos + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
+                let timeDelta = (app.tacticData.targetPos + 1 + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
+                app.tactic = '';
                 let inter = setInterval(() => {
                     showDeltaVLimit(app.chosenWaypoint[1], {
-                        targetPos: (app.tacticData.targetPos - 1) + ii / 5,
+                        targetPos: oldTarget + ii / 5,
                         availDv: app.tacticData.availDv
                     })
+                    app.tacticData.targetPos += 1 / 6;
                     app.currentTime += timeDelta / 6;
                     $('.slider')[0].value = app.currentTime;
                     $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
-                    calcData(app.currentTime);
+                    targetCalc(x,y);
+                    // calcData(app.currentTime);
                     // globalChartRef.update();
                     if (ii === 5) {
+                        app.tactic = 'target';
+                        app.tacticData.targetPos = Math.round(app.tacticData.targetPos);
                         clearInterval(inter);
                     }
                     ii++;
