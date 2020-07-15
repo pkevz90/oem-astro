@@ -138,7 +138,6 @@
                     </tr>
                 </thead>
                 <tbody class="pointer">
-                    
                     <tr class="burnRows" v-for="(burn,index) in scenario_data.redBurns" v-on:click="burnClick">
                         <th>+ {{ (scenario_data.scenLength/scenario_data.numBurns*(index)).toFixed(1) }}</th>
                         <td>{{ burn[0].toFixed(3) }}</td>

@@ -1,7 +1,4 @@
 function handleHover(valueX, valueY) {
-    if (app.transition) {
-        return;
-    }
     if (app.tactic === 'burn') {
         burnCalc(valueX, valueY);
     } else if (app.tactic === 'target') {
@@ -56,12 +53,16 @@ function handleKeyPress(k) {
             if (app.tactic === 'target' && app.tacticData.targetPos > 1) {
                 app.tacticData.targetPos--;
                 let ii = 0;
+                let timeDelta = (app.tacticData.targetPos + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
                 let inter = setInterval(() => {
                     showDeltaVLimit(app.chosenWaypoint[1], {
                         targetPos: (app.tacticData.targetPos + 1) - ii / 5,
                         availDv: app.tacticData.availDv
                     })
-                    globalChartRef.update();
+                    app.currentTime += timeDelta / 6;
+                    $('.slider')[0].value = app.currentTime;
+                    $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
+                    calcData(app.currentTime);
                     if (ii === 5) {
                         clearInterval(inter);
                     }
@@ -73,12 +74,17 @@ function handleKeyPress(k) {
             if (app.tactic === 'target') {
                 app.tacticData.targetPos++;
                 let ii = 0;
+                let timeDelta = (app.tacticData.targetPos + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
                 let inter = setInterval(() => {
                     showDeltaVLimit(app.chosenWaypoint[1], {
                         targetPos: (app.tacticData.targetPos - 1) + ii / 5,
                         availDv: app.tacticData.availDv
                     })
-                    globalChartRef.update();
+                    app.currentTime += timeDelta / 6;
+                    $('.slider')[0].value = app.currentTime;
+                    $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
+                    calcData(app.currentTime);
+                    // globalChartRef.update();
                     if (ii === 5) {
                         clearInterval(inter);
                     }
@@ -143,16 +149,17 @@ function handleKeyPress(k) {
             };
             let ii = 0;
             let timeDelta = (app.tacticData.targetPos + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
-            app.transition = !app.transition;
             let inter = setInterval(() => {
                 showDeltaVLimit(app.chosenWaypoint[1], {
                     targetPos: app.tacticData.targetPos,
                     availDv: app.tacticData.availDv * ii / 5
                 });
                 app.currentTime += timeDelta / 6;
+                $('.slider')[0].value = app.currentTime;
+                $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
                 calcData(app.currentTime);
                 if (ii === 5) {
-                    app.transition = !app.transition;
+                    app.tactic = 'target';
                     clearInterval(inter);
                 }
                 ii++;
