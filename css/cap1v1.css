@@ -184,15 +184,11 @@ input {
     display: none;
     z-index: 4;
     background-color: black;
+    color: white;
     padding-left: 5%;
     font-size: 1.5vw;
 }
 
-.instruction-screen p,
-h2,
-h4 {
-    color: white;
-}
 
 .selected {
     background-color: rgba(50, 50, 50, 0.85);
@@ -237,5 +233,13 @@ h4 {
     position: fixed;
     color: white;
     left: 8%;
+    bottom: 2%;
+}
+
+.info-right {
+    position: fixed;
+    color: white;
+    right: 10%;
+    width: 20%;
     bottom: 2%;
 }
