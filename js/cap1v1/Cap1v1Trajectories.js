@@ -131,7 +131,7 @@ function calcData(curTime = 0) {
 	}
 	Object.assign(sideData.scenario_data, {
 		closeApproach: math.norm([redR[0][0] - blueR[0][0], redR[1][0] - blueR[1][0]]),
-		closeTime: t2 / 3600
+		closeTime: hrsToTime(t2 / 3600)
 	});
 	globalChartRef.update();
 }
