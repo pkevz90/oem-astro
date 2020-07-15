@@ -140,6 +140,7 @@ function calcData(curTime = 0) {
 function burnCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
+		$('.info-right')[0].textContent = '';
 		app.chosenWaypoint = undefined;
 		app.chartData.burnDir.data = [];
 		app.chartData.selected.data = [];
@@ -183,6 +184,8 @@ function burnCalc(xMouse, yMouse, click = false) {
 function targetCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
+		
+		$('.info-right')[0].textContent = '';
 		app.chartData.burnDir.data = [];
 		app.chartData.selected.data = [];
 		setBottomInfo();

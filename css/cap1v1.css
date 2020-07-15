@@ -239,7 +239,7 @@ input {
 .info-right {
     position: fixed;
     color: white;
-    right: 10%;
-    width: 20%;
+    right: 0%;
+    width: 40%;
     bottom: 2%;
 }

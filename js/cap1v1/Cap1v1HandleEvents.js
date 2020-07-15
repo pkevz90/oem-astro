@@ -141,11 +141,25 @@ function handleKeyPress(k) {
             calcData();
             globalChartRef.update();
             break;
+        case 'b':
+            app.tactic = 'burn';
+            $('.info-right')[0].textContent = 'Set burn magnitude and direction by hovering mouse'
+            app.chartData.burnDir.data = [{
+                x: 0,
+                y: 0
+            }, {
+                x: 0,
+                y: 0
+            }];
+            globalChartRef.update();
+            return;
         case 't':
             if (app.chosenWaypoint === undefined) {
                 return;
             }
             app.tactic = 'target';
+            
+            $('.info-right')[0].textContent = 'Target burn by hovering over desired location. Change target waypoint with [<] & [>]'
             let totalDv = 0;
             app.players[app.chosenWaypoint[1]].burns.forEach((burn, element) => {
                 if (element < app.chosenWaypoint[0]) {
@@ -204,6 +218,7 @@ function setSelectedWaypoint(index, side) {
     $($('tr')[index + ((side === 'blue') ? 1 : 7)]).toggleClass('selected')
 
     app.chosenWaypoint = [index, side];
+    $('.info-right')[0].textContent = 'Press [B] to manual burn, [T] to target burn'
     let xPoint = app.players[side].dataLoc.waypoints.data[index].x,
         yPoint = app.players[side].dataLoc.waypoints.data[index].y;
     app.chartData.selected.data = [{
