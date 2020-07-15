@@ -76,7 +76,7 @@ function handleKeyPress(k) {
             }
             break;
         case ('.' || '>'):
-            if (app.tactic === 'target' && (app.tacticData.targetPos + 1 + app.chosenWaypoint[0]) < app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data.length) {
+            if (app.tactic === 'target' && (app.tacticData.targetPos + 2 + app.chosenWaypoint[0]) < app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data.length) {
                 let {x, y} = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]+app.tacticData.targetPos];
                 let oldTarget = app.tacticData.targetPos + 0;
                 let ii = 0;
@@ -92,8 +92,6 @@ function handleKeyPress(k) {
                     $('.slider')[0].value = app.currentTime;
                     $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
                     targetCalc(x,y);
-                    // calcData(app.currentTime);
-                    // globalChartRef.update();
                     if (ii === 5) {
                         app.tactic = 'target';
                         app.tacticData.targetPos = Math.round(app.tacticData.targetPos);

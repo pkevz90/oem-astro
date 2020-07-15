@@ -59,13 +59,13 @@ var setupData = new Vue({
         blue: {
             ae: (0).toFixed(1),
             xd: (0).toFixed(1),
-            yd: (10).toFixed(1),
+            yd: (50).toFixed(1),
             B:  (0).toFixed(1)
         },
         red: {
             ae: (0).toFixed(1),
             xd: (0).toFixed(1),
-            yd: (-10).toFixed(1),
+            yd: (-50).toFixed(1),
             B:  (0).toFixed(1)
         },
         gray1: {
@@ -83,12 +83,12 @@ var setupData = new Vue({
             B:  (0).toFixed(1)
         },
         scenario_start: {
-            dVavail: (2.5).toFixed(1),
+            dVavail: (10).toFixed(1),
             reqCats: (90).toFixed(0),
             rangeReq: [(10).toFixed(0), (15).toFixed(0)],
             initSun: (90).toFixed(0),
-            bp: (5).toFixed(0),
-            sl: (15).toFixed(0),
+            bp: (16).toFixed(0),
+            sl: (48).toFixed(0),
         }
     }
 });

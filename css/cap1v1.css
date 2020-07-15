@@ -244,3 +244,8 @@ input {
     width: 40%;
     bottom: 2%;
 }
+
+.burn-container {
+    max-height: 35%;
+    overflow-y: scroll;
+}

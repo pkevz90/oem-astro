@@ -17,7 +17,7 @@ let app = {
 		red: undefined
 	},
 	chosenWaypoint: undefined,
-	axisLimits: 40,
+	axisLimits: 100,
 	axisCenter: [0, 0],
 	currentTime: 0,
 	initSunVector: [

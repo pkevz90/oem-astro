@@ -56,12 +56,13 @@
             </ol>
         </ol>
         <p>The slider will allow user to view satellite/Sun positions at any scenario time</p>
+        <p>Zoom [+] & [-]   Move Camera [W][S][A][D]</p>
     </div>
     <div class="setup-screen" id="setup-data">
         <div class="setup-container">
             <p class="container-title" style="color: rgb(100,150,255)">Blue Satellite</p>
             <p><u>Initial State</u></p>
-            <p><em>Ae</em>: <input v-model="blue.ae"> km</p>
+            <p><em>A<sub>e</sub></em>: <input v-model="blue.ae"> km</p>
             <p><em>R<sub>c</em></sub> :<input v-model="blue.xd"> km</p>
             <p><em>I<sub>c</sub></em> :<input v-model="blue.yd" placeholder="10.0"> km</p>
             <p><em>&#946</em>: <input v-model="blue.B"> <sup>o</sup></p>
@@ -73,7 +74,7 @@
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,150,100)">Red Satellite</p>
             <p><u>Initial State</u></p>
-            <p><em>Ae</em>: <input v-model="red.ae"> km</p>
+            <p><em>A<sub>e</sub></em>: <input v-model="red.ae"> km</p>
             <p><em>R<sub>c</em></sub> :<input v-model="red.xd"> km</p>
             <p><em>I<sub>c</sub></em> :<input v-model="red.yd" placeholder="-10.0"> km</p>
             <p><em>&#946</em>: <input v-model="red.B"> <sup>o</sup></p>
@@ -111,13 +112,13 @@
         <div class="controlTitle pointer"><span>Engagement Data</span></div>
         <div class="side-data" id="dataContainer">
             <p class="dropdown-item">Current Range: {{ scenario_data.curRange.toFixed(2) }} km</p>
-            <p class="dropdown-item">Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} hrs @ {{ scenario_data.closeTime }}</p>
+            <p class="dropdown-item">Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} km @ {{ scenario_data.closeTime }}</p>
             <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }} degrees</p>
             <p class="dropdown-item">Blue &#916V: {{ scenario_data.blueDv.toFixed(2) }} m/s</p>
             <p class="dropdown-item">Red &#916V: {{ scenario_data.redDv.toFixed(2) }} m/s</p>
         </div>
         <div class="controlTitle pointer"><span style="color:rgb(100,150,255)">Blue Satellite</span></div>
-        <div class="side-data" id="dataContainer" style="display: none;">
+        <div class="side-data burn-container" id="dataContainer" style="display: none;">
             <table class="table" id="burnTable" style="margin-top: 3%;">
                 <thead>
                     <tr>
@@ -136,7 +137,7 @@
             </table>
         </div>
         <div class="controlTitle pointer"><span style="color:rgb(255,100,50)">Red Satellite</span></div>
-        <div class="side-data" id="dataContainer" style="display: none;">
+        <div class="side-data burn-container" id="dataContainer" style="display: none;">
             <table class="table" id="burnTable" style="margin-top: 3%;">
                 <thead>
                     <tr>
