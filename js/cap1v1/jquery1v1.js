@@ -8,8 +8,12 @@ $('#turn-button').on('click', () => {
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
     $('#turn-button p span')[0].textContent = turn;
-    firebase.database().ref('turn/').set({
-        currentTurn: turn
+    firebase.database().ref('team1/').set({
+        burn: app.players.blue.burns,
+        turn: turn
+    });
+    firebase.database().ref('team1/').once('value').then(function(snapshot) {
+        console.log(snapshot.val());
     });
 })
 $('.start-button').on('click', () => {

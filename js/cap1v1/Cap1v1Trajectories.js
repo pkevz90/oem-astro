@@ -24,7 +24,7 @@ function calculateTrajecory() {
 		}
 		return;
 	}
-	let numPoints = 50;
+	let numPoints = 12;
 	app.calcDt = (app.scenLength / app.numBurns) * 3600 / (numPoints + 1);
 	this.dataLoc.waypoints.data = [];
 	this.dataLoc.trajectory.data = [];
