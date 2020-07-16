@@ -91,5 +91,12 @@ var setupData = new Vue({
             sl: (30).toFixed(0),
         },
         teamNumber: 1
+    },
+    watch: {
+        teamNumber: (val) => {
+            console.log(this);
+            setupData.blue.yd = (val == 1) ? (30).toFixed(1) : (-30).toFixed(1);
+            setupData.red.yd =  (val == 1) ? (-30).toFixed(1) :  (30).toFixed(1);
+        }
     }
 });

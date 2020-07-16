@@ -63,8 +63,8 @@
             <p class="container-title" style="color: rgb(100,150,255)">Blue Satellite</p>
             <p><u>Initial State</u></p>
             <p><em>A<sub>e</sub></em>: <input v-model="blue.ae"> km</p>
-            <p><em>Y<sub>d</em></sub> :<input v-model="blue.xd"> km</p>
-            <p><em>X<sub>d</sub></em> :<input v-model="blue.yd" placeholder="10.0"> km</p>
+            <p><em>X<sub>d</em></sub> :<input v-model="blue.xd"> km</p>
+            <p><em>Y<sub>d</sub></em> :<input v-model="blue.yd" placeholder="10.0"> km</p>
             <p><em>&#946</em>: <input v-model="blue.B"> <sup>o</sup></p>
             <p><u>Success Parameters</u></p>
             <p>&#916V Available: <input v-model="scenario_start.dVavail"> m/s</p>
@@ -107,6 +107,12 @@
             <br>Scenario Length <input v-model="scenario_start.sl"> hrs
             <br>Team 1<input type="radio" name="gender" value="1" v-model="teamNumber">
             <br>Team 2<input type="radio" name="gender" value="2" v-model="teamNumber">
+            <!-- <select>
+                <option value="volvo">Volvo</option>
+                <option value="saab">Saab</option>
+                <option value="mercedes">Mercedes</option>
+                <option value="audi">Audi</option>
+            </select> -->
         </div>
         <div class="start-button">Start</div>
     </div>
