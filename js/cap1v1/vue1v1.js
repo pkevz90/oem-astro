@@ -89,6 +89,7 @@ var setupData = new Vue({
             initSun: (90).toFixed(0),
             bp: (10).toFixed(0),
             sl: (30).toFixed(0),
-        }
+        },
+        teamNumber: 1
     }
 });

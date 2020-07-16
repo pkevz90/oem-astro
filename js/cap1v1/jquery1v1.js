@@ -8,13 +8,15 @@ $('#turn-button').on('click', () => {
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
     $('#turn-button p span')[0].textContent = turn;
-    firebase.database().ref('team1/').set({
-        burn: app.players.blue.burns,
+    let outBurns = math.zeros(5,2)._data;
+    for (let ii = 0; ii < (turn-1); ii++) {
+        outBurns[ii] = app.players.blue.burns[ii];
+    }
+    firebase.database().ref('team' + setupData.teamNumber + '/').set({
+        burn: outBurns,
         turn: turn
     });
-    firebase.database().ref('team1/').once('value').then(function(snapshot) {
-        console.log(snapshot.val());
-    });
+    
 })
 $('.start-button').on('click', () => {
     $('.setup-screen').fadeOut(500);
@@ -51,6 +53,15 @@ $('.start-button').on('click', () => {
     app.deltaVAvail = Number(setupData.scenario_start.dVavail);
     app.reqCats = Number(setupData.scenario_start.reqCats)*Math.PI/180;
     app.rangeReq = [Number(setupData.scenario_start.rangeReq[0]), Number(setupData.scenario_start.rangeReq[1])];
+    setInterval(() => {
+        firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function(snapshot) {
+                for (let ii = 0; ii < Number($('#turn-button p span')[0].textContent); ii++) {
+                    app.players.red.burns[ii] = snapshot.val().burn[ii];
+                }
+                app.players.red.calculateTrajecory();
+                calcData(app.currentTime);
+        });
+    },500);
     startGame();
     
 })
