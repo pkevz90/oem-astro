@@ -24,10 +24,10 @@ $('.start-button').on('click', () => {
         [15*Math.cos(Number(setupData.scenario_start.initSun)*Math.PI/180)],
         [15*Math.sin(Number(setupData.scenario_start.initSun)*Math.PI/180)],
     ];
-    // firebase.database().ref('team' + setupData.teamNumber + '/').set({
-    //     burn: math.zeros(Number(setupData.scenario_start.bp),2)._data,
-    //     turn: 1
-    // });
+    firebase.database().ref('team' + setupData.teamNumber + '/').set({
+        burn: math.zeros(Number(setupData.scenario_start.bp),2)._data,
+        turn: 1
+    });
     app.scenLength = Number(setupData.scenario_start.sl);
     app.numBurns = Number(setupData.scenario_start.bp);
     sideData.scenario_data.numBurns = app.numBurns;
@@ -57,15 +57,15 @@ $('.start-button').on('click', () => {
     app.deltaVAvail = Number(setupData.scenario_start.dVavail);
     app.reqCats = Number(setupData.scenario_start.reqCats)*Math.PI/180;
     app.rangeReq = [Number(setupData.scenario_start.rangeReq[0]), Number(setupData.scenario_start.rangeReq[1])];
-    // setInterval(() => {
-    //     firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function(snapshot) {
-    //             for (let ii = 0; ii < Number($('#turn-button p span')[0].textContent); ii++) {
-    //                 app.players.red.burns[ii] = snapshot.val().burn[ii];
-    //             }
-    //             app.players.red.calculateTrajecory();
-    //             calcData(app.currentTime);
-    //     });
-    // },500);
+    setInterval(() => {
+        firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function(snapshot) {
+                for (let ii = 0; ii < Number($('#turn-button p span')[0].textContent); ii++) {
+                    app.players.red.burns[ii] = snapshot.val().burn[ii];
+                }
+                app.players.red.calculateTrajecory();
+                calcData(app.currentTime);
+        });
+    },500);
     startGame();
     
 })
