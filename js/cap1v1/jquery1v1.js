@@ -24,6 +24,10 @@ $('.start-button').on('click', () => {
         [15*Math.cos(Number(setupData.scenario_start.initSun)*Math.PI/180)],
         [15*Math.sin(Number(setupData.scenario_start.initSun)*Math.PI/180)],
     ];
+    firebase.database().ref('team' + setupData.teamNumber + '/').set({
+        burn: math.zeros(Number(setupData.scenario_start.bp),2)._data,
+        turn: 1
+    });
     app.scenLength = Number(setupData.scenario_start.sl);
     app.numBurns = Number(setupData.scenario_start.bp);
     sideData.scenario_data.numBurns = app.numBurns;
