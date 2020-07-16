@@ -124,17 +124,6 @@ input {
     font-weight: bold;
     z-index: 3;
 }
-.sun-angle {
-    position: absolute;
-    bottom: 25%;
-    width: 30%;
-    left: 30%;
-    height: auto;
-    text-align: center;
-    font-size: 2vw;
-    font-weight: bold;
-    z-index: 3;
-}
 
 .start-button:hover {
     background-color: rgba(255, 255, 255, 0.25);

@@ -57,7 +57,7 @@ $('.start-button').on('click', () => {
         current: globalChartRef.config.data.datasets[10],
     });
     let init;
-    if ($('.setup-container').eq(2).find('div').eq(0).is(':visible')) {
+    if (setupData.gray1.exist) {
         init = stateFromRoe({
             ae: Number(setupData.gray1.ae),
             xd: Number(setupData.gray1.xd),
@@ -69,7 +69,7 @@ $('.start-button').on('click', () => {
             current: globalChartRef.config.data.datasets[13]
         })
     }
-    if ($('.setup-container').eq(3).find('div').eq(0).is(':visible')) {
+    if (setupData.gray2.exist) {
         init = stateFromRoe({
             ae: Number(setupData.gray2.ae),
             xd: Number(setupData.gray2.xd),
@@ -97,10 +97,6 @@ $('.start-button').on('click', () => {
     startGame();
 
 })
-$('.add-button').on('click', (a) => {
-    $(a.target).hide();
-    $(a.target).prev().fadeIn();
-})
 $('.controlTitle').on('click', (a) => {
     if ($(a.target).is('span')) {
         a.target = $(a.target).parent();
@@ -118,24 +114,6 @@ $('.slider-contain input').on('input', (a) => {
     setBottomInfo();
     calcData(app.currentTime);
 })
-
-var burnRows, dataRows; {
-    let $tableRows = $('td');
-    app.spans.manRows = {
-        blue: $tableRows.splice(0, 10),
-        red: $tableRows
-    }
-    $tableRows = $('.side-data span');
-    app.spans.scenData = {
-        curRange: $tableRows.splice(0, 1),
-        minRange: $tableRows.splice(0, 2),
-        cats: $tableRows.splice(0, 1),
-        totalDv: {
-            blue: $tableRows.splice(0, 1),
-            red: $tableRows.splice(0, 1)
-        }
-    }
-}
 
 function hrsToTime(hrs) {
     return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);

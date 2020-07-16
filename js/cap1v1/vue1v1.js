@@ -13,7 +13,6 @@ var sideData = new Vue({
             scenLength: 15,
             numBurns: 5
         }
-        
     },
     methods: {
         burnClick: function (event) {
@@ -49,7 +48,7 @@ var sideData = new Vue({
                 x: 0,
                 y: 0
             }];
-        }
+        },
     }
 });
 
@@ -94,9 +93,16 @@ var setupData = new Vue({
     },
     watch: {
         teamNumber: (val) => {
-            console.log(this);
             setupData.blue.yd = (val == 1) ? (30).toFixed(1) : (-30).toFixed(1);
             setupData.red.yd =  (val == 1) ? (-30).toFixed(1) :  (30).toFixed(1);
+        }
+    },
+    methods: {
+        addGray: function (event) {
+            let num = $(event.target).attr("id");
+            $(event.target).hide();
+            $(event.target).prev().fadeIn();
+            setupData['gray' + num].exist = true;
         }
     }
 });

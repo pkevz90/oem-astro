@@ -104,7 +104,7 @@
                 <p><em>Y<sub>d</sub></em> :<input v-model="gray1.yd"> km</p>
                 <p><em>&#946</em>: <input v-model="gray1.B"> <sup>o</sup></p>
             </div>
-            <div class="add-button">+</div>
+            <div class="add-button" v-on:click="addGray" id="1">+</div>
         </div>
         <div class="setup-container">
             <div style="display: none;">
@@ -115,9 +115,8 @@
                 <p><em>Y<sub>d</sub></em> :<input v-model="gray2.yd"> km</p>
                 <p><em>&#946</em>: <input v-model="gray2.B"> <sup>o</sup></p>
             </div>
-            <div class="add-button">+</div>
+            <div class="add-button" v-on:click="addGray" id="2">+</div>
         </div>
-        <!-- <div class="sun-angle"> -->
         
         <div class="start-button">Start</div>
     </div>
