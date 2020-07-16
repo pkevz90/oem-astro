@@ -8,6 +8,9 @@ $('#turn-button').on('click', () => {
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
     $('#turn-button p span')[0].textContent = turn;
+    firebase.database().ref('turn/').set({
+        currentTurn: turn
+    });
 })
 $('.start-button').on('click', () => {
     $('.setup-screen').fadeOut(500);
