@@ -5,15 +5,15 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <script src="SupportLibraries/Chart.bundle.min.js"></script>
-    <script src="SupportLibraries/math.min.js"></script>
-    <script src="SupportLibraries/vue.js"></script>
-    <script src="SupportLibraries/jquery.min.js"></script>
+    <script src="./SupportLibraries/Chart.bundle.min.js"></script>
+    <script src="./SupportLibraries/math.min.js"></script>
+    <script src="./SupportLibraries/vue.js"></script>
+    <script src="./SupportLibraries/jquery.min.js"></script>
 
     <!-- <script src="SupportLibraries/astroFunctions.js"></script> -->
-    <script src="js/cap1v1/Cap1v1main.js"></script>
-    <script src="js/cap1v1/Cap1v1Trajectories.js"></script>
-    <script src="js/cap1v1/Cap1v1HandleEvents.js"></script>
+    <script src="./js/cap1v1/Cap1v1main.js"></script>
+    <script src="./js/cap1v1/Cap1v1Trajectories.js"></script>
+    <script src="./js/cap1v1/Cap1v1HandleEvents.js"></script>
     <title>RPO 1v1</title>
     <link rel="stylesheet" type="text/css" href="css/cap1v1.css">
     
@@ -43,8 +43,8 @@
             <li>- Alternatively, click on the desired maneuver on the side-bar menu</li>
             <li>- With a waypoint selected, the user has two options, accessed by keyboard inputs</li>
             <ol>
-                <li>[b] - Plan a manual maneuver burn (i.e. manually choose direction and magnitude)</li> <br>
-                <li>[t] - Initiate a targeting sequence</li>
+                <li>[B] - Plan a manual maneuver burn (i.e. manually choose direction and magnitude)</li> <br>
+                <li>[T] - Initiate a targeting sequence</li>
             </ol>
             <li>- For both options, the user will be constrained by the amount of fuel they have left. An example would be if a user has a total of 2.5 m/s and they used 1.5 m/s on the first burn, the second burn will 
                 be restricted to a magnitude of 1 m/s.
@@ -80,6 +80,22 @@
             <p><em>&#946</em>: <input v-model="red.B"> <sup>o</sup></p>
         </div>
         <div class="setup-container">
+            <p class="container-title" style="color: rgb(255,255,255)">Scenario Data</p>
+            <p>Initial Sun <input v-model="scenario_start.initSun"><sup>o</sup></p>
+            <p>Burns/Player <input v-model="scenario_start.bp"></p>
+            <p>Length <input v-model="scenario_start.sl"> hrs</p>
+            <p>Team 1<input type="radio" name="gender" value="1" v-model="teamNumber"></p>
+            <p>Team 2<input type="radio" name="gender" value="2" v-model="teamNumber"></p>
+            <p> Scenario
+            <select style="font-size: 1.5vw;">
+                <option value="volvo">Custom</option>
+                <option value="volvo">Knife Fight</option>
+                <option value="saab">Drive-By</option>
+                <option value="mercedes">NMC</option>
+            </select>
+            </p>    
+        </div>
+        <div class="setup-container">
             <div style="display: none;">
                 <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #1</p>
                 <p><u>Initial State</u></p>
@@ -101,19 +117,8 @@
             </div>
             <div class="add-button">+</div>
         </div>
-        <div class="sun-angle">
-            Initial Sun <input v-model="scenario_start.initSun"><sup>o</sup> 
-            <br>Burns/Player <input v-model="scenario_start.bp">
-            <br>Scenario Length <input v-model="scenario_start.sl"> hrs
-            <br>Team 1<input type="radio" name="gender" value="1" v-model="teamNumber">
-            <br>Team 2<input type="radio" name="gender" value="2" v-model="teamNumber">
-            <!-- <select>
-                <option value="volvo">Volvo</option>
-                <option value="saab">Saab</option>
-                <option value="mercedes">Mercedes</option>
-                <option value="audi">Audi</option>
-            </select> -->
-        </div>
+        <!-- <div class="sun-angle"> -->
+        
         <div class="start-button">Start</div>
     </div>
     <div class="sideBar" id="side-data">
