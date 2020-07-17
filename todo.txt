@@ -1,18 +1,7 @@
 - RPO 1v1
-    -- Make sun vector an arrow
-    -- Fix targeting functionality (complete)
-    -- Make scenario customizable
-        --- range and cats req do not function (complete)
-        --- Changes in scenario length, number of burns
     -- Iterate on user interface
-        --- Popup needs work
     -- Finite burn functionality???
-
-- Mission Planner
-    -- Add targeting
-    -- Iterate on user interface
-    -- Add gray satellites
-    -- Pre-built scenarios
+    -- Interpolation between calculated trajectory points
 
 - Classical Orbital Element Vis
     -- Add more visualizations and quick scenarios
