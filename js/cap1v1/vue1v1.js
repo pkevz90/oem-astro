@@ -31,13 +31,13 @@ var sideData = new Vue({
             if (app.chosenWaypoint === undefined) {
                 app.tactic = '';
             } else if ((app.chosenWaypoint[0] === ii) && (sat === 'blue')) {
-                console.log(1)
+                // console.log(1)
                 app.tactic = 'burn';
             } else if ((app.chosenWaypoint[0] === ii) && (sat === 'red')) {
-                console.log(2)
+                // console.log(2)
                 app.tactic = 'burn';
             } else {
-                console.log(3)
+                // console.log(3)
                 app.tactic = '';
             }
             setSelectedWaypoint(ii, sat);

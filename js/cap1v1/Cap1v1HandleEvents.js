@@ -213,7 +213,7 @@ function setAxisZoomPos() {
 function setSelectedWaypoint(index, side) {
 
     $('tr').removeClass('selected');
-    $($('tr')[index + ((side === 'blue') ? 1 : 7)]).toggleClass('selected')
+    $($('.burnRows')[index + ((side === 'blue') ? 0 : Number(setupData.scenario_start.bp))]).toggleClass('selected')
 
     app.chosenWaypoint = [index, side];
     $('.info-right')[0].textContent = 'Press [B] to manual burn, [T] to target burn'
