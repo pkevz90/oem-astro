@@ -89,7 +89,8 @@ var setupData = new Vue({
             bp: (10).toFixed(0),
             sl: (30).toFixed(0),
         },
-        teamNumber: 1
+        teamNumber: 1,
+        server: false
     },
     watch: {
         teamNumber: (val) => {

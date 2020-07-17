@@ -8,15 +8,17 @@ $('#turn-button').on('click', () => {
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
     $('#turn-button p span')[0].textContent = turn;
-    let outBurns = math.zeros(Number(setupData.scenario_start.bp), 2)._data;
-    for (let ii = 0; ii < (turn - 1); ii++) {
-        outBurns[ii] = app.players.blue.burns[ii];
+    if (setupData.server) {
+        let outBurns = math.zeros(Number(setupData.scenario_start.bp), 2)._data;
+        for (let ii = 0; ii < (turn - 1); ii++) {
+            outBurns[ii] = app.players.blue.burns[ii];
+        }
+        firebase.database().ref('team' + setupData.teamNumber + '/').set({
+            burn: outBurns,
+            turn: turn
+        });
     }
-    console.log(outBurns);
-    // firebase.database().ref('team' + setupData.teamNumber + '/').set({
-    //     burn: outBurns,
-    //     turn: turn
-    // });
+    
 
 })
 $('.start-button').on('click', () => {
@@ -25,10 +27,13 @@ $('.start-button').on('click', () => {
         [15 * Math.cos(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
         [15 * Math.sin(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
     ];
-    // firebase.database().ref('team' + setupData.teamNumber + '/').set({
-    //     burn: math.zeros(Number(setupData.scenario_start.bp), 2)._data,
-    //     turn: 1
-    // });
+    if (setupData.server) {
+        firebase.database().ref('team' + setupData.teamNumber + '/').set({
+            burn: math.zeros(Number(setupData.scenario_start.bp), 2)._data,
+            turn: 1
+        });
+    }
+    
     app.scenLength = Number(setupData.scenario_start.sl);
     app.numBurns = Number(setupData.scenario_start.bp);
     sideData.scenario_data.numBurns = app.numBurns;
@@ -84,16 +89,20 @@ $('.start-button').on('click', () => {
     app.deltaVAvail = Number(setupData.scenario_start.dVavail);
     app.reqCats = Number(setupData.scenario_start.reqCats) * Math.PI / 180;
     app.rangeReq = [Number(setupData.scenario_start.rangeReq[0]), Number(setupData.scenario_start.rangeReq[1])];
-    // setInterval(() => {
-    //     firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function (snapshot) {
-    //         let turn = Math.min(Number($('#turn-button p span')[0].textContent), snapshot.val().turn);
-    //         for (let ii = 0; ii < (turn - 1); ii++) {
-    //             app.players.red.burns[ii] = snapshot.val().burn[ii];
-    //         }
-    //         app.players.red.calculateTrajecory();
-    //         calcData(app.currentTime);
-    //     });
-    // }, 500);
+    if (setupData.server) {
+        setInterval(() => {
+            firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function (snapshot) {
+                let turn = Math.min(Number($('#turn-button p span')[0].textContent), snapshot.val().turn);
+                for (let ii = 0; ii < (turn - 1); ii++) {
+                    app.players.red.burns[ii] = snapshot.val().burn[ii];
+                }
+                app.players.red.calculateTrajecory();
+                console.log(app.players.red.burns);
+                calcData(app.currentTime);
+            });
+        }, 500);
+    }
+    
     startGame();
 
 })
