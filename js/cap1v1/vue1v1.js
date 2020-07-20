@@ -104,6 +104,97 @@ var setupData = new Vue({
             $(event.target).hide();
             $(event.target).prev().fadeIn();
             setupData['gray' + num].exist = true;
+        },
+        selectScenario: function (event) {
+            switch(event.target.value) {
+                case 'knifefight':
+                    this.blue = {
+                        ae: 0,
+                        xd: 0,
+                        yd: 30,
+                        B: 0
+                    };
+                    this.red = {
+                        ae: 0,
+                        xd: 0,
+                        yd: -30,
+                        B: 0
+                    };
+                    this.gray1 = {
+                        exist: false,
+                        ae: 0,
+                        xd: 0,
+                        yd:0,
+                        B: 0
+                    };
+                    this.gray2 = {
+                        exist: false,
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B: 0
+                    };
+                    return;
+                case 'driveby':
+                    this.blue = {
+                        ae: 0,
+                        xd: 20,
+                        yd: 40,
+                        B: 0
+                    };
+                    this.red = {
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B: 0
+                    };
+                    this.gray1 = {
+                        exist: false,
+                        ae: 0,
+                        xd: 0,
+                        yd:0,
+                        B: 0
+                    };
+                    this.gray2 = {
+                        exist: false,
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B: 0
+                    };
+                    return;
+                case 'defend':
+                    this.blue = {
+                        ae: 20,
+                        xd: 0,
+                        yd: 0,
+                        B: 90
+                    };
+                    this.red = {
+                        ae: 0,
+                        xd: 30,
+                        yd: 60,
+                        B: 0
+                    };
+                    this.gray1 = {
+                        exist: true,
+                        ae: 0,
+                        xd: 0,
+                        yd:0,
+                        B: 0
+                    };
+                    this.gray2 = {
+                        exist: false,
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B: 0
+                    };
+                    return;
+                default:
+                    return;
+            }
+            
         }
     }
 });

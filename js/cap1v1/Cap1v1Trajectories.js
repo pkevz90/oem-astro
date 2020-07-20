@@ -7,6 +7,8 @@ function calculateTrajecory() {
 		[this.initState[2][0]],
 		[this.initState[3][0]]
 	];
+	let numPoints = 12;
+	app.calcDt = (app.scenLength / app.numBurns) * 3600 / (numPoints + 1);
 	let pRR = PhiRR(app.calcDt),
 		pRV = PhiRV(app.calcDt),
 		pVR = PhiVR(app.calcDt),
@@ -24,8 +26,6 @@ function calculateTrajecory() {
 		}
 		return;
 	}
-	let numPoints = 12;
-	app.calcDt = (app.scenLength / app.numBurns) * 3600 / (numPoints + 1);
 	this.dataLoc.waypoints.data = [];
 	this.dataLoc.trajectory.data = [];
 	this.dataLoc.waypoints.data.push({

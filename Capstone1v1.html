@@ -86,11 +86,11 @@
             <p>Length <input v-model="scenario_start.sl"> hrs</p>
             <p>Team 1<input type="radio" name="teamN" value="1" v-model="teamNumber" checked>Team 2<input type="radio" name="teamN" value="2" v-model="teamNumber"></p>
             <p> Scenario
-            <select style="font-size: 1.5vw;">
-                <option value="volvo">Custom</option>
-                <option value="volvo">Knife Fight</option>
-                <option value="saab">Drive-By</option>
-                <option value="mercedes">NMC</option>
+            <select style="font-size: 1.5vw;" v-on:click="selectScenario">
+                <option value="custom">Custom</option>
+                <option value="knifefight">Knife Fight</option>
+                <option value="driveby">Drive-By</option>
+                <option value="defend">NMC</option>
             </select>
             </p>    
             <p>Game Server</p>
