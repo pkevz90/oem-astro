@@ -140,6 +140,11 @@ function handleKeyPress(k) {
             globalChartRef.update();
             break;
         case 'b':
+            if (app.chosenWaypoint === undefined) {
+                return;
+            } else if (app.tactic !== '') {
+                return;
+            }
             app.tactic = 'burn';
             $('.info-right')[0].textContent = 'Set burn magnitude and direction by hovering mouse'
             app.chartData.burnDir.data = [{
@@ -153,6 +158,8 @@ function handleKeyPress(k) {
             return;
         case 't':
             if (app.chosenWaypoint === undefined) {
+                return;
+            } else if (app.tactic !== '') {
                 return;
             }
             app.tactic = 'target';
