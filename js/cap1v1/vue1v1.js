@@ -138,8 +138,8 @@ var setupData = new Vue({
                 case 'driveby':
                     this.blue = {
                         ae: 0,
-                        xd: 20,
-                        yd: 40,
+                        xd: -30,
+                        yd: -80,
                         B: 0
                     };
                     this.red = {
@@ -173,14 +173,14 @@ var setupData = new Vue({
                     this.red = {
                         ae: 0,
                         xd: 30,
-                        yd: 60,
+                        yd: 80,
                         B: 0
                     };
                     this.gray1 = {
                         exist: true,
                         ae: 0,
                         xd: 0,
-                        yd:0,
+                        yd: 0,
                         B: 0
                     };
                     this.gray2 = {

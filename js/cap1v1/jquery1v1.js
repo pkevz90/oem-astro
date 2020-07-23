@@ -99,6 +99,8 @@ $('.start-button').on('click', () => {
                 app.players.red.calculateTrajecory();
                 console.log(app.players.red.burns);
                 calcData(app.currentTime);
+            }).catch(() => {
+                console.log('error');
             });
         }, 500);
     }
