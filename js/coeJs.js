@@ -33,7 +33,6 @@ drawStars();
 drawLightSources();
 drawOrbit(orbitParams);
 drawAxes();
-// drawTube();
 
 var render = function () {
     renderer.render(scene, camera);
@@ -46,8 +45,8 @@ var render = function () {
     })
     sidTime += timeStep / 86164 * 360;
     if (!ecef) {
-        Earth.rotation.y += timeStep / 86164 * 2 * Math.PI;
-        clouds.rotation.y += timeStep / 86164 * 2 * Math.PI;
+        Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+        clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
         ECEF.forEach((item) => {
             item.rotation.y = sidTime * Math.PI / 180;
         })
@@ -57,6 +56,9 @@ var render = function () {
         Sunlight.position.y = 100 * curSun[2][0];
         Sunlight.position.z = 100 * curSun[1][0];
         stars.rotation.y -= timeStep / 86164 * 2 * Math.PI;
+        ECI.forEach((item) => {
+            item.rotation.y -= timeStep / 86164 * 2 * Math.PI;
+        })
     }
     drawOrbit(orbitParams)
 }
@@ -168,24 +170,24 @@ function drawAxes() {
         new THREE.Vector3(-3, 0, 0),
     ]);
     var geometry = new THREE.TubeGeometry(curve, 4, 0.05, 8, true);
-    ECI.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial()));
-    ECEF.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial()));
+    ECI.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x44ff44 })));
+    ECEF.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x4444ff })));
     // ECI Y
     var curve = new THREE.CatmullRomCurve3([
         new THREE.Vector3(0, 0, 0),
         new THREE.Vector3(0, 0, 3),
     ]);
     var geometry = new THREE.TubeGeometry(curve, 4, 0.05, 8, true);
-    ECI.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial()));
-    ECEF.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial()));
+    ECI.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x44ff44 })));
+    ECEF.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x4444ff })));
     // ECI Z
     var curve = new THREE.CatmullRomCurve3([
         new THREE.Vector3(0, 0, 0),
         new THREE.Vector3(0, 3, 0),
     ]);
     var geometry = new THREE.TubeGeometry(curve, 4, 0.05, 8, true);
-    ECI.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial()));
-    ECEF.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial()));
+    ECI.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x44ff44 })));
+    ECEF.push(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x4444ff })));
     ECI.forEach((item) => {
         scene.add(item);
     })
@@ -193,19 +195,6 @@ function drawAxes() {
         item.rotation.y = 0.2;
         scene.add(item);
     })
-}
-
-function drawTube() {
-    var curve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(2, 0, 0),
-    ]);
-    var geometry = new THREE.TubeGeometry(curve, 4, 0.25, 8, true);
-    var curveMesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial());
-    scene.add(curveMesh);
-
-
-
 }
 
 function drawStars() {
@@ -268,15 +257,12 @@ document.addEventListener('keypress', function (key) {
         ecef = !ecef;
         if (ecef) {
             $('.referenceDiv span')[0].textContent = 'Earth-Fixed';
-            Earth.rotation.y = Math.PI;
-            clouds.rotation.y = Math.PI;
+            //Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            //clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
         } else {
             $('.referenceDiv span')[0].textContent = 'Inertial';
-            Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
-            clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI
-            Sunlight.position.x = -100 * sunVec[0][0];
-            Sunlight.position.y = 100 * sunVec[2][0];
-            Sunlight.position.z = 100 * sunVec[1][0];
+            //Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            //clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
         }
     }
     if (k === '.' || k === '>') {
