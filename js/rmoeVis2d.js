@@ -327,6 +327,9 @@ window.addEventListener('DOMContentLoaded', function () {
 	for (var ii = 0; ii < sliders.length; ii++) {
 		sliders[ii].addEventListener('input',calculateTrajecories);	
 	}
+	$('#playButton').on('click',() => {
+		playScene();
+	})
 	document.addEventListener('keypress', function(key){
 		let k = key.key;
 		if (k === '-' || k === '_'){
@@ -347,71 +350,7 @@ window.addEventListener('DOMContentLoaded', function () {
 			globalChartRef.config.options.scales.yAxes[0].ticks.max = axisLimits/2;
 		}
 		else if (k === 'p' || k === 'P'){
-			if (!playBool){
-				playBool = true;
-			}
-			else{
-				playBool = false;
-				return;
-			}
-			nPlay = 2*Math.PI/86164;
-			aePlay = Number(sliders[0].value);
-			xdPlay = Number(sliders[1].value);
-			ydPlay = Number(sliders[2].value);
-			bPlay = Number(sliders[3].value)*Math.PI/180;
-			let zmax = Number(sliders[4].value);
-			let m = Number(sliders[5].value)*Math.PI/180;
-			let rPlay = [[-aePlay/2*Math.cos(bPlay)+xdPlay],[aePlay*Math.sin(bPlay)+ydPlay],[zmax*Math.sin(m)]];
-			let vPlay = [[aePlay*nPlay/2*Math.sin(bPlay)],[aePlay*nPlay*Math.cos(bPlay)-1.5*xdPlay*nPlay],[zmax*nPlay*Math.cos(m)]];
-			playRR = PhiRR(dtPlay,nPlay); playRV = PhiRV(dtPlay,nPlay); 
-			playVR = PhiVR(dtPlay,nPlay); playVV = PhiVV(dtPlay,nPlay); 
-			globalChartRef3.config.data.datasets[0].data = [];
-			globalChartRef1.config.data.datasets[0].data = [];
-			globalChartRef3.config.data.datasets[0].data.push({
-				x: rPlay[1][0],
-				y: rPlay[0][0]
-			})
-			globalChartRef1.config.data.datasets[0].data.push({
-				x: rPlay[1][0],
-				y: rPlay[2][0]
-			})
-			idInterval = setInterval(() => {
-				//console.log(globalChartRef1.config.data.datasets[0].data)
-				let rPlayT = math.add(math.multiply(playRR,rPlay),math.multiply(playRV,vPlay));
-				vPlay = math.add(math.multiply(playVR,rPlay),math.multiply(playVV,vPlay));
-				ydPlay -= 3/2*xdPlay*nPlay*dtPlay; bPlay += nPlay*dtPlay;
-				createEllipse(ydPlay,xdPlay,aePlay,bPlay);
-				rPlay = rPlayT;
-				globalChartRef3.config.data.datasets[0].data.push({
-					x: rPlay[1][0],
-					y: rPlay[0][0]
-				})
-				globalChartRef1.config.data.datasets[0].data.push({
-					x: rPlay[1][0],
-					y: rPlay[2][0]
-				})
-				if ((aePlay+Math.abs(ydPlay)) > axisLimits) {
-					axisCenter += -3/2*xdPlay*nPlay*dtPlay;
-				}
-				resetAxisSize();
-				globalChartRef3.config.data.datasets[1].data[0].x = rPlay[1][0];
-				globalChartRef3.config.data.datasets[1].data[0].y = rPlay[0][0];
-				globalChartRef2.config.data.datasets[1].data[0].x = rPlay[0][0];
-				globalChartRef2.config.data.datasets[1].data[0].y = rPlay[2][0];
-				globalChartRef1.config.data.datasets[1].data[0].x = rPlay[1][0];
-				globalChartRef1.config.data.datasets[1].data[0].y = rPlay[2][0];
-				//globalChartRef1.config.data.datasets[1].data[0].x = rPlay[1][0];
-				//globalChartRef1.config.data.datasets[1].data[0].y = rPlay[2][0];
-				globalChartRef3.update();
-				globalChartRef2.update();
-				globalChartRef1.update();
-				if (!playBool) {
-					axisCenter = 0;
-					resetAxisSize();
-					clearInterval(idInterval);
-					calculateTrajecories();
-				}
-			}, 25);
+			playScene();
 		}
 		else if (k === 'e' || k === 'E'){
 		}
@@ -556,4 +495,74 @@ function setLabelSize(canvasWidth) {
     globalChartRef3.config.options.scales.yAxes[0].ticks.fontSize = canvasWidth/fontSize;
     
     
+}
+
+function playScene() {
+	if (!playBool){
+		playBool = true;
+		$('#playButton')[0].textContent = 'Stop Scene';
+	}
+	else{
+		playBool = false;
+		return;
+	}
+	nPlay = 2*Math.PI/86164;
+	aePlay = Number(sliders[0].value);
+	xdPlay = Number(sliders[1].value);
+	ydPlay = Number(sliders[2].value);
+	bPlay = Number(sliders[3].value)*Math.PI/180;
+	let zmax = Number(sliders[4].value);
+	let m = Number(sliders[5].value)*Math.PI/180;
+	let rPlay = [[-aePlay/2*Math.cos(bPlay)+xdPlay],[aePlay*Math.sin(bPlay)+ydPlay],[zmax*Math.sin(m)]];
+	let vPlay = [[aePlay*nPlay/2*Math.sin(bPlay)],[aePlay*nPlay*Math.cos(bPlay)-1.5*xdPlay*nPlay],[zmax*nPlay*Math.cos(m)]];
+	playRR = PhiRR(dtPlay,nPlay); playRV = PhiRV(dtPlay,nPlay); 
+	playVR = PhiVR(dtPlay,nPlay); playVV = PhiVV(dtPlay,nPlay); 
+	globalChartRef3.config.data.datasets[0].data = [];
+	globalChartRef1.config.data.datasets[0].data = [];
+	globalChartRef3.config.data.datasets[0].data.push({
+		x: rPlay[1][0],
+		y: rPlay[0][0]
+	})
+	globalChartRef1.config.data.datasets[0].data.push({
+		x: rPlay[1][0],
+		y: rPlay[2][0]
+	})
+	idInterval = setInterval(() => {
+		//console.log(globalChartRef1.config.data.datasets[0].data)
+		let rPlayT = math.add(math.multiply(playRR,rPlay),math.multiply(playRV,vPlay));
+		vPlay = math.add(math.multiply(playVR,rPlay),math.multiply(playVV,vPlay));
+		ydPlay -= 3/2*xdPlay*nPlay*dtPlay; bPlay += nPlay*dtPlay;
+		createEllipse(ydPlay,xdPlay,aePlay,bPlay);
+		rPlay = rPlayT;
+		globalChartRef3.config.data.datasets[0].data.push({
+			x: rPlay[1][0],
+			y: rPlay[0][0]
+		})
+		globalChartRef1.config.data.datasets[0].data.push({
+			x: rPlay[1][0],
+			y: rPlay[2][0]
+		})
+		if ((aePlay+Math.abs(ydPlay)) > axisLimits) {
+			axisCenter += -3/2*xdPlay*nPlay*dtPlay;
+		}
+		resetAxisSize();
+		globalChartRef3.config.data.datasets[1].data[0].x = rPlay[1][0];
+		globalChartRef3.config.data.datasets[1].data[0].y = rPlay[0][0];
+		globalChartRef2.config.data.datasets[1].data[0].x = rPlay[0][0];
+		globalChartRef2.config.data.datasets[1].data[0].y = rPlay[2][0];
+		globalChartRef1.config.data.datasets[1].data[0].x = rPlay[1][0];
+		globalChartRef1.config.data.datasets[1].data[0].y = rPlay[2][0];
+		//globalChartRef1.config.data.datasets[1].data[0].x = rPlay[1][0];
+		//globalChartRef1.config.data.datasets[1].data[0].y = rPlay[2][0];
+		globalChartRef3.update();
+		globalChartRef2.update();
+		globalChartRef1.update();
+		if (!playBool) {
+			$('#playButton')[0].textContent = 'Play Scene';
+			axisCenter = 0;
+			resetAxisSize();
+			clearInterval(idInterval);
+			calculateTrajecories();
+		}
+	}, 25);
 }

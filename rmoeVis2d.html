@@ -67,17 +67,22 @@
         #setup:hover:not(.active) {
             cursor: pointer;
 		}
-		@media screen and (min-width: 1200px) {
+
+        #playButton:hover {
+            background-color: rgba(255, 255, 255, 0.125);
+            cursor: pointer;
+        }
+		/* @media screen and (min-width: 1200px) {
 			.navbar #playButton {
 				display: none;
 			}
-		}
+		} */
 	</style>
   </head>
   <body">
     <ul class="navbar">
         <li><p id="navTitle">Relative Motion Orbital Elements</p></li>
-        <li><p id="playButton">Play</p></li>
+        <li><p id="playButton">Play Scene</p></li>
     </ul>
 	<div class="row sticky-top" id="sliderDiv">
 		<div class="col-xl-2 col-md-6 slidercontainer">
@@ -118,7 +123,7 @@
     <!-- <script src="SupportLibraries/jqpackage/dist/jquery.slim.min.js"></script>
 	<script src="SupportLibraries/bootstrapjs/bootstrap.min.js"></script> -->
 	
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.js"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
    
   </body>
