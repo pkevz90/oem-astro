@@ -119,7 +119,7 @@ function handleKeyPress(k) {
                 return;
             }
             let newR = Number(window.prompt('Enter new radial burn [m/s]: '));
-            let newI = Number(window.prompt('Enter new radial burn [m/s]: '));
+            let newI = Number(window.prompt('Enter new in-track burn [m/s]: '));
 
             let sat = app.chosenWaypoint[1];
             app.players[sat].burns[app.chosenWaypoint[0]][0] = newR;
