@@ -20,7 +20,7 @@ var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     orbit = [],
     r = 2,
     scene, camera, renderer, controls, ecef = false,
-    timeStep = 60;
+    timeStep = 1000/60;
 var ECI = [],
     ECEF = [],
     RIC = [],
@@ -86,6 +86,7 @@ function drawOrbit(orbitParams) {
     let r, r0;
     orbitParams.forEach((orbitP,index) => {
         let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
+        $('.controls span')[5+index*6].textContent = ((180/Math.PI)*(tA-(2*Math.PI*Math.floor(tA / (2*math.PI))))).toFixed(0)
         let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
         let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, orbitP.raan * Math.PI / 180, orbitP.arg * Math.PI / 180, tA]
 
@@ -279,12 +280,26 @@ document.addEventListener('keypress', function (key) {
         }
     }
     if (k === '.' || k === '>') {
-        timeStep += 10;
-        $('.timeStepDiv span')[0].textContent = timeStep.toFixed(0);
+        if (Math.abs(timeStep - 1/60)  < .0001) {
+            timeStep = 0;
+        }
+        timeStep += 100/60;
+        if (Math.abs(timeStep) < .0001) {
+            timeStep = 1/60;
+        }
+        $('.timeStepDiv span')[0].textContent = (timeStep*60).toFixed(0);
+        console.log(timeStep)
     }
     if (k === ',' || k === '<') {
-        timeStep -= 10;
-        $('.timeStepDiv span')[0].textContent = timeStep.toFixed(0);
+        if (Math.abs(timeStep - 1/60) < .0001) {
+            timeStep = 0;
+        }
+        timeStep -= 100/60;
+        if (Math.abs(timeStep) < .0001) {
+            timeStep = 1/60;
+        }
+        $('.timeStepDiv span')[0].textContent = (timeStep*60).toFixed(0);
+        console.log(timeStep)
     }
 
 });
