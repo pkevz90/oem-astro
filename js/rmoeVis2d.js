@@ -460,11 +460,10 @@ function createEllipse(xC,yC,a,B) {
     globalChartRef3.config.data.datasets[3].data.push({
         x: a*Math.sin(B)+xC,
         y: -a/2*Math.cos(B)+yC
-    })
-	globalChartRef3.config.data.datasets[3].data.push({
+    },{
 		x: xC,
 		y: yC
-	})
+	});
 }
 function resetAxisSize() {
 	globalChartRef3.config.options.scales.xAxes[0].ticks.min = -40 + axisCenter;
