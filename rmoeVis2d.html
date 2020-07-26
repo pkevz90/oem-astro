@@ -7,13 +7,10 @@
 	
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
-	<!-- <link rel="stylesheet" href="SupportLibraries/bootstrapcss/bootstrap.min.css"> -->
-	<!-- <script src="SupportLibraries/chartpack/dist/chart.bundle.min.js"></script> -->
+
     <script src="./SupportLibraries/Chart.bundle.min.js"></script>
     <script src="./SupportLibraries/math.min.js"></script>
     <script src="./SupportLibraries/vue.js"></script>
-	<!-- <script src="SupportLibraries/mathjs/dist/math.min.js"></script> -->
-	<script src="js/rmoeVis2d.js"></script>
     <title>RMOE</title>
 	<style>
 		.navbar {
@@ -54,8 +51,9 @@
 			width: 100%;
 		}
 		.slidercontainer {
-            font-size: 2.2vh;
+            font-size: 3vh;
             background-color: #1f3a52;
+            margin: 0px 0px 0px 0px;
 			/* background-color: rgb(100,100,100); */
 			opacity: 0.75;
 		}
@@ -68,47 +66,49 @@
         #setup:hover:not(.active) {
             cursor: pointer;
 		}
-
+        #playButton {
+            position: fixed;
+            top: 3%;
+            right: 5%;
+            border: 1px solid white;
+            padding: 10px;
+            font-size: 1.8vw;
+        }
         #playButton:hover {
             background-color: rgba(255, 255, 255, 0.125);
             cursor: pointer;
         }
-		/* @media screen and (min-width: 1200px) {
-			.navbar #playButton {
-				display: none;
-			}
-		} */
 	</style>
   </head>
-  <body">
+  <body>
     <ul class="navbar">
         <li><p id="navTitle">Relative Motion Orbital Elements</p></li>
-        <li><p id="playButton">Play Scene</p></li>
     </ul>
-	<div class="row sticky-top" id="sliderDiv">
+	<div class="row sticky-top" id="sliderApp">
+        <p id="playButton" @click="playScene">{{playText}}</p>
 		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>Ae: <span>0</span> km</p>
-			<input type="range" class="slider" min="0" max="15" value="0" step="0.01">
+			<p>A<sub>e</sub>: {{ ae.toFixed(2)  }} km</p>
+			<input v-model.number="ae" type="range" class="slider" min="0" max="15" step="0.01" :disabled="playBool">
 		</div>
 		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>Xd: <span>0</span> km</p>
-			<input type="range" class="slider" min="-15" max="15" value="0" step="0.01">
+			<p>X<sub>d</sub>: {{ xd.toFixed(2)  }} km</p>
+			<input v-model.number="xd" type="range" class="slider" min="-15" max="15" step="0.01" :disabled="playBool">
 		</div>
 		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>Yd: <span>0</span> km</p>
-			<input type="range" class="slider" min="-15" max="15" value="0" step="0.01">
+			<p>Y<sub>d</sub>: {{ yd.toFixed(2) }} km</p>
+			<input v-model.number="yd" type="range" class="slider" min="-15" max="15" step="0.01" :disabled="playBool">
 		</div>
 		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>Beta: <span>0</span> deg</p>
-			<input type="range" class="slider" min="0" max="360" value="0" step="0.05">
+			<p>&#946: {{ b.toFixed(2) }} deg</p>
+			<input v-model.number="b" type="range" class="slider" min="0" max="360" step="0.01" :disabled="playBool">
 		</div>
 		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>Zmax: <span>0</span> km</p>
-			<input type="range" class="slider" min="0" max="15" value="0" step="0.05">
+			<p>Z<sub>max</sub>: {{ zmax.toFixed(2)  }} km</p>
+			<input v-model.number="zmax" type="range" class="slider" min="0" max="15" step="0.01" :disabled="playBool">
 		</div>
 		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>M: <span>0</span> deg</p>
-			<input type="range" class="slider" min="0" max="360" value="0" step="0.05">
+			<p>M: {{ m.toFixed(2) }} deg</p>
+			<input v-model.number="m" type="range" class="slider" min="0" max="360" step="0.01" :disabled="playBool">
 		</div>
 	</div>
 	<div class="row">
@@ -121,9 +121,106 @@
 		</div>
     </div>
     
-    <!-- <script src="SupportLibraries/jqpackage/dist/jquery.slim.min.js"></script>
-	<script src="SupportLibraries/bootstrapjs/bootstrap.min.js"></script> -->
+    <script>
+        var app = new Vue({
+            el: '#sliderApp',
+            created() {
+                window.addEventListener('keydown', e => {if (e.key.toLowerCase() === 'p') {this.playScene();}});
+            },
+            data: {
+                ae: 0,
+                xd: 0,
+                yd: 0,
+                b:  0,
+                zmax: 0,
+                m: 0,
+                playBool: false,
+                playText: '[P]lay Scene'
+            },
+            methods: {
+                playScene: function() {
+                    if (!this.playBool) {
+                        this.playBool = true;
+                        this.playText = 'Stop Scene';
+                    }
+                    else {
+                        this.playBool = false;
+                        this.playText = '[P]lay Scene';
+                        return;
+                    }
+                    let nPlay = 2*Math.PI/86164;
+                    let bOld = app.b + 0;
+                    let mOld = app.m + 0;
+                    let ydOld = app.yd + 0;
+                    let rPlay = [[-app.ae/2*Math.cos(app.b * Math.PI / 180)+app.xd],[app.ae*Math.sin(app.b * Math.PI / 180)+app.yd],[app.zmax*Math.sin(app.m * Math.PI / 180)]];
+                    let vPlay = [[app.ae*nPlay/2*Math.sin(app.b * Math.PI / 180)],[app.ae*nPlay*Math.cos(app.b * Math.PI / 180)-1.5*app.xd*nPlay],[app.zmax*nPlay*Math.cos(app.m * Math.PI / 180)]];
+                    let dtPlay = 500;
+                    let playRR = PhiRR(dtPlay,nPlay); let playRV = PhiRV(dtPlay,nPlay); 
+                    let playVR = PhiVR(dtPlay,nPlay); let playVV = PhiVV(dtPlay,nPlay); 
+                    globalChartRef3.config.data.datasets[0].data = [];
+                    globalChartRef1.config.data.datasets[0].data = [];
+                    globalChartRef3.config.data.datasets[0].data.push({
+                        x: rPlay[1][0],
+                        y: rPlay[0][0]
+                    })
+                    globalChartRef1.config.data.datasets[0].data.push({
+                        x: rPlay[1][0],
+                        y: rPlay[2][0]
+                    })
+                    let idInterval = setInterval(() => {
+                        let rPlayT = math.add(math.multiply(playRR,rPlay),math.multiply(playRV,vPlay));
+                        vPlay = math.add(math.multiply(playVR,rPlay),math.multiply(playVV,vPlay));
+                        app.yd -= 3/2*app.xd*nPlay*dtPlay;
+                        app.b += nPlay*dtPlay*180/Math.PI;
+                        app.b = app.b > 360 ? app.b - 360 : app.b;
+                        app.m += nPlay*dtPlay*180/Math.PI;
+                        app.m = app.m > 360 ? app.m - 360 : app.m;
+                        createEllipse(app.yd,app.xd,app.ae,app.b*Math.PI/180);
+                        rPlay = rPlayT;
+                        globalChartRef3.config.data.datasets[0].data.push({
+                            x: rPlay[1][0],
+                            y: rPlay[0][0]
+                        })
+                        globalChartRef1.config.data.datasets[0].data.push({
+                            x: rPlay[1][0],
+                            y: rPlay[2][0]
+                        })
+                        if ((app.ae+Math.abs(app.yd)) > axisLimits) {
+                            axisCenter += -3/2*app.xd*nPlay*dtPlay;
+                        }
+                        resetAxisSize();
+                        globalChartRef3.config.data.datasets[1].data[0].x = rPlay[1][0];
+                        globalChartRef3.config.data.datasets[1].data[0].y = rPlay[0][0];
+                        globalChartRef2.config.data.datasets[1].data[0].x = rPlay[0][0];
+                        globalChartRef2.config.data.datasets[1].data[0].y = rPlay[2][0];
+                        globalChartRef1.config.data.datasets[1].data[0].x = rPlay[1][0];
+                        globalChartRef1.config.data.datasets[1].data[0].y = rPlay[2][0];
+                        globalChartRef3.update();
+                        globalChartRef2.update();
+                        globalChartRef1.update();
+                        if (!this.playBool) {
+                            app.b = bOld;
+                            app.yd = ydOld;
+                            axisCenter = 0;
+                            resetAxisSize();
+                            calculateTrajecories();
+                            clearInterval(idInterval);
+                        }
+                    }, 25);
+                }
+            },
+            watch: {
+                ae: () => calculateTrajecories(),
+                xd: () => calculateTrajecories(),
+                yd: () => calculateTrajecories(),
+                b: () => calculateTrajecories(),
+                zmax: () => calculateTrajecories(),
+                m: () => calculateTrajecories(),
+            }
+        })
+    </script>
 	
+	<script src="./js/rmoeVis2d.js"></script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.js"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
    
