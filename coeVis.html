@@ -50,7 +50,7 @@
             left: 35%;
             text-align: center;
             font-size: 1.5vw;
-            opacity: 0.5;
+            opacity: 0.8;
         }
         .timeStepDiv {
             position: fixed;
@@ -61,7 +61,7 @@
             text-align: center;
             padding-right: 1%;
             font-size: 1.5vw;
-            opacity: 0.5;
+            opacity: 0.8;
         }
         .addButton {
             float: right;
@@ -153,14 +153,13 @@
     <div id="optionsList" style="text-align: center; display: none; position: fixed; right: 5%; top: 5%; width: 20%; z-index: 3; color: white;">
         <p>Tail length: <span>50</span>%</p>
         <input type="range" class="slider" min="0" max="300" value="50" step="1">
-        <p style="display: inline-block;">ECI frame</p>
-        <input type="checkbox">
+        <input type="checkbox" checked>
+        <p style="display: inline-block;color: #44ff44">Show ECI Axes</p>
+        
         <br>
-        <p style="display: inline-block;">ECEF frame</p>
-        <input type="checkbox">
-        <br>
-        <p style="display: inline-block;">Orbit Color</p>
-        <input type="color" value="#FFC300">
+        <input type="checkbox" checked>
+        <p style="display: inline-block;color: #4444ff">Show ECEF Axes</p>
+        
     </div>
     <!-- <div class="controlTitle">Change Elements</div> -->
     <div class="sideBar">
@@ -189,16 +188,17 @@
             </div>
             <div class="slidercontainer">
                 <p><em>&#957</em>: <span>0.0</span> deg</p>
-                <input type="range" class="slider" min="0" max="360" value="0" step="0.1">
+                <input type="range" class="slider" min="0" max="360" value="0" step="0.1" style="visibility: hidden;">
             </div>
         </div>
         <div class="addButton pointer">+</div>
     </div>
     <div class="referenceDiv">
-        Earth-Centered <span>Inertial</span>
+        Earth-Centered <span>Inertial</span>; Press e to switch
     </div>
     <div class="timeStepDiv">
-        Time Step: <span>60</span> sec
+        <span>1000</span> times real time<br>
+        Use < and > to change 
     </div>
     <!-- <div class="taDiv">
         True Anomaly: <span>60</span> sec
