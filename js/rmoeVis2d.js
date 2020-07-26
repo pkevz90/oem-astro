@@ -342,6 +342,9 @@ function PhiVV(t,n = 2*Math.PI/86164){
 	return [[Math.cos(nt),2*Math.sin(nt),0],[-2*Math.sin(nt), 4*Math.cos(nt)-3,0],[0,0,Math.cos(nt)]];
 }
 function calculateTrajecories(){
+	if (app.playBool) {
+		return;
+	}
 	let dt = 1000;
 	let n = 2*Math.PI/86164;
 	let beta = app.b * Math.PI/180;
