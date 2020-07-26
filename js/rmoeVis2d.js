@@ -368,17 +368,17 @@ function calculateTrajecories() {
 	}
 	let dt = 1000;
 	let n = 2 * Math.PI / 86164;
-	let beta = app.b * Math.PI / 180;
-	let m = app.m * Math.PI / 180;
+	let beta = app.rmoes.b.value * Math.PI / 180;
+	let m = app.rmoes.m.value * Math.PI / 180;
 	let r = [
-		[-app.ae / 2 * Math.cos(beta) + app.xd],
-		[app.ae * Math.sin(beta) + app.yd],
-		[app.zmax * Math.sin(m)]
+		[-app.rmoes.ae.value / 2 * Math.cos(beta) + app.rmoes.xd.value],
+		[app.rmoes.ae.value * Math.sin(beta) + app.rmoes.yd.value],
+		[app.rmoes.zmax.value * Math.sin(m)]
 	];
 	let v = [
-		[app.ae * n / 2 * Math.sin(beta)],
-		[app.ae * n * Math.cos(beta) - 1.5 * app.xd * n],
-		[app.zmax * n * Math.cos(m)]
+		[app.rmoes.ae.value * n / 2 * Math.sin(beta)],
+		[app.rmoes.ae.value * n * Math.cos(beta) - 1.5 * app.rmoes.xd.value * n],
+		[app.rmoes.zmax.value * n * Math.cos(m)]
 	];
 	rr = PhiRR(dt, n);
 	rv = PhiRV(dt, n);
@@ -386,7 +386,7 @@ function calculateTrajecories() {
 	vv = PhiVV(dt, n);
 	resetTrajectory();
 	setCurrentPosition(r);
-	createEllipse(app.yd, app.xd, app.ae, beta);
+	createEllipse(app.yd, app.rmoes.xd.value, app.rmoes.ae.value, beta);
 	for (ii = 0; ii < 186164; ii += dt) {
 		globalChartRef3.config.data.datasets[0].data.push({
 			x: r[1][0],

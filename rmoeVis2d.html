@@ -52,12 +52,8 @@
 		}
 		.slidercontainer {
             font-size: 3vh;
-            background-color: #1f3a52;
 			/* background-color: rgb(100,100,100); */
 			opacity: 0.75;
-		}
-		.slidercontainer:hover {
-			opacity: 1;
 		}
         .inplanecontainer {
             padding: 0.5% 1%;
@@ -87,12 +83,7 @@
     </ul>
 	<div class="row sticky-top" id="sliderApp">
         <p id="playButton" @click="playScene">{{playText}}</p>
-        <slider-input :element="'Ae'" :invalue="ae" :mn="0" :mx="20"   :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
-        <slider-input :element="'Xd'" :invalue="xd" :mn="-20" :mx="20" :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
-        <slider-input :element="'Yd'" :invalue="yd" :mn="-20" :mx="20" :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
-        <slider-input :element="'B'" :invalue="b" :mn="0" :mx="360"   :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
-        <slider-input :element="'Zmax'" :invalue="zmax" :mn="-15" :mx="15" :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
-        <slider-input :element="'M'" :invalue="m" :mn="0" :mx="360"     :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
+        <slider-input v-for="rmoe in rmoes" :rmoeIn="rmoe" :value="rmoe.value" :dsbld="playBool" @value-change="updateScreen"></slider-input>
 	</div>
 	<div class="row">
         <div class="col-8 inplanecontainer">
@@ -106,20 +97,21 @@
     
     <script>
         Vue.component('slider-input', {
-            props: ['element','invalue','mn','mx','dsbld'],
+            props: ['rmoein','dsbld'],
             data: function() {
-                return {playBool: false, rmoeVar: this.invalue}
+                console.log(this.rmoein)
+                return {rmoeVar: this.rmoein.value}
             },
             template: '<div class="col-xl-2 col-md-6 slidercontainer">\
-                <p> {{element}}: {{rmoeVar.toFixed(2)}} km </p>\
-                <input v-model.number="rmoeVar" type="range" class="slider" :min="mn" :max="mx" step="0.01" :disabled="dsbld" >\
+                <p> {{rmoein.name}}: {{rmoeVar.toFixed(2)}} {{rmoein.units}} </p>\
+                <input v-model.number="rmoeVar" type="range" class="slider" :min="rmoein.min" :max="rmoein.max" step="0.01" :disabled="dsbld" >\
                 </div>',
             watch: {
                 rmoeVar: function() {
-                    this.$emit('value-change',[this.element, this.rmoeVar]);
+                    this.$emit('value-change',[this.rmoein.name, this.rmoeVar]);
                 },
-                invalue: function() {
-                    this.rmoeVar = this.invalue;
+                'rmoein.value':  function() {
+                        this.rmoeVar = this.rmoein.value;
                 }
             }
         })
@@ -142,7 +134,7 @@
                         max: 20,
                         value: 0,
                         units: 'km',
-                        name: 'ae',
+                        name: 'Ae',
                         inHtml: 'A<sub>e</sub>'
                     },
                     xd: {
@@ -150,7 +142,7 @@
                         max: 20,
                         value: 0,
                         units: 'km',
-                        name: 'xd',
+                        name: 'Xd',
                         inHtml: 'X<sub>d</sub>'
                     },
                     yd: {
@@ -158,15 +150,15 @@
                         max: 20,
                         value: 0,
                         units: 'km',
-                        name: 'ae',
+                        name: 'Yd',
                         inHtml: 'Y<sub>d</sub>'
                     },
                     b: {
                         min: 0,
                         max: 360,
                         value: 0,
-                        units: 'km',
-                        name: 'ae',
+                        units: 'deg',
+                        name: 'B',
                         inHtml: 'B'
                     },
                     zmax: {
@@ -174,7 +166,7 @@
                         max: 20,
                         value: 0,
                         units: 'km',
-                        name: 'ae',
+                        name: 'Zmax',
                         inHtml: 'Z<sub>max</sub>'
                     },
                     m: {
@@ -182,7 +174,7 @@
                         max: 360,
                         value: 0,
                         units: 'deg',
-                        name: 'm',
+                        name: 'M',
                         inHtml: 'M'
                     }
                 },
@@ -191,7 +183,8 @@
             },
             methods: {
                 updateScreen: function($event) {
-                    this[$event[0].toLowerCase()] = $event[1];
+                    this.rmoes[$event[0].toLowerCase()].value = $event[1];
+                    calculateTrajecories();
                 },
                 playScene: function() {
                     if (!this.playBool) {
@@ -204,11 +197,11 @@
                         return;
                     }
                     let nPlay = 2*Math.PI/86164;
-                    let bOld = app.b + 0;
-                    let mOld = app.m + 0;
-                    let ydOld = app.yd + 0;
-                    let rPlay = [[-app.ae/2*Math.cos(app.b * Math.PI / 180)+app.xd],[app.ae*Math.sin(app.b * Math.PI / 180)+app.yd],[app.zmax*Math.sin(app.m * Math.PI / 180)]];
-                    let vPlay = [[app.ae*nPlay/2*Math.sin(app.b * Math.PI / 180)],[app.ae*nPlay*Math.cos(app.b * Math.PI / 180)-1.5*app.xd*nPlay],[app.zmax*nPlay*Math.cos(app.m * Math.PI / 180)]];
+                    let bOld = app.rmoes.b.value + 0;
+                    let mOld = app.rmoes.m.value + 0;
+                    let ydOld = app.rmoes.yd.value + 0;
+                    let rPlay = [[-app.rmoes.ae.value/2*Math.cos(app.rmoes.b.value * Math.PI / 180)+app.rmoes.xd.value],[app.rmoes.ae.value*Math.sin(app.rmoes.b.value * Math.PI / 180)+app.rmoes.yd.value],[app.rmoes.zmax.value*Math.sin(app.rmoes.m.value * Math.PI / 180)]];
+                    let vPlay = [[app.rmoes.ae.value*nPlay/2*Math.sin(app.rmoes.b.value * Math.PI / 180)],[app.rmoes.ae.value*nPlay*Math.cos(app.rmoes.b.value * Math.PI / 180)-1.5*app.rmoes.xd.value*nPlay],[app.rmoes.zmax.value*nPlay*Math.cos(app.rmoes.m.value * Math.PI / 180)]];
                     let dtPlay = 500;
                     let playRR = PhiRR(dtPlay,nPlay); let playRV = PhiRV(dtPlay,nPlay); 
                     let playVR = PhiVR(dtPlay,nPlay); let playVV = PhiVV(dtPlay,nPlay); 
@@ -225,12 +218,12 @@
                     let idInterval = setInterval(() => {
                         let rPlayT = math.add(math.multiply(playRR,rPlay),math.multiply(playRV,vPlay));
                         vPlay = math.add(math.multiply(playVR,rPlay),math.multiply(playVV,vPlay));
-                        app.yd -= 3/2*app.xd*nPlay*dtPlay;
-                        app.b += nPlay*dtPlay*180/Math.PI;
-                        app.b = app.b > 360 ? app.b - 360 : app.b;
-                        app.m += nPlay*dtPlay*180/Math.PI;
-                        app.m = app.m > 360 ? app.m - 360 : app.m;
-                        createEllipse(app.yd,app.xd,app.ae,app.b*Math.PI/180);
+                        app.rmoes.yd.value -= 3/2*app.rmoes.xd.value*nPlay*dtPlay;
+                        app.rmoes.b.value += nPlay*dtPlay*180/Math.PI;
+                        app.rmoes.b.value = app.rmoes.b.value > 360 ? app.rmoes.b.value - 360 : app.rmoes.b.value;
+                        app.rmoes.m.value += nPlay*dtPlay*180/Math.PI;
+                        app.rmoes.m.value = app.rmoes.m.value > 360 ? app.rmoes.m.value - 360 : app.rmoes.m.value;
+                        createEllipse(app.rmoes.yd.value,app.rmoes.xd.value,app.rmoes.ae.value,app.rmoes.b.value*Math.PI/180);
                         rPlay = rPlayT;
                         globalChartRef3.config.data.datasets[0].data.push({
                             x: rPlay[1][0],
@@ -240,8 +233,8 @@
                             x: rPlay[1][0],
                             y: rPlay[2][0]
                         })
-                        if ((app.ae+Math.abs(app.yd)) > axisLimits) {
-                            axisCenter += -3/2*app.xd*nPlay*dtPlay;
+                        if ((app.rmoes.ae.value+Math.abs(app.rmoes.yd.value)) > axisLimits) {
+                            axisCenter += -3/2*app.rmoes.xd.value*nPlay*dtPlay;
                         }
                         resetAxisSize();
                         globalChartRef3.config.data.datasets[1].data[0].x = rPlay[1][0];
@@ -254,9 +247,9 @@
                         globalChartRef2.update();
                         globalChartRef1.update();
                         if (!this.playBool) {
-                            app.b = bOld;
-                            app.yd = ydOld;
-                            app.m = mOld;
+                            app.rmoes.b.value = bOld;
+                            app.rmoes.yd.value = ydOld;
+                            app.rmoes.m.value = mOld;
                             axisCenter = 0;
                             resetAxisSize();
                             calculateTrajecories();
@@ -264,15 +257,6 @@
                         }
                     }, 25);
                 }
-            },
-                
-            watch: {
-                ae: () => calculateTrajecories(),
-                xd: () => calculateTrajecories(),
-                yd: () => calculateTrajecories(),
-                b: () => calculateTrajecories(),
-                zmax: () => calculateTrajecories(),
-                m: () => calculateTrajecories(),
             }
         })
     </script>
