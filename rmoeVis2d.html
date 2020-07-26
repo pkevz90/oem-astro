@@ -69,6 +69,8 @@
             position: fixed;
             top: 3%;
             right: 5%;
+            width: 15%;
+            text-align: center;
             border: 1px solid white;
             padding: 10px;
             font-size: 1.8vw;
@@ -85,30 +87,12 @@
     </ul>
 	<div class="row sticky-top" id="sliderApp">
         <p id="playButton" @click="playScene">{{playText}}</p>
-		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>A<sub>e</sub>: {{ ae.toFixed(2)  }} km</p>
-			<input v-model.number="ae" type="range" class="slider" min="0" max="15" step="0.01" :disabled="playBool">
-		</div>
-		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>X<sub>d</sub>: {{ xd.toFixed(2)  }} km</p>
-			<input v-model.number="xd" type="range" class="slider" min="-15" max="15" step="0.01" :disabled="playBool">
-		</div>
-		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>Y<sub>d</sub>: {{ yd.toFixed(2) }} km</p>
-			<input v-model.number="yd" type="range" class="slider" min="-15" max="15" step="0.01" :disabled="playBool">
-		</div>
-		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>&#946: {{ b.toFixed(2) }} deg</p>
-			<input v-model.number="b" type="range" class="slider" min="0" max="360" step="0.01" :disabled="playBool">
-		</div>
-		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>Z<sub>max</sub>: {{ zmax.toFixed(2)  }} km</p>
-			<input v-model.number="zmax" type="range" class="slider" min="0" max="15" step="0.01" :disabled="playBool">
-		</div>
-		<div class="col-xl-2 col-md-6 slidercontainer">
-			<p>M: {{ m.toFixed(2) }} deg</p>
-			<input v-model.number="m" type="range" class="slider" min="0" max="360" step="0.01" :disabled="playBool">
-		</div>
+        <slider-input :element="'Ae'" :invalue="ae" :mn="0" :mx="20"   :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
+        <slider-input :element="'Xd'" :invalue="xd" :mn="-20" :mx="20" :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
+        <slider-input :element="'Yd'" :invalue="yd" :mn="-20" :mx="20" :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
+        <slider-input :element="'B'" :invalue="b" :mn="0" :mx="360"   :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
+        <slider-input :element="'Zmax'" :invalue="zmax" :mn="-15" :mx="15" :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
+        <slider-input :element="'M'" :invalue="m" :mn="0" :mx="360"     :dsbld="playBool" v-on:value-change="updateScreen"></slider-input>
 	</div>
 	<div class="row">
         <div class="col-8 inplanecontainer">
@@ -121,6 +105,25 @@
     </div>
     
     <script>
+        Vue.component('slider-input', {
+            props: ['element','invalue','mn','mx','dsbld'],
+            data: function() {
+                return {playBool: false, rmoeVar: this.invalue}
+            },
+            template: '<div class="col-xl-2 col-md-6 slidercontainer">\
+                <p> {{element}}: {{rmoeVar.toFixed(2)}} km </p>\
+                <input v-model.number="rmoeVar" type="range" class="slider" :min="mn" :max="mx" step="0.01" :disabled="dsbld" >\
+                </div>',
+            watch: {
+                rmoeVar: function() {
+                    this.$emit('value-change',[this.element, this.rmoeVar]);
+                },
+                invalue: function() {
+                    this.rmoeVar = this.invalue;
+                }
+            }
+        })
+
         var app = new Vue({
             el: '#sliderApp',
             created() {
@@ -133,10 +136,63 @@
                 b:  0,
                 zmax: 0,
                 m: 0,
+                rmoes: {
+                    ae: {
+                        min: 0,
+                        max: 20,
+                        value: 0,
+                        units: 'km',
+                        name: 'ae',
+                        inHtml: 'A<sub>e</sub>'
+                    },
+                    xd: {
+                        min: -20,
+                        max: 20,
+                        value: 0,
+                        units: 'km',
+                        name: 'xd',
+                        inHtml: 'X<sub>d</sub>'
+                    },
+                    yd: {
+                        min: -20,
+                        max: 20,
+                        value: 0,
+                        units: 'km',
+                        name: 'ae',
+                        inHtml: 'Y<sub>d</sub>'
+                    },
+                    b: {
+                        min: 0,
+                        max: 360,
+                        value: 0,
+                        units: 'km',
+                        name: 'ae',
+                        inHtml: 'B'
+                    },
+                    zmax: {
+                        min: 0,
+                        max: 20,
+                        value: 0,
+                        units: 'km',
+                        name: 'ae',
+                        inHtml: 'Z<sub>max</sub>'
+                    },
+                    m: {
+                        min: 0,
+                        max: 360,
+                        value: 0,
+                        units: 'deg',
+                        name: 'm',
+                        inHtml: 'M'
+                    }
+                },
                 playBool: false,
                 playText: '[P]lay Scene'
             },
             methods: {
+                updateScreen: function($event) {
+                    this[$event[0].toLowerCase()] = $event[1];
+                },
                 playScene: function() {
                     if (!this.playBool) {
                         this.playBool = true;
@@ -209,6 +265,7 @@
                     }, 25);
                 }
             },
+                
             watch: {
                 ae: () => calculateTrajecories(),
                 xd: () => calculateTrajecories(),
