@@ -111,14 +111,14 @@ function drawOrbit(orbitParams) {
         }
         if (orbit[index] === undefined) {
             var material = new THREE.LineBasicMaterial({
-                color: 0xFFC300,
+                color: $('.controlTitle').find('input')[0].value,
                 linewidth: 2
             });
             var geometry = new THREE.BufferGeometry().setFromPoints(points);
             orbit[index] = new THREE.Line(geometry, material);
             var geometry = new THREE.SphereGeometry(0.05, 6, 6);
             var material = new THREE.MeshBasicMaterial({
-                color: 0xFFC300
+                color: $('.controlTitle').find('input')[0].value
             });
             satPoint[index] = new THREE.Mesh(geometry, material);
             // coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, tA]
@@ -286,7 +286,10 @@ document.addEventListener('keypress', function (key) {
         }
         $('.timeStepDiv span')[0].textContent = (timeStep*60).toFixed(0);
         console.log(timeStep)
+    } else if (k.toLowerCase() === 's') {
+        stars.visible = !stars.visible;
     }
+
 
 });
 
@@ -355,6 +358,20 @@ $('#orbitList p').on('click', (a) => {
                 mA: orbitParams[kk].mA
             }
             break;
+        /*case 'GPS Constellation (24)':
+            for (newsats = 0; newsats<4; newsats++){
+                newControlTitle();
+                orbitParams[kk] = {
+                    a: 26561.7437,
+                    e: 0,
+                    i: 55,
+                    raan: 0,
+                    arg: 0,
+                    mA: 0 * (math.PI / 180)
+                }
+            }
+            
+            break;*/
         default:
             break;
     }

@@ -70,6 +70,14 @@
             padding: 1% 2%;
             border-radius: 10%;
         }
+        .closeButton {
+            float: right;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 2%;
+            border-radius: 50%;
+            font-size: 1.5vw;
+        }
         .addButton:hover {
             background-color: rgba(50,50,50,0.75);
         }
@@ -139,11 +147,13 @@
         </p>
     </div>
     <div id="orbitList" style="text-align: center; display: none; position: fixed; right: 25%; top: 5%; width: 20%; z-index: 3; color: white;">
+        Replace opened orbit with:
         <p class="pointer">ISS</p>
         <p class="pointer">GPS</p>
         <p class="pointer">Molniya</p>
         <p class="pointer">Sun-Synchronous</p>
         <p class="pointer">Geo-Stationary</p>
+        <!--<p class="pointer">GPS Constellation (24)</p>-->
     </div>
     <div class="optionsPane pointer">
         <p>
@@ -159,12 +169,15 @@
         <br>
         <input type="checkbox" checked>
         <p style="display: inline-block;color: #4444ff">Show ECEF Axes</p>
+        <!--<p class='resetButton'>Reset</p>-->
+        
         
     </div>
     <!-- <div class="controlTitle">Change Elements</div> -->
     <div class="sideBar">
         <div class="controlTitle pointer"><span>Satellite 1</span>
-            <input type="color" value="#FFC300"></div>
+            <input type="color" value="#FFC300">
+            <div class="closeButton" style="display:none">X</div></div>
         <div class="controls">
             <div class="slidercontainer">
                 <p><em>a</em>: <span>8000</span> km</p>
@@ -194,7 +207,8 @@
         <div class="addButton pointer">+</div>
     </div>
     <div class="referenceDiv">
-        Earth-Centered <span>Inertial</span>; Press e to switch
+        Earth-Centered <span>Inertial</span>; Press e to switch <br />
+        Press s to toggle stars
     </div>
     <div class="timeStepDiv">
         <span>1000</span> times real time<br>
@@ -208,6 +222,7 @@
     <script src="./js/astroFunctions.js"></script>
     <script src="./SupportLibraries/three.js-master/build/three.js"></script>
     <script src="./SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
+    <script src="./js/coeJs.js"></script>
     <script>
         $('.orbitsPane').on('mouseenter',()=>{
             $('#orbitList').show(); 
@@ -225,7 +240,6 @@
         })
         var editTarget;
         function changeColor (a) {
-            
             let p = $(a.target).parent();
             let ii = $('.controlTitle').index(p);
             let c = hexToRgb(a.target.value);
@@ -247,19 +261,23 @@
             })
             if ($(a.target).is('span')) {
                 a.target = $(a.target).parent();
+            } 
+            if (!$(a.target).is('input')) {
+                if(!$(a.target).is('input')){
+                    let ind = $('.controlTitle').index(a.target);
+                    orbitParams[ind].shown = true;
+                    
+                    if (!$(a.target).next().is(":hidden")) {
+                        $(a.target).next().slideUp(250);
+                        return;
+                    }
+                    $('.controls').slideUp(250);
+                    $(a.target).next().slideDown(250);
+                }
             }
-            let ind = $('.controlTitle').index(a.target);
-            orbitParams[ind].shown = true;
-            
-            if (!$(a.target).next().is(":hidden")) {
-                $(a.target).next().slideUp(250);
-                return;
-            }
-            $('.controls').slideUp(250);
-            $(a.target).next().slideDown(250);
-
         })
-        $('.addButton').on('click',()=>{
+        $('.addButton').on('click',()=>newControlTitle());
+        function newControlTitle(){
             let len = $('.controlTitle').length;
             $('.controls').slideUp(250);
             let cl = $('.controlTitle').last().clone();
@@ -274,14 +292,16 @@
                 if ($(a.target).is('span')) {
                     a.target = $(a.target).parent();
                 }
-                let ind = $('.controlTitle').index(a.target);
-                
-                if (!$(a.target).next().is(":hidden")) {
-                    $(a.target).next().slideUp(250);
-                    return;
+                if (!$(a.target).is('input')) {
+                    let ind = $('.controlTitle').index(a.target);
+                    
+                    if (!$(a.target).next().is(":hidden")) {
+                        $(a.target).next().slideUp(250);
+                        return;
+                    }
+                    $('.controls').slideUp(250);
+                    $(a.target).next().slideDown(250);
                 }
-                $('.controls').slideUp(250);
-                $(a.target).next().slideDown(250);
 
             })
             cl.find('span')[0].innerText = "Satellite " + (len+1);
@@ -298,11 +318,43 @@
                 mA: orbitParams[len-1].mA
             }
             cl.find('.slidercontainer').on('input',sliderInput);
+            $('.closeButton').on('click',(a)=>{closeTab(a)});
             cl.prev().find('input').on('input',changeColor);
             $orbitsControls = $('.controls span');
-        })
+            if ($('.controlTitle').length > 1){
+                $('.closeButton').show();
+            } else {
+                $('.closeButton').first().hide();
+            }
+        }
+        
+        function closeTab(a){
+            a.target = $(a.target).parent();
+            let ind = $('.controlTitle').index(a.target);
+            if (ind != -1){
+                scene.remove(orbit[ind])
+                scene.remove(satPoint[ind])
+                orbit.splice(ind,1);
+                satPoint.splice(ind,1);
+                orbitParams.splice(ind,1);
+
+                for(closeind = ind+1; closeind < $('.controlTitle').length; closeind++){
+                    $('.controlTitle').eq(closeind).find('span')[0].innerText = "Satellite " + (closeind);
+                }
+
+                a.target.next().remove();
+                a.target.remove();
+                if ($('.controlTitle').length > 1){
+                    $('.closeButton').show();
+                } else {
+                    $('.closeButton').first().hide();
+                }
+            }
+        }
+        //$('.resetButton').on('click')
+        $('.closeButton').on('click',(a)=>{closeTab(a)});
         $('.controlTitle input').on('input',changeColor);
     </script>
-    <script src="./js/coeJs.js"></script>
+    
 </body>
 </html>
