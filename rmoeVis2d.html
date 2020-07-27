@@ -103,7 +103,7 @@
                 return {rmoeVar: this.rmoein.value}
             },
             template: '<div class="col-xl-2 col-md-6 slidercontainer">\
-                <p> {{rmoein.name}}: {{rmoeVar.toFixed(2)}} {{rmoein.units}} </p>\
+                <p> <span v-html="rmoein.inHtml"></span>: {{rmoeVar.toFixed(2)}} {{rmoein.units}} </p>\
                 <input v-model.number="rmoeVar" type="range" class="slider" :min="rmoein.min" :max="rmoein.max" step="0.01" :disabled="dsbld" >\
                 </div>',
             watch: {
@@ -159,7 +159,7 @@
                         value: 0,
                         units: 'deg',
                         name: 'B',
-                        inHtml: 'B'
+                        inHtml: '&#946'
                     },
                     zmax: {
                         min: 0,
