@@ -32,7 +32,13 @@
             transition: transform .2s;
             -webkit-transition: -webkit-transform .2s;
         }
-        
+        .slider-div {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: space-around;
+            height: 20%;
+        }
         li {
             float: left;
         }
@@ -45,22 +51,20 @@
             font-size: 5vh;
         }
         #sliderApp {
-            padding: 0% 2.5%;
+            /* padding: 0% 2.5%; */
         }
 		.slider {
 			width: 100%;
 		}
 		.slidercontainer {
             font-size: 3vh;
-			/* background-color: rgb(100,100,100); */
 			opacity: 0.75;
+            width: 16%;
+            min-width: 200px;
 		}
         .inplanecontainer {
             padding: 0.5% 1%;
         }
-        #setup:hover:not(.active) {
-            cursor: pointer;
-		}
         #playButton {
             position: fixed;
             top: 3%;
@@ -81,7 +85,7 @@
     <ul class="navbar">
         <li><p id="navTitle">Relative Motion Orbital Elements</p></li>
     </ul>
-	<div class="row sticky-top" id="sliderApp">
+	<div class="slider-div" id="sliderApp">
         <p id="playButton" @click="playScene">{{playText}}</p>
         <slider-input v-for="rmoe in rmoes" :rmoeIn="rmoe" :value="rmoe.value" :dsbld="playBool" @value-change="updateScreen"></slider-input>
 	</div>
@@ -102,7 +106,7 @@
                 console.log(this.rmoein)
                 return {rmoeVar: this.rmoein.value}
             },
-            template: '<div class="col-xl-2 col-md-6 slidercontainer">\
+            template: '<div class="slidercontainer">\
                 <p> <span v-html="rmoein.inHtml"></span>: {{rmoeVar.toFixed(2)}} {{rmoein.units}} </p>\
                 <input v-model.number="rmoeVar" type="range" class="slider" :min="rmoein.min" :max="rmoein.max" step="0.01" :disabled="dsbld" >\
                 </div>',

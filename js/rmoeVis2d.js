@@ -386,7 +386,7 @@ function calculateTrajecories() {
 	vv = PhiVV(dt, n);
 	resetTrajectory();
 	setCurrentPosition(r);
-	createEllipse(app.yd, app.rmoes.xd.value, app.rmoes.ae.value, beta);
+	createEllipse(app.rmoes.yd.value, app.rmoes.xd.value, app.rmoes.ae.value, beta);
 	for (ii = 0; ii < 186164; ii += dt) {
 		globalChartRef3.config.data.datasets[0].data.push({
 			x: r[1][0],
