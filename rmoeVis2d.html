@@ -61,6 +61,10 @@
         .slidercontainer p {
             margin-block-start: 0;
             margin-block-end: 0;
+            padding: 0 10%;
+        }
+        .slidercontainer div {
+            padding: 0 10%;
         }
         .inplanecontainer {
             padding: 0.5% 1%;
@@ -136,7 +140,7 @@
             },
             template: '<div class="slidercontainer">\
                 <p> <span v-html="rmoein.inHtml"></span>: {{rmoeVar.toFixed(2)}} {{rmoein.units}} </p>\
-                <input v-model.number="rmoeVar" type="range" class="slider" :min="rmoein.min" :max="rmoein.max" step="0.01" :disabled="dsbld" >\
+                <div><input v-model.number="rmoeVar" type="range" class="slider" :min="rmoein.min" :max="rmoein.max" step="0.01" :disabled="dsbld" ></div>\
                 </div>',
             watch: {
                 rmoeVar: function() {
