@@ -79,6 +79,19 @@
             background-color: rgba(255, 255, 255, 0.125);
             cursor: pointer;
         }
+        .chart-div {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: space-around;
+        }
+        .big-div {
+            width: 60%;
+            min-width: 800px;
+        }
+        .small-div {
+            width: 30%;
+        }
 	</style>
   </head>
   <body>
@@ -89,11 +102,11 @@
         <p id="playButton" @click="playScene">{{playText}}</p>
         <slider-input v-for="rmoe in rmoes" :rmoeIn="rmoe" :value="rmoe.value" :dsbld="playBool" @value-change="updateScreen"></slider-input>
 	</div>
-	<div class="row">
-        <div class="col-8 inplanecontainer">
+	<div class="chart-div">
+        <div class="big-div inplanecontainer">
             <canvas id="ChartCnvs3" width="12" height="7"></canvas>
         </div>
-		<div class="col-4 inplanecontainer">
+		<div class="small-div inplanecontainer">
             <div><canvas id="ChartCnvs1" width="12" height="7"></canvas></div>
             <div><canvas id="ChartCnvs2" width="12" height="7"></canvas></div>
 		</div>
