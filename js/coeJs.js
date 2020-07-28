@@ -68,7 +68,7 @@ render();
 function setupScene() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight);
-    camera.position.set(10, 10, 10);
+    camera.position.set(-10, 15, 10);
     renderer = new THREE.WebGLRenderer({
         antialias: true
     });
@@ -111,14 +111,14 @@ function drawOrbit(orbitParams) {
         }
         if (orbit[index] === undefined) {
             var material = new THREE.LineBasicMaterial({
-                color: $('.controlTitle').find('input')[0].value,
+                color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
                 linewidth: 2
             });
             var geometry = new THREE.BufferGeometry().setFromPoints(points);
             orbit[index] = new THREE.Line(geometry, material);
             var geometry = new THREE.SphereGeometry(0.05, 6, 6);
             var material = new THREE.MeshBasicMaterial({
-                color: $('.controlTitle').find('input')[0].value
+                color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value
             });
             satPoint[index] = new THREE.Mesh(geometry, material);
             // coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, tA]

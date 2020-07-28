@@ -1,5 +1,6 @@
 let globalChartRef,
     dragPoint, state1, state2,a,tf, $spanList = $('table span');
+let meanFocusDist
 
 function createGraph() {
     var config = {
@@ -59,7 +60,7 @@ function createGraph() {
 					} else if (scaleKey == 'y-axis-1') {
 						valueY = scaleRef.getValueForPixel(element.offsetY);
 					}
-				}
+                }
 				handleHover(valueX,valueY);
 			},
             onClick: function (element, dataAtClick) {
@@ -145,6 +146,7 @@ window.addEventListener('DOMContentLoaded', function () {
     state1 = {x: 0, y: 0, z: 0, xd: 0, yd: 0.0, zd: 0};
     state2 = {x: -10, y: 2, z: 0, xd: 0, yd: 0, zd: 0};
     tf = 43200; a = 0.0000001; tf = 14400;
+    showReach(state1,a,tf);
     performOneBurnAnalysis();
     $('.slidercontainer').on('input',()=>{
         tf = Number($('.slidercontainer input')[0].value)*3600;
@@ -152,15 +154,34 @@ window.addEventListener('DOMContentLoaded', function () {
         a = Number($('.slidercontainer input')[1].value);
         a = Math.pow(10,a)/1000;
         $('.slidercontainer span')[1].textContent = a.toExponential(2);
+        showReach(state1,a,tf);
         performOneBurnAnalysis();
     })
 }, false);
 
+function isInsideEllipse(checkX,checkY){
+    let mindist = 1000000;
+    let inside = true;
+    for (count = 0; count < globalChartRef.config.data.datasets[2].data.length; count++){
+        let bndryX=globalChartRef.config.data.datasets[2].data[count].x;
+        let bndryY=globalChartRef.config.data.datasets[2].data[count].y;
+        //console.log(count)
+        if (math.norm([bndryX-checkX,bndryY-checkY])<mindist){
+            mindist = math.norm([bndryX-checkX,bndryY-checkY]);
+            if (math.norm([bndryX,bndryY]) < math.norm([checkX,checkY])){
+                inside = false;
+            } else {
+                inside = true;
+            }
+        }
+    }
+    return inside;
+}
+
 function performOneBurnAnalysis() {
     let X = hcwFiniteBurnOneBurn(state1, state2, undefined, tf, a);
     drawStartEnd();
-    showReach(state1,a,tf);
-    // console.log(X);
+    //showReach(state1,a,tf);
     if (X[0] !== false){
         drawOneBurnTrajectory(state1,X[1],tf,a);
         recordStats(X,tf,a);
@@ -176,7 +197,7 @@ function performTwoBurnAnalysis() {
     let X2 = hcwFiniteBurnTwoBurn(state1, state2, undefined, tf, a);
     
     
-    showReach(state1,a,tf);
+    //showReach(state1,a,tf);
     if (X2[0] !== false){
         drawOneBurnTrajectory(state1,X2[0],tf,a);
         recordStats(X2,tf,a);
@@ -269,10 +290,11 @@ function drawTwoBurnTrajectory(state,X,tf,a0) {
 function showReach(state,a0,tf) {
     globalChartRef.config.data.datasets[2].data = [];
     let maxR =0, maxI = 0;
-    for (var ii = 0; ii <= 360; ii+=10){
+    for (var ii = 0; ii <= 360; ii+=2.5){
         finiteState = hcwBurnClosed(state,a0,ii*Math.PI/180,tf);
         // r1 = [[finiteState[0]],[finiteState[1]]];
         // v1 = [[finiteState[2]],[finiteState[3]]];
+        //console.log(finiteState)
         if (finiteState[1] > maxI) {
             maxI = finiteState[1];
         }
@@ -284,6 +306,7 @@ function showReach(state,a0,tf) {
             y: finiteState[0]
         })
     }
+    globalChartRef.update();
     if ((maxI/2) < maxR) {
         globalChartRef.config.options.scales.yAxes[0].ticks.min = -maxR*1.2;
         globalChartRef.config.options.scales.yAxes[0].ticks.max = maxR*1.2;
@@ -350,7 +373,7 @@ function recordStats(X,tf,a) {
 
 }
 function handleHover(valueX,valueY){
-    if (dragPoint){
+    if (dragPoint && isInsideEllipse(1.02*valueX,1.02*valueY)){
         globalChartRef.config.data.datasets[4].data[1].x = valueX;
         globalChartRef.config.data.datasets[4].data[1].y = valueY;
         state2.x = valueY;
@@ -359,7 +382,7 @@ function handleHover(valueX,valueY){
     }
 }
 function handleClick(valueX,valueY){
-    if (dragPoint){
+    if (dragPoint && isInsideEllipse(1.02*valueX,1.02*valueY)){
         dragPoint = !dragPoint;
         return;
     }
