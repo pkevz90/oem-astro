@@ -290,7 +290,7 @@ function drawTwoBurnTrajectory(state,X,tf,a0) {
 function showReach(state,a0,tf) {
     globalChartRef.config.data.datasets[2].data = [];
     let maxR =0, maxI = 0;
-    for (var ii = 0; ii <= 360; ii+=2.5){
+    for (var ii = 0; ii <= 360; ii+=5){
         finiteState = hcwBurnClosed(state,a0,ii*Math.PI/180,tf);
         // r1 = [[finiteState[0]],[finiteState[1]]];
         // v1 = [[finiteState[2]],[finiteState[3]]];
