@@ -56,8 +56,8 @@ function createGraph1() {
 						fontSize: 30
 					},
 					ticks: {
-						min: -axisLimits,
-						max: axisLimits,
+						min: -40,
+						max: 40,
 						fontSize: 20,
 						reverse: true,
 						fontColor: 'rgba(255,255,255,1)',
@@ -86,8 +86,8 @@ function createGraph1() {
 						fontSize: 30
 					},
 					ticks: {
-						min: -3 * axisLimits / 4,
-						max: 3 * axisLimits / 4,
+						min: -30,
+						max: 30,
 						fontColor: 'rgba(255,255,255,1)',
 						fontSize: 20,
 					}
@@ -443,8 +443,8 @@ function createEllipse(xC, yC, a, B) {
 function resetAxisSize() {
 	globalChartRef3.config.options.scales.xAxes[0].ticks.min = -40 + axisCenter;
 	globalChartRef3.config.options.scales.xAxes[0].ticks.max = 40 + axisCenter;
-	globalChartRef1.config.options.scales.xAxes[0].ticks.min = -20 + axisCenter;
-	globalChartRef1.config.options.scales.xAxes[0].ticks.max = 20 + axisCenter;
+	globalChartRef1.config.options.scales.xAxes[0].ticks.min = -40 + axisCenter;
+	globalChartRef1.config.options.scales.xAxes[0].ticks.max = 40 + axisCenter;
 	//globalChartRef3.config.options.scales.yAxes[0].ticks.min = -3*axisLimits/4;
 	//globalChartRef3.config.options.scales.yAxes[0].ticks.max = 3*axisLimits/4;
 }
