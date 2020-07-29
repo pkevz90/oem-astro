@@ -213,8 +213,8 @@ function drawStars() {
 function drawLightSources() {
     Sunlight = new THREE.PointLight(0xFFFFFF, 1, 500);
     sunVec = sunVectorCalc(jdUTI0);
-    console.log(sunVec);
-    console.log(math.norm(math.squeeze(sunVec)));
+    // console.log(sunVec);
+    // console.log(math.enorm(math.squeeze(sunVec)));
 
     Sunlight.position.set(-100 * sunVec[0][0], 100 * sunVec[2][0], 100 * sunVec[1][0]);
     scene.add(Sunlight);
@@ -256,14 +256,14 @@ document.addEventListener('keypress', function (key) {
     if (k.toLowerCase() === 'e') {
         ecef = !ecef;
         if (ecef) {
-            $('.referenceDiv span')[0].textContent = 'Earth-Fixed';
+            $('.referenceDiv span').text('Earth-Fixed');
             let oldErf = Earth.rotation.y % (2 * Math.PI);
-            Earth.rotation.y = Math.PI;
-            clouds.rotation.y = Math.PI;
             let oldEcef = ECEF[0].rotation.y % (2 * Math.PI);
+            oldEcef = oldEcef > Math.PI ? oldEcef - 2 * Math.PI : oldEcef;
             let oldEci = ECI[0].rotation.y % (2 * Math.PI);
-            let ii = 0;
-            let frames = 30;
+            let desEci = -sidTime * Math.PI / 180  % (2 * Math.PI);
+            oldEci = (desEci - oldEci) < -Math.PI ? oldEci - 2 * Math.PI : oldEci;
+            let ii = 0, frames = 30;
             let inter = setInterval(() => {
                 ii++;
                 Earth.rotation.y = (Math.PI-oldErf) * ii / frames + oldErf;
@@ -271,15 +271,16 @@ document.addEventListener('keypress', function (key) {
                 ECEF.forEach((item) => {
                     item.rotation.y = (0 - oldEcef) * ii / frames + oldEcef;
                 })
+                desEci = (-sidTime * Math.PI / 180) % (2 * Math.PI);
                 ECI.forEach((item) => {
-                    item.rotation.y = (-sidTime * Math.PI / 180 - oldEci) * ii / frames + oldEci;
+                    item.rotation.y = (desEci - oldEci) * ii / frames + oldEci;
                 })
                 if (ii === frames) {
                     clearInterval(inter)
                 }
             },25)
         } else {
-            $('.referenceDiv span')[0].textContent = 'Inertial';
+            $('.referenceDiv span').text('Inertial');
             Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
             clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI
             Sunlight.position.x = -100 * sunVec[0][0];
@@ -304,7 +305,7 @@ document.addEventListener('keypress', function (key) {
             timeStep = 1/60;
         }
         $('.timeStepDiv span')[0].textContent = (timeStep*60).toFixed(0);
-        console.log(timeStep)
+        // console.log(timeStep)
     }
     if (k === ',' || k === '<') {
         if (Math.abs(timeStep - 1/60) < .0001) {
