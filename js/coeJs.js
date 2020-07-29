@@ -257,12 +257,31 @@ document.addEventListener('keypress', function (key) {
         ecef = !ecef;
         if (ecef) {
             $('.referenceDiv span')[0].textContent = 'Earth-Fixed';
-            //Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
-            //clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            Earth.rotation.y = Math.PI;
+            clouds.rotation.y = Math.PI;
+            ECEF.forEach((item) => {
+                item.rotation.y = 0;
+            })
+            ECI.forEach((item) => {
+                item.rotation.y = -sidTime * Math.PI / 180;
+            })
+            // Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            // clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
         } else {
             $('.referenceDiv span')[0].textContent = 'Inertial';
-            //Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
-            //clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI
+            Sunlight.position.x = -100 * sunVec[0][0];
+            Sunlight.position.y = 100 * sunVec[2][0];
+            Sunlight.position.z = 100 * sunVec[1][0];
+            ECI.forEach((item) => {
+                item.rotation.y = 0;
+            })
+            ECEF.forEach((item) => {
+                item.rotation.y = sidTime * Math.PI / 180;
+            })
+            // Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            // clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
         }
     }
     if (k === '.' || k === '>') {
