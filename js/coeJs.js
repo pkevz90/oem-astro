@@ -50,8 +50,8 @@ setupScene();
 drawEarth();
 drawStars();
 drawLightSources();
-drawOrbit(orbitParams);
 drawAxes();
+drawOrbit(orbitParams);
 
 var render = function () {
     let updatedTime = new Date().getTime();
@@ -133,7 +133,8 @@ function drawOrbit(orbitParams) {
             $('.controls span')[5+index*6].textContent = ((tA % (2*math.PI))*180/math.PI).toFixed(0)
         }
         let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
-        let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, orbitP.raan * Math.PI / 180, orbitP.arg * Math.PI / 180, tA]
+        console.log(ECI)
+        let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]
 
         var points = [];
         let tailLength = Number($('#optionsList input')[0].value) / 100;
@@ -141,7 +142,7 @@ function drawOrbit(orbitParams) {
             r = Coe2PosVel(coe);
             r = r[0];
             if (ecef) {
-                r = Eci2Ecef(sidTime - ii * tailLength * period / 199 * 360 / 86164, r)
+                r = Eci2Ecef(- ii * tailLength * period / 199 * 360 / 86164, r)
             }
             if (ii === 0) {
                 r0 = r;
