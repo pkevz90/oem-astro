@@ -22,21 +22,17 @@
                 transition: transform .2s;
                 -webkit-transition: -webkit-transform .2s;
             }
-            ul a {
-                display: block;
-                font-size: 2em;
-                padding: 2.5% 0;
-            }
             .flexDiv {
                 display: flex;
                 flex-flow: row wrap;
                 justify-content: space-around;
+                height: 100%;
             }
             .flexDiv div {
                 text-decoration: none;
                 width: 30%;
                 min-width: 200px;
-                /* height: 280px; */
+                height: 280px;
                 margin-top: 2.5%;
                 background-color: rgba(201, 203, 206,0.25);
                 border-radius: 2%;
@@ -52,7 +48,7 @@
                 border-bottom: 1px solid white;
                 padding-bottom: 1%;
             }
-            a button {
+           .link-center {
                 font-size: 2vw;
                 position: absolute;
                 cursor: pointer;
@@ -60,12 +56,22 @@
                 width: 50%;
                 left: 25%;
             }
-            .footer {
-                position: fixed;
+            .link-left {
+                font-size: 1.5vw;
+                position: absolute;
+                cursor: pointer;
                 bottom: 5%;
-                color: white;
-                text-align: center;
-                font-weight: bold;
+                width: 30%;
+                left: 10%;
+            }
+            
+            .link-right {
+                font-size: 1.5vw;
+                position: absolute;
+                cursor: pointer;
+                bottom: 5%;
+                width: 30%;
+                right: 10%;
             }
         </style>
     </head>
@@ -78,33 +84,33 @@
             <div>
                 <h1>1v1 Sim</h1>
                 <p>Pit two equivalent RSO's against each other.</p>
-                <a href="./Capstone1v1.html"><button>Open</button></a>
+                <a href="./Capstone1v1.html"><button class="link-center">Open</button></a>
             </div>
             <div>
                 <h1>Classical Orbital Elements</h1>
                 <p>Visualize how COE's define an orbit in multiple reference frames.</p>
-                <a href="./coeVis.html"><button>Open</button></a>
+                <a href="./coeVis.html"><button class="link-center">Open</button></a>
             </div>
             <div>
                 <h1>Relative Motion Elements</h1>
                 <p>Demonstrate how relative orbital elements (ROE's) can be used to describe arbitary states within the RIC frame.</p>
-                <a href="./rmoeVis2d.html"><button>Open 2D</button></a>
-                <a href="./rmoeVis.html"><button>Open 3D</button></a>
+                <a href="./rmoeVis2d.html"><button class="link-left">Open 2D</button></a>
+                <a href="./rmoeVis.html"><button class="link-right">Open 3D</button></a>
             </div>
             <div>
                 <h1>Waypoint Planner</h1>
                 <p>Plan out RPO trajectories with an arbitrary number of waypoints.</p>
-                <a href="./WaypointPlannerOwWiki.html"><button>Open</button></a>
+                <a href="./WaypointPlannerOwWiki.html"><button class="link-center">Open</button></a>
             </div>
             <div>
                 <h1>Reachability</h1>
                 <p>Demonstrate how relative orbital elements (ROE's) can be used to describe arbitary states within the RIC frame.</p>
-                <a href="./ReachabilityOwWiki.html"><button>Open</button></a>
+                <a href="./ReachabilityOwWiki.html"><button class="link-center">Open</button></a>
             </div>
             <div>
                 <h1>Finite Burn (beta)</h1>
                 <p>Calculate constant direction finite burns within the HCW framework.</p>
-                <a href="./rpoFinite.html"><button>Open</button></a>
+                <a href="./rpoFinite.html"><button class="link-center">Open</button></a>
             </div>
         </div>
     </body>
