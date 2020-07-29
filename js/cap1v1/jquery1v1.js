@@ -1,13 +1,13 @@
-var teamNum, $turn = $('#turn-button p span')[0];
+var teamNum, $turn = $('.selectable:first span');;
 createGraph();
 $('#setup').on('click', () => {
     $('.instruction-screen').slideToggle(250);
 })
-$('#turn-button').on('click', () => {
-    let turn = $('#turn-button p span')[0].textContent;
+$('.selectable:first').on('click', () => {
+    let turn = Number($turn.text());
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
-    $('#turn-button p span')[0].textContent = turn;
+    $('.selectable:first span').text(turn)
     if (setupData.server) {
         let outBurns = math.zeros(Number(setupData.scenario_start.bp), 2)._data;
         for (let ii = 0; ii < (turn - 1); ii++) {
@@ -23,6 +23,7 @@ $('#turn-button').on('click', () => {
 })
 $('.start-button').on('click', () => {
     $('.setup-screen').fadeOut(500);
+    $('.selectable:first').parent().fadeIn(500);
     app.initSunVector = [
         [15 * Math.cos(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
         [15 * Math.sin(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
@@ -92,7 +93,7 @@ $('.start-button').on('click', () => {
     if (setupData.server) {
         setInterval(() => {
             firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function (snapshot) {
-                let turn = Math.min(Number($('#turn-button p span')[0].textContent), snapshot.val().turn);
+                let turn = Math.min(Number($turn.text()), snapshot.val().turn);
                 for (let ii = 0; ii < (turn - 1); ii++) {
                     app.players.red.burns[ii] = snapshot.val().burn[ii];
                 }
@@ -120,7 +121,7 @@ $('.controlTitle').on('click', (a) => {
     $(a.target).next().slideDown(250);
 })
 $('.slider-contain input').on('input', (a) => {
-    $(a.target).prev().find('span')[0].textContent = hrsToTime(a.target.value);
+    $(a.target).prev().find('span').text(hrsToTime(a.target.value));
     app.currentTime = Number(a.target.value);
     setBottomInfo();
     calcData(app.currentTime);

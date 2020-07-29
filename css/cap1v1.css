@@ -2,6 +2,7 @@
     list-style-type: none;
     margin: 0;
     padding: 0;
+    width: 100%;
     overflow: hidden;
     background-color: #1f3a52;
 }
@@ -19,15 +20,28 @@ body {
     -webkit-transition: -webkit-transform .2s;
 }
 
-li {
-    display: inline-block;
+.nav-element {
+    float: left;
 }
-
+.nav-element-right {
+    float: right;
+}
 li p {
     display: block;
     color: white;
-    padding: 2% 0;
-    margin: 0;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    margin-top: 0;
+    margin-bottom: 0;
+    font-size: 1.5vw;
+}
+.selectable {
+    cursor: pointer;
+
+}
+.selectable:hover {
+    background-color: #365775;
 }
 
 .pointer {
@@ -145,7 +159,7 @@ input {
 
 .slider-contain {
     position: absolute;
-    top: 5%;
+    top: 7%;
     width: 100%;
     height: auto;
 }
@@ -154,6 +168,7 @@ input {
     display: inline-block;
     width: 20%;
     margin-left: 10%;
+    margin-top: 0.5%;
     font-size: 2vw;
 }
 

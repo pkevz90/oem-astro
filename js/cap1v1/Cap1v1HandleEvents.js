@@ -221,7 +221,6 @@ function setSelectedWaypoint(index, side) {
 
     $('tr').removeClass('selected');
     $($('.burnRows')[index + ((side === 'blue') ? 0 : Number(setupData.scenario_start.bp))]).toggleClass('selected')
-
     app.chosenWaypoint = [index, side];
     $('.info-right')[0].textContent = 'Press [B] to manual burn, [T] to target burn'
     let xPoint = app.players[side].dataLoc.waypoints.data[index].x,
@@ -242,7 +241,7 @@ function setSelectedWaypoint(index, side) {
 
 function checkClose(X, Y) {
     let xPoint, yPoint;
-    let turn = Number($turn.textContent) - 1;
+    let turn = Number($turn.text()) - 1;
 
     for (sat in app.players) {
         if (app.players[sat].name.substr(0, 4) === 'gray') {

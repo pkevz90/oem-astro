@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.min.js"></script>
     <script src="./SupportLibraries/vue.js"></script>
-	<title>Reachability</title>
+	<title>Least Squares</title>
 	<style>
 		.navbar {
             list-style-type: none;
@@ -46,7 +46,8 @@
   </head>
   <body>
     <ul class="navbar" id="app-data">
-        <li><p id="navTitle">Least Squares</p></li>
+        <li><p>Least Squares</p></li>
+        <li><p v-html="modelHtml"></p></li>
     </ul>
 	<div style="width: 90%; margin: auto">
 		<canvas style="margin-top: 2%" id="ChartCnvs" width="48" height="20"></canvas>
