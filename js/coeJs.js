@@ -82,22 +82,22 @@ var render = function () {
     
     
     sidTime += timeStep / 86164 * 360;
-    if (!ecef) {
-        Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
-        clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
-        ECEF.forEach((item) => {
-            item.rotation.y = sidTime * Math.PI / 180;
-        })
-    } else {
-        let curSun = Eci2Ecef(sidTime, sunVec);
-        Sunlight.position.x = -100 * curSun[0][0];
-        Sunlight.position.y = 100 * curSun[2][0];
-        Sunlight.position.z = 100 * curSun[1][0];
-        stars.rotation.y -= timeStep / 86164 * 2 * Math.PI;
+    if (ecef){
         ECI.forEach((item) => {
             item.rotation.y -= timeStep / 86164 * 2 * Math.PI;
         })
     }
+    Earth.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180;
+    clouds.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180;
+    ECEF.forEach((item) => {
+        item.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180 + Math.PI;
+    })
+    let curSun = Eci2Ecef(-(ECI[0].rotation.y * 180/Math.PI), sunVec);
+    console.log(ECI[0].rotation.y * 180/Math.PI)
+    Sunlight.position.x = -100 * curSun[0][0];
+    Sunlight.position.y = 100 * curSun[2][0];
+    Sunlight.position.z = 100 * curSun[1][0];
+    stars.rotation.y  = ECI[0].rotation.y;
     drawOrbit(orbitParams)
     if ($('#optionsList input')[3].checked){
         drawConst(constParams)
@@ -381,7 +381,7 @@ document.addEventListener('keypress', function (key) {
         ecef = !ecef;
         if (ecef) {
             $('.referenceDiv span').text('Earth-Fixed');
-            let oldErf = Earth.rotation.y % (2 * Math.PI);
+            /*let oldErf = Earth.rotation.y % (2 * Math.PI);
             let oldEcef = ECEF[0].rotation.y % (2 * Math.PI);
             oldEcef = oldEcef > Math.PI ? oldEcef - 2 * Math.PI : oldEcef;
             let oldEci = ECI[0].rotation.y % (2 * Math.PI);
@@ -402,10 +402,10 @@ document.addEventListener('keypress', function (key) {
                 if (ii === frames) {
                     clearInterval(inter)
                 }
-            },25)
+            },25)*/
         } else {
             $('.referenceDiv span').text('Inertial');
-            Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            /*Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
             clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI
             Sunlight.position.x = -100 * sunVec[0][0];
             Sunlight.position.y = 100 * sunVec[2][0];
@@ -415,7 +415,7 @@ document.addEventListener('keypress', function (key) {
             })
             ECEF.forEach((item) => {
                 item.rotation.y = sidTime * Math.PI / 180;
-            })
+            })*/
             // Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
             // clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
         }
