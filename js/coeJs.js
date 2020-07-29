@@ -16,16 +16,35 @@ var orbitParams = [{
     mA: 0
 }];
 
+
+var constParams = [];
+for(i = 0; i < 24; i++){
+    constParams.push({
+        a: 26561.7,
+        e: 0,
+        i: 55,
+        raan: math.floor(i/4)*60,
+        arg: 0,
+        mA: (i % 4)*90
+    })
+}
+console.log(constParams)
+
 var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     orbit = [],
+    constOrbit = [],
+    constSatPoint = [],
     r = 2,
     scene, camera, renderer, controls, ecef = false,
     timeStep = 1000/60;
+    timeMult = 1000;
 var ECI = [],
     ECEF = [],
     RIC = [],
     pari = [];
 var jdUTI0 = julianDateCalcStruct(time);
+var stopwatch;
+var lastTenSpeeds = [];
 
 setupScene();
 drawEarth();
@@ -35,6 +54,18 @@ drawOrbit(orbitParams);
 drawAxes();
 
 var render = function () {
+    let updatedTime = new Date().getTime();
+    let persec = 1000/(updatedTime-stopwatch);
+    if (lastTenSpeeds.length < 10){
+        lastTenSpeeds.push(persec);
+    }else{
+        lastTenSpeeds = lastTenSpeeds.slice(1,10);
+        lastTenSpeeds.push(persec);
+        timeStep = timeMult/math.mean(lastTenSpeeds);
+    }
+    stopwatch = new Date().getTime();
+
+
     renderer.render(scene, camera);
     controls.update();
     requestAnimationFrame(render);
@@ -43,6 +74,13 @@ var render = function () {
     orbitParams.forEach(orbit => {
         orbit.mA += timeStep * 180 / Math.PI * Math.sqrt(398600.4418 / Math.pow(orbit.a, 3));
     })
+    if ($('#optionsList input')[3].checked){
+        constParams.forEach(orbit => {
+            orbit.mA += timeStep * 180 / Math.PI * Math.sqrt(398600.4418 / Math.pow(orbit.a, 3));
+        })
+    }
+    
+    
     sidTime += timeStep / 86164 * 360;
     if (!ecef) {
         Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
@@ -61,6 +99,9 @@ var render = function () {
         })
     }
     drawOrbit(orbitParams)
+    if ($('#optionsList input')[3].checked){
+        drawConst(constParams)
+    }
 }
 
 render();
@@ -88,7 +129,9 @@ function drawOrbit(orbitParams) {
     let r, r0;
     orbitParams.forEach((orbitP,index) => {
         let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
-        $('.controls span')[5+index*6].textContent = ((180/Math.PI)*(tA-(2*Math.PI*Math.floor(tA / (2*math.PI))))).toFixed(0)
+        if (!$('#optionsList input')[3].checked){
+            $('.controls span')[5+index*6].textContent = ((tA % (2*math.PI))*180/math.PI).toFixed(0)
+        }
         let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
         let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, orbitP.raan * Math.PI / 180, orbitP.arg * Math.PI / 180, tA]
 
@@ -137,7 +180,60 @@ function drawOrbit(orbitParams) {
             satPoint[index].position.z = r0[1][0] / 6371;
         }
     })
+}
 
+function drawConst(constParams) {
+    let r, r0;
+    constParams.forEach((orbitP,index) => {
+        let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
+        let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
+        let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, orbitP.raan * Math.PI / 180, orbitP.arg * Math.PI / 180, tA]
+
+        var points = [];
+        let tailLength = Number($('#optionsList input')[0].value) / 100;
+        for (var ii = 0; ii <= 200; ii++) {
+            r = Coe2PosVel(coe);
+            r = r[0];
+            if (ecef) {
+                r = Eci2Ecef(sidTime - ii * tailLength * period / 199 * 360 / 86164, r)
+            }
+            if (ii === 0) {
+                r0 = r;
+            }
+            // console.log(r0);
+            points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
+
+            coe = twoBodyProp(coe, -tailLength * period / 199);
+        }
+        if (constOrbit == undefined || constOrbit[index] === undefined) {
+            var material = new THREE.LineBasicMaterial({
+                color: $('.constInfo input')[0].value,
+                linewidth: 2
+            });
+            var geometry = new THREE.BufferGeometry().setFromPoints(points);
+            constOrbit[index] = new THREE.Line(geometry, material);
+            var geometry = new THREE.SphereGeometry(0.05, 6, 6);
+            var material = new THREE.MeshBasicMaterial({
+                color: $('.constInfo input')[0].value
+            });
+            constSatPoint[index] = new THREE.Mesh(geometry, material);
+            // coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, tA]
+            // r = Coe2PosVel(coe);
+            constSatPoint[index].position.x = -r0[0][0] / 6371;
+            constSatPoint[index].position.y = r0[2][0] / 6371;
+            constSatPoint[index].position.z = r0[1][0] / 6371;
+            console.log(constSatPoint[index])
+
+            scene.add(constSatPoint[index]);
+            scene.add(constOrbit[index]);
+        } else {
+            // Edit orbitVar
+            constOrbit[index].geometry.setFromPoints(points);
+            constSatPoint[index].position.x = -r0[0][0] / 6371;
+            constSatPoint[index].position.y = r0[2][0] / 6371;
+            constSatPoint[index].position.z = r0[1][0] / 6371;
+        }
+    })
 }
 
 function drawEarth() {
@@ -230,6 +326,34 @@ $('#optionsList input').on('input', () => {
     ECEF.forEach((item) => {
         item.visible = $('#optionsList input')[2].checked
     })
+    if ($('#optionsList input')[3].checked){
+        $('.constInfo').show();
+        constOrbit.forEach(lineobj => {lineobj.visible = true;});
+        constSatPoint.forEach(pointobj => {pointobj.visible = true;});
+        $('.constPane').show()
+    }else{
+        $('.constInfo').hide();
+        constOrbit.forEach(lineobj => {lineobj.visible = false;});
+        constSatPoint.forEach(pointobj => {pointobj.visible = false;});
+        $('.constList').hide()
+        $('.constPane').hide()
+    }
+    if ($('#optionsList input')[4].checked){
+        $('.controlTitle').show();
+        $('.controls').show();
+        $('.addButton').show();
+        orbit.forEach(lineobj => {lineobj.visible = true;});
+        satPoint.forEach(pointobj => {pointobj.visible = true;});
+        $('.orbitsPane').show()
+    }else{
+        $('.controlTitle').hide();
+        $('.controls').hide();
+        $('.addButton').hide();
+        orbit.forEach(lineobj => {lineobj.visible = false;});
+        satPoint.forEach(pointobj => {pointobj.visible = false;});
+        $('.orbitList').hide()
+        $('.orbitsPane').hide()
+    }
 })
 function sliderInput(a) {
     let p = $(a.target).parent().parent();
@@ -297,26 +421,24 @@ document.addEventListener('keypress', function (key) {
         }
     }
     if (k === '.' || k === '>') {
-        if (Math.abs(timeStep - 1/60)  < .0001) {
-            timeStep = 0;
+        if (timeMult == 1) {
+            timeMult = 0;
         }
-        timeStep += 100/60;
-        if (Math.abs(timeStep) < .0001) {
-            timeStep = 1/60;
+        timeMult += 100;
+        if (timeMult == 0) {
+            timeMult = 1;
         }
-        $('.timeStepDiv span')[0].textContent = (timeStep*60).toFixed(0);
-        // console.log(timeStep)
+        $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
     }
     if (k === ',' || k === '<') {
-        if (Math.abs(timeStep - 1/60) < .0001) {
-            timeStep = 0;
+        if (timeMult == 1) {
+            timeMult = 0;
         }
-        timeStep -= 100/60;
-        if (Math.abs(timeStep) < .0001) {
-            timeStep = 1/60;
+        timeMult -= 100;
+        if (timeMult == 0) {
+            timeMult = 1;
         }
-        $('.timeStepDiv span')[0].textContent = (timeStep*60).toFixed(0);
-        console.log(timeStep)
+        $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
     } else if (k.toLowerCase() === 's') {
         stars.visible = !stars.visible;
     }
@@ -328,9 +450,68 @@ window.addEventListener('load', (event) => {
     $('.loadingScreen').fadeOut(500);
 });
 
+$('#constList p').on('click', (a) => {
+    let constel = a.target.innerHTML;
+    constSatPoint.forEach(tempPoint => {
+        tempObj = scene.getObjectByProperty('uuid',tempPoint.uuid);
+        tempObj.geometry.dispose();
+        tempObj.material.dispose();
+        scene.remove(tempObj)
+    })
+    constOrbit.forEach(tempOrbit => {
+        tempObj = scene.getObjectByProperty('uuid',tempOrbit.uuid);
+        tempObj.geometry.dispose();
+        tempObj.material.dispose();
+        scene.remove(tempObj)
+    })
+    constParams = [];
+    constOrbit = [];
+    constSatPoint = [];
+    switch(constel) {
+        case 'GPS (24 Satellites)':
+            for(i = 0; i < 24; i++){
+                constParams.push({
+                    a: 26561.7,
+                    e: 0,
+                    i: 55,
+                    raan: math.floor(i/4)*60,
+                    arg: 0,
+                    mA: (i % 4)*90
+                })
+            }
+            $('#constName')[0].innerText = "GPS (24 Satellites)"
+            $('.constInfo .value')[0].innerText = "26561.7";
+            $('.constInfo .value')[1].innerText = "0";
+            $('.constInfo .value')[2].innerText = "55";
+            $('.constInfo .value')[3].innerText = "Varies by Orbit";
+            $('.constInfo .value')[4].innerText = "N/A (circular)";
+            $('.constInfo .value')[5].innerText = "Varies by Satellite";
+            break;
+        case 'Molniya (3 Satellites)':
+            for(i = 0; i < 3; i++){
+                constParams.push({
+                    a: 26561.7,
+                    e: .74,
+                    i: 63.4,
+                    raan: 0,
+                    arg: 270,
+                    mA: i*120
+                })
+            }
+            $('#constName')[0].innerText = "Molniya (3 Satellites)"
+            $('.constInfo .value')[0].innerText = "26561.7";
+            $('.constInfo .value')[1].innerText = "0.74";
+            $('.constInfo .value')[2].innerText = "63.4";
+            $('.constInfo .value')[3].innerText = "0";
+            $('.constInfo .value')[4].innerText = "270";
+            $('.constInfo .value')[5].innerText = "Varies by Satellite";
+            break;
+    }
+})
+
 $('#orbitList p').on('click', (a) => {
     let orbit = a.target.innerHTML;
-    let kk;
+    let kk = -1;
     $('.controls').each(index => {
         if ($('.controls').eq(index).is(':visible')) {
             kk = index;
@@ -389,8 +570,8 @@ $('#orbitList p').on('click', (a) => {
                 mA: orbitParams[kk].mA
             }
             break;
-        /*case 'GPS Constellation (24)':
-            for (newsats = 0; newsats<4; newsats++){
+        case 'GPS Constellation (24)':
+            /*for (newsats = 0; newsats<4; newsats++){
                 newControlTitle();
                 orbitParams[kk] = {
                     a: 26561.7437,
@@ -400,9 +581,9 @@ $('#orbitList p').on('click', (a) => {
                     arg: 0,
                     mA: 0 * (math.PI / 180)
                 }
-            }
-            
-            break;*/
+            }*/
+            console.log('yup')
+            break;
         default:
             break;
     }

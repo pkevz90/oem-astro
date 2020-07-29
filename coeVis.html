@@ -35,6 +35,29 @@
             z-index: 2;
             font-size: 2vw;
         }
+        .constInfo {
+            width: 100%;
+            float: left;
+            color: white;
+            text-align: center;
+            background-color: rgba(50,50,50,0.5);
+            z-index: 2;
+            font-size: 1.5vw;
+            padding-top: 1vw;
+            text-align: center;
+        }
+        .constInfo div{
+            text-align: left;
+            margin: 0;
+            padding: 0;
+            outline: 0;
+            border: 0;
+            margin-left: 1.5vw;
+            display: block;
+        }
+        #constName {
+            font-weight: bold;
+        }
         .slidercontainer {
             padding: 1.5% 10%;
             font-size: 1.5vw;
@@ -111,7 +134,23 @@
             opacity: 0.5;
             text-align: center;
         }
+        .constPane {
+            position: fixed;
+            background-color: black;
+            right: 45%;
+            height: 5%;
+            z-index: 3;
+            font-size: 2vw;
+            width: 20%;
+            opacity: 0.5;
+            text-align: center;
+        }
         .orbitsPane p {
+            color: white;
+            margin: 0;
+            vertical-align: middle;
+        }
+        .constPane p {
             color: white;
             margin: 0;
             vertical-align: middle;
@@ -141,19 +180,27 @@
     <div class="loadingScreen">
         <div>Loading...</div>
     </div>
+    <div class="constPane pointer" style="display: none;">
+        <p>
+            Constellations
+        </p>
+    </div>
     <div class="orbitsPane pointer">
         <p>
             Common Orbits
         </p>
     </div>
+    <div id="constList" style="text-align: center; display: none; position: fixed; right: 45%; top: 5%; width: 20%; z-index: 3; color: white;">
+        <p class="pointer">GPS (24 Satellites)</p>
+        <p class="pointer">Molniya (3 Satellites)</p>
+    </div>
     <div id="orbitList" style="text-align: center; display: none; position: fixed; right: 25%; top: 5%; width: 20%; z-index: 3; color: white;">
-        Replace opened orbit with:
+        <span>Replace opened orbit with:</span>
         <p class="pointer">ISS</p>
         <p class="pointer">GPS</p>
         <p class="pointer">Molniya</p>
         <p class="pointer">Sun-Synchronous</p>
         <p class="pointer">Geo-Stationary</p>
-        <!--<p class="pointer">GPS Constellation (24)</p>-->
     </div>
     <div class="optionsPane pointer">
         <p>
@@ -169,6 +216,12 @@
         <br>
         <input type="checkbox" checked>
         <p style="display: inline-block;color: #4444ff">Show ECEF Axes</p>
+        <br>
+        <input type="checkbox" />
+        <p style="display: inline-block;color: #ffffff">Show Constellations</p>
+        <br>
+        <input type="checkbox" checked>
+        <p style="display: inline-block;color: #ffffff">Show User Orbits</p>
         <!--<p class='resetButton'>Reset</p>-->
         
         
@@ -205,6 +258,16 @@
             </div>
         </div>
         <div class="addButton pointer">+</div>
+        <div class="constInfo" style="display:none">
+            <span id="constName">GPS (24 Satellites)</span>
+            <input type="color" value="#00FFFF"/><br /><br />
+            <div><em>a</em>: <span class='value'>26561.7</span><span class='unit'> km</span></div>
+            <div><em>e</em>: <span class='value'>0</span></div>
+            <div><em>i</em>: <span class='value'>55</span><sup class='unit'>o</sup></div>
+            <div><em>&#937</em>: <span class='value'>Varies by Orbit</span></div>
+            <div><em>&#969</em>: <span class='value'>N/A (circular)</span></div>
+            <div><em>&#957</em>: <span class='value'>Varies by Satellite</span></div>
+        </div>
     </div>
     <div class="referenceDiv">
         Earth-Centered <span>Inertial</span>; Press e to switch <br />
@@ -224,19 +287,31 @@
     <script src="./SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
     <script src="./js/coeJs.js"></script>
     <script>
+        //$('.constList').hide()
+        //$('.constPane').hide()
         $('.orbitsPane').on('mouseenter',()=>{
             $('#orbitList').show(); 
-            $('#optionsList').hide(); 
+            $('#optionsList').hide();
+            $('#constList').hide(); 
         })
         $('#orbitList').on('mouseleave',()=>{
             $('#orbitList').hide(); 
         })
         $('.optionsPane').on('mouseenter',()=>{
             $('#optionsList').show(); 
-            $('#orbitList').hide(); 
+            $('#orbitList').hide();
+            $('#constList').hide();  
         })
         $('#optionsList').on('mouseleave',()=>{
             $('#optionsList').hide(); 
+        })
+        $('.constPane').on('mouseenter',()=>{
+            $('#optionsList').hide(); 
+            $('#orbitList').hide();
+            $('#constList').show();  
+        })
+        $('#constList').on('mouseleave',()=>{
+            $('#constList').hide(); 
         })
         var editTarget;
         function changeColor (a) {
@@ -247,13 +322,21 @@
             orbit[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
             satPoint[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
         }
+        function constChangeColor() {
+            let c = hexToRgb($('.constInfo input')[0].value);
+            constOrbit.forEach(tempOrbit => {
+                tempOrbit.material.color.setRGB(c.r/255,c.g/255,c.b/255);
+            })
+            constSatPoint.forEach(tempPoint => {
+                tempPoint.material.color.setRGB(c.r/255,c.g/255,c.b/255);
+            })
+        }
         function hexToRgb(hex) {
             var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? {
                 r: parseInt(result[1], 16),
                 g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)
-            } : null;
+                b: parseInt(result[3], 16)            } : null;
         }
         $('.controlTitle').on('click',(a)=>{
             orbitParams.forEach((el)=>{
@@ -263,17 +346,15 @@
                 a.target = $(a.target).parent();
             } 
             if (!$(a.target).is('input')) {
-                if(!$(a.target).is('input')){
-                    let ind = $('.controlTitle').index(a.target);
-                    orbitParams[ind].shown = true;
-                    
-                    if (!$(a.target).next().is(":hidden")) {
-                        $(a.target).next().slideUp(250);
-                        return;
-                    }
-                    $('.controls').slideUp(250);
-                    $(a.target).next().slideDown(250);
+                let ind = $('.controlTitle').index(a.target);
+                orbitParams[ind].shown = true;
+                
+                if (!$(a.target).next().is(":hidden")) {
+                    $(a.target).next().slideUp(250);
+                    return;
                 }
+                $('.controls').slideUp(250);
+                $(a.target).next().slideDown(250);
             }
         })
         $('.addButton').on('click',()=>newControlTitle());
@@ -354,6 +435,7 @@
         //$('.resetButton').on('click')
         $('.closeButton').on('click',(a)=>{closeTab(a)});
         $('.controlTitle input').on('input',changeColor);
+        $('.constInfo input').on('input',constChangeColor)
     </script>
     
 </body>
