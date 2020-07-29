@@ -257,16 +257,27 @@ document.addEventListener('keypress', function (key) {
         ecef = !ecef;
         if (ecef) {
             $('.referenceDiv span')[0].textContent = 'Earth-Fixed';
+            let oldErf = Earth.rotation.y % (2 * Math.PI);
             Earth.rotation.y = Math.PI;
             clouds.rotation.y = Math.PI;
-            ECEF.forEach((item) => {
-                item.rotation.y = 0;
-            })
-            ECI.forEach((item) => {
-                item.rotation.y = -sidTime * Math.PI / 180;
-            })
-            // Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
-            // clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
+            let oldEcef = ECEF[0].rotation.y % (2 * Math.PI);
+            let oldEci = ECI[0].rotation.y % (2 * Math.PI);
+            let ii = 0;
+            let frames = 30;
+            let inter = setInterval(() => {
+                ii++;
+                Earth.rotation.y = (Math.PI-oldErf) * ii / frames + oldErf;
+                clouds.rotation.y = (Math.PI-oldErf) * ii / frames + oldErf;
+                ECEF.forEach((item) => {
+                    item.rotation.y = (0 - oldEcef) * ii / frames + oldEcef;
+                })
+                ECI.forEach((item) => {
+                    item.rotation.y = (-sidTime * Math.PI / 180 - oldEci) * ii / frames + oldEci;
+                })
+                if (ii === frames) {
+                    clearInterval(inter)
+                }
+            },25)
         } else {
             $('.referenceDiv span')[0].textContent = 'Inertial';
             Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
