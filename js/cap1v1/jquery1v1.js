@@ -24,6 +24,8 @@ $('.selectable:first').on('click', () => {
 $('.start-button').on('click', () => {
     $('.setup-screen').fadeOut(500);
     $('.selectable:first').parent().fadeIn(500);
+    $('.selectable:first').parent().prev().fadeIn(500);
+    $('.selectable:first').parent().prev().prev().fadeIn(500);
     app.initSunVector = [
         [15 * Math.cos(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
         [15 * Math.sin(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
@@ -120,8 +122,8 @@ $('.controlTitle').on('click', (a) => {
     $('.side-data').slideUp(250);
     $(a.target).next().slideDown(250);
 })
-$('.slider-contain input').on('input', (a) => {
-    $(a.target).prev().find('span').text(hrsToTime(a.target.value));
+$('.nav-element input').on('input', (a) => {
+    $(a.target).parent().prev().find('p').find('span').text(hrsToTime(a.target.value));
     app.currentTime = Number(a.target.value);
     setBottomInfo();
     calcData(app.currentTime);

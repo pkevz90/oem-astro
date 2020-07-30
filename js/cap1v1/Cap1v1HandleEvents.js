@@ -63,8 +63,8 @@ function handleKeyPress(k) {
                     })
                     app.tacticData.targetPos -= 1 / 6;
                     app.currentTime += timeDelta / 6;
-                    $('.slider')[0].value = app.currentTime;
-                    $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
+                    $('.nav-element input')[0].value = app.currentTime;
+                    $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
                     targetCalc(x,y);
                     if (ii === 5) {
                         app.tactic = 'target';
@@ -89,8 +89,8 @@ function handleKeyPress(k) {
                     })
                     app.tacticData.targetPos += 1 / 6;
                     app.currentTime += timeDelta / 6;
-                    $('.slider')[0].value = app.currentTime;
-                    $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
+                    $('.nav-element input')[0].value = app.currentTime;
+                    $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
                     targetCalc(x,y);
                     if (ii === 5) {
                         app.tactic = 'target';
@@ -185,8 +185,8 @@ function handleKeyPress(k) {
                     availDv: app.tacticData.availDv * ii / 5
                 });
                 app.currentTime += timeDelta / 6;
-                $('.slider')[0].value = app.currentTime;
-                $('.slider').prev().find('span')[0].textContent = hrsToTime(app.currentTime);
+                $('.nav-element input')[0].value = app.currentTime;
+                $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
                 calcData(app.currentTime);
                 if (ii === 5) {
                     app.tactic = 'target';

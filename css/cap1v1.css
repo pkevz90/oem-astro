@@ -156,6 +156,10 @@ input {
     text-align: center;
     padding: 2% 0;
 }
+.nav-slider-contain {
+    width: 100%;
+    height: auto;
+}
 
 .slider-contain {
     position: absolute;

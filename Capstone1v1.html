@@ -24,7 +24,13 @@
         <li class="nav-element">
             <p>1v1 Simulator</p>
         </li>
-        <li class="nav-element"  style="margin-left: 40%; display: none;">
+        <li class="nav-element" style="margin-left: 10%; display: none">
+            <p>Time: <span>00:00</span></p>
+        </li>
+        <li class="nav-element" style="padding: 1.1%; width: 40%; display: none">
+            <input type="range" class="slider" min="0" max="15" value="0" step="0.016667" style="width: 100%;">
+        </li>
+        <li class="nav-element"  style="display: none;">
             <p class="selectable">Turn <span>1</span></p>
         </li>
         <li class="nav-element-right">
@@ -32,31 +38,7 @@
         </li>
     </ul>
     <div class="instruction-screen">
-        <h4><u>Goal</u></h4>
-        <p>Move blue satellite into an advantageous position with respect to the Sun vector and the red satellite.
-            Success will be defined by the specific mission.
-        </p>
-        <h4><u>Planning Manuevers</u></h4>
-        <p>User is able to plan a maneuver on their blue RSO (and speculate what the red side could do as well)</p>
-        <ol>
-            <li>- Click on desired waypoint to start the maneuver process</li>
-            <li>- Alternatively, click on the desired maneuver on the side-bar menu</li>
-            <li>- With a waypoint selected, the user has two options, accessed by keyboard inputs</li>
-            <ol>
-                <li>[B] - Plan a manual maneuver burn (i.e. manually choose direction and magnitude)</li> <br>
-                <li>[T] - Initiate a targeting sequence</li>
-            </ol>
-            <li>- For both options, the user will be constrained by the amount of fuel they have left. An example would be if a user has a total of 2.5 m/s and they used 1.5 m/s on the first burn, the second burn will 
-                be restricted to a magnitude of 1 m/s.
-            </li>
-            <li>- When planning a maneuver with waypoint targeting, keep the following in mind</li>
-            <ol>
-                <li>- The default targeted point is the next burn location, this can be changed with the [<] and [>] keys.</li> <br>
-                <li>- The tranparent white ellipse that appears represents the area that is physically possible to reach in the chosen amount of time with fuel constraints.</li> <br>
-            </ol>
-        </ol>
-        <p>The slider will allow user to view satellite/Sun positions at any scenario time</p>
-        <p>Zoom [+] & [-]   Move Camera [W][S][A][D]</p>
+        
     </div>
     <div class="setup-screen" id="setup-data">
         <div class="setup-container">
@@ -172,10 +154,10 @@
     <div style="width:95%; height:auto; margin: auto; padding-top: 2.5%; z-index: 1;">
         <canvas id="ChartCnvs" width="51" height="23"></canvas>
     </div>
-    <div class="slider-contain">
+    <!-- <div class="slider-contain">
         <p>Time: <span>00:00</span></p>
         <input type="range" class="slider" min="0" max="15" value="0" step="0.016667">
-    </div>
+    </div> -->
     <div class="team-number"></div>
     <div class="info">
         Test
