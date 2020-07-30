@@ -458,8 +458,8 @@ document.addEventListener('keypress', function (key) {
         }
     }
     if (k === '.' || k === '>') {
-        constTaTailPts = [];
-        constTailPts = [];
+        //constTaTailPts = [];
+        //constTailPts = [];
         if (timeMult == 1) {
             timeMult = 0;
         }
@@ -470,8 +470,8 @@ document.addEventListener('keypress', function (key) {
         $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
     }
     if (k === ',' || k === '<') {
-        constTaTailPts = [];
-        constTailPts = [];
+        //constTaTailPts = [];
+        //constTailPts = [];
         if (timeMult == 1) {
             timeMult = 0;
         }
@@ -538,7 +538,7 @@ $('#constList p').on('click', (a) => {
                     a: 6378+781,
                     e: 0,
                     i: 86.4,
-                    raan: math.floor(i/11)*60,
+                    raan: math.floor(i/11)*30,
                     arg: 0,
                     mA: (i % 11)*(360/11)
                 })
@@ -547,7 +547,7 @@ $('#constList p').on('click', (a) => {
             $('.constInfo .value')[0].innerText = "7159 km";
             $('.constInfo .value')[1].innerText = "0";
             $('.constInfo .value')[2].innerText = "86.4°";
-            $('.constInfo .value')[3].innerText = "0°/60°/120°/...";
+            $('.constInfo .value')[3].innerText = "0°/30°/60°/...";
             $('.constInfo .value')[4].innerText = "N/A (circular)";
             $('.constInfo .value')[5].innerText = "Varies by Satellite";
             break;
@@ -616,6 +616,17 @@ $('#orbitList p').on('click', (a) => {
                 mA: orbitParams[kk].mA
             }
             break;
+        case 'Iridium':
+
+                orbitParams[kk] = {
+                    a: 7159,
+                    e: 0,
+                    i: 85.9,
+                    raan: 0,
+                    arg: 0,
+                    mA: orbitParams[kk].mA
+                }
+                break;
         case 'Sun-Synchronous':
             orbitParams[kk] = {
                 a: 6784.2389,
