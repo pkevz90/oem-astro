@@ -37,6 +37,8 @@ var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     constSatPoint = [],
     nTailPts = 400,
     r = 2;
+var gndPts = [],
+    gndTracks = [];
 var   scene, camera, renderer, controls, ecef = false,
     timeStep = 1000/60;
     timeMult = 1000;
@@ -177,12 +179,21 @@ function drawOrbit(orbitParams) {
 
             scene.add(satPoint[index]);
             scene.add(orbit[index]);
+            console.log(orbit,satPoint,gndPts)
+            gndPts[index] = new THREE.Mesh(geometry,material);//satPoint[index];
+            gndPts[index].position = getGroundPoint(gndPts[index].position.x,gndPts[index].position.y,gndPts[index].position.z);
+            console.log(gndPts[index].position)
+            scene.add(gndPts[index])
         } else {
             // Edit orbitVar
             orbit[index].geometry.setFromPoints(points);
             satPoint[index].position.x = -r0[0][0] / 6371;
             satPoint[index].position.y = r0[2][0] / 6371;
             satPoint[index].position.z = r0[1][0] / 6371;
+            gndPts[index] = satPoint[index].deepCopy();
+            gndpt = getGroundPoint(gndPts[index].position.x,gndPts[index].position.y,gndPts[index].position.z);
+            Object.assign(gndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
+            scene.add(gndPts[index])
         }
     })
 }
@@ -331,6 +342,12 @@ function drawLightSources() {
     scene.add(Sunlight);
     var light1 = new THREE.AmbientLight(0xFFFFFF, 0.2); // soft white light
     scene.add(light1);
+}
+
+function getGroundPoint(x,y,z){
+    return {x: (1.01/(math.norm([x,y,z]))*x),
+            y: (1.01/(math.norm([x,y,z]))*y),
+            z: (1.01/(math.norm([x,y,z]))*z)};
 }
 
 $('#optionsList input').on('input', () => {
