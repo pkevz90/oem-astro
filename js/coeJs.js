@@ -28,14 +28,16 @@ for(i = 0; i < 24; i++){
         mA: (i % 4)*90
     })
 }
-console.log(constParams)
 
 var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     orbit = [],
+    constTaTailPts = [];
     constOrbit = [],
+    constTailPts = [];
     constSatPoint = [],
-    r = 2,
-    scene, camera, renderer, controls, ecef = false,
+    nTailPts = 200,
+    r = 2;
+var   scene, camera, renderer, controls, ecef = false,
     timeStep = 1000/60;
     timeMult = 1000;
 var ECI = [],
@@ -98,7 +100,9 @@ var render = function () {
     Sunlight.position.y = 100 * curSun[2][0];
     Sunlight.position.z = 100 * curSun[1][0];
     stars.rotation.y  = ECI[0].rotation.y;
-    drawOrbit(orbitParams)
+    if ($('#optionsList input')[4].checked){
+        drawOrbit(orbitParams)
+    }
     if ($('#optionsList input')[3].checked){
         drawConst(constParams)
     }
@@ -129,8 +133,8 @@ function drawOrbit(orbitParams) {
     let r, r0;
     orbitParams.forEach((orbitP,index) => {
         let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
-        if (!$('#optionsList input')[3].checked){
-            $('.controls span')[5+index*6].textContent = ((tA % (2*math.PI))*180/math.PI).toFixed(0)
+        if ($('#optionsList input')[4].checked){
+            $('.controls span')[5+index*6].textContent = ((((2*math.PI) + tA) % (2*math.PI))*180/math.PI).toFixed(0)
         }
         let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
         // console.log(ECI)
@@ -138,11 +142,11 @@ function drawOrbit(orbitParams) {
 
         var points = [];
         let tailLength = Number($('#optionsList input')[0].value) / 100;
-        for (var ii = 0; ii <= 200; ii++) {
+        for (var ii = 0; ii <= nTailPts; ii++) {
             r = Coe2PosVel(coe);
             r = r[0];
             if (ecef) {
-                r = Eci2Ecef(- ii * tailLength * period / 199 * 360 / 86164, r)
+                r = Eci2Ecef(- ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
             }
             if (ii === 0) {
                 r0 = r;
@@ -151,8 +155,9 @@ function drawOrbit(orbitParams) {
 
             points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
 
-            coe = twoBodyProp(coe, -tailLength * period / 199);
+            coe = twoBodyProp(coe, -tailLength * period / (nTailPts-1));
         }
+        //console.log(points)
         if (orbit[index] === undefined) {
             var material = new THREE.LineBasicMaterial({
                 color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
@@ -188,15 +193,13 @@ function drawConst(constParams) {
     constParams.forEach((orbitP,index) => {
         let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
         let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
-        let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, orbitP.raan * Math.PI / 180, orbitP.arg * Math.PI / 180, tA]
-
-        var points = [];
+        let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]
         let tailLength = Number($('#optionsList input')[0].value) / 100;
-        for (var ii = 0; ii <= 200; ii++) {
+        /*for (var ii = 0; ii <= 200; ii++) {
             r = Coe2PosVel(coe);
             r = r[0];
             if (ecef) {
-                r = Eci2Ecef(sidTime - ii * tailLength * period / 199 * 360 / 86164, r)
+                r = Eci2Ecef(- ii * tailLength * period / 199 * 360 / 86164, r)
             }
             if (ii === 0) {
                 r0 = r;
@@ -205,13 +208,47 @@ function drawConst(constParams) {
             points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
 
             coe = twoBodyProp(coe, -tailLength * period / 199);
+        }*/
+        r0=Coe2PosVel(coe);
+        r0=[r0[0][0], r0[0][1], r0[0][2]];
+        if (constTailPts[index]==undefined){
+            constTailPts[index]=[];
+            constTaTailPts[index] = [];
         }
+        //console.log(tA, constTaTailPts[index][constTaTailPts[index].length-1])
+        if (constTailPts[index].length == 0 || (((2*math.PI) + tA - constTaTailPts[index][constTaTailPts[index].length-1])%(2*math.PI) >= (tailLength * 2 * math.PI / nTailPts))){
+            constTailPts[index].push(new THREE.Vector3(-r0[0][0] / 6371, r0[2][0] / 6371, r0[1][0] / 6371));
+            constTaTailPts[index].push(tA);
+        }
+        //console.log(constTaTailPts[index])
+        if (constTailPts[index].length > nTailPts){
+            constTailPts[index].shift();
+            constTaTailPts[index].shift();
+        }
+        //WRITE FUNCTION TO Return angular distance
+        if (((2*math.PI) + math.abs(constTaTailPts[index][constTaTailPts[index].length-1] - constTaTailPts[index][0])) % (2*math.PI) > (tailLength * 2 * math.PI)){
+           temp=constTaTailPts[index].map(val => ((2*math.PI) +constTaTailPts[index][constTaTailPts[index].length-1] - val) % (2*math.PI) > (tailLength * 2 * math.PI) &&
+           //console.log(temp)
+           ind = temp.findIndex(val => {return !val});
+           if (ind>2){
+               console.log(constTaTailPts[index].map(val => ((2*math.PI) +constTaTailPts[index][constTaTailPts[index].length-1] - val)) % (2*math.PI)))
+               console.log(tailLength * 2 * math.PI) 
+           }
+           constTaTailPts[index] = constTaTailPts[index].slice(ind)
+           constTailPts[index] = constTailPts[index].slice(ind)
+           //console.log(ind,constTaTailPts[index].length)
+            //temp = constTaTailPts[index] - 
+        } else {
+            //console.log(constTaTailPts[index][constTaTailPts[index].length-1], constTaTailPts[index][0])
+            //console.log(((2*math.PI) + math.abs(constTaTailPts[index][constTaTailPts[index].length-1] - constTaTailPts[index][0]))% (2*math.PI), (tailLength * 2 * math.PI))
+        }
+        //console.log(constTailPts)
         if (constOrbit == undefined || constOrbit[index] === undefined) {
             var material = new THREE.LineBasicMaterial({
                 color: $('.constInfo input')[0].value,
                 linewidth: 2
             });
-            var geometry = new THREE.BufferGeometry().setFromPoints(points);
+            var geometry = new THREE.BufferGeometry().setFromPoints(constTailPts[index]);
             constOrbit[index] = new THREE.Line(geometry, material);
             var geometry = new THREE.SphereGeometry(0.05, 6, 6);
             var material = new THREE.MeshBasicMaterial({
@@ -229,7 +266,7 @@ function drawConst(constParams) {
             scene.add(constOrbit[index]);
         } else {
             // Edit orbitVar
-            constOrbit[index].geometry.setFromPoints(points);
+            constOrbit[index].geometry.setFromPoints(constTailPts[index]);
             constSatPoint[index].position.x = -r0[0][0] / 6371;
             constSatPoint[index].position.y = r0[2][0] / 6371;
             constSatPoint[index].position.z = r0[1][0] / 6371;
@@ -379,6 +416,8 @@ $('.slidercontainer input').on('input', sliderInput);
 document.addEventListener('keypress', function (key) {
     let k = key.key;
     if (k.toLowerCase() === 'e') {
+        constTaTailPts = [];
+        constTailPts = [];
         ecef = !ecef;
         if (ecef) {
             $('.referenceDiv span').text('Earth-Fixed');
@@ -422,6 +461,8 @@ document.addEventListener('keypress', function (key) {
         }
     }
     if (k === '.' || k === '>') {
+        constTaTailPts = [];
+        constTailPts = [];
         if (timeMult == 1) {
             timeMult = 0;
         }
@@ -432,6 +473,8 @@ document.addEventListener('keypress', function (key) {
         $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
     }
     if (k === ',' || k === '<') {
+        constTaTailPts = [];
+        constTailPts = [];
         if (timeMult == 1) {
             timeMult = 0;
         }
