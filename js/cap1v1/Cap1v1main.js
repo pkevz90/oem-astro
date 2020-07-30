@@ -358,10 +358,21 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 
 function setCurrentPoints(curTime, noPlot = false) {
 	var points = {};
+	let point1, point2, dt;
 	for (sat in app.players) {
-		points[sat + 'R'] = [
+		point1 = [
 			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)].y],
 			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)].x]
+		];
+		point2 = [
+			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)+1].y],
+			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)+1].x]
+		];
+		dt = (curTime * 3600) % app.calcDt;
+		console.log(dt);
+		points[sat + 'R'] = [
+			[point1[0][0] + (point2[0][0]-point1[0][0]) * dt / app.calcDt],
+			[point1[1][0] + (point2[1][0]-point1[1][0]) * dt / app.calcDt]
 		];
 		app.players[sat].dataLoc.current.data = [{
 			x: points[sat + 'R'][1],
