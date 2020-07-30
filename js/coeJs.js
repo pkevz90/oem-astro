@@ -93,7 +93,7 @@ var render = function () {
         item.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180 + Math.PI;
     })
     let curSun = Eci2Ecef(-(ECI[0].rotation.y * 180/Math.PI), sunVec);
-    console.log(ECI[0].rotation.y * 180/Math.PI)
+    // console.log(ECI[0].rotation.y * 180/Math.PI)
     Sunlight.position.x = -100 * curSun[0][0];
     Sunlight.position.y = 100 * curSun[2][0];
     Sunlight.position.z = 100 * curSun[1][0];
@@ -133,7 +133,7 @@ function drawOrbit(orbitParams) {
             $('.controls span')[5+index*6].textContent = ((tA % (2*math.PI))*180/math.PI).toFixed(0)
         }
         let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
-        console.log(ECI)
+        // console.log(ECI)
         let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]
 
         var points = [];
@@ -494,7 +494,7 @@ $('#constList p').on('click', (a) => {
                     a: 26561.7,
                     e: .74,
                     i: 63.4,
-                    raan: 0,
+                    raan: i*120,
                     arg: 270,
                     mA: i*120
                 })
@@ -503,7 +503,7 @@ $('#constList p').on('click', (a) => {
             $('.constInfo .value')[0].innerText = "26561.7";
             $('.constInfo .value')[1].innerText = "0.74";
             $('.constInfo .value')[2].innerText = "63.4";
-            $('.constInfo .value')[3].innerText = "0";
+            $('.constInfo .value')[3].innerText = "0/120/240";
             $('.constInfo .value')[4].innerText = "270";
             $('.constInfo .value')[5].innerText = "Varies by Satellite";
             break;
