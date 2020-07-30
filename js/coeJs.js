@@ -35,7 +35,7 @@ var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     constOrbit = [],
     constTailPts = [];
     constSatPoint = [],
-    nTailPts = 200,
+    nTailPts = 400,
     r = 2;
 var   scene, camera, renderer, controls, ecef = false,
     timeStep = 1000/60;
@@ -187,7 +187,11 @@ function drawOrbit(orbitParams) {
         }
     })
 }
-
+function angularDistance(ang1,ang2){
+    ang1 = ((2*math.PI) + ang1) % (2*math.PI);
+    ang2 = ((2*math.PI) + ang2) % (2*math.PI);
+    return math.abs(ang1-ang2);
+}
 function drawConst(constParams) {
     let r, r0;
     constParams.forEach((orbitP,index) => {
@@ -216,7 +220,7 @@ function drawConst(constParams) {
             constTaTailPts[index] = [];
         }
         //console.log(tA, constTaTailPts[index][constTaTailPts[index].length-1])
-        if (constTailPts[index].length == 0 || (((2*math.PI) + tA - constTaTailPts[index][constTaTailPts[index].length-1])%(2*math.PI) >= (tailLength * 2 * math.PI / nTailPts))){
+        if (constTailPts[index].length == 0 || angularDistance(tA, constTaTailPts[index][constTaTailPts[index].length-1]) >= (tailLength * 2 * math.PI / nTailPts)){
             constTailPts[index].push(new THREE.Vector3(-r0[0][0] / 6371, r0[2][0] / 6371, r0[1][0] / 6371));
             constTaTailPts[index].push(tA);
         }
@@ -226,18 +230,11 @@ function drawConst(constParams) {
             constTaTailPts[index].shift();
         }
         //WRITE FUNCTION TO Return angular distance
-        if (((2*math.PI) + math.abs(constTaTailPts[index][constTaTailPts[index].length-1] - constTaTailPts[index][0])) % (2*math.PI) > (tailLength * 2 * math.PI)){
-           temp=constTaTailPts[index].map(val => ((2*math.PI) +constTaTailPts[index][constTaTailPts[index].length-1] - val) % (2*math.PI) > (tailLength * 2 * math.PI) &&
-           //console.log(temp)
-           ind = temp.findIndex(val => {return !val});
-           if (ind>2){
-               console.log(constTaTailPts[index].map(val => ((2*math.PI) +constTaTailPts[index][constTaTailPts[index].length-1] - val)) % (2*math.PI)))
-               console.log(tailLength * 2 * math.PI) 
-           }
-           constTaTailPts[index] = constTaTailPts[index].slice(ind)
-           constTailPts[index] = constTailPts[index].slice(ind)
-           //console.log(ind,constTaTailPts[index].length)
-            //temp = constTaTailPts[index] - 
+        if (angularDistance(constTaTailPts[index][constTaTailPts[index].length-1], constTaTailPts[index][0]) > (tailLength * 2 * math.PI)){
+            temp=constTaTailPts[index].map(val => ((2*math.PI) +constTaTailPts[index][constTaTailPts[index].length-1] - val) % (2*math.PI) > (tailLength * 2 * math.PI));
+            ind = temp.findIndex(val => {return !val});
+            constTaTailPts[index] = constTaTailPts[index].slice(ind);
+            constTailPts[index] = constTailPts[index].slice(ind);
         } else {
             //console.log(constTaTailPts[index][constTaTailPts[index].length-1], constTaTailPts[index][0])
             //console.log(((2*math.PI) + math.abs(constTaTailPts[index][constTaTailPts[index].length-1] - constTaTailPts[index][0]))% (2*math.PI), (tailLength * 2 * math.PI))
@@ -513,6 +510,8 @@ $('#constList p').on('click', (a) => {
     constSatPoint = [];
     switch(constel) {
         case 'GPS (24 Satellites)':
+            constTaTailPts = [];
+            constTailPts = [];
             for(i = 0; i < 24; i++){
                 constParams.push({
                     a: 26561.7,
@@ -524,14 +523,37 @@ $('#constList p').on('click', (a) => {
                 })
             }
             $('#constName')[0].innerText = "GPS (24 Satellites)"
-            $('.constInfo .value')[0].innerText = "26561.7";
+            $('.constInfo .value')[0].innerText = "26561.7 km";
             $('.constInfo .value')[1].innerText = "0";
-            $('.constInfo .value')[2].innerText = "55";
-            $('.constInfo .value')[3].innerText = "Varies by Orbit";
+            $('.constInfo .value')[2].innerText = "55°";
+            $('.constInfo .value')[3].innerText = "0°/60°/120°/...";
+            $('.constInfo .value')[4].innerText = "N/A (circular)";
+            $('.constInfo .value')[5].innerText = "Varies by Satellite";
+            break;
+        case 'Iridium (66 Satellites)':
+            constTaTailPts = [];
+            constTailPts = [];
+            for(i = 0; i < 66; i++){
+                constParams.push({
+                    a: 6378+781,
+                    e: 0,
+                    i: 86.4,
+                    raan: math.floor(i/11)*60,
+                    arg: 0,
+                    mA: (i % 11)*(360/11)
+                })
+            }
+            $('#constName')[0].innerText = "Iridium (66 Satellites)"
+            $('.constInfo .value')[0].innerText = "7159 km";
+            $('.constInfo .value')[1].innerText = "0";
+            $('.constInfo .value')[2].innerText = "86.4°";
+            $('.constInfo .value')[3].innerText = "0°/60°/120°/...";
             $('.constInfo .value')[4].innerText = "N/A (circular)";
             $('.constInfo .value')[5].innerText = "Varies by Satellite";
             break;
         case 'Molniya (3 Satellites)':
+            constTaTailPts = [];
+            constTailPts = [];
             for(i = 0; i < 3; i++){
                 constParams.push({
                     a: 26561.7,
@@ -543,11 +565,11 @@ $('#constList p').on('click', (a) => {
                 })
             }
             $('#constName')[0].innerText = "Molniya (3 Satellites)"
-            $('.constInfo .value')[0].innerText = "26561.7";
+            $('.constInfo .value')[0].innerText = "26561.7 km";
             $('.constInfo .value')[1].innerText = "0.74";
-            $('.constInfo .value')[2].innerText = "63.4";
-            $('.constInfo .value')[3].innerText = "0/120/240";
-            $('.constInfo .value')[4].innerText = "270";
+            $('.constInfo .value')[2].innerText = "63.4°";
+            $('.constInfo .value')[3].innerText = "0°/120°/240°";
+            $('.constInfo .value')[4].innerText = "270°";
             $('.constInfo .value')[5].innerText = "Varies by Satellite";
             break;
     }
