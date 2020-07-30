@@ -369,7 +369,6 @@ function setCurrentPoints(curTime, noPlot = false) {
 			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)+1].x]
 		];
 		dt = (curTime * 3600) % app.calcDt;
-		console.log(dt);
 		points[sat + 'R'] = [
 			[point1[0][0] + (point2[0][0]-point1[0][0]) * dt / app.calcDt],
 			[point1[1][0] + (point2[1][0]-point1[1][0]) * dt / app.calcDt]
