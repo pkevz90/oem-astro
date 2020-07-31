@@ -1,6 +1,6 @@
 var teamNum, $turn = $('.selectable:first span');;
 createGraph();
-$('#setup').on('click', () => {
+$('.nav-element-right').on('click', () => {
     $('.instruction-screen').slideToggle(250);
 })
 $('.selectable:first').on('click', () => {
