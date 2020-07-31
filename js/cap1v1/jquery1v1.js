@@ -5,7 +5,7 @@ $('.nav-element-right').on('click', () => {
 })
 $('.selectable:first').on('click', () => {
     let turn = Number($turn.text());
-    if (turn > app.redTurn) {
+    if (turn > app.redTurn && setupData.server) {
         return;
     }
     turn++;
