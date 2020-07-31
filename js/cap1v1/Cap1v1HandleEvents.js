@@ -142,7 +142,7 @@ function handleKeyPress(k) {
         case 'b':
             if (app.chosenWaypoint === undefined) {
                 return;
-            } else if (app.tactic !== '') {
+            } else if (app.tactic === 'burn') {
                 return;
             }
             app.tactic = 'burn';
@@ -159,7 +159,7 @@ function handleKeyPress(k) {
         case 't':
             if (app.chosenWaypoint === undefined) {
                 return;
-            } else if (app.tactic !== '') {
+            } else if (app.tactic === 'target') {
                 return;
             }
             app.tactic = 'target';

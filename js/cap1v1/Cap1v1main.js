@@ -33,6 +33,7 @@ let app = {
 	numBurns: undefined,
 	reqCats: undefined,
 	rangeReq: undefined,
+	burnTransition: false,
 	spans: {
 		manRows: undefined,
 		scenData: undefined
