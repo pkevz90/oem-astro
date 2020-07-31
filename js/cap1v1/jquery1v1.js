@@ -99,7 +99,6 @@ $('.start-button').on('click', () => {
     if (setupData.server) {
         setInterval(() => {
             firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function (snapshot) {
-                // console.log(snapshot.val().turn);
                 let turn = Math.min(Number($turn.text()), snapshot.val().turn);
                 if (Number($turn.text()) > snapshot.val().turn) {
                     $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
@@ -107,7 +106,13 @@ $('.start-button').on('click', () => {
                 else {
                     $('.nav-element-right').prev().find('p').css("color","white")
                 }
+                let oldNorm, newNorm;
                 for (let ii = 0; ii < (turn - 1); ii++) {
+                    // oldNorm = math.norm(app.players.red.burns[ii]);
+                    // newNorm = math.norm(snapshot.val().burn[ii]);
+                    // if (Math.abs(oldNorm-newNorm) > 1e-4) {
+                    //     console.log('change');
+                    // }
                     app.players.red.burns[ii] = snapshot.val().burn[ii];
                 }
                 app.players.red.calculateTrajecory();
