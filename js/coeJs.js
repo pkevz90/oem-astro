@@ -38,7 +38,9 @@ var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     nTailPts = 400,
     r = 2;
 var gndPts = [],
-    gndTracks = [];
+    constGndPts = [],
+    localHoriz = [],
+    constLocalHoriz = [];
 var   scene, camera, renderer, controls, ecef = false,
     timeStep = 1000/60;
     timeMult = 1000;
@@ -179,23 +181,63 @@ function drawOrbit(orbitParams) {
 
             scene.add(satPoint[index]);
             scene.add(orbit[index]);
-            console.log(orbit,satPoint,gndPts)
             gndPts[index] = new THREE.Mesh(geometry,material);//satPoint[index];
-            gndPts[index].position = getGroundPoint(gndPts[index].position.x,gndPts[index].position.y,gndPts[index].position.z);
-            console.log(gndPts[index].position)
-            scene.add(gndPts[index])
+            gndpt = getGroundPoint(satPoint[index].position.x,satPoint[index].position.y,satPoint[index].position.z);
+            Object.assign(gndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
+            //scene.add(gndPts[index])
+            let swc = math.sin(math.acos(1/math.norm(xyzToVec(satPoint[index].position))));
+            if (satPoint[index].position.z != 0){
+                perpvec1 = math.cross(xyzToVec(satPoint[index].position),[1,0,0]);
+                perpvec1 = perpvec1.map(val => {return (swc/2)*val/math.norm(perpvec1)});
+            }
+            else{
+                perpvec1 = [0,0,(swc/2)];
+            }
+            perpvec2 = math.cross(xyzToVec(satPoint[index].position),perpvec1);
+            perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
+            let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
+            centerpt = xyzToVec(gndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
+            console.log(centerpt)
+            lhpts = angles.map(val => {return {x: centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val)),
+                y: centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val)),
+                z: centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val))}});
+            var material = new THREE.LineBasicMaterial({
+                    color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
+                    linewidth: 2
+                    });
+            var geometry = new THREE.BufferGeometry().setFromPoints(lhpts);
+            localHoriz[index] = new THREE.Line(geometry, material);
+            scene.add(localHoriz[index])
         } else {
             // Edit orbitVar
             orbit[index].geometry.setFromPoints(points);
             satPoint[index].position.x = -r0[0][0] / 6371;
             satPoint[index].position.y = r0[2][0] / 6371;
             satPoint[index].position.z = r0[1][0] / 6371;
-            gndPts[index] = satPoint[index].deepCopy();
-            gndpt = getGroundPoint(gndPts[index].position.x,gndPts[index].position.y,gndPts[index].position.z);
+            //gndPts[index] = satPoint[index];
+            gndpt = getGroundPoint(satPoint[index].position.x,satPoint[index].position.y,satPoint[index].position.z);
             Object.assign(gndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
-            scene.add(gndPts[index])
+            let swc = math.sin(math.acos(1/math.norm(xyzToVec(satPoint[index].position))));
+            if (satPoint[index].position.z != 0){
+                perpvec1 = math.cross(xyzToVec(satPoint[index].position),[1,0,0]);
+                perpvec1 = perpvec1.map(val => {return (swc/2)*val/math.norm(perpvec1)});
+            }
+            else{
+                perpvec1 = [0,0,(swc/2)];
+            }
+            perpvec2 = math.cross(xyzToVec(satPoint[index].position),perpvec1);
+            perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
+            let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
+            centerpt = xyzToVec(gndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
+            lhpts = angles.map(val => {return {x: centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val)),
+                y: centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val)),
+                z: centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val))}});
+            localHoriz[index].geometry.setFromPoints(lhpts)
         }
     })
+}
+function xyzToVec(vec){
+    return [vec.x,vec.y,vec.z];
 }
 function angularDistance(ang1,ang2){
     ang1 = ((2*math.PI) + ang1) % (2*math.PI);
@@ -254,12 +296,62 @@ function drawConst(constParams) {
 
             scene.add(constSatPoint[index]);
             scene.add(constOrbit[index]);
+            constGndPts[index] = new THREE.Mesh(geometry,material);
+            gndpt = getGroundPoint(constSatPoint[index].position.x,constSatPoint[index].position.y,constSatPoint[index].position.z);
+            Object.assign(constGndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
+            //scene.add(constGndPts[index])
+
+            let swc = math.sin(math.acos(1/math.norm(xyzToVec(constSatPoint[index].position))));
+            if (constSatPoint[index].position.z != 0){
+                perpvec1 = math.cross(xyzToVec(constSatPoint[index].position),[1,0,0]);
+                perpvec1 = perpvec1.map(val => {return (swc/2)*val/math.norm(perpvec1)});
+            }
+            else{
+                perpvec1 = [0,0,(swc/2)];
+            }
+            perpvec2 = math.cross(xyzToVec(constSatPoint[index].position),perpvec1);
+            perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
+            let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
+            centerpt = xyzToVec(constGndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
+            console.log(centerpt)
+            lhpts = angles.map(val => {return {x: centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val)),
+                y: centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val)),
+                z: centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val))}});
+            var material = new THREE.LineBasicMaterial({
+                    color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
+                    linewidth: 2
+                    });
+            var geometry = new THREE.BufferGeometry().setFromPoints(lhpts);
+            constLocalHoriz[index] = new THREE.Line(geometry, material);
+            scene.add(constLocalHoriz[index])
         } else {
             // Edit orbitVar
             constOrbit[index].geometry.setFromPoints(constTailPts[index]);
             constSatPoint[index].position.x = -r0[0][0] / 6371;
             constSatPoint[index].position.y = r0[2][0] / 6371;
             constSatPoint[index].position.z = r0[1][0] / 6371;
+            gndpt = getGroundPoint(constSatPoint[index].position.x,constSatPoint[index].position.y,constSatPoint[index].position.z);
+            Object.assign(constGndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
+            
+            let swc = math.sin(math.acos(1/math.norm(xyzToVec(constSatPoint[index].position))));
+            console.log(swc)
+            if (constSatPoint[index].position.z != 0){
+                perpvec1 = math.cross(xyzToVec(constSatPoint[index].position),[1,0,0]);
+                perpvec1 = perpvec1.map(val => {return (swc/2)*val/math.norm(perpvec1)});
+            }
+            else{
+                perpvec1 = [0,0,(swc/2)];
+            }
+            perpvec2 = math.cross(xyzToVec(constSatPoint[index].position),perpvec1);
+            perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
+            console.log(perpvec1,perpvec2)
+            let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
+            centerpt = xyzToVec(constGndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
+            lhpts = angles.map(val => {return {x: centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val)),
+                y: centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val)),
+                z: centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val))}});
+            console.log(lhpts)
+            constLocalHoriz[index].geometry.setFromPoints(lhpts)
         }
     })
 }

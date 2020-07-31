@@ -279,10 +279,10 @@ function state2rmoe(state,n,degrees) {
 
 function groundSwath(radius,deg) {
     if (deg){
-        return Math.aMath.cos(6371/radius)*180/Math.PI;
+        return Math.acos(6371/radius)*180/Math.PI;
     }
     else {
-        return Math.aMath.cos(6371/radius);
+        return Math.acos(6371/radius);
     }
 }
 
