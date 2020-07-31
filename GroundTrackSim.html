@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+	<!-- <link rel="stylesheet" href="SupportLibraries/bootstrapcss/bootstrap.min.css"> -->
+	<script src="SupportLibraries/chart.bundle.min.js"></script>
+	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script> -->
+	<script src="SupportLibraries/math.min.js"></script>
+	<script src="js/GroundTrackmain.js"></script>
+	<script src="js/astroFunctions.js"></script>
+  
+    <title>Ground Tracks</title>
+	<style>
+		.slider {
+			width: 100%;
+		}
+		.slidercontainer {
+			font-size: 150%;
+			background-color: rgb(100,100,100);
+      margin-left: 5%;
+			opacity: 0.5;
+		}
+		.slidercontainer:hover {
+			opacity: 1;
+		}
+    .inplanecontainer {
+        padding: 5% 0;
+    }
+    .timebar {
+      margin: 10%;
+    }
+    .element {
+      margin-left: 5%;
+    }
+	</style>
+  </head>
+  <body class="p-3 mb-2 bg-dark text-white">
+    <div class="row">
+      <div class="col-3">
+        <nav class="navbar navbar-expand-lg navbar-dark">
+          <!-- <img src="SupportLibraries/533d.png" width="100" alt=""> -->
+          <a class="navbar-brand" href="#" style="padding-left: 20px; font-size: 300%;">Ground Tracks</a>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNavDropdown">
+          </div>
+        </nav>
+        <div class="slidercontainer" style="margin-top: 10%;">
+          <p class="element"><em>a</em>: <span id="SMA">7000</span> km</p>
+          <input type="range" class="slider" id="smaSlider" min="6800" max="50000" value="7000" step="0.01">
+        </div>
+        <div class="slidercontainer">
+          <p class="element"><em>e</em>: <span id="ecc">0</span></p>
+          <input type="range" class="slider" id="eccSlider" min="0" max="0.99999" value="0" step="0.01">
+        </div>
+        <div class="slidercontainer">
+          <p class="element"><em>i</em>: <span id="inc">45</span> degrees</p>
+          <input type="range" class="slider" id="incSlider" min="0" max="180" value="45" step="0.01">
+        </div>
+        <div class="slidercontainer">
+          <p class="element"><em>&#937</em>: <span id="raan">0</span> degrees</p>
+          <input type="range" class="slider" id="raanSlider" min="0" max="360" value="0" step="0.01">
+        </div>
+        <div class="slidercontainer">
+          <p class="element"><em>&#969</em>: <span id="argP">0</span> degrees</p>
+          <input type="range" class="slider" id="argSlider" min="0" max="360" value="0" step="0.01">
+        </div>
+        <div class="slidercontainer">
+          <p class="element"><em>&#957</em>: <span id="ta">0</span> degrees</p>
+          <input type="range" class="slider" id="taSlider" min="0" max="360" value="0" step="0.01">
+        </div>
+      </div>
+      <div class="col-9" style="margin-top: 10%;">
+        <div style="margin: auto; width: 85%;">
+          <canvas id="ChartCnvs" width='12' height='7' style=" background-image: url(Media/world2.png); background-repeat: no-repeat;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="SupportLibraries/jquery.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script> -->
+    <script src="SupportLibraries/bootstrap.min.js"></script>
+    <script src="SupportLibraries/bootstrap-input-spinner.js"></script>
+  </body>
+</html>

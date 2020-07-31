@@ -5,6 +5,9 @@ $('.nav-element-right').on('click', () => {
 })
 $('.selectable:first').on('click', () => {
     let turn = Number($turn.text());
+    if (turn > app.redTurn) {
+        return;
+    }
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
     $('.selectable:first span').text(turn)
@@ -113,7 +116,8 @@ $('.start-button').on('click', () => {
                 if (app.burnTransition) {
                     return;
                 }
-                let turn = Math.min(Number($turn.text()), snapshot.val().turn);
+                app.redTurn = snapshot.val().turn;
+                let turn = Math.min(Number($turn.text()), app.redTurn);
                 if (Number($turn.text()) > snapshot.val().turn) {
                     $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
                 }
@@ -126,13 +130,11 @@ $('.start-button').on('click', () => {
                     newNorm = math.norm(snapshot.val().burn[ii]);
                     change = (Math.abs(oldNorm-newNorm) > 1e-4) ? ii : change;
                 }
-                // console.log(change);
                 if (change !== undefined) {
                     let frames = 15, frame = 0;
                     app.burnTransition = true;
                     let intB = setInterval(() => {
                         app.players.red.burns[change] = math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change])
-                        // console.log(app.players.red.burns);
                         frame++;
                         app.players.red.calculateTrajecory();
                         calcData(app.currentTime);
