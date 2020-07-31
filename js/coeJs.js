@@ -25,7 +25,7 @@ for(i = 0; i < 24; i++){
         i: 55,
         raan: math.floor(i/4)*60,
         arg: 0,
-        mA: (i % 4)*90
+        mA: (i % 4)*90 + math.floor(i/4)*15
     })
 }
 
@@ -185,7 +185,7 @@ function drawOrbit(orbitParams) {
             gndpt = getGroundPoint(satPoint[index].position.x,satPoint[index].position.y,satPoint[index].position.z);
             Object.assign(gndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
             //scene.add(gndPts[index])
-            let swc = math.sin(math.acos(1/math.norm(xyzToVec(satPoint[index].position))));
+            let swc = 2.05*math.sin(math.acos(1/math.norm(xyzToVec(satPoint[index].position))));
             if (satPoint[index].position.z != 0){
                 perpvec1 = math.cross(xyzToVec(satPoint[index].position),[1,0,0]);
                 perpvec1 = perpvec1.map(val => {return (swc/2)*val/math.norm(perpvec1)});
@@ -197,10 +197,10 @@ function drawOrbit(orbitParams) {
             perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
             let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
             centerpt = xyzToVec(gndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
-            console.log(centerpt)
-            lhpts = angles.map(val => {return {x: centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val)),
-                y: centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val)),
-                z: centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val))}});
+            //console.log(centerpt)
+            lhpts = angles.map(val => {return {x: 1.02*(centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val))),
+                y: 1.02*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
+                z: 1.02*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
             var material = new THREE.LineBasicMaterial({
                     color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
                     linewidth: 2
@@ -217,7 +217,8 @@ function drawOrbit(orbitParams) {
             //gndPts[index] = satPoint[index];
             gndpt = getGroundPoint(satPoint[index].position.x,satPoint[index].position.y,satPoint[index].position.z);
             Object.assign(gndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
-            let swc = math.sin(math.acos(1/math.norm(xyzToVec(satPoint[index].position))));
+            let swc = 2*math.sin(math.acos(1/math.norm(xyzToVec(satPoint[index].position))));
+            //console.log(math.acos(1/math.norm(xyzToVec(satPoint[index].position))))
             if (satPoint[index].position.z != 0){
                 perpvec1 = math.cross(xyzToVec(satPoint[index].position),[1,0,0]);
                 perpvec1 = perpvec1.map(val => {return (swc/2)*val/math.norm(perpvec1)});
@@ -229,9 +230,9 @@ function drawOrbit(orbitParams) {
             perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
             let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
             centerpt = xyzToVec(gndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
-            lhpts = angles.map(val => {return {x: centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val)),
-                y: centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val)),
-                z: centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val))}});
+            lhpts = angles.map(val => {return {x: 1.02*(centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val))),
+                y: 1.02*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
+                z: 1.02*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
             localHoriz[index].geometry.setFromPoints(lhpts)
         }
     })
@@ -301,7 +302,7 @@ function drawConst(constParams) {
             Object.assign(constGndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
             //scene.add(constGndPts[index])
 
-            let swc = math.sin(math.acos(1/math.norm(xyzToVec(constSatPoint[index].position))));
+            let swc = 2*math.sin(math.acos(1/math.norm(xyzToVec(constSatPoint[index].position))));
             if (constSatPoint[index].position.z != 0){
                 perpvec1 = math.cross(xyzToVec(constSatPoint[index].position),[1,0,0]);
                 perpvec1 = perpvec1.map(val => {return (swc/2)*val/math.norm(perpvec1)});
@@ -313,12 +314,12 @@ function drawConst(constParams) {
             perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
             let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
             centerpt = xyzToVec(constGndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
-            console.log(centerpt)
-            lhpts = angles.map(val => {return {x: centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val)),
-                y: centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val)),
-                z: centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val))}});
+            //console.log(centerpt)
+            lhpts = angles.map(val => {return {x: 1.02*(centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val))),
+                y: 1.02*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
+                z: 1.02*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
             var material = new THREE.LineBasicMaterial({
-                    color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
+                    color: $('.constInfo input')[0].value,
                     linewidth: 2
                     });
             var geometry = new THREE.BufferGeometry().setFromPoints(lhpts);
@@ -333,8 +334,8 @@ function drawConst(constParams) {
             gndpt = getGroundPoint(constSatPoint[index].position.x,constSatPoint[index].position.y,constSatPoint[index].position.z);
             Object.assign(constGndPts[index].position,{x: gndpt.x ,y:gndpt.y ,z: gndpt.z})
             
-            let swc = math.sin(math.acos(1/math.norm(xyzToVec(constSatPoint[index].position))));
-            console.log(swc)
+            let swc = 2*math.sin(math.acos(1/math.norm(xyzToVec(constSatPoint[index].position))));
+            //console.log(swc)
             if (constSatPoint[index].position.z != 0){
                 perpvec1 = math.cross(xyzToVec(constSatPoint[index].position),[1,0,0]);
                 perpvec1 = perpvec1.map(val => {return (swc/2)*val/math.norm(perpvec1)});
@@ -344,13 +345,13 @@ function drawConst(constParams) {
             }
             perpvec2 = math.cross(xyzToVec(constSatPoint[index].position),perpvec1);
             perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
-            console.log(perpvec1,perpvec2)
+            //console.log(perpvec1,perpvec2)
             let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
             centerpt = xyzToVec(constGndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
-            lhpts = angles.map(val => {return {x: centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val)),
-                y: centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val)),
-                z: centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val))}});
-            console.log(lhpts)
+            lhpts = angles.map(val => {return {x: 1.02*(centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val))),
+                y: 1.02*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
+                z: 1.02*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
+            //console.log(lhpts)
             constLocalHoriz[index].geometry.setFromPoints(lhpts)
         }
     })
@@ -437,9 +438,9 @@ function drawLightSources() {
 }
 
 function getGroundPoint(x,y,z){
-    return {x: (1.01/(math.norm([x,y,z]))*x),
-            y: (1.01/(math.norm([x,y,z]))*y),
-            z: (1.01/(math.norm([x,y,z]))*z)};
+    return {x: (1.02/(math.norm([x,y,z]))*x),
+            y: (1.02/(math.norm([x,y,z]))*y),
+            z: (1.02/(math.norm([x,y,z]))*z)};
 }
 
 $('#optionsList input').on('input', () => {
@@ -454,11 +455,13 @@ $('#optionsList input').on('input', () => {
         $('.constInfo').show();
         constOrbit.forEach(lineobj => {lineobj.visible = true;});
         constSatPoint.forEach(pointobj => {pointobj.visible = true;});
+        constLocalHoriz.forEach(lineobj => {lineobj.visible = true;});
         $('.constPane').show()
     }else{
         $('.constInfo').hide();
         constOrbit.forEach(lineobj => {lineobj.visible = false;});
         constSatPoint.forEach(pointobj => {pointobj.visible = false;});
+        constLocalHoriz.forEach(lineobj => {lineobj.visible = false;});
         $('.constList').hide()
         $('.constPane').hide()
     }
@@ -468,6 +471,7 @@ $('#optionsList input').on('input', () => {
         $('.addButton').show();
         orbit.forEach(lineobj => {lineobj.visible = true;});
         satPoint.forEach(pointobj => {pointobj.visible = true;});
+        localHoriz.forEach(lineobj => {lineobj.visible = true;});
         $('.orbitsPane').show()
     }else{
         $('.controlTitle').hide();
@@ -475,6 +479,7 @@ $('#optionsList input').on('input', () => {
         $('.addButton').hide();
         orbit.forEach(lineobj => {lineobj.visible = false;});
         satPoint.forEach(pointobj => {pointobj.visible = false;});
+        localHoriz.forEach(lineobj => {lineobj.visible = false;});
         $('.orbitList').hide()
         $('.orbitsPane').hide()
     }
@@ -594,13 +599,20 @@ $('#constList p').on('click', (a) => {
         tempObj.material.dispose();
         scene.remove(tempObj)
     })
+    constLocalHoriz.forEach(tempLH => {
+        tempObj = scene.getObjectByProperty('uuid',tempLH.uuid);
+        tempObj.geometry.dispose();
+        tempObj.material.dispose();
+        scene.remove(tempObj)
+    })
     constParams = [];
     constOrbit = [];
     constSatPoint = [];
+    constTaTailPts = [];
+    constTailPts = [];
+    constLocalHoriz = [];
     switch(constel) {
         case 'GPS (24 Satellites)':
-            constTaTailPts = [];
-            constTailPts = [];
             for(i = 0; i < 24; i++){
                 constParams.push({
                     a: 26561.7,
@@ -608,7 +620,7 @@ $('#constList p').on('click', (a) => {
                     i: 55,
                     raan: math.floor(i/4)*60,
                     arg: 0,
-                    mA: (i % 4)*90
+                    mA: (i % 4)*90 + (math.floor(i/4)%2)*(360/4/2)
                 })
             }
             $('#constName')[0].innerText = "GPS (24 Satellites)"
@@ -620,8 +632,6 @@ $('#constList p').on('click', (a) => {
             $('.constInfo .value')[5].innerText = "Varies by Satellite";
             break;
         case 'Iridium (66 Satellites)':
-            constTaTailPts = [];
-            constTailPts = [];
             for(i = 0; i < 66; i++){
                 constParams.push({
                     a: 6378+781,
@@ -641,8 +651,7 @@ $('#constList p').on('click', (a) => {
             $('.constInfo .value')[5].innerText = "Varies by Satellite";
             break;
         case 'Molniya (3 Satellites)':
-            constTaTailPts = [];
-            constTailPts = [];
+            console.log("hi")
             for(i = 0; i < 3; i++){
                 constParams.push({
                     a: 26561.7,
@@ -672,7 +681,7 @@ $('#orbitList p').on('click', (a) => {
             kk = index;
         }
     });
-    console.log(kk)
+    //console.log(kk)
     switch (orbit) {
         case 'ISS':
             orbitParams[kk] = {

@@ -323,6 +323,7 @@
             
             orbit[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
             satPoint[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
+            localHoriz[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
         }
         function constChangeColor() {
             let c = hexToRgb($('.constInfo input')[0].value);
@@ -330,6 +331,9 @@
                 tempOrbit.material.color.setRGB(c.r/255,c.g/255,c.b/255);
             })
             constSatPoint.forEach(tempPoint => {
+                tempPoint.material.color.setRGB(c.r/255,c.g/255,c.b/255);
+            })
+            constLocalHoriz.forEach(tempPoint => {
                 tempPoint.material.color.setRGB(c.r/255,c.g/255,c.b/255);
             })
         }
@@ -417,9 +421,11 @@
             if (ind != -1){
                 scene.remove(orbit[ind])
                 scene.remove(satPoint[ind])
+                scene.remove(localHoriz[ind])
                 orbit.splice(ind,1);
                 satPoint.splice(ind,1);
                 orbitParams.splice(ind,1);
+                localHoriz.splice(ind,1)
 
                 for(closeind = ind+1; closeind < $('.controlTitle').length; closeind++){
                     $('.controlTitle').eq(closeind).find('span')[0].innerText = "Satellite " + (closeind);
