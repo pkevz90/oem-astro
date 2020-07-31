@@ -8,6 +8,10 @@ $('.selectable:first').on('click', () => {
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
     $('.selectable:first span').text(turn)
+    for (player in app.players) {
+        app.players[player].calculateTrajecory();
+    }
+    calcData(app.currentTime);
     if (setupData.server) {
         let outBurns = math.zeros(Number(setupData.scenario_start.bp), 2)._data;
         for (let ii = 0; ii < (turn - 1); ii++) {
@@ -95,12 +99,18 @@ $('.start-button').on('click', () => {
     if (setupData.server) {
         setInterval(() => {
             firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function (snapshot) {
+                // console.log(snapshot.val().turn);
                 let turn = Math.min(Number($turn.text()), snapshot.val().turn);
+                if (Number($turn.text()) > snapshot.val().turn) {
+                    $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
+                }
+                else {
+                    $('.nav-element-right').prev().find('p').css("color","white")
+                }
                 for (let ii = 0; ii < (turn - 1); ii++) {
                     app.players.red.burns[ii] = snapshot.val().burn[ii];
                 }
                 app.players.red.calculateTrajecory();
-                console.log(app.players.red.burns);
                 calcData(app.currentTime);
             }).catch(() => {
                 console.log('error');

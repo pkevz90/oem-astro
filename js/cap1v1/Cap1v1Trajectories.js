@@ -26,11 +26,12 @@ function calculateTrajecory() {
 		}
 		return;
 	}
+	let turn = Number($turn.text()) - 1;
 	this.dataLoc.waypoints.data = [];
 	this.dataLoc.trajectory.data = [];
 	this.dataLoc.waypoints.data.push({
-		x: r[1][0],
-		y: r[0][0],
+		x: turn > 0 ? NaN : r[1][0],
+		y: turn > 0 ? NaN : r[0][0],
 		dRad: v[0][0],
 		dIt: v[1][0]
 	});
@@ -49,11 +50,12 @@ function calculateTrajecory() {
 				y: r[0][0]
 			});
 		}
+		// console.log(turn,index);
 		// if ((index !== (app.burns[sat].length-1)) && (index >= (Number($turn.textContent)-1))) {
 		if (index !== (this.burns.length - 1)) {
 			this.dataLoc.waypoints.data.push({
-				x: r[1][0],
-				y: r[0][0],
+				x: turn > index + 1 ? NaN : r[1][0],
+				y: turn > index + 1 ? NaN : r[0][0],
 				dRad: v[0][0],
 				dIt: v[1][0]
 			});
