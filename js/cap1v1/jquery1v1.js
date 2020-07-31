@@ -8,6 +8,10 @@ $('.selectable:first').on('click', () => {
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
     $('.selectable:first span').text(turn)
+    for (player in app.players) {
+        app.players[player].calculateTrajecory();
+    }
+    calcData(app.currentTime);
     if (setupData.server) {
         let outBurns = math.zeros(Number(setupData.scenario_start.bp), 2)._data;
         for (let ii = 0; ii < (turn - 1); ii++) {
@@ -18,7 +22,18 @@ $('.selectable:first').on('click', () => {
             turn: turn
         });
     }
-    
+    let ii = 0;
+    let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
+    let inter = setInterval(() => {
+        app.currentTime += timeDelta / 6;
+        $('.nav-element input')[0].value = app.currentTime;
+        $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
+        calcData(app.currentTime);
+        if (ii === 5) {
+            clearInterval(inter);
+        }
+        ii++;
+    }, 15);
 
 })
 $('.start-button').on('click', () => {
@@ -95,13 +110,38 @@ $('.start-button').on('click', () => {
     if (setupData.server) {
         setInterval(() => {
             firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function (snapshot) {
-                let turn = Math.min(Number($turn.text()), snapshot.val().turn);
-                for (let ii = 0; ii < (turn - 1); ii++) {
-                    app.players.red.burns[ii] = snapshot.val().burn[ii];
+                if (app.burnTransition) {
+                    return;
                 }
-                app.players.red.calculateTrajecory();
-                console.log(app.players.red.burns);
-                calcData(app.currentTime);
+                let turn = Math.min(Number($turn.text()), snapshot.val().turn);
+                if (Number($turn.text()) > snapshot.val().turn) {
+                    $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
+                }
+                else {
+                    $('.nav-element-right').prev().find('p').css("color","white")
+                }
+                let oldNorm, newNorm, change = undefined, oldBurn = [...app.players.red.burns];
+                for (let ii = 0; ii < (turn - 1); ii++) {
+                    oldNorm = math.norm(app.players.red.burns[ii]);
+                    newNorm = math.norm(snapshot.val().burn[ii]);
+                    change = (Math.abs(oldNorm-newNorm) > 1e-4) ? ii : change;
+                }
+                // console.log(change);
+                if (change !== undefined) {
+                    let frames = 15, frame = 0;
+                    app.burnTransition = true;
+                    let intB = setInterval(() => {
+                        app.players.red.burns[change] = math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change])
+                        // console.log(app.players.red.burns);
+                        frame++;
+                        app.players.red.calculateTrajecory();
+                        calcData(app.currentTime);
+                        if (frame > frames) {
+                            clearInterval(intB)
+                            app.burnTransition = false;
+                        }
+                    },33)
+                }
             }).catch(() => {
                 console.log('error');
             });
