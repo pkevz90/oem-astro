@@ -271,6 +271,14 @@ function createGraph() {
 						fontSize: 20,
 						reverse: true,
 						fontColor: 'rgba(255,255,255,1)'
+					},
+					afterBuildTicks: (a, ticks) => {
+
+						ticks.pop();
+						ticks.shift();
+						// ticks.pop();
+						// ticks.shift();
+						return ticks;
 					}
 				}],
 				yAxes: [{
@@ -290,6 +298,14 @@ function createGraph() {
 						max: app.axisLimits * 0.5,
 						fontColor: 'rgba(255,255,255,1)',
 						fontSize: 20
+					},
+					afterBuildTicks: (a, ticks) => {
+
+						ticks.pop();
+						ticks.shift();
+						// ticks.pop();
+						// ticks.shift();
+						return ticks;
 					}
 				}]
 			},
