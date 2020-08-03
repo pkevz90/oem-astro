@@ -35,16 +35,6 @@
 .slidercontainer p {
     margin: 1%;
 }
-.referenceDiv {
-    position: fixed;
-    bottom: 0%;
-    color: white;
-    width: 30%;
-    left: 35%;
-    text-align: center;
-    font-size: 1.5vw;
-    opacity: 0.5;
-}
 .timeStepDiv {
     position: fixed;
     bottom: 0%;
@@ -77,4 +67,30 @@
 .edit-field input {
     font-size: 2vw;
     width: 100%;
+}
+.closeButton {
+    float: right;
+    border: 1px solid white;
+    color: white;
+    padding: 1% 2%;
+    border-radius: 50%;
+    font-size: 1.5vw;
+}
+.resetButton {
+    float: right;
+    border: 1px solid white;
+    color: white;
+    padding: 1% 2%;
+    border-radius: 50%;
+    font-size: 1.25vw;
+}
+.referenceDiv {
+    position: fixed;
+    bottom: 0%;
+    color: white;
+    width: 30%;
+    left: 35%;
+    text-align: center;
+    font-size: 1.5vw;
+    opacity: 0.5;
 }

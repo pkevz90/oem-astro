@@ -8,7 +8,7 @@
 </head>
 <body style="overflow: hidden;">
     <div class="sideBar">
-        <div class="controlTitle pointer"><span>Satellite 1</span>
+        <div class="controlTitle pointer"><span>Satellite 1</span><span class="closeButton" style="display: none;">X</span><span class="resetButton">⭯</span>
             <input type="color" value="#FFC300"></div>
         <div class="controls">
             <div class="slidercontainer">
@@ -39,9 +39,15 @@
     <!-- <div class="edit-field">
         <input type="number">
     </div> -->
-    <div class="timeStepDiv">
-        Time Step: <span>60</span> sec
+    <div class="referenceDiv">
+        Press s to toggle stars <br />
+        (frame will remain non-inertial)
     </div>
+    <div class="timeStepDiv">
+        <span>1000</span> times real time<br>
+        Use , and . to change 
+    </div>
+    
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.2/math.min.js"></script>
     <script src="./js/astroFunctions.js"></script>
@@ -68,32 +74,8 @@
             } : null;
         }
         $('.controlTitle').on('click',(a)=>{
-            orbitParams.forEach((el)=>{
-                el.shown = false;
-            })
-            if ($(a.target).is('span')) {
-                a.target = $(a.target).parent();
-            }
-            let ind = $('.controlTitle').index(a.target);
-            orbitParams[ind].shown = true;
-            
-            if (!$(a.target).next().is(":hidden")) {
-                $(a.target).next().slideUp(250);
-                return;
-            }
-            $('.controls').slideUp(250);
-            $(a.target).next().slideDown(250);
-
-        })
-        $('.addButton').on('click',()=>{
-            let len = $('.controlTitle').length;
-            $('.controls').slideUp(250);
-            let cl = $('.controlTitle').last().clone();
-            cl.hide();
-            orbitParams.forEach((el)=>{
-                el.shown = false;
-            })
-            cl.on('click',(a)=>{
+            if (a.target.className != "resetButton" && a.target.className != "closeButton" && !$(a.target).is('input')){
+                console.log(a.target.className)
                 orbitParams.forEach((el)=>{
                     el.shown = false;
                 })
@@ -109,7 +91,34 @@
                 }
                 $('.controls').slideUp(250);
                 $(a.target).next().slideDown(250);
-
+            }
+        })
+        $('.addButton').on('click',()=>{
+            let len = $('.controlTitle').length;
+            $('.controls').slideUp(250);
+            let cl = $('.controlTitle').last().clone();
+            cl.hide();
+            orbitParams.forEach((el)=>{
+                el.shown = false;
+            })
+            cl.on('click',(a)=>{
+                if (a.target.className != "resetButton" && a.target.className != "closeButton" && !$(a.target).is('input')){
+                    orbitParams.forEach((el)=>{
+                        el.shown = false;
+                    })
+                    if ($(a.target).is('span')) {
+                        a.target = $(a.target).parent();
+                    }
+                    let ind = $('.controlTitle').index(a.target);
+                    orbitParams[ind].shown = true;
+                    
+                    if (!$(a.target).next().is(":hidden")) {
+                        $(a.target).next().slideUp(250);
+                        return;
+                    }
+                    $('.controls').slideUp(250);
+                    $(a.target).next().slideDown(250);
+                }
             })
             cl.find('span')[0].innerText = "Satellite " + (len+1);
             $('.addButton').before(cl);
@@ -128,7 +137,71 @@
             cl.find('.slidercontainer').on('input',sliderInput);
             cl.prev().find('input').on('input',changeColor);
             $orbitsControls = $('.controls span');
+            $('.closeButton').on('click',(a)=>{closeTab(a)});
+            $('.resetButton').on('click',(a)=>{resetROEs(a)});
+            if ($('.controlTitle').length > 1){
+                $('.closeButton').show();
+            } else {
+                $('.closeButton').first().hide();
+            }
         })
+        function closeTab(a){
+            a.target = $(a.target).parent();
+            let ind = $('.controlTitle').index(a.target);
+            if (ind != -1){
+                scene.remove(orbit[ind])
+                scene.remove(satPoint[ind])
+                orbit.splice(ind,1);
+                satPoint.splice(ind,1);
+                orbitParams.splice(ind,1);
+
+                for(closeind = ind+1; closeind < $('.controlTitle').length; closeind++){
+                    $('.controlTitle').eq(closeind).find('span')[0].innerText = "Satellite " + (closeind);
+                }
+
+                a.target.next().remove();
+                a.target.remove();
+                if ($('.controlTitle').length > 1){
+                    $('.closeButton').show();
+                } else {
+                    $('.closeButton').first().hide();
+                }
+            }
+        }
+        function resetROEs(a){
+            console.log(orbitParams)
+            a.target = $(a.target).parent();
+            let ind = $('.controlTitle').index(a.target);
+            if (ind != -1){
+                Object.assign(orbitParams[ind],{
+                    a: 10,
+                    xd: 0,
+                    yd: 0,
+                    b: 0,
+                    zmax: 10,
+                    M: 0,
+                    shown: true
+                });
+                console.log("ind",ind,"input length",$('.controls input').length )
+                $('.controls span')[ind*6 + 0].innerText = "10";
+                $('.controls span')[ind*6 + 1].innerText = "0";
+                $('.controls span')[ind*6 + 2].innerText = "0";
+                $('.controls span')[ind*6 + 3].innerText = "0";
+                $('.controls span')[ind*6 + 4].innerText = "10";
+                $('.controls span')[ind*6 + 5].innerText = "0";
+                
+                $('.controls input')[ind*4 + 0].value = 10;
+                $('.controls input')[ind*4 + 1].value = 0;
+                //$('.controls input')[ind*6 + XX].value = 0;
+                //$('.controls input')[ind*6 + XX].value = 0;
+                $('.controls input')[ind*4 + 2].value = 10;
+                $('.controls input')[ind*4 + 3].value = 0;
+                
+            }
+            console.log(orbitParams)
+        }
+        $('.resetButton').on('click',(a)=>{resetROEs(a)});
+        $('.closeButton').on('click',(a)=>{closeTab(a)});
         $('.controlTitle input').on('input',changeColor);
     </script>
 </body>
