@@ -201,9 +201,9 @@ function drawOrbit(orbitParams) {
                 let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
                 centerpt = xyzToVec(gndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
                 //console.log(centerpt)
-                lhpts = angles.map(val => {return {x: 1.02*(centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val))),
-                    y: 1.02*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
-                    z: 1.02*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
+                lhpts = angles.map(val => {return {x: 1.01*(centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val))),
+                    y: 1.01*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
+                    z: 1.01*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
                 var material = new THREE.LineBasicMaterial({
                         color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
                         linewidth: 2
@@ -235,9 +235,9 @@ function drawOrbit(orbitParams) {
                 perpvec2 = perpvec2.map(val => {return (swc/2)*val/math.norm(perpvec2)});
                 let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
                 centerpt = xyzToVec(gndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
-                lhpts = angles.map(val => {return {x: 1.02*(centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val))),
-                    y: 1.02*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
-                    z: 1.02*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
+                lhpts = angles.map(val => {return {x: 1.01*(centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val))),
+                    y: 1.01*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
+                    z: 1.01*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
                 localHoriz[index].geometry.setFromPoints(lhpts)
                 if (!localHoriz[0].visible){
                     localHoriz.forEach(lineobj => {lineobj.visible = true;});
@@ -324,9 +324,9 @@ function drawConst(constParams) {
                 let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
                 centerpt = xyzToVec(constGndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
                 //console.log(centerpt)
-                lhpts = angles.map(val => {return {x: 1.02*(centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val))),
-                    y: 1.02*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
-                    z: 1.02*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
+                lhpts = angles.map(val => {return {x: 1.01*(centerpt[0] + (perpvec1[0]*math.sin(val))+(perpvec2[0]*math.cos(val))),
+                    y: 1.01*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
+                    z: 1.01*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
                 var material = new THREE.LineBasicMaterial({
                         color: $('.constInfo input')[0].value,
                         linewidth: 2
@@ -359,9 +359,9 @@ function drawConst(constParams) {
                 //console.log(perpvec1,perpvec2)
                 let angles = Array(31).fill(0).map((val,ind)=>{return (ind/30)*2*math.PI})
                 centerpt = xyzToVec(constGndPts[index].position).map(val => {return val*math.sqrt(1-math.pow(swc/2,2))})
-                lhpts = angles.map(val => {return {x: 1.02*(centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val))),
-                    y: 1.02*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
-                    z: 1.02*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
+                lhpts = angles.map(val => {return {x: 1.01*(centerpt[0] + (perpvec1[0]*math.cos(val))+(perpvec2[0]*math.sin(val))),
+                    y: 1.01*(centerpt[1] + (perpvec1[1]*math.cos(val))+(perpvec2[1]*math.sin(val))),
+                    z: 1.01*(centerpt[2] + (perpvec1[2]*math.cos(val))+(perpvec2[2]*math.sin(val)))}});
                 //console.log(lhpts)
                 constLocalHoriz[index].geometry.setFromPoints(lhpts)
                 if (!constLocalHoriz[0].visible){
@@ -453,9 +453,9 @@ function drawLightSources() {
 }
 
 function getGroundPoint(x,y,z){
-    return {x: (1.02/(math.norm([x,y,z]))*x),
-            y: (1.02/(math.norm([x,y,z]))*y),
-            z: (1.02/(math.norm([x,y,z]))*z)};
+    return {x: (1.0/(math.norm([x,y,z]))*x),
+            y: (1.0/(math.norm([x,y,z]))*y),
+            z: (1.0/(math.norm([x,y,z]))*z)};
 }
 
 $('#optionsList input').on('input', () => {
