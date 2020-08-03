@@ -40,15 +40,6 @@ function handleClick(valueX, valueY) {
 function handleKeyPress(k) {
     k = k.toLowerCase();
     switch (k) {
-        case '=':
-            app.axisLimits -= 1;
-            break;
-        case '-':
-            if (app.axisLimits < 5) {
-                return;
-            }
-            app.axisLimits += 1;
-            break;
         case (',' || '<'):
             if (app.tactic === 'target' && app.tacticData.targetPos > 1) {
                 let {x, y} = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]+app.tacticData.targetPos];
@@ -102,18 +93,6 @@ function handleKeyPress(k) {
             }
 
             break;
-        case 'a':
-            app.axisCenter[0] += 1;
-            break;
-        case 'd':
-            app.axisCenter[0] -= 1;
-            break;
-        case 'w':
-            app.axisCenter[1] += 1;
-            break;
-        case 's':
-            app.axisCenter[1] -= 1;
-            break;
         case 'e':
             if (app.chosenWaypoint === undefined) {
                 return;
@@ -164,7 +143,7 @@ function handleKeyPress(k) {
             }
             app.tactic = 'target';
             
-            $('.info-right')[0].textContent = 'Target burn by hovering over desired location. Change target waypoint with [<] & [>]'
+            $('.info-right').text('Target burn by hovering over desired location. Change target waypoint with [<] & [>]');
             let totalDv = 0;
             app.players[app.chosenWaypoint[1]].burns.forEach((burn, element) => {
                 if (element < app.chosenWaypoint[0]) {
