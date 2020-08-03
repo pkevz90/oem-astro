@@ -1,5 +1,27 @@
 var teamNum, $turn = $('.selectable:first span');;
 createGraph();
+$(window).on('mousewheel',event => {
+    app.axisLimits -= event.deltaY*5;
+    setAxisZoomPos();
+})
+$('canvas').mousedown(event => {
+    app.appDrag = [[event.offsetX,event.offsetY],
+                   [...app.axisCenter]];
+    $('canvas').css('cursor','grabbing')
+})
+$('canvas').mousemove(event => {
+    if (!app.appDrag) {
+        return;
+    }
+    app.axisCenter[0] = app.appDrag[1][0] + 2*(event.offsetX-app.appDrag[0][0])*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
+    app.axisCenter[1] = app.appDrag[1][1] + 2*(event.offsetY-app.appDrag[0][1])*0.5*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+    setAxisZoomPos();
+})
+$('canvas').mouseup(() => {
+    app.appDrag = undefined;
+    $('canvas').css('cursor','grab')
+})
+
 $('.nav-element-right').on('click', () => {
     $('.instruction-screen').slideToggle(250);
 })
