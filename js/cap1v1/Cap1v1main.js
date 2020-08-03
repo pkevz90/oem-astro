@@ -19,6 +19,7 @@ let app = {
 	chosenWaypoint: undefined,
 	axisLimits: 100,
 	axisCenter: [0, 0],
+	appDrag: undefined,
 	currentTime: 0,
 	initSunVector: [
 		[0],
@@ -47,8 +48,8 @@ let app = {
 	updateApp: function () {
 		for (var sat in app.players) {
 			app.players[sat].calculateTrajecory();
-			calcData(app.currentTime);
 		}
+		calcData(app.currentTime);
 	}
 }
 

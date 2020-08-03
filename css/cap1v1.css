@@ -259,3 +259,6 @@ input {
     max-height: 35vh;
     overflow-y: scroll;
 }
+canvas {
+    cursor: grab;
+}
