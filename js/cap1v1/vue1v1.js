@@ -81,42 +81,6 @@ var sideData = new Vue({
             return this.scenario_data.scenLength / this.scenario_data.numBurns;
         }
     },
-    methods: {
-        burnClick: function (event) {
-            let ii = 0;
-            let target = event.target;
-            while (!$(target).is('tr')) {
-                target = $(target).parent();
-                ii++;
-                if (ii > 5) {
-                    return;
-                }
-            }
-            ii = $('.burnRows').index(target);
-            let sat = (ii >= this._data.scenario_data.numBurns) ? 'red' : 'blue';
-            ii = (ii >= this._data.scenario_data.numBurns) ? ii - this._data.scenario_data.numBurns : ii;
-            if (app.chosenWaypoint === undefined) {
-                app.tactic = '';
-            } else if ((app.chosenWaypoint[0] === ii) && (sat === 'blue')) {
-                // console.log(1)
-                app.tactic = 'burn';
-            } else if ((app.chosenWaypoint[0] === ii) && (sat === 'red')) {
-                // console.log(2)
-                app.tactic = 'burn';
-            } else {
-                // console.log(3)
-                app.tactic = '';
-            }
-            setSelectedWaypoint(ii, sat);
-            app.chartData.burnDir.data = [{
-                x: 0,
-                y: 0
-            }, {
-                x: 0,
-                y: 0
-            }];
-        },
-    }
 });
 
 var setupData = new Vue({
