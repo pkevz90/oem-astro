@@ -147,7 +147,7 @@
                     </tr>
                 </thead>
                 <tbody class="pointer">
-                    <tr is="burn-data" v-for="(burn,index) in scenario_data.blueBurns" :satburn="burn" :thisindex="index" :key="index" :turn_length="turnLength"></tr>
+                    <tr is="burn-data" v-for="(burn,index) in scenario_data.burns.blue" :satburn="burn" :thisindex="index" :key="index" :turn_length="turnLength"></tr>
                 </tbody>
             </table>
         </div>
@@ -162,7 +162,7 @@
                     </tr>
                 </thead>
                 <tbody class="pointer">
-                    <tr is="burn-data" v-for="(burn,index) in scenario_data.redBurns" :satburn="burn" :thisindex="index" :key="index" :turn_length="turnLength"></tr>
+                    <tr is="burn-data" v-for="(burn,index) in scenario_data.burns.red" :satburn="burn" :thisindex="index" :key="index" :turn_length="turnLength"></tr>
                 </tbody>
             </table>
         </div>

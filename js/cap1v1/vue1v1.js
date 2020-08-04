@@ -1,14 +1,50 @@
 Vue.component('burn-data', {
     props: ['satburn','thisindex','turn_length'],
     data: function() {
+        // console.log(this.satburn);
         return {};
     },
-    template:  '<tr>\
+    template:  '<tr @click="burnclick">\
                     <th>{{ (thisindex * turn_length).toFixed(1) }}</th>\
                     <td>{{ satburn[0].toFixed(3) }}</td>\
                     <td>{{ satburn[1].toFixed(3) }}</td>\
                 </tr>',
-    
+    methods: {
+        burnclick: function(event) {
+            let $target = event.target;
+            while (!$($target).is('th')) {
+                $target = $($target).prev();
+            }
+            let burnNumber = Number($($target).text()) / this.turn_length;
+            let playerIndex = $('.burn-container').index($($target).parent().parent().parent().parent())
+            let sat = Object.keys(app.players)[playerIndex];
+            setSelectedWaypoint(burnNumber, sat);
+        }
+    }   
+})
+
+Vue.component('player-data', {
+    props: ['inburns','in_turn_length'],
+    template: ' <div>\
+                    <div class="controlTitle pointer">\
+                        <span>Satellite</span>\
+                    </div>\
+                    <div class="side-data" id="dataContainer" >\
+                        <table class="table" id="burnTable" style="margin-top: 3%;">\
+                            <thead>\
+                                <tr>\
+                                    <th>Time [hrs]</th>\
+                                    <th>Radial [m/s]</th>\
+                                    <th>In-Track [m/s]</th>\
+                                </tr>\
+                            </thead>\
+                            <tbody> class="pointer">\
+                                <tr is="burn-data" v-for=(burn,index) in inburns" :satburn="burn" :thisindex="index" :key="index" :turn_length="in_turn_length"></tr>\
+                            </tbody>\
+                        </table>\
+                    </div>\
+                </div>'
+
 })
 
 var sideData = new Vue({
@@ -21,8 +57,10 @@ var sideData = new Vue({
             closeTime: 0,
             blueDv: 0,
             redDv: 0,
-            blueBurns: [[0,0],[0,0],[0,0],[0,0],[0,0]],
-            redBurns: [[0,0],[0,0],[0,0],[0,0],[0,0]],
+            burns: {
+                blue: [[0,0]],
+                red: [[0,0]]
+            },
             scenLength: 15,
             numBurns: 5
         }

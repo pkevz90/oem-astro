@@ -318,8 +318,10 @@ function createGraph() {
 }
 
 function startGame() {
-	sideData.scenario_data.blueBurns = app.players.blue.burns;
-	sideData.scenario_data.redBurns = app.players.red.burns;
+	for (sat in app.players) {
+		sideData.scenario_data.burns[sat] = app.players[sat].burns;
+		sideData.scenario_data.burns[sat] = app.players[sat].burns;
+	}
 	app.chartData = {
 		burnDir: globalChartRef.config.data.datasets[6],
 		sun: globalChartRef.config.data.datasets[7],
