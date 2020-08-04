@@ -147,11 +147,7 @@
                     </tr>
                 </thead>
                 <tbody class="pointer">
-                    <tr class="burnRows" v-for="(burn,index) in scenario_data.blueBurns" v-on:click="burnClick">
-                        <th>+ {{ (scenario_data.scenLength/scenario_data.numBurns*(index)).toFixed(1) }}</th>
-                        <td>{{ burn[0].toFixed(3) }}</td>
-                        <td>{{ burn[1].toFixed(3) }}</td>
-                    </tr>
+                    <tr is="burn-data" v-for="(burn,index) in scenario_data.blueBurns" :satburn="burn" :thisindex="index" :key="index" :turn_length="turnLength"></tr>
                 </tbody>
             </table>
         </div>
@@ -166,11 +162,7 @@
                     </tr>
                 </thead>
                 <tbody class="pointer">
-                    <tr class="burnRows" v-for="(burn,index) in scenario_data.redBurns" v-on:click="burnClick">
-                        <th>+ {{ (scenario_data.scenLength/scenario_data.numBurns*(index)).toFixed(1) }}</th>
-                        <td>{{ burn[0].toFixed(3) }}</td>
-                        <td>{{ burn[1].toFixed(3) }}</td>
-                    </tr>
+                    <tr is="burn-data" v-for="(burn,index) in scenario_data.redBurns" :satburn="burn" :thisindex="index" :key="index" :turn_length="turnLength"></tr>
                 </tbody>
             </table>
         </div>

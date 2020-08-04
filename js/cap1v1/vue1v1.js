@@ -1,3 +1,16 @@
+Vue.component('burn-data', {
+    props: ['satburn','thisindex','turn_length'],
+    data: function() {
+        return {};
+    },
+    template:  '<tr>\
+                    <th>{{ (thisindex * turn_length).toFixed(1) }}</th>\
+                    <td>{{ satburn[0].toFixed(3) }}</td>\
+                    <td>{{ satburn[1].toFixed(3) }}</td>\
+                </tr>',
+    
+})
+
 var sideData = new Vue({
     el: '#side-data',
     data: {
@@ -12,6 +25,11 @@ var sideData = new Vue({
             redBurns: [[0,0],[0,0],[0,0],[0,0],[0,0]],
             scenLength: 15,
             numBurns: 5
+        }
+    },
+    computed: {
+        turnLength: function() {
+            return this.scenario_data.scenLength / this.scenario_data.numBurns;
         }
     },
     methods: {
