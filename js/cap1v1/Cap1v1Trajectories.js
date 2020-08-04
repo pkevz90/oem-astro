@@ -14,18 +14,18 @@ function calculateTrajecory() {
 		pVR = PhiVR(app.calcDt),
 		pVV = PhiVV(app.calcDt);
 
-	if (this.name.substr(0, 4) === 'gray') {
-		for (let t = 0; t <= app.scenLength * 3600; t += app.calcDt) {
-			let r1 = r;
-			r = math.add(math.multiply(pRR, r), math.multiply(pRV, v));
-			v = math.add(math.multiply(pVR, r1), math.multiply(pVV, v));
-			this.dataLoc.trajectory.data.push({
-				x: r[1][0],
-				y: r[0][0]
-			});
-		}
-		return;
-	}
+	// if (this.name.substr(0, 4) === 'gray') {
+	// 	for (let t = 0; t <= app.scenLength * 3600; t += app.calcDt) {
+	// 		let r1 = r;
+	// 		r = math.add(math.multiply(pRR, r), math.multiply(pRV, v));
+	// 		v = math.add(math.multiply(pVR, r1), math.multiply(pVV, v));
+	// 		this.dataLoc.trajectory.data.push({
+	// 			x: r[1][0],
+	// 			y: r[0][0]
+	// 		});
+	// 	}
+	// 	return;
+	// }
 	let turn = Number($turn.text()) - 1;
 	this.dataLoc.waypoints.data = [];
 	this.dataLoc.trajectory.data = [];

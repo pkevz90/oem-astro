@@ -113,8 +113,9 @@ $('.start-button').on('click', () => {
             B: Number(setupData.gray1.B)
         });
         app.players.gray1 = new Satellite(init, 'gray1', {
-            trajectory: globalChartRef.config.data.datasets[14],
-            current: globalChartRef.config.data.datasets[13]
+            trajectory: globalChartRef.config.data.datasets[15],
+            current: globalChartRef.config.data.datasets[14],
+            waypoints: globalChartRef.config.data.datasets[13]
         })
     }
     if (setupData.gray2.exist) {
