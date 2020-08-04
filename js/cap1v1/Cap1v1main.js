@@ -4,9 +4,7 @@ class Satellite {
 	constructor(initState, name, dataLoc) {
 		this.name = name;
 		this.initState = initState;
-		if (name !== 'gray') {
-			this.burns = math.zeros(app.numBurns,2)._data;
-		}
+		this.burns = math.zeros(app.numBurns,2)._data;
 		this.calculateTrajecory = calculateTrajecory;
 		this.dataLoc = dataLoc;
 	}
@@ -173,6 +171,13 @@ function createGraph() {
 				borderDash: [10, 10],
 				borderColor: 'rgba(255,255,255,0.5)',
 			}, {
+				// label: "Blue Waypoints",
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 7,
+				borderColor: 'rgba(120,200,255,1)'
+			},{
 				// label: "Current Gray1",
 				data: [],
 				showLine: false,
@@ -318,14 +323,16 @@ function createGraph() {
 }
 
 function startGame() {
-	sideData.scenario_data.blueBurns = app.players.blue.burns;
-	sideData.scenario_data.redBurns = app.players.red.burns;
+	for (sat in app.players) {
+		sideData.scenario_data.burns[sat] = app.players[sat].burns;
+		sideData.scenario_data.burns[sat] = app.players[sat].burns;
+	}
 	app.chartData = {
 		burnDir: globalChartRef.config.data.datasets[6],
 		sun: globalChartRef.config.data.datasets[7],
 		selected: globalChartRef.config.data.datasets[8],
 		relative: globalChartRef.config.data.datasets[12],
-		targetLim: globalChartRef.config.data.datasets[17],
+		targetLim: globalChartRef.config.data.datasets[18],
 		view: globalChartRef.config.data.datasets[11]
 	};
 	for (sat in app.players) {

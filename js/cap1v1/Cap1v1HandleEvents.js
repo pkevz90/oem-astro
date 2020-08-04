@@ -223,13 +223,11 @@ function checkClose(X, Y) {
     let turn = Number($turn.text()) - 1;
 
     for (sat in app.players) {
-        if (app.players[sat].name.substr(0, 4) === 'gray') {
-            continue;
-        }
         for (var ii = turn; ii < app.players[sat].dataLoc.waypoints.data.length; ii++) {
             xPoint = app.players[sat].dataLoc.waypoints.data[ii].x;
             yPoint = app.players[sat].dataLoc.waypoints.data[ii].y;
             if (math.norm([xPoint - X, yPoint - Y]) < 2) {
+                console.log(ii,sat);
                 setSelectedWaypoint(ii, sat);
                 return true;
             }

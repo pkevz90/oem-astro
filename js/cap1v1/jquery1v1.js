@@ -113,8 +113,9 @@ $('.start-button').on('click', () => {
             B: Number(setupData.gray1.B)
         });
         app.players.gray1 = new Satellite(init, 'gray1', {
-            trajectory: globalChartRef.config.data.datasets[14],
-            current: globalChartRef.config.data.datasets[13]
+            trajectory: globalChartRef.config.data.datasets[15],
+            current: globalChartRef.config.data.datasets[14],
+            waypoints: globalChartRef.config.data.datasets[13]
         })
     }
     if (setupData.gray2.exist) {
@@ -175,17 +176,17 @@ $('.start-button').on('click', () => {
     startGame();
 
 })
-$('.controlTitle').on('click', (a) => {
-    if ($(a.target).is('span')) {
-        a.target = $(a.target).parent();
-    }
-    if (!$(a.target).next().is(":hidden")) {
-        $(a.target).next().slideUp(250);
-        return;
-    }
-    $('.side-data').slideUp(250);
-    $(a.target).next().slideDown(250);
-})
+// $('.controlTitle').on('click', (a) => {
+//     if ($(a.target).is('span')) {
+//         a.target = $(a.target).parent();
+//     }
+//     if (!$(a.target).next().is(":hidden")) {
+//         $(a.target).next().slideUp(250);
+//         return;
+//     }
+//     $('.side-data').slideUp(250);
+//     $(a.target).next().slideDown(250);
+// })
 $('.nav-element input').on('input', (a) => {
     $(a.target).parent().prev().find('p').find('span').text(hrsToTime(a.target.value));
     app.currentTime = Number(a.target.value);
