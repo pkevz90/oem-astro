@@ -15,9 +15,12 @@ Vue.component('burn-data', {
             while (!$($target).is('th')) {
                 $target = $($target).prev();
             }
+            console.log(event.target);
+            console.log($($target).parent().parent().parent().parent());
             let burnNumber = Number($($target).text()) / this.turn_length;
             let playerIndex = $('.burn-container').index($($target).parent().parent().parent().parent())
             let sat = Object.keys(app.players)[playerIndex];
+            console.log(sat);
             setSelectedWaypoint(burnNumber, sat);
         }
     }   
@@ -25,11 +28,14 @@ Vue.component('burn-data', {
 
 Vue.component('player-data', {
     props: ['inburns','in_turn_length'],
+    data: function() {
+        return {visible: false};
+    },
     template: ' <div>\
-                    <div class="controlTitle pointer">\
+                    <div class="controlTitle pointer" @click="togglelist">\
                         <span>Satellite</span>\
                     </div>\
-                    <div class="side-data" id="dataContainer" >\
+                    <div class="side-data burn-container" id="dataContainer" v-if="visible">\
                         <table class="table" id="burnTable" style="margin-top: 3%;">\
                             <thead>\
                                 <tr>\
@@ -38,12 +44,17 @@ Vue.component('player-data', {
                                     <th>In-Track [m/s]</th>\
                                 </tr>\
                             </thead>\
-                            <tbody> class="pointer">\
-                                <tr is="burn-data" v-for=(burn,index) in inburns" :satburn="burn" :thisindex="index" :key="index" :turn_length="in_turn_length"></tr>\
+                            <tbody class="pointer">\
+                                <tr is="burn-data" v-for="(burn,index) in inburns" :satburn="burn" :thisindex="index" :key="index" :turn_length="in_turn_length"></tr>\
                             </tbody>\
                         </table>\
                     </div>\
-                </div>'
+                </div>',
+    methods: {
+        togglelist: function() {
+            this.visible = !this.visible;
+        }
+    }
 
 })
 

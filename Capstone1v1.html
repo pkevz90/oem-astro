@@ -136,36 +136,7 @@
             <p class="dropdown-item">Blue &#916V: {{ scenario_data.blueDv.toFixed(2) }} m/s</p>
             <p class="dropdown-item">Red &#916V: {{ scenario_data.redDv.toFixed(2) }} m/s</p>
         </div>
-        <div class="controlTitle pointer"><span style="color:rgb(100,150,255)">Blue Satellite</span></div>
-        <div class="side-data burn-container" id="dataContainer" style="display: none;">
-            <table class="table" id="burnTable" style="margin-top: 3%;">
-                <thead>
-                    <tr>
-                        <th>Time [hrs]</th>
-                        <th>Radial [m/s]</th>
-                        <th>In-Track [m/s]</th>
-                    </tr>
-                </thead>
-                <tbody class="pointer">
-                    <tr is="burn-data" v-for="(burn,index) in scenario_data.burns.blue" :satburn="burn" :thisindex="index" :key="index" :turn_length="turnLength"></tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="controlTitle pointer"><span style="color:rgb(255,100,50)">Red Satellite</span></div>
-        <div class="side-data burn-container" id="dataContainer" style="display: none;">
-            <table class="table" id="burnTable" style="margin-top: 3%;">
-                <thead>
-                    <tr>
-                        <th>Time [hrs]</th>
-                        <th>Radial [m/s]</th>
-                        <th>In-Track [m/s]</th>
-                    </tr>
-                </thead>
-                <tbody class="pointer">
-                    <tr is="burn-data" v-for="(burn,index) in scenario_data.burns.red" :satburn="burn" :thisindex="index" :key="index" :turn_length="turnLength"></tr>
-                </tbody>
-            </table>
-        </div>
+        <player-data v-for="player in scenario_data.burns" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>
     <div style="width:95%; height:auto; margin: auto; padding-top: 1%; z-index: 1;">
         <canvas id="ChartCnvs" width="51" height="23"></canvas>

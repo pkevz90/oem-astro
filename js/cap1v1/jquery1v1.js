@@ -175,17 +175,17 @@ $('.start-button').on('click', () => {
     startGame();
 
 })
-$('.controlTitle').on('click', (a) => {
-    if ($(a.target).is('span')) {
-        a.target = $(a.target).parent();
-    }
-    if (!$(a.target).next().is(":hidden")) {
-        $(a.target).next().slideUp(250);
-        return;
-    }
-    $('.side-data').slideUp(250);
-    $(a.target).next().slideDown(250);
-})
+// $('.controlTitle').on('click', (a) => {
+//     if ($(a.target).is('span')) {
+//         a.target = $(a.target).parent();
+//     }
+//     if (!$(a.target).next().is(":hidden")) {
+//         $(a.target).next().slideUp(250);
+//         return;
+//     }
+//     $('.side-data').slideUp(250);
+//     $(a.target).next().slideDown(250);
+// })
 $('.nav-element input').on('input', (a) => {
     $(a.target).parent().prev().find('p').find('span').text(hrsToTime(a.target.value));
     app.currentTime = Number(a.target.value);
