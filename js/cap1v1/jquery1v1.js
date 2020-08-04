@@ -1,6 +1,6 @@
 var teamNum, $turn = $('.selectable:first span');;
 createGraph();
-$(window).on('mousewheel',event => {
+$('canvas').on('mousewheel',event => {
     app.axisLimits -= event.deltaY*5;
     setAxisZoomPos();
 })
