@@ -101,10 +101,7 @@ function handleKeyPress(k) {
             let newI = Number(window.prompt('Enter new in-track burn [m/s]: '));
 
             let sat = app.chosenWaypoint[1];
-            app.players[sat].burns[app.chosenWaypoint[0]][0] = newR;
-            app.players[sat].burns[app.chosenWaypoint[0]][1] = newI;
-            // app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (newR).toFixed(3);
-            // app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (newI).toFixed(3);
+            app.players[sat].burns.splice(app.chosenWaypoint[0],1,[newR,newI]);
             let xPoint = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].x,
                 yPoint = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].y;
             app.chartData.burnDir.data = [{
@@ -218,19 +215,20 @@ function setSelectedWaypoint(index, side) {
     globalChartRef.update();
 }
 
-function checkClose(X, Y) {
+function checkClose(X, Y, change = true) {
     let xPoint, yPoint;
     let turn = Number($turn.text()) - 1;
 
     for (sat in app.players) {
-        if (app.players[sat].name.substr(0, 4) === 'gray') {
-            continue;
-        }
         for (var ii = turn; ii < app.players[sat].dataLoc.waypoints.data.length; ii++) {
             xPoint = app.players[sat].dataLoc.waypoints.data[ii].x;
             yPoint = app.players[sat].dataLoc.waypoints.data[ii].y;
-            if (math.norm([xPoint - X, yPoint - Y]) < 2) {
-                setSelectedWaypoint(ii, sat);
+            if (math.norm([xPoint - X, yPoint - Y]) < app.axisLimits / 25) {
+                // console.log(ii,sat);
+                // console.log(change);
+                if (change) {
+                    setSelectedWaypoint(ii, sat);
+                }
                 return true;
             }
         }

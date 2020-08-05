@@ -5,6 +5,14 @@ $('canvas').on('mousewheel',event => {
     setAxisZoomPos();
 })
 $('canvas').mousedown(event => {
+    if (app.tactic !== '') {
+        return;
+    }
+    let X = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
+    let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+    if (checkClose(X, Y, false)) {
+        return;
+    }
     app.appDrag = [[event.offsetX,event.offsetY],
                    [...app.axisCenter]];
     $('canvas').css('cursor','grabbing')
@@ -61,6 +69,18 @@ $('.selectable:first').on('click', () => {
     }, 15);
 
 })
+// Other control title buttons are handled by callback within Vue object
+$('.controlTitle :first').on('click', (a) => {
+    if ($(a.target).is('span')) {
+        a.target = $(a.target).parent();
+    }
+    if (!$(a.target).next().is(":hidden")) {
+        $(a.target).next().slideUp(250);
+        return;
+    }
+    $('.side-data').slideUp(250);
+    $(a.target).next().slideDown(250);
+})
 $('.start-button').on('click', () => {
     $('.setup-screen').fadeOut(500);
     $('.selectable:first').parent().fadeIn(500);
@@ -112,9 +132,10 @@ $('.start-button').on('click', () => {
             yd: Number(setupData.gray1.yd),
             B: Number(setupData.gray1.B)
         });
-        app.players.gray1 = new Satellite(init, 'gray1', {
-            trajectory: globalChartRef.config.data.datasets[14],
-            current: globalChartRef.config.data.datasets[13]
+        app.players.green = new Satellite(init, 'green', {
+            trajectory: globalChartRef.config.data.datasets[15],
+            current: globalChartRef.config.data.datasets[14],
+            waypoints: globalChartRef.config.data.datasets[13]
         })
     }
     if (setupData.gray2.exist) {
@@ -124,9 +145,10 @@ $('.start-button').on('click', () => {
             yd: Number(setupData.gray2.yd),
             B:  Number(setupData.gray2.B)
         });
-        app.players.gray2 = new Satellite(init, 'gray2', {
-            trajectory: globalChartRef.config.data.datasets[16],
-            current: globalChartRef.config.data.datasets[15]
+        app.players.gray = new Satellite(init, 'gray', {
+            waypoints: globalChartRef.config.data.datasets[16],
+            trajectory: globalChartRef.config.data.datasets[18],
+            current: globalChartRef.config.data.datasets[17]
         })
     }
     app.deltaVAvail = Number(setupData.scenario_start.dVavail);
@@ -156,7 +178,7 @@ $('.start-button').on('click', () => {
                     let frames = 15, frame = 0;
                     app.burnTransition = true;
                     let intB = setInterval(() => {
-                        app.players.red.burns[change] = math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change])
+                        app.players.red.burns.splice(change,1,math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change]));
                         frame++;
                         app.players.red.calculateTrajecory();
                         calcData(app.currentTime);
@@ -175,17 +197,17 @@ $('.start-button').on('click', () => {
     startGame();
 
 })
-$('.controlTitle').on('click', (a) => {
-    if ($(a.target).is('span')) {
-        a.target = $(a.target).parent();
-    }
-    if (!$(a.target).next().is(":hidden")) {
-        $(a.target).next().slideUp(250);
-        return;
-    }
-    $('.side-data').slideUp(250);
-    $(a.target).next().slideDown(250);
-})
+// $('.controlTitle').on('click', (a) => {
+//     if ($(a.target).is('span')) {
+//         a.target = $(a.target).parent();
+//     }
+//     if (!$(a.target).next().is(":hidden")) {
+//         $(a.target).next().slideUp(250);
+//         return;
+//     }
+//     $('.side-data').slideUp(250);
+//     $(a.target).next().slideDown(250);
+// })
 $('.nav-element input').on('input', (a) => {
     $(a.target).parent().prev().find('p').find('span').text(hrsToTime(a.target.value));
     app.currentTime = Number(a.target.value);

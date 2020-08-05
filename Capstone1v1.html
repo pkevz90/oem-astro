@@ -104,7 +104,7 @@
         </div>
         <div class="setup-container">
             <div style="display: none;">
-                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #1</p>
+                <p class="container-title" style="color: rgb(160,255,160)">Green Satellite</p>
                 <p><u>Initial State</u></p>
                 <p><em>Ae</em>: <input v-model="gray1.ae"> km</p>
                 <p><em>X<sub>d</em></sub>: <input v-model="gray1.xd"> km</p>
@@ -115,7 +115,7 @@
         </div>
         <div class="setup-container">
             <div style="display: none;">
-                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #2</p>
+                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite</p>
                 <p><u>Initial State</u></p>
                 <p><em>Ae</em>: <input v-model="gray2.ae"> km</p>
                 <p><em>X<sub>d</em></sub>: <input v-model="gray2.xd"> km</p>
@@ -132,46 +132,9 @@
         <div class="side-data" id="dataContainer">
             <p class="dropdown-item">Current Range: {{ scenario_data.curRange.toFixed(2) }} km</p>
             <p class="dropdown-item">Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} km @ {{ scenario_data.closeTime }}</p>
-            <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }} degrees</p>
+            <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }}<sup>o</sup></p>
         </div>
-        <div class="controlTitle pointer"><span style="color:rgb(100,150,255)">Blue ({{ scenario_data.blueDv.toFixed(2) }} m/s)</span></div>
-        <div class="side-data burn-container" id="dataContainer" style="display: none;">
-            <table class="table" id="burnTable" style="margin-top: 3%;">
-                <thead>
-                    <tr>
-                        <th>Time [hrs]</th>
-                        <th>Radial [m/s]</th>
-                        <th>In-Track [m/s]</th>
-                    </tr>
-                </thead>
-                <tbody class="pointer">
-                    <tr class="burnRows" v-for="(burn,index) in scenario_data.blueBurns" v-on:click="burnClick">
-                        <th>+ {{ (scenario_data.scenLength/scenario_data.numBurns*(index)).toFixed(1) }}</th>
-                        <td>{{ burn[0].toFixed(3) }}</td>
-                        <td>{{ burn[1].toFixed(3) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="controlTitle pointer"><span style="color:rgb(255,100,50)">Red ({{ scenario_data.redDv.toFixed(2) }} m/s)</span></div>
-        <div class="side-data burn-container" id="dataContainer" style="display: none;">
-            <table class="table" id="burnTable" style="margin-top: 3%;">
-                <thead>
-                    <tr>
-                        <th>Time [hrs]</th>
-                        <th>Radial [m/s]</th>
-                        <th>In-Track [m/s]</th>
-                    </tr>
-                </thead>
-                <tbody class="pointer">
-                    <tr class="burnRows" v-for="(burn,index) in scenario_data.redBurns" v-on:click="burnClick">
-                        <th>+ {{ (scenario_data.scenLength/scenario_data.numBurns*(index)).toFixed(1) }}</th>
-                        <td>{{ burn[0].toFixed(3) }}</td>
-                        <td>{{ burn[1].toFixed(3) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <player-data v-for="player in scenario_data.players" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>
     <div style="width:95%; height:auto; margin: auto; padding-top: 1%; z-index: 1;">
         <canvas id="ChartCnvs" width="51" height="23"></canvas>
