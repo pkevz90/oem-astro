@@ -215,7 +215,7 @@ function setSelectedWaypoint(index, side) {
     globalChartRef.update();
 }
 
-function checkClose(X, Y) {
+function checkClose(X, Y, change = true) {
     let xPoint, yPoint;
     let turn = Number($turn.text()) - 1;
 
@@ -223,9 +223,12 @@ function checkClose(X, Y) {
         for (var ii = turn; ii < app.players[sat].dataLoc.waypoints.data.length; ii++) {
             xPoint = app.players[sat].dataLoc.waypoints.data[ii].x;
             yPoint = app.players[sat].dataLoc.waypoints.data[ii].y;
-            if (math.norm([xPoint - X, yPoint - Y]) < 2) {
-                console.log(ii,sat);
-                setSelectedWaypoint(ii, sat);
+            if (math.norm([xPoint - X, yPoint - Y]) < app.axisLimits / 25) {
+                // console.log(ii,sat);
+                console.log(change);
+                if (change) {
+                    setSelectedWaypoint(ii, sat);
+                }
                 return true;
             }
         }

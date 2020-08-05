@@ -5,6 +5,14 @@ $('canvas').on('mousewheel',event => {
     setAxisZoomPos();
 })
 $('canvas').mousedown(event => {
+    if (app.tactic !== '') {
+        return;
+    }
+    let X = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
+    let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+    if (checkClose(X, Y, false)) {
+        return;
+    }
     app.appDrag = [[event.offsetX,event.offsetY],
                    [...app.axisCenter]];
     $('canvas').css('cursor','grabbing')

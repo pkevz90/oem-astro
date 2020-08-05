@@ -132,7 +132,7 @@
         <div class="side-data" id="dataContainer">
             <p class="dropdown-item">Current Range: {{ scenario_data.curRange.toFixed(2) }} km</p>
             <p class="dropdown-item">Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} km @ {{ scenario_data.closeTime }}</p>
-            <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }} degrees</p>
+            <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }}<sup>o</sup></p>
         </div>
         <player-data v-for="player in scenario_data.players" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>
