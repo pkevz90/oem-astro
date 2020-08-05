@@ -101,10 +101,7 @@ function handleKeyPress(k) {
             let newI = Number(window.prompt('Enter new in-track burn [m/s]: '));
 
             let sat = app.chosenWaypoint[1];
-            app.players[sat].burns[app.chosenWaypoint[0]][0] = newR;
-            app.players[sat].burns[app.chosenWaypoint[0]][1] = newI;
-            // app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2].textContent = (newR).toFixed(3);
-            // app.spans.manRows[sat][(app.chosenWaypoint[0]) * 2 + 1].textContent = (newI).toFixed(3);
+            app.players[sat].burns.splice(app.chosenWaypoint[0],1,[newR,newI]);
             let xPoint = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].x,
                 yPoint = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].y;
             app.chartData.burnDir.data = [{

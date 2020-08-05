@@ -61,6 +61,18 @@ $('.selectable:first').on('click', () => {
     }, 15);
 
 })
+// Other control title buttons are handled by callback within Vue object
+$('.controlTitle :first').on('click', (a) => {
+    if ($(a.target).is('span')) {
+        a.target = $(a.target).parent();
+    }
+    if (!$(a.target).next().is(":hidden")) {
+        $(a.target).next().slideUp(250);
+        return;
+    }
+    $('.side-data').slideUp(250);
+    $(a.target).next().slideDown(250);
+})
 $('.start-button').on('click', () => {
     $('.setup-screen').fadeOut(500);
     $('.selectable:first').parent().fadeIn(500);
@@ -112,7 +124,7 @@ $('.start-button').on('click', () => {
             yd: Number(setupData.gray1.yd),
             B: Number(setupData.gray1.B)
         });
-        app.players.gray1 = new Satellite(init, 'gray1', {
+        app.players.green = new Satellite(init, 'green', {
             trajectory: globalChartRef.config.data.datasets[15],
             current: globalChartRef.config.data.datasets[14],
             waypoints: globalChartRef.config.data.datasets[13]

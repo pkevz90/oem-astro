@@ -171,27 +171,27 @@ function createGraph() {
 				borderDash: [10, 10],
 				borderColor: 'rgba(255,255,255,0.5)',
 			}, {
-				// label: "Blue Waypoints",
+				// label: "Green Waypoints",
 				data: [],
 				showLine: false,
 				fill: false,
 				pointRadius: 7,
-				borderColor: 'rgba(120,200,255,1)'
+				borderColor: 'rgba(160,255,160,1)'
 			},{
-				// label: "Current Gray1",
+				// label: "Current Green",
 				data: [],
 				showLine: false,
 				fill: false,
 				pointRadius: 15,
 				pointStyle: 'rect',
-				backgroundColor: 'rgba(150,150,150,1)',
+				backgroundColor: 'rgba(160,255,160,1)',
 			}, {
-				// label: "Gray Trajectory1",
+				// label: "Green Trajectory1",
 				data: [],
 				fill: false,
 				showLine: true,
 				pointRadius: 0,
-				borderColor: 'rgba(150,150,150,1)',
+				borderColor: 'rgba(160,255,160,1)',
 			}, {
 				// label: "Current Gray2",
 				data: [],
@@ -281,8 +281,6 @@ function createGraph() {
 
 						ticks.pop();
 						ticks.shift();
-						// ticks.pop();
-						// ticks.shift();
 						return ticks;
 					}
 				}],
@@ -308,8 +306,6 @@ function createGraph() {
 
 						ticks.pop();
 						ticks.shift();
-						// ticks.pop();
-						// ticks.shift();
 						return ticks;
 					}
 				}]
@@ -323,10 +319,16 @@ function createGraph() {
 }
 
 function startGame() {
+	let colors = {
+		blue:  'rgba(100,150,255,1)',
+		red:   'rgba(255,150,100,1)',
+		green: 'rgba(120,255,120,1)'
+	}
 	for (sat in app.players) {
-		Vue.set(sideData.scenario_data.burns,sat,app.players[sat].burns)
-		// sideData.scenario_data.burns[sat] = app.players[sat].burns;
-		// sideData.scenario_data.burns[sat] = app.players[sat].burns;
+		Vue.set(sideData.scenario_data.players,sat,{})
+		Vue.set(sideData.scenario_data.players[sat],'burns',app.players[sat].burns)
+		Vue.set(sideData.scenario_data.players[sat],'name',sat)
+		Vue.set(sideData.scenario_data.players[sat],'color',colors[sat])
 	}
 	app.chartData = {
 		burnDir: globalChartRef.config.data.datasets[6],

@@ -104,7 +104,7 @@
         </div>
         <div class="setup-container">
             <div style="display: none;">
-                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #1</p>
+                <p class="container-title" style="color: rgb(160,255,160)">Green Satellite</p>
                 <p><u>Initial State</u></p>
                 <p><em>Ae</em>: <input v-model="gray1.ae"> km</p>
                 <p><em>X<sub>d</em></sub>: <input v-model="gray1.xd"> km</p>
@@ -115,7 +115,7 @@
         </div>
         <div class="setup-container">
             <div style="display: none;">
-                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #2</p>
+                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite</p>
                 <p><u>Initial State</u></p>
                 <p><em>Ae</em>: <input v-model="gray2.ae"> km</p>
                 <p><em>X<sub>d</em></sub>: <input v-model="gray2.xd"> km</p>
@@ -134,7 +134,7 @@
             <p class="dropdown-item">Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} km @ {{ scenario_data.closeTime }}</p>
             <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }} degrees</p>
         </div>
-        <player-data v-for="player in scenario_data.burns" :inburns="player" :in_turn_length="turnLength"></player-data>
+        <player-data v-for="player in scenario_data.players" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>
     <div style="width:95%; height:auto; margin: auto; padding-top: 1%; z-index: 1;">
         <canvas id="ChartCnvs" width="51" height="23"></canvas>

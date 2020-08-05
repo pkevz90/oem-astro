@@ -19,9 +19,7 @@ Vue.component('burn-data', {
             console.log($($target).parent().parent().parent().parent());
             let burnNumber = Number($($target).text()) / this.turn_length;
             let playerIndex = $('.burn-container').index($($target).parent().parent().parent().parent())
-            console.log(playerIndex);
             let sat = Object.keys(app.players)[playerIndex];
-            console.log(sat);
             setSelectedWaypoint(burnNumber, sat);
         }
     }   
@@ -30,13 +28,14 @@ Vue.component('burn-data', {
 Vue.component('player-data', {
     props: ['inburns','in_turn_length'],
     data: function() {
+        // console.log(this.inburns);
         return {visible: false, totalDv: 0};
     },
     template: ' <div>\
-                    <div class="controlTitle pointer" @click="togglelist">\
-                        <span>Satellite ({{ totalDv.toFixed(1) }} m/s)</span>\
+                    <div class="controlTitle pointer" @click="togglelist" v-bind:style="{color: inburns.color}">\
+                        <span>{{inburns.name.toUpperCase()}} ({{ totalDv.toFixed(1) }} m/s)</span>\
                     </div>\
-                    <div class="side-data burn-container" id="dataContainer" v-if="visible">\
+                    <div class="side-data burn-container" id="dataContainer" style="display:none;">\
                         <table class="table" id="burnTable" style="margin-top: 3%;">\
                             <thead>\
                                 <tr>\
@@ -46,21 +45,30 @@ Vue.component('player-data', {
                                 </tr>\
                             </thead>\
                             <tbody class="pointer">\
-                                <tr is="burn-data" v-for="(burn,index) in inburns" :satburn="burn" :thisindex="index" :key="index" :turn_length="in_turn_length"></tr>\
+                                <tr is="burn-data" v-for="(burn,index) in inburns.burns" :satburn="burn" :thisindex="index" :key="index" :turn_length="in_turn_length"></tr>\
                             </tbody>\
                         </table>\
                     </div>\
                 </div>',
     methods: {
-        togglelist: function() {
-            this.visible = !this.visible;
+        togglelist: function(event) {
+            let $target = event.target;
+            while (!$($target).is('div')) {
+                $target = $($target).parent();
+            }
+            if (!$($target).next().is(":hidden")) {
+                $($target).next().slideUp(250);
+                return;
+            }
+            $('.side-data').slideUp(250);
+            $($target).next().slideDown(250);
         }
     },
     watch: {
-        inburns: function() {
+        'inburns.burns': function() {
             let total = 0;
-            for (burn in this.inburns) {
-                total += math.norm(this.inburns[burn]);
+            for (burn in this.inburns.burns) {
+                total += math.norm(this.inburns.burns[burn]);
             }
             this.totalDv = total;
         }
@@ -78,9 +86,15 @@ var sideData = new Vue({
             closeTime: 0,
             blueDv: 0,
             redDv: 0,
-            burns: {
-                blue: [[0,0]],
-                red: [[0,0]]
+            players: {
+                blue: {
+                    burns: [[0,0]],
+                    name: 'blue'
+                },
+                red: {
+                    burns: [[0,0]],
+                    name: 'red'
+                },
             },
             scenLength: 15,
             numBurns: 5
