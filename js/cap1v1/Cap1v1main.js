@@ -324,8 +324,9 @@ function createGraph() {
 
 function startGame() {
 	for (sat in app.players) {
-		sideData.scenario_data.burns[sat] = app.players[sat].burns;
-		sideData.scenario_data.burns[sat] = app.players[sat].burns;
+		Vue.set(sideData.scenario_data.burns,sat,app.players[sat].burns)
+		// sideData.scenario_data.burns[sat] = app.players[sat].burns;
+		// sideData.scenario_data.burns[sat] = app.players[sat].burns;
 	}
 	app.chartData = {
 		burnDir: globalChartRef.config.data.datasets[6],

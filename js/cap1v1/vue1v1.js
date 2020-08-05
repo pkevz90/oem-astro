@@ -19,6 +19,7 @@ Vue.component('burn-data', {
             console.log($($target).parent().parent().parent().parent());
             let burnNumber = Number($($target).text()) / this.turn_length;
             let playerIndex = $('.burn-container').index($($target).parent().parent().parent().parent())
+            console.log(playerIndex);
             let sat = Object.keys(app.players)[playerIndex];
             console.log(sat);
             setSelectedWaypoint(burnNumber, sat);
@@ -29,11 +30,11 @@ Vue.component('burn-data', {
 Vue.component('player-data', {
     props: ['inburns','in_turn_length'],
     data: function() {
-        return {visible: false};
+        return {visible: false, totalDv: 0};
     },
     template: ' <div>\
                     <div class="controlTitle pointer" @click="togglelist">\
-                        <span>Satellite</span>\
+                        <span>Satellite ({{ totalDv.toFixed(1) }} m/s)</span>\
                     </div>\
                     <div class="side-data burn-container" id="dataContainer" v-if="visible">\
                         <table class="table" id="burnTable" style="margin-top: 3%;">\
@@ -53,6 +54,15 @@ Vue.component('player-data', {
     methods: {
         togglelist: function() {
             this.visible = !this.visible;
+        }
+    },
+    watch: {
+        inburns: function() {
+            let total = 0;
+            for (burn in this.inburns) {
+                total += math.norm(this.inburns[burn]);
+            }
+            this.totalDv = total;
         }
     }
 
