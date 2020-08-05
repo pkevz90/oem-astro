@@ -170,7 +170,7 @@ function createGraph() {
 				pointRadius: 0,
 				borderDash: [10, 10],
 				borderColor: 'rgba(255,255,255,0.5)',
-			}, {
+			},{
 				// label: "Green Waypoints",
 				data: [],
 				showLine: false,
@@ -186,14 +186,21 @@ function createGraph() {
 				pointStyle: 'rect',
 				backgroundColor: 'rgba(160,255,160,1)',
 			}, {
-				// label: "Green Trajectory1",
+				// label: "Green Trajectory",
 				data: [],
 				fill: false,
 				showLine: true,
 				pointRadius: 0,
 				borderColor: 'rgba(160,255,160,1)',
+			},{
+				// label: "Gray Waypoints",
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 7,
+				borderColor: 'rgba(150,150,150,1)'
 			}, {
-				// label: "Current Gray2",
+				// label: "Current Gray",
 				data: [],
 				showLine: false,
 				fill: false,
@@ -201,7 +208,7 @@ function createGraph() {
 				pointStyle: 'rect',
 				backgroundColor: 'rgba(150,150,150,1)',
 			}, {
-				// label: "Gray Trajectory2",
+				// label: "Gray Trajectory",
 				data: [],
 				fill: false,
 				showLine: true,
@@ -322,7 +329,8 @@ function startGame() {
 	let colors = {
 		blue:  'rgba(100,150,255,1)',
 		red:   'rgba(255,150,100,1)',
-		green: 'rgba(120,255,120,1)'
+		green: 'rgba(120,255,120,1)',
+		gray: 'rgba(150,150,150,1)'
 	}
 	for (sat in app.players) {
 		Vue.set(sideData.scenario_data.players,sat,{})
@@ -335,7 +343,7 @@ function startGame() {
 		sun: globalChartRef.config.data.datasets[7],
 		selected: globalChartRef.config.data.datasets[8],
 		relative: globalChartRef.config.data.datasets[12],
-		targetLim: globalChartRef.config.data.datasets[18],
+		targetLim: globalChartRef.config.data.datasets[19],
 		view: globalChartRef.config.data.datasets[11]
 	};
 	for (sat in app.players) {

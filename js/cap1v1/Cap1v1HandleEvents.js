@@ -225,7 +225,7 @@ function checkClose(X, Y, change = true) {
             yPoint = app.players[sat].dataLoc.waypoints.data[ii].y;
             if (math.norm([xPoint - X, yPoint - Y]) < app.axisLimits / 25) {
                 // console.log(ii,sat);
-                console.log(change);
+                // console.log(change);
                 if (change) {
                     setSelectedWaypoint(ii, sat);
                 }

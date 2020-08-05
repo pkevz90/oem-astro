@@ -145,9 +145,10 @@ $('.start-button').on('click', () => {
             yd: Number(setupData.gray2.yd),
             B:  Number(setupData.gray2.B)
         });
-        app.players.gray2 = new Satellite(init, 'gray2', {
-            trajectory: globalChartRef.config.data.datasets[16],
-            current: globalChartRef.config.data.datasets[15]
+        app.players.gray = new Satellite(init, 'gray', {
+            waypoints: globalChartRef.config.data.datasets[16],
+            trajectory: globalChartRef.config.data.datasets[18],
+            current: globalChartRef.config.data.datasets[17]
         })
     }
     app.deltaVAvail = Number(setupData.scenario_start.dVavail);
@@ -177,7 +178,7 @@ $('.start-button').on('click', () => {
                     let frames = 15, frame = 0;
                     app.burnTransition = true;
                     let intB = setInterval(() => {
-                        app.players.red.burns[change] = math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change])
+                        app.players.red.burns.splice(change,1,math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change]));
                         frame++;
                         app.players.red.calculateTrajecory();
                         calcData(app.currentTime);
