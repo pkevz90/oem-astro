@@ -14,27 +14,6 @@ function handleClick(valueX, valueY) {
         targetCalc(valueX, valueY, true);
         return;
     }
-    if (app.chosenWaypoint !== undefined) {
-        if (checkPointClose(valueX, valueY,
-                app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].x,
-                app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].y)) {
-            app.tactic = 'burn';
-            app.chartData.burnDir.data = [{
-                x: 0,
-                y: 0
-            }, {
-                x: 0,
-                y: 0
-            }];
-            globalChartRef.update();
-            return;
-        }
-
-    }
-    if (checkClose(valueX, valueY)) {
-        globalChartRef.update();
-        return;
-    }
 }
 
 function handleKeyPress(k) {
@@ -228,6 +207,7 @@ function checkClose(X, Y, change = true) {
                 // console.log(change);
                 if (change) {
                     setSelectedWaypoint(ii, sat);
+                    globalChartRef.update();
                 }
                 return true;
             }
@@ -255,4 +235,50 @@ function setBottomInfo(type = 'state') {
             $('.info')[0].textContent = type;
     }
 
+}
+
+function startTarget() {
+    app.tactic = 'target';
+            
+    $('.info-right').text('Target burn by hovering over desired location. Change target waypoint with [<] & [>]');
+    let totalDv = 0;
+    app.players[app.chosenWaypoint[1]].burns.forEach((burn, element) => {
+        if (element < app.chosenWaypoint[0]) {
+            totalDv += math.norm(burn);
+        } else if (element > app.chosenWaypoint[0]) {
+            app.players[app.chosenWaypoint[1]].burns[element] = [0, 0];
+        }
+    })
+    app.tacticData = {
+        availDv: app.deltaVAvail - totalDv,
+        targetPos: 1
+    };
+    let ii = 0;
+    let timeDelta = (app.tacticData.targetPos + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
+    let inter = setInterval(() => {
+        showDeltaVLimit(app.chosenWaypoint[1], {
+            targetPos: app.tacticData.targetPos,
+            availDv: app.tacticData.availDv * ii / 5
+        });
+        app.currentTime += timeDelta / 6;
+        $('.nav-element input')[0].value = app.currentTime;
+        $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
+        calcData(app.currentTime);
+        if (ii === 5) {
+            app.tactic = 'target';
+            clearInterval(inter);
+        }
+        ii++;
+    }, 15);
+
+
+    app.chartData.burnDir.data = [{
+        x: 0,
+        y: 0
+    }, {
+        x: 0,
+        y: 0
+    }];
+    app.players[app.chosenWaypoint[1]].calculateTrajecory();
+    calcData(app.currentTime);
 }

@@ -5,12 +5,24 @@ $('canvas').on('mousewheel',event => {
     setAxisZoomPos();
 })
 $('canvas').mousedown(event => {
-    if (app.tactic !== '') {
-        return;
-    }
     let X = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
     let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
-    if (checkClose(X, Y, false)) {
+    if (checkClose(X, Y)) {
+        app.tactic = 'burn';
+        app.chartData.burnDir.data = [{
+            x: 0,
+            y: 0
+        }, {
+            x: 0,
+            y: 0
+        }];
+        globalChartRef.update();
+        setTimeout(() => {
+            console.log(checkClose(app.mouseCoor.x, app.mouseCoor.y, false));
+            if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false)) {
+                startTarget();
+            }
+        },500)
         return;
     }
     app.appDrag = [[event.offsetX,event.offsetY],
@@ -18,6 +30,18 @@ $('canvas').mousedown(event => {
     $('canvas').css('cursor','grabbing')
 })
 $('canvas').mousemove(event => {
+    app.mouseCoor.x = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
+    app.mouseCoor.y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top); 
+    switch(app.tactic) {
+        case 'burn':
+            burnCalc(app.mouseCoor.x,app.mouseCoor.y);
+            return;
+        case 'target':
+            targetCalc(app.mouseCoor.x,app.mouseCoor.y);
+            return;
+        default:
+            break;
+    }
     if (!app.appDrag) {
         return;
     }
@@ -26,6 +50,16 @@ $('canvas').mousemove(event => {
     setAxisZoomPos();
 })
 $('canvas').mouseup(() => {
+    switch(app.tactic) {
+        case 'burn':
+            burnCalc(0,0,true);
+            return;
+        case 'target':
+            targetCalc(0, 0, true);
+            return;
+        default:
+            break;
+    }
     app.appDrag = undefined;
     $('canvas').css('cursor','grab')
 })
