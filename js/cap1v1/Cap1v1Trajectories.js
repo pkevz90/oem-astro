@@ -127,12 +127,12 @@ function calcData(curTime = 0) {
 }
 
 
-function burnCalc(xMouse, yMouse, click = false) {
+function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 	if (click) {
 		app.tactic = '';
-		$('.info-right')[0].textContent = '';
+		// $('.info-right')[0].textContent = '';
 		app.chosenWaypoint = undefined;
-		app.chartData.burnDir.data = [];
+		// app.chartData.burnDir.data = [];
 		app.chartData.selected.data = [];
 		setBottomInfo();
 		globalChartRef.update();
@@ -175,7 +175,6 @@ function burnCalc(xMouse, yMouse, click = false) {
 function targetCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
-		
 		$('.info-right')[0].textContent = '';
 		app.chartData.burnDir.data = [];
 		app.chartData.selected.data = [];

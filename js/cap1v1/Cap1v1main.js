@@ -23,6 +23,10 @@ let app = {
 		[0],
 		[40 * 0.4]
 	],
+	mouseCoor: {
+		x: undefined,
+		y: undefined
+	},
 	calcDt: 240,
 	burnChange: false,
 	tactic: '',
@@ -234,33 +238,6 @@ function createGraph() {
 				enabled: false
 			},
 			legend: {
-				display: false
-			},
-			onHover: function (element) {
-				let scaleRef, valueX, valueY;
-				for (var scaleKey in this.scales) {
-					scaleRef = this.scales[scaleKey];
-					if (scaleRef.isHorizontal() && scaleKey === 'x-axis-1') {
-						valueX = scaleRef.getValueForPixel(element.offsetX);
-					} else if (scaleKey === 'y-axis-1') {
-						valueY = scaleRef.getValueForPixel(element.offsetY);
-					}
-				}
-				handleHover(valueX, valueY);
-			},
-			onClick: function (element) {
-				let scaleRef, valueX, valueY;
-				for (var scaleKey in this.scales) {
-					scaleRef = this.scales[scaleKey];
-					if (scaleRef.isHorizontal() && scaleKey == 'x-axis-1') {
-						valueX = scaleRef.getValueForPixel(element.offsetX);
-					} else if (scaleKey == 'y-axis-1') {
-						valueY = scaleRef.getValueForPixel(element.offsetY);
-					}
-				}
-				handleClick(valueX, valueY);
-			},
-			title: {
 				display: false
 			},
 			scales: {
