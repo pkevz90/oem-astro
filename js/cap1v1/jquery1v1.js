@@ -24,7 +24,7 @@ $('canvas').mousedown(event => {
                 $('canvas').css('cursor','crosshair')
                 startTarget();
             }
-        },500)
+        },250)
         return;
     }
     app.appDrag = [[event.offsetX,event.offsetY],
