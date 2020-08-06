@@ -20,6 +20,8 @@ $('canvas').mousedown(event => {
         setTimeout(() => {
             console.log(checkClose(app.mouseCoor.x, app.mouseCoor.y, false));
             if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false)) {
+                
+                $('canvas').css('cursor','crosshair')
                 startTarget();
             }
         },500)
@@ -53,10 +55,10 @@ $('canvas').mouseup(() => {
     switch(app.tactic) {
         case 'burn':
             burnCalc(0,0,true);
-            return;
+            break;
         case 'target':
             targetCalc(0, 0, true);
-            return;
+            break;
         default:
             break;
     }
