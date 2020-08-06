@@ -193,11 +193,13 @@ function startTarget() {
             availDv: app.tacticData.availDv * ii / 5
         });
         app.currentTime += timeDelta / 6;
+        console.log(ii,app.currentTime);
         $('.nav-element input')[0].value = app.currentTime;
         $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
         calcData(app.currentTime);
         if (ii === 5) {
             app.tactic = 'target';
+            console.log('hey');
             clearInterval(inter);
         }
         ii++;
