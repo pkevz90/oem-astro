@@ -1,0 +1,184 @@
+<!--<!doctype html>
+<html lang="en">
+    <head>
+        <script type="module" src='./js/main.bundle.js'></script>
+    </head>
+    <body>
+        <canvas style="border: 1px solid black; position: absolute; left: 20%; top: 20%; width: 40%; height: 40%" id="wave-draw"></canvas>
+    </body>
+</html>-->
+<!DOCTYPE html>
+<html >
+<head>
+	<title>An Interactive Introduction to Fourier Transforms</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link href="css/styles.css" rel="stylesheet" type="text/css">
+</head>
+<body onscroll="">
+<main id="content">
+    
+<div class="multi-container">
+<div class="sketch" id="waveDrawBox" onclick="$('#wave-freq-instruction')[0].innerText = '';$('#freqPlot-instruction')[0].innerText = '';">
+    <canvas id="wave-draw" class="sketch-child" width=500 height=300></canvas>
+    <p id="wave-draw-instruction" class="instruction wave-instruction">Draw here!</p>
+</div>
+<canvas id="wave-draw-split" class="sketch" width=500 height=500></canvas>
+</div>
+<p><input id="wave-draw-slider" type="range" min="0" max="1" value="1" step="any">
+<button id="wave-draw-button" class="button">Play Wave</button></p>
+<p><em>Move the slider to see how as we add more sine waves, it gets closer and closer to your drawing</em></p>
+<p>Again, aside from the extra wigglyness, the wave looks pretty similar with just half of the sine waves.</p>
+<p>We can actually use the fact that the wave is pretty similar to our advantage. By using a Fourier transform, we can get the important parts of a sound, and only store those to end up with something that's pretty close to the original sound.</p>
+<p>What we can do is represent your wave as a bunch of sine waves. Then we can compress the sound by ignoring the smaller frequencies. Our end result won't be the same, but it'll sound pretty similar to a person.</p>
+<div class="sketch">
+    <canvas id="wave-frequencies" class="sketch-child" width=500 height=500></canvas>
+    <p id="wave-freq-instruction" class="sketch-child instruction wave-instruction">Draw a wave above to begin!</p>
+    </div>
+<input type="range" id="wave-frequencies-slider" min=".4" max=".8" value=".4" step="any">
+<p><em>Move the slider to see each component sine wave, its frequncy and its associated magnitude</em></p>
+<p>This is essentially what MP3s do, except they're more clever about which frequencies they keep and which ones they throw away.</p>
+<p>So in this case, we can use Fourier transforms to get an understanding of the fundamental properties of a wave, and then we can use that for things like compression.</p>
+<p>The Wave is broken down using the following equation:</p>
+<img src="" />
+<p>Finally, the information above can be presented in a frequency domain plot, where each spike represents a frequency that is highly present in the original wave.</p>
+<div class="sketch">
+    <canvas id="freqPlot"></canvas>
+    <p id="freqPlot-instruction" class="instruction wave-instruction" style="width:auto; height:auto">Draw a wave above to begin!</p>
+</div>
+</main>
+<script src="./js/main.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/6.6.4/math.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+<script>
+    function sortBy(key){
+        return function(a, b){
+            if(a[key] < b[key]){
+                return -1;
+            }else if(a[key] > b[key]){
+                return 1;
+            }
+            return 0;
+        };
+    }
+    function updateGraph(){
+        console.log("updateGraph Running...")
+        //let newChartData = [{x: 1, y: 1},{x: 2, y: 2}];
+        if (dat != undefined){
+            let newChartData = dat.map((val) => {
+                return {x: val.freq*220, y: val.amplitude};
+            })
+            newChartData.unshift({x:0,y:0})
+            newChartData = newChartData.sort(sortBy("x"));
+            globalChartRef.config.data.datasets[0].data = newChartData;
+            globalChartRef.config.options.scales.xAxes[0].ticks.min = 0;
+            globalChartRef.config.options.scales.xAxes[0].ticks.max = math.max(newChartData.map(val=>{return val.x}));
+            globalChartRef.config.options.scales.yAxes[0].ticks.min = 0;
+            globalChartRef.config.options.scales.yAxes[0].ticks.max = math.max(newChartData.map(val=>{return val.y}));
+            globalChartRef.update();
+        }
+    }
+
+    let globalChartRef,
+	sliders = [],
+	sliderLabels = [],
+	axisLimits = 40,
+	axisCenter = 0;
+	function keysrt(key,desc) {
+        return function(a,b){
+            return desc ? ~~(a[key] < b[key]) : ~~(a[key] > b[key]);
+        }
+    }
+
+    function createGraph() {
+        var config = {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    // label: "Trajectory",
+                    data: [],
+                    fill: false,
+                    showLine: true,
+                    pointRadius: 0,
+                    borderColor: 'rgba(120,200,255,0.35)'
+                }]
+            },
+            options: {
+                onResize: function (element, a) {
+                    // console.log(globalChartRef.config.options.scales.xAxes[0].scaleLabel)
+                    globalChartRef.config.options.scales.xAxes[0].scaleLabel.fontSize = a.width / 40;
+                    globalChartRef.config.options.scales.yAxes[0].scaleLabel.fontSize = a.width / 40;
+                    globalChartRef.config.options.scales.xAxes[0].ticks.fontSize = a.width / 60;
+                    globalChartRef.config.options.scales.yAxes[0].ticks.fontSize = a.width / 60;
+                },
+                animation: {
+                    duration: 0
+                },
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: false,
+                    text: "In-Plane View",
+                    fontColor: 'rgba(0,0,0,1)',
+                    fontSize: 40
+                    },
+                scales: {
+                    xAxes: [{
+                        gridLines: {
+                            zeroLineColor: '#ffcc33',
+                            color: 'rgba(255,255,255,0.25)'
+                        },
+                        type: "linear",
+                        display: true,
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Frequency (Hz)',
+                            fontColor: 'rgba(0,0,0,1)',
+                            fontSize: 20
+                        },
+                        ticks: {
+                            min: 0,
+                            max: 2000,
+                            fontSize: 15,
+                            reverse: false,
+                            fontColor: 'rgba(0,0,0,1)',
+                        },
+                    }, ],
+                    yAxes: [{
+                        gridLines: {
+                            zeroLineColor: '#ffcc33',
+                            color: 'rgba(255,255,255,0.25)'
+                        },
+                        display: true,
+                        scaleLabel: {
+                           display: true,
+                           labelString: 'Amplitude',
+                           fontColor: 'rgba(0,0,0,1)',
+                           fontSize: 20
+                        },
+                        ticks: {
+                            min: 0,
+                            max: .2,
+                            fontColor: 'rgba(0,0,0,1)',
+                            fontSize: 15,
+                        }
+                    }]
+                },
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        };
+
+        var ctx = document.getElementById('freqPlot').getContext('2d');
+        globalChartRef = new Chart(ctx, config);
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+        createGraph();
+        globalChartRef.update();
+        });
+</script>
+</body>
+</html>
