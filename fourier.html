@@ -3,13 +3,149 @@
 <head>
 	<title>An Interactive Introduction to Fourier Transforms</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<link href="css/styles.css" rel="stylesheet" type="text/css">
+    <style>
+		.navbar {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1f3a52;
+        }
+        body {
+            min-height: 300px;
+            background: #06090c;
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#111b24', endColorstr='#0c4161',GradientType=0 );
+            height: 100%;
+            font-family: "open_sansregular";
+                color: rgb(201, 203, 206);
+            overflow-x: hidden;
+            /* Panel opening and closing animation time - 200mx */
+            transition: transform .2s;
+            -webkit-transition: -webkit-transform .2s;
+            font-size: 2.5vh;
+            line-height: 1.6;
+        }
+        
+        li {
+            float: left;
+        }
+        li p {
+            display: block;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            font-size: 5vh;
+            margin:2vh;
+        }
+        em {
+            color: #e91e63;
+            display: block;
+            text-align: center;
+        }
+        main {
+            width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 80px;
+            margin-bottom: 80px;
+        }
+        .sketch {
+            display: block;
+            position: relative;
+            max-width: 500px;
+            width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 30px;
+            margin-bottom: 30px;
+
+            -webkit-box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+            -moz-box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+            border-style: solid;
+            border-width: 1px;
+            border-color: rgb(0, 0, 0, 0.2);
+            border-radius: 5px;
+            background-color: rgba(25,25,25,1);
+        }
+        .sketch-child {
+            display: block;
+            width: 100%;
+        }
+        .button {
+            display: block;
+            margin: auto;
+            background-color: #e91e63;
+            color: white;
+            font-size: 20px;
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            border: none;
+            transition: transform 0.1s linear,
+                        background-color 0.1s linear;
+        }
+        .button:hover, .button:focus {
+            background-color: #ed7656;
+        }
+        .button:active {
+            transform: scale(0.95);
+        }
+        .instruction {
+            font-size: 30px;
+            color: #e91e63;
+            margin: auto;
+            position: absolute;
+            text-align: center;
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 1;
+
+            pointer-events: none;
+            -moz-user-select: -moz-none;
+            -khtml-user-select: none;
+            -webkit-user-select: none;
+            -o-user-select: none;
+            user-select: none;
+
+            transition: opacity 0.2s ease-in-out;
+        }
+        .wave-instruction {
+            top: 25%;
+        }
+        .multi-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .multi-container .sketch {
+            margin: 10px;
+        }
+        input[type=range] {
+            display: block;
+            max-width: 500px;
+            width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+	</style>
 </head>
 <body>
+<ul class="navbar">
+    <li><p id="navTitle">Fourier Transforms</p></li>
+    <!-- <li style="float: right" id="setup"><p>Setup & Instructions &#9776;</p></li> -->
+</ul>   
 <main id="content">
-    
 <div class="multi-container">
-<div class="sketch" id="waveDrawBox" onclick="$('#wave-freq-instruction')[0].innerText = '';$('#freqPlot-instruction')[0].innerText = '';">
+<p>The Fourier transform is a way of splitting something up into a bunch of sine waves.</p>
+<p>Try drawing a wave below, to see how it can be broken down.</p>
+<div class="sketch" id="waveDrawBox">
     <canvas id="wave-draw" class="sketch-child" width=500 height=300></canvas>
     <p id="wave-draw-instruction" class="instruction wave-instruction">Draw here!</p>
 </div>
@@ -18,7 +154,7 @@
 <p><input id="wave-draw-slider" type="range" min="0" max="1" value="1" step="any">
 <button id="wave-draw-button" class="button">Play Wave</button></p>
 <p><em>Move the slider to see how as we add more sine waves, it gets closer and closer to your drawing</em></p>
-<p>Again, aside from the extra wigglyness, the wave looks pretty similar with just half of the sine waves.</p>
+<p>Aside from the extra wigglyness, the wave looks pretty similar with just half of the sine waves.</p>
 <p>We can actually use the fact that the wave is pretty similar to our advantage. By using a Fourier transform, we can get the important parts of a sound, and only store those to end up with something that's pretty close to the original sound.</p>
 <p>What we can do is represent your wave as a bunch of sine waves. Then we can compress the sound by ignoring the smaller frequencies. Our end result won't be the same, but it'll sound pretty similar to a person.</p>
 <div class="sketch">
@@ -43,6 +179,11 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
 <script>
+    $('#wave-draw').mousedown(()=>{
+        $('#wave-freq-instruction')[0].innerText = '';
+        $('#freqPlot-instruction')[0].innerText = '';
+        $('#wave-draw-instruction')[0].innerText = '';
+    })
     function sortBy(key){
         return function(a, b){
             if(a[key] < b[key]){
@@ -113,7 +254,7 @@
                 title: {
                     display: false,
                     text: "In-Plane View",
-                    fontColor: 'rgba(0,0,0,1)',
+                    fontColor: 'rgba(255,255,255,1)',
                     fontSize: 40
                     },
                 scales: {
@@ -127,7 +268,7 @@
                         scaleLabel: {
                             display: true,
                             labelString: 'Frequency (Hz)',
-                            fontColor: 'rgba(0,0,0,1)',
+                            fontColor: 'rgba(255,255,255,1)',
                             fontSize: 20
                         },
                         ticks: {
@@ -135,7 +276,7 @@
                             max: 2000,
                             fontSize: 15,
                             reverse: false,
-                            fontColor: 'rgba(0,0,0,1)',
+                            fontColor: 'rgba(255,255,255,1)',
                         },
                         afterBuildTicks: (a, ticks) => {
                             ticks.pop();
@@ -146,19 +287,19 @@
                     yAxes: [{
                         gridLines: {
                             zeroLineColor: '#cc9900',
-                            color: 'rgba(255,255,255,0.25)'
+                            color: 'rgba(50,50,50,0.8)'
                         },
                         display: true,
                         scaleLabel: {
                            display: true,
                            labelString: 'Amplitude',
-                           fontColor: 'rgba(0,0,0,1)',
+                           fontColor: 'rgba(255,255,255,1)',
                            fontSize: 20
                         },
                         ticks: {
                             min: 0,
                             max: .2,
-                            fontColor: 'rgba(0,0,0,1)',
+                            fontColor: 'rgba(255,255,255,1)',
                             fontSize: 15,
                         },
                         afterBuildTicks: (a, ticks) => {
