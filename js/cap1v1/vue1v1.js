@@ -84,8 +84,6 @@ var sideData = new Vue({
             curCats: 0,
             closeApproach: 0,
             closeTime: 0,
-            blueDv: 0,
-            redDv: 0,
             players: {
                 blue: {
                     burns: [[0,0]],
@@ -114,27 +112,35 @@ var setupData = new Vue({
             ae: (0).toFixed(1),
             xd: (0).toFixed(1),
             yd: (30).toFixed(1),
-            B:  (0).toFixed(1)
+            B:  (0).toFixed(1),
+            dVavail: (6).toFixed(1),
+            reqCats: (90).toFixed(0),
+            rangeReq: [(10).toFixed(0), (15).toFixed(0)],
         },
         red: {
             ae: (0).toFixed(1),
             xd: (0).toFixed(1),
             yd: (-30).toFixed(1),
-            B:  (0).toFixed(1)
+            B:  (0).toFixed(1),
+            dVavail: (6).toFixed(1),
+            reqCats: (90).toFixed(0),
+            rangeReq: [(10).toFixed(0), (15).toFixed(0)],
         },
-        gray1: {
+        green: {
             exist: false,
             ae: (0).toFixed(1),
             xd: (0).toFixed(1),
             yd: (0).toFixed(1),
-            B:  (0).toFixed(1)
+            B:  (0).toFixed(1),
+            dVavail: (6).toFixed(1),
         },
-        gray2: {
+        gray: {
             exist: false,
             ae: (0).toFixed(1),
             xd: (0).toFixed(1),
             yd: (0).toFixed(1),
-            B:  (0).toFixed(1)
+            B:  (0).toFixed(1),
+            dVavail: (6).toFixed(1),
         },
         scenario_start: {
             dVavail: (6).toFixed(1),
@@ -155,10 +161,10 @@ var setupData = new Vue({
     },
     methods: {
         addGray: function (event) {
-            let num = $(event.target).attr("id");
+            let sat = $(event.target).attr("id");
             $(event.target).hide();
             $(event.target).prev().fadeIn();
-            setupData['gray' + num].exist = true;
+            setupData[sat].exist = true;
         },
         selectScenario: function (event) {
             switch(event.target.value) {
@@ -167,89 +173,144 @@ var setupData = new Vue({
                         ae: 0,
                         xd: 0,
                         yd: 30,
-                        B: 0
+                        B:  0, 
+                        dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
                     };
                     this.red = {
                         ae: 0,
                         xd: 0,
                         yd: -30,
-                        B: 0
+                        B:  0, 
+                        dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
                     };
-                    this.gray1 = {
-                        exist: false,
-                        ae: 0,
-                        xd: 0,
-                        yd:0,
-                        B: 0
-                    };
-                    this.gray2 = {
-                        exist: false,
+                    this.green = {
                         ae: 0,
                         xd: 0,
                         yd: 0,
-                        B: 0
+                        B:  0,
+                        dVavail: (0).toFixed(1),
+                        exist: false
                     };
-                    return;
+                    this.gray = {
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B:  0,
+                        dVavail: (0).toFixed(1),
+                        exist: false
+                    };
+                    break;
                 case 'driveby':
                     this.blue = {
                         ae: 0,
-                        xd: -30,
-                        yd: -80,
-                        B: 0
-                    };
-                    this.red = {
-                        ae: 0,
                         xd: 0,
                         yd: 0,
-                        B: 0
-                    };
-                    this.gray1 = {
-                        exist: false,
-                        ae: 0,
-                        xd: 0,
-                        yd:0,
-                        B: 0
-                    };
-                    this.gray2 = {
-                        exist: false,
-                        ae: 0,
-                        xd: 0,
-                        yd: 0,
-                        B: 0
-                    };
-                    return;
-                case 'defend':
-                    this.blue = {
-                        ae: 20,
-                        xd: 0,
-                        yd: 0,
-                        B: 90
+                        B:  0, 
+                        dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
                     };
                     this.red = {
                         ae: 0,
                         xd: 30,
                         yd: 80,
-                        B: 0
+                        B:  0, 
+                        dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
                     };
-                    this.gray1 = {
-                        exist: true,
+                    this.green = {
                         ae: 0,
                         xd: 0,
                         yd: 0,
-                        B: 0
+                        B:  0,
+                        dVavail: (0).toFixed(1),
+                        exist: false
                     };
-                    this.gray2 = {
-                        exist: false,
+                    this.gray = {
                         ae: 0,
                         xd: 0,
                         yd: 0,
-                        B: 0
+                        B:  0,
+                        dVavail: (0).toFixed(1),
+                        exist: false
                     };
-                    return;
+                    break;
+                case 'defend':
+                    this.blue = {
+                        ae: 20,
+                        xd: 0,
+                        yd: 0,
+                        B:  0, 
+                        dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+                    };
+                    this.red = {
+                        ae: 0,
+                        xd: -30,
+                        yd: -80,
+                        B:  0, 
+                        dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+                    };
+                    this.green = {
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B:  0,
+                        dVavail: (0.5).toFixed(1),
+                        exist: true
+                    };
+                    this.gray = {
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B:  0,
+                        dVavail: (0).toFixed(1),
+                        exist: false
+                    };
+                    break;
                 default:
-                    return;
+                    this.green = {
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B:  0,
+                        dVavail: (0.5).toFixed(1),
+                        exist: false
+                    };
+                    this.gray = {
+                        ae: 0,
+                        xd: 0,
+                        yd: 0,
+                        B:  0,
+                        dVavail: (0).toFixed(1),
+                        exist: false
+                    };
+                    break;
             }
-            
+            if (this.gray.exist) {
+                $('#gray').prev().show();
+                $('#gray').hide();
+            }
+            else {
+                $('#gray').prev().hide();
+                $('#gray').show();
+            }
+            if (this.green.exist) {
+                $('#green').prev().show();
+                $('#green').hide();
+            }
+            else {
+                $('#green').prev().hide();
+                $('#green').show();
+            }
         }
     }
 });

@@ -31,7 +31,6 @@ let app = {
 	burnChange: false,
 	tactic: '',
 	tacticData: undefined,
-	deltaVAvail: undefined,
 	scenLength: undefined,
 	numBurns: undefined,
 	reqCats: undefined,
@@ -373,7 +372,7 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 function setCurrentPoints(curTime, noPlot = false) {
 	var points = {};
 	let point1, point2, dt;
-	console.log(Math.floor(curTime * 3600 / app.calcDt),Math.floor(curTime * 3600 / app.calcDt)+1)
+	// console.log(Math.floor(curTime * 3600 / app.calcDt),Math.floor(curTime * 3600 / app.calcDt)+1)
 	for (sat in app.players) {
 		point1 = [
 			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)].y],

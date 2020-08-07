@@ -1,14 +1,25 @@
 var teamNum, $turn = $('.selectable:first span');;
 createGraph();
 $('canvas').on('mousewheel',event => {
+    if (app.tactic === 'target') {
+        changeTargetTime(event.deltaY)
+        return;
+    }
+    else if (app.chosenWaypoint !== undefined) {
+        return;
+    }
     app.axisLimits -= event.deltaY*5;
     setAxisZoomPos();
 })
 $('canvas').mousedown(event => {
     let X = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
     let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+    
     if (checkClose(X, Y)) {
         app.tactic = 'burn';
+        app.players[app.chosenWaypoint[1]].burns.splice(app.chosenWaypoint[0],1, [0, 0]);
+        app.players[app.chosenWaypoint[1]].calculateTrajecory();
+        calcData();
         app.chartData.burnDir.data = [{
             x: 0,
             y: 0
@@ -18,9 +29,7 @@ $('canvas').mousedown(event => {
         }];
         globalChartRef.update();
         setTimeout(() => {
-            console.log(checkClose(app.mouseCoor.x, app.mouseCoor.y, false));
-            if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false)) {
-                
+            if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false) && app.chosenWaypoint !== undefined) {
                 $('canvas').css('cursor','crosshair')
                 startTarget();
             }
@@ -161,12 +170,12 @@ $('.start-button').on('click', () => {
         current: globalChartRef.config.data.datasets[10],
     });
     let init;
-    if (setupData.gray1.exist) {
+    if (setupData.green.exist) {
         init = stateFromRoe({
-            ae: Number(setupData.gray1.ae),
-            xd: Number(setupData.gray1.xd),
-            yd: Number(setupData.gray1.yd),
-            B: Number(setupData.gray1.B)
+            ae: Number(setupData.green.ae),
+            xd: Number(setupData.green.xd),
+            yd: Number(setupData.green.yd),
+            B: Number(setupData.green.B)
         });
         app.players.green = new Satellite(init, 'green', {
             trajectory: globalChartRef.config.data.datasets[15],
@@ -174,12 +183,12 @@ $('.start-button').on('click', () => {
             waypoints: globalChartRef.config.data.datasets[13]
         })
     }
-    if (setupData.gray2.exist) {
+    if (setupData.gray.exist) {
         init = stateFromRoe({
-            ae: Number(setupData.gray2.ae),
-            xd: Number(setupData.gray2.xd),
-            yd: Number(setupData.gray2.yd),
-            B:  Number(setupData.gray2.B)
+            ae: Number(setupData.gray.ae),
+            xd: Number(setupData.gray.xd),
+            yd: Number(setupData.gray.yd),
+            B:  Number(setupData.gray.B)
         });
         app.players.gray = new Satellite(init, 'gray', {
             waypoints: globalChartRef.config.data.datasets[16],
@@ -187,7 +196,6 @@ $('.start-button').on('click', () => {
             current: globalChartRef.config.data.datasets[17]
         })
     }
-    app.deltaVAvail = Number(setupData.scenario_start.dVavail);
     app.reqCats = Number(setupData.scenario_start.reqCats) * Math.PI / 180;
     app.rangeReq = [Number(setupData.scenario_start.rangeReq[0]), Number(setupData.scenario_start.rangeReq[1])];
     if (setupData.server) {

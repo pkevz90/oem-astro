@@ -60,7 +60,7 @@
             </ol>
         </ol>
         <p>The slider will allow user to view satellite/Sun positions at any scenario time</p>
-        <p>Zoom [+] & [-]   Move Camera [W][S][A][D]</p>
+        <p>Click and drag to move camera. Scroll wheel to zoom.</p>
     </div>
     <div class="setup-screen" id="setup-data">
         <div class="setup-container">
@@ -70,10 +70,9 @@
             <p><em>X<sub>d</em></sub>: <input v-model="blue.xd"> km</p>
             <p><em>Y<sub>d</sub></em>: <input v-model="blue.yd" placeholder="10.0"> km</p>
             <p><em>&#946</em>: <input v-model="blue.B"> <sup>o</sup></p>
-            <p><u>Success Parameters</u></p>
-            <p>&#916V Available: <input v-model="scenario_start.dVavail"> m/s</p>
-            <p>Required CATS: <input v-model="scenario_start.reqCats"> <sup>o</sup></p>
-            <p>Range: <input v-model="scenario_start.rangeReq[0]"> to <input v-model="scenario_start.rangeReq[1]">
+            <p>&#916V Available: <input v-model.number="blue.dVavail"> m/s</p>
+            <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
+            <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
         </div>
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,150,100)">Red Satellite</p>
@@ -82,19 +81,23 @@
             <p><em>X<sub>d</em></sub>: <input v-model="red.xd"> km</p>
             <p><em>Y<sub>d</sub></em>: <input v-model="red.yd" placeholder="-10.0"> km</p>
             <p><em>&#946</em>: <input v-model="red.B"> <sup>o</sup></p>
+            <p>&#916V Available: <input v-model="red.dVavail"> m/s</p>
         </div>
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,255,255)">Scenario Data</p>
             <p>Initial Sun <input v-model="scenario_start.initSun"><sup>o</sup></p>
             <p>Burns/Player <input v-model="scenario_start.bp"></p>
             <p>Length <input v-model="scenario_start.sl"> hrs</p>
-            <p>Team 1<input type="radio" name="teamN" value="1" v-model="teamNumber" checked>Team 2<input type="radio" name="teamN" value="2" v-model="teamNumber"></p>
+            <p>
+                Team 1<input type="radio" name="teamN" value="1" v-model="teamNumber" checked>
+                Team 2<input type="radio" name="teamN" value="2" v-model="teamNumber">
+            </p>
             <p> Scenario
-            <select style="font-size: 1.5vw;" v-on:click="selectScenario">
-                <option value="custom">Custom</option>
+            <select style="font-size: 1.5vw;" v-on:change="selectScenario">
+                <option value="custom"    >Custom</option>
                 <option value="knifefight">Knife Fight</option>
-                <option value="driveby">Drive-By</option>
-                <option value="defend">NMC</option>
+                <option value="driveby"   >Drive-By</option>
+                <option value="defend"    >Defender</option>
             </select>
             </p>    
             <p>Game Server</p>
@@ -104,23 +107,25 @@
             <div style="display: none;">
                 <p class="container-title" style="color: rgb(160,255,160)">Green Satellite</p>
                 <p><u>Initial State</u></p>
-                <p><em>Ae</em>: <input v-model="gray1.ae"> km</p>
-                <p><em>X<sub>d</em></sub>: <input v-model="gray1.xd"> km</p>
-                <p><em>Y<sub>d</sub></em>: <input v-model="gray1.yd"> km</p>
-                <p><em>&#946</em>: <input v-model="gray1.B"> <sup>o</sup></p>
+                <p><em>Ae</em>: <input v-model="green.ae"> km</p>
+                <p><em>X<sub>d</em></sub>: <input v-model="green.xd"> km</p>
+                <p><em>Y<sub>d</sub></em>: <input v-model="green.yd"> km</p>
+                <p><em>&#946</em>: <input v-model="green.B"> <sup>o</sup></p>
+                <p>&#916V Available: <input v-model="green.dVavail"> m/s</p>
             </div>
-            <div class="add-button" v-on:click="addGray" id="1">+</div>
+            <div class="add-button" v-on:click="addGray" id="green">+</div>
         </div>
         <div class="setup-container">
             <div style="display: none;">
                 <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite</p>
                 <p><u>Initial State</u></p>
-                <p><em>Ae</em>: <input v-model="gray2.ae"> km</p>
-                <p><em>X<sub>d</em></sub>: <input v-model="gray2.xd"> km</p>
-                <p><em>Y<sub>d</sub></em>: <input v-model="gray2.yd"> km</p>
-                <p><em>&#946</em>: <input v-model="gray2.B"> <sup>o</sup></p>
+                <p><em>Ae</em>: <input v-model="gray.ae"> km</p>
+                <p><em>X<sub>d</em></sub>: <input v-model="gray.xd"> km</p>
+                <p><em>Y<sub>d</sub></em>: <input v-model="gray.yd"> km</p>
+                <p><em>&#946</em>: <input v-model="gray.B"> <sup>o</sup></p>
+                <p>&#916V Available: <input v-model="gray.dVavail"> m/s</p>
             </div>
-            <div class="add-button" v-on:click="addGray" id="2">+</div>
+            <div class="add-button" v-on:click="addGray" id="gray">+</div>
         </div>
         
         <div class="start-button">Start</div>

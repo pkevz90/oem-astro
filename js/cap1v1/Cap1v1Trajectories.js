@@ -146,16 +146,14 @@ function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 
 		let sat = app.chosenWaypoint[1];
 		let maxDv = 10;
-		if (sat === 'blue') {
-			let totalDv = 0;
-			for (let ii = 0; ii < app.players.blue.burns.length; ii++) {
-				if (ii === app.chosenWaypoint[0]) {
-					continue;
-				};
-				totalDv += math.norm(app.players.blue.burns[ii]);
-			}
-			maxDv = app.deltaVAvail - totalDv;
+		let totalDv = 0;
+		for (let ii = 0; ii < app.players[sat].burns.length; ii++) {
+			if (ii === app.chosenWaypoint[0]) {
+				continue;
+			};
+			totalDv += math.norm(app.players[sat].burns[ii]);
 		}
+		maxDv = setupData[sat].dVavail - totalDv;
 		distance = (distance > 10 * maxDv) ? 10 * maxDv : distance;
 		// app.players[sat].burns[app.chosenWaypoint[0]] = [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)];
 		app.players[sat].burns.splice(app.chosenWaypoint[0],1,[distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)]);
@@ -175,8 +173,7 @@ function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 function targetCalc(xMouse, yMouse, click = false) {
 	if (click) {
 		app.tactic = '';
-		$('.info-right')[0].textContent = '';
-		app.chartData.burnDir.data = [];
+		$('.info-right').text('');
 		app.chartData.selected.data = [];
 		setBottomInfo();
 		let ii = 0;

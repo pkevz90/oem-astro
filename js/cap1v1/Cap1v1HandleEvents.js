@@ -20,58 +20,11 @@ function handleKeyPress(k) {
     k = k.toLowerCase();
     switch (k) {
         case (',' || '<'):
-            if (app.tactic === 'target' && app.tacticData.targetPos > 1) {
-                let {x, y} = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]+app.tacticData.targetPos];
-                let oldTarget = app.tacticData.targetPos + 0;
-                let ii = 0;
-                let timeDelta = (app.tacticData.targetPos - 1 + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
-                app.tactic = '';
-                let inter = setInterval(() => {
-                    showDeltaVLimit(app.chosenWaypoint[1], {
-                        targetPos: oldTarget - ii / 5,
-                        availDv: app.tacticData.availDv
-                    })
-                    app.tacticData.targetPos -= 1 / 6;
-                    app.currentTime += timeDelta / 6;
-                    $('.nav-element input')[0].value = app.currentTime;
-                    $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
-                    targetCalc(x,y);
-                    if (ii === 5) {
-                        app.tactic = 'target';
-                        app.tacticData.targetPos = Math.round(app.tacticData.targetPos);
-                        clearInterval(inter);
-                    }
-                    ii++;
-                }, 10);
-            }
-            break;
+            changeTargetTime(-1)
+            return;
         case ('.' || '>'):
-            if (app.tactic === 'target' && (app.tacticData.targetPos + 2 + app.chosenWaypoint[0]) < app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data.length) {
-                let {x, y} = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]+app.tacticData.targetPos];
-                let oldTarget = app.tacticData.targetPos + 0;
-                let ii = 0;
-                let timeDelta = (app.tacticData.targetPos + 1 + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
-                app.tactic = '';
-                let inter = setInterval(() => {
-                    showDeltaVLimit(app.chosenWaypoint[1], {
-                        targetPos: oldTarget + ii / 5,
-                        availDv: app.tacticData.availDv
-                    })
-                    app.tacticData.targetPos += 1 / 6;
-                    app.currentTime += timeDelta / 6;
-                    $('.nav-element input')[0].value = app.currentTime;
-                    $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
-                    targetCalc(x,y);
-                    if (ii === 5) {
-                        app.tactic = 'target';
-                        app.tacticData.targetPos = Math.round(app.tacticData.targetPos);
-                        clearInterval(inter);
-                    }
-                    ii++;
-                }, 10);
-            }
-
-            break;
+            changeTargetTime(1)
+            return;
         case 'e':
             if (app.chosenWaypoint === undefined) {
                 return;
@@ -107,7 +60,6 @@ function setAxisZoomPos() {
 }
 
 function setSelectedWaypoint(index, side) {
-
     $('tr').removeClass('selected');
     $($('.burnRows')[index + ((side === 'blue') ? 0 : Number(setupData.scenario_start.bp))]).toggleClass('selected')
     app.chosenWaypoint = [index, side];
@@ -170,9 +122,8 @@ function setBottomInfo(type = 'state') {
 }
 
 function startTarget() {
-    app.tactic = 'target';
-            
-    $('.info-right').text('Target burn by hovering over desired location. Change target waypoint with [<] & [>]');
+    app.tactic = 'target';   
+    $('.info-right').text('Target burn by hovering over desired location. Change target waypoint with mouse wheel');
     let totalDv = 0;
     app.players[app.chosenWaypoint[1]].burns.forEach((burn, element) => {
         if (element < app.chosenWaypoint[0]) {
@@ -182,7 +133,7 @@ function startTarget() {
         }
     })
     app.tacticData = {
-        availDv: app.deltaVAvail - totalDv,
+        availDv: setupData[app.chosenWaypoint[1]].dVavail - totalDv,
         targetPos: 1
     };
     let ii = 0;
@@ -193,13 +144,11 @@ function startTarget() {
             availDv: app.tacticData.availDv * ii / 5
         });
         app.currentTime += timeDelta / 6;
-        console.log(ii,app.currentTime);
-        $('.nav-element input')[0].value = app.currentTime;
+        $('.nav-element input').val(app.currentTime);
         $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
         calcData(app.currentTime);
         if (ii === 5) {
             app.tactic = 'target';
-            console.log('hey');
             clearInterval(inter);
         }
         ii++;
@@ -215,4 +164,32 @@ function startTarget() {
     }];
     app.players[app.chosenWaypoint[1]].calculateTrajecory();
     calcData(app.currentTime);
+}
+
+function changeTargetTime(direction) {
+    if (!((app.tacticData.targetPos > 1 && direction < 0) || (direction > 0 && (app.tacticData.targetPos + 2 + app.chosenWaypoint[0]) < app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data.length))) {
+        return; 
+    } 
+    let {x, y} = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]+app.tacticData.targetPos];
+    let oldTarget = app.tacticData.targetPos + 0;
+    let ii = 0;
+    let timeDelta = (app.tacticData.targetPos + direction + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
+    app.tactic = '';
+    let inter = setInterval(() => {
+        showDeltaVLimit(app.chosenWaypoint[1], {
+            targetPos: oldTarget + direction * ii / 5,
+            availDv: app.tacticData.availDv
+        })
+        app.tacticData.targetPos += direction * 1 / 6;
+        app.currentTime += timeDelta / 6;
+        $('.nav-element input')[0].value = app.currentTime;
+        $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
+        targetCalc(x,y);
+        if (ii === 5) {
+            app.tactic = 'target';
+            app.tacticData.targetPos = Math.round(app.tacticData.targetPos);
+            clearInterval(inter);
+        }
+        ii++;
+    }, 10);
 }
