@@ -57,7 +57,7 @@ li p {
     background-color: rgba(0, 0, 0, 0);
     width: 20%;
     /* height: 100%; */
-    padding-top: 4%;
+    padding-top: 1%;
     right: 0%;
     z-index: 0;
 }
@@ -258,4 +258,7 @@ input {
 .burn-container {
     max-height: 35vh;
     overflow-y: scroll;
+}
+canvas {
+    cursor: grab;
 }

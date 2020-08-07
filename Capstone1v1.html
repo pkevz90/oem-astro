@@ -9,7 +9,7 @@
     <script src="./SupportLibraries/math.min.js"></script>
     <script src="./SupportLibraries/vue.js"></script>
     <script src="./SupportLibraries/jquery.min.js"></script>
-
+    <script src="./SupportLibraries/jquery.mousewheel.min.js"></script>
     <!-- <script src="SupportLibraries/astroFunctions.js"></script> -->
     <script src="./js/cap1v1/Cap1v1main.js"></script>
     <script src="./js/cap1v1/Cap1v1Trajectories.js"></script>
@@ -45,58 +45,59 @@
         <h4><u>Planning Manuevers</u></h4>
         <p>User is able to plan a maneuver on their blue RSO (and speculate what the red side could do as well)</p>
         <ol>
-            <li>- Click on desired waypoint to start the maneuver process</li>
-            <li>- Alternatively, click on the desired maneuver on the side-bar menu</li>
-            <li>- With a waypoint selected, the user has two options, accessed by keyboard inputs</li>
+            <li>- Click and hold on a desired waypoint to start the maneuver process</li>
             <ol>
-                <li>[B] - Plan a manual maneuver burn (i.e. manually choose direction and magnitude)</li> <br>
-                <li>[T] - Initiate a targeting sequence</li>
+                <li>Move immediately to start a manual burn</li> 
+                <li>Hold for half a second in place to start a targeting sequence</li>
             </ol>
             <li>- For both options, the user will be constrained by the amount of fuel they have left. An example would be if a user has a total of 2.5 m/s and they used 1.5 m/s on the first burn, the second burn will 
                 be restricted to a magnitude of 1 m/s.
             </li>
             <li>- When planning a maneuver with waypoint targeting, keep the following in mind</li>
             <ol>
-                <li>- The default targeted point is the next burn location, this can be changed with the [<] and [>] keys.</li> <br>
+                <li>- The default targeted point is the next burn location, this can be changed with the [<] and [>] keys.</li>
                 <li>- The tranparent white ellipse that appears represents the area that is physically possible to reach in the chosen amount of time with fuel constraints.</li> <br>
             </ol>
         </ol>
         <p>The slider will allow user to view satellite/Sun positions at any scenario time</p>
-        <p>Zoom [+] & [-]   Move Camera [W][S][A][D]</p>
+        <p>Click and drag to move camera. Scroll wheel to zoom.</p>
     </div>
     <div class="setup-screen" id="setup-data">
         <div class="setup-container">
             <p class="container-title" style="color: rgb(100,150,255)">Blue Satellite</p>
             <p><u>Initial State</u></p>
             <p><em>A<sub>e</sub></em>: <input v-model="blue.ae"> km</p>
-            <p><em>X<sub>d</em></sub> :<input v-model="blue.xd"> km</p>
-            <p><em>Y<sub>d</sub></em> :<input v-model="blue.yd" placeholder="10.0"> km</p>
+            <p><em>X<sub>d</em></sub>: <input v-model="blue.xd"> km</p>
+            <p><em>Y<sub>d</sub></em>: <input v-model="blue.yd" placeholder="10.0"> km</p>
             <p><em>&#946</em>: <input v-model="blue.B"> <sup>o</sup></p>
-            <p><u>Success Parameters</u></p>
-            <p>&#916V Available: <input v-model="scenario_start.dVavail"> m/s</p>
-            <p>Required CATS: <input v-model="scenario_start.reqCats"> <sup>o</sup></p>
-            <p>Range: <input v-model="scenario_start.rangeReq[0]"> to <input v-model="scenario_start.rangeReq[1]">
+            <p>&#916V Available: <input v-model.number="blue.dVavail"> m/s</p>
+            <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
+            <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
         </div>
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,150,100)">Red Satellite</p>
             <p><u>Initial State</u></p>
             <p><em>A<sub>e</sub></em>: <input v-model="red.ae"> km</p>
-            <p><em>X<sub>d</em></sub> :<input v-model="red.xd"> km</p>
-            <p><em>Y<sub>d</sub></em> :<input v-model="red.yd" placeholder="-10.0"> km</p>
+            <p><em>X<sub>d</em></sub>: <input v-model="red.xd"> km</p>
+            <p><em>Y<sub>d</sub></em>: <input v-model="red.yd" placeholder="-10.0"> km</p>
             <p><em>&#946</em>: <input v-model="red.B"> <sup>o</sup></p>
+            <p>&#916V Available: <input v-model="red.dVavail"> m/s</p>
         </div>
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,255,255)">Scenario Data</p>
             <p>Initial Sun <input v-model="scenario_start.initSun"><sup>o</sup></p>
             <p>Burns/Player <input v-model="scenario_start.bp"></p>
             <p>Length <input v-model="scenario_start.sl"> hrs</p>
-            <p>Team 1<input type="radio" name="teamN" value="1" v-model="teamNumber" checked>Team 2<input type="radio" name="teamN" value="2" v-model="teamNumber"></p>
+            <p>
+                Team 1<input type="radio" name="teamN" value="1" v-model="teamNumber" checked>
+                Team 2<input type="radio" name="teamN" value="2" v-model="teamNumber">
+            </p>
             <p> Scenario
-            <select style="font-size: 1.5vw;" v-on:click="selectScenario">
-                <option value="custom">Custom</option>
+            <select style="font-size: 1.5vw;" v-on:change="selectScenario">
+                <option value="custom"    >Custom</option>
                 <option value="knifefight">Knife Fight</option>
-                <option value="driveby">Drive-By</option>
-                <option value="defend">NMC</option>
+                <option value="driveby"   >Drive-By</option>
+                <option value="defend"    >Defender</option>
             </select>
             </p>    
             <p>Game Server</p>
@@ -104,25 +105,27 @@
         </div>
         <div class="setup-container">
             <div style="display: none;">
-                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #1</p>
+                <p class="container-title" style="color: rgb(160,255,160)">Green Satellite</p>
                 <p><u>Initial State</u></p>
-                <p><em>Ae</em>: <input v-model="gray1.ae"> km</p>
-                <p><em>X<sub>d</em></sub> :<input v-model="gray1.xd"> km</p>
-                <p><em>Y<sub>d</sub></em> :<input v-model="gray1.yd"> km</p>
-                <p><em>&#946</em>: <input v-model="gray1.B"> <sup>o</sup></p>
+                <p><em>Ae</em>: <input v-model="green.ae"> km</p>
+                <p><em>X<sub>d</em></sub>: <input v-model="green.xd"> km</p>
+                <p><em>Y<sub>d</sub></em>: <input v-model="green.yd"> km</p>
+                <p><em>&#946</em>: <input v-model="green.B"> <sup>o</sup></p>
+                <p>&#916V Available: <input v-model="green.dVavail"> m/s</p>
             </div>
-            <div class="add-button" v-on:click="addGray" id="1">+</div>
+            <div class="add-button" v-on:click="addGray" id="green">+</div>
         </div>
         <div class="setup-container">
             <div style="display: none;">
-                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite #2</p>
+                <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite</p>
                 <p><u>Initial State</u></p>
-                <p><em>Ae</em>: <input v-model="gray2.ae"> km</p>
-                <p><em>X<sub>d</em></sub> :<input v-model="gray2.xd"> km</p>
-                <p><em>Y<sub>d</sub></em> :<input v-model="gray2.yd"> km</p>
-                <p><em>&#946</em>: <input v-model="gray2.B"> <sup>o</sup></p>
+                <p><em>Ae</em>: <input v-model="gray.ae"> km</p>
+                <p><em>X<sub>d</em></sub>: <input v-model="gray.xd"> km</p>
+                <p><em>Y<sub>d</sub></em>: <input v-model="gray.yd"> km</p>
+                <p><em>&#946</em>: <input v-model="gray.B"> <sup>o</sup></p>
+                <p>&#916V Available: <input v-model="gray.dVavail"> m/s</p>
             </div>
-            <div class="add-button" v-on:click="addGray" id="2">+</div>
+            <div class="add-button" v-on:click="addGray" id="gray">+</div>
         </div>
         
         <div class="start-button">Start</div>
@@ -132,50 +135,11 @@
         <div class="side-data" id="dataContainer">
             <p class="dropdown-item">Current Range: {{ scenario_data.curRange.toFixed(2) }} km</p>
             <p class="dropdown-item">Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} km @ {{ scenario_data.closeTime }}</p>
-            <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }} degrees</p>
-            <p class="dropdown-item">Blue &#916V: {{ scenario_data.blueDv.toFixed(2) }} m/s</p>
-            <p class="dropdown-item">Red &#916V: {{ scenario_data.redDv.toFixed(2) }} m/s</p>
+            <p class="dropdown-item">CATS Angle: {{ scenario_data.curCats.toFixed(2) }}<sup>o</sup></p>
         </div>
-        <div class="controlTitle pointer"><span style="color:rgb(100,150,255)">Blue Satellite</span></div>
-        <div class="side-data burn-container" id="dataContainer" style="display: none;">
-            <table class="table" id="burnTable" style="margin-top: 3%;">
-                <thead>
-                    <tr>
-                        <th>Time [hrs]</th>
-                        <th>Radial [m/s]</th>
-                        <th>In-Track [m/s]</th>
-                    </tr>
-                </thead>
-                <tbody class="pointer">
-                    <tr class="burnRows" v-for="(burn,index) in scenario_data.blueBurns" v-on:click="burnClick">
-                        <th>+ {{ (scenario_data.scenLength/scenario_data.numBurns*(index)).toFixed(1) }}</th>
-                        <td>{{ burn[0].toFixed(3) }}</td>
-                        <td>{{ burn[1].toFixed(3) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="controlTitle pointer"><span style="color:rgb(255,100,50)">Red Satellite</span></div>
-        <div class="side-data burn-container" id="dataContainer" style="display: none;">
-            <table class="table" id="burnTable" style="margin-top: 3%;">
-                <thead>
-                    <tr>
-                        <th>Time [hrs]</th>
-                        <th>Radial [m/s]</th>
-                        <th>In-Track [m/s]</th>
-                    </tr>
-                </thead>
-                <tbody class="pointer">
-                    <tr class="burnRows" v-for="(burn,index) in scenario_data.redBurns" v-on:click="burnClick">
-                        <th>+ {{ (scenario_data.scenLength/scenario_data.numBurns*(index)).toFixed(1) }}</th>
-                        <td>{{ burn[0].toFixed(3) }}</td>
-                        <td>{{ burn[1].toFixed(3) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <player-data v-for="player in scenario_data.players" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>
-    <div style="width:95%; height:auto; margin: auto; padding-top: 2.5%; z-index: 1;">
+    <div style="width:95%; height:auto; margin: auto; padding-top: 1%; z-index: 1;">
         <canvas id="ChartCnvs" width="51" height="23"></canvas>
     </div>
     <div class="team-number"></div>

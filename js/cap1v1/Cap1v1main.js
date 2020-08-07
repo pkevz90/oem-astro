@@ -4,9 +4,7 @@ class Satellite {
 	constructor(initState, name, dataLoc) {
 		this.name = name;
 		this.initState = initState;
-		if (name !== 'gray') {
-			this.burns = math.zeros(app.numBurns,2)._data;
-		}
+		this.burns = math.zeros(app.numBurns,2)._data;
 		this.calculateTrajecory = calculateTrajecory;
 		this.dataLoc = dataLoc;
 	}
@@ -19,20 +17,25 @@ let app = {
 	chosenWaypoint: undefined,
 	axisLimits: 100,
 	axisCenter: [0, 0],
+	appDrag: undefined,
 	currentTime: 0,
 	initSunVector: [
 		[0],
 		[40 * 0.4]
 	],
+	mouseCoor: {
+		x: undefined,
+		y: undefined
+	},
 	calcDt: 240,
 	burnChange: false,
 	tactic: '',
 	tacticData: undefined,
-	deltaVAvail: undefined,
 	scenLength: undefined,
 	numBurns: undefined,
 	reqCats: undefined,
 	rangeReq: undefined,
+	redTurn: 1,
 	burnTransition: false,
 	spans: {
 		manRows: undefined,
@@ -46,8 +49,8 @@ let app = {
 	updateApp: function () {
 		for (var sat in app.players) {
 			app.players[sat].calculateTrajecory();
-			calcData(app.currentTime);
 		}
+		calcData(app.currentTime);
 	}
 }
 
@@ -170,23 +173,37 @@ function createGraph() {
 				pointRadius: 0,
 				borderDash: [10, 10],
 				borderColor: 'rgba(255,255,255,0.5)',
-			}, {
-				// label: "Current Gray1",
+			},{
+				// label: "Green Waypoints",
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 7,
+				borderColor: 'rgba(160,255,160,1)'
+			},{
+				// label: "Current Green",
 				data: [],
 				showLine: false,
 				fill: false,
 				pointRadius: 15,
 				pointStyle: 'rect',
-				backgroundColor: 'rgba(150,150,150,1)',
+				backgroundColor: 'rgba(160,255,160,1)',
 			}, {
-				// label: "Gray Trajectory1",
+				// label: "Green Trajectory",
 				data: [],
 				fill: false,
 				showLine: true,
 				pointRadius: 0,
-				borderColor: 'rgba(150,150,150,1)',
+				borderColor: 'rgba(160,255,160,1)',
+			},{
+				// label: "Gray Waypoints",
+				data: [],
+				showLine: false,
+				fill: false,
+				pointRadius: 7,
+				borderColor: 'rgba(150,150,150,1)'
 			}, {
-				// label: "Current Gray2",
+				// label: "Current Gray",
 				data: [],
 				showLine: false,
 				fill: false,
@@ -194,7 +211,7 @@ function createGraph() {
 				pointStyle: 'rect',
 				backgroundColor: 'rgba(150,150,150,1)',
 			}, {
-				// label: "Gray Trajectory2",
+				// label: "Gray Trajectory",
 				data: [],
 				fill: false,
 				showLine: true,
@@ -222,33 +239,6 @@ function createGraph() {
 			legend: {
 				display: false
 			},
-			onHover: function (element) {
-				let scaleRef, valueX, valueY;
-				for (var scaleKey in this.scales) {
-					scaleRef = this.scales[scaleKey];
-					if (scaleRef.isHorizontal() && scaleKey === 'x-axis-1') {
-						valueX = scaleRef.getValueForPixel(element.offsetX);
-					} else if (scaleKey === 'y-axis-1') {
-						valueY = scaleRef.getValueForPixel(element.offsetY);
-					}
-				}
-				handleHover(valueX, valueY);
-			},
-			onClick: function (element) {
-				let scaleRef, valueX, valueY;
-				for (var scaleKey in this.scales) {
-					scaleRef = this.scales[scaleKey];
-					if (scaleRef.isHorizontal() && scaleKey == 'x-axis-1') {
-						valueX = scaleRef.getValueForPixel(element.offsetX);
-					} else if (scaleKey == 'y-axis-1') {
-						valueY = scaleRef.getValueForPixel(element.offsetY);
-					}
-				}
-				handleClick(valueX, valueY);
-			},
-			title: {
-				display: false
-			},
 			scales: {
 				xAxes: [{
 					gridLines: {
@@ -269,6 +259,12 @@ function createGraph() {
 						fontSize: 20,
 						reverse: true,
 						fontColor: 'rgba(255,255,255,1)'
+					},
+					afterBuildTicks: (a, ticks) => {
+
+						ticks.pop();
+						ticks.shift();
+						return ticks;
 					}
 				}],
 				yAxes: [{
@@ -288,6 +284,12 @@ function createGraph() {
 						max: app.axisLimits * 0.5,
 						fontColor: 'rgba(255,255,255,1)',
 						fontSize: 20
+					},
+					afterBuildTicks: (a, ticks) => {
+
+						ticks.pop();
+						ticks.shift();
+						return ticks;
 					}
 				}]
 			},
@@ -300,14 +302,24 @@ function createGraph() {
 }
 
 function startGame() {
-	sideData.scenario_data.blueBurns = app.players.blue.burns;
-	sideData.scenario_data.redBurns = app.players.red.burns;
+	let colors = {
+		blue:  'rgba(100,150,255,1)',
+		red:   'rgba(255,150,100,1)',
+		green: 'rgba(120,255,120,1)',
+		gray: 'rgba(150,150,150,1)'
+	}
+	for (sat in app.players) {
+		Vue.set(sideData.scenario_data.players,sat,{})
+		Vue.set(sideData.scenario_data.players[sat],'burns',app.players[sat].burns)
+		Vue.set(sideData.scenario_data.players[sat],'name',sat)
+		Vue.set(sideData.scenario_data.players[sat],'color',colors[sat])
+	}
 	app.chartData = {
 		burnDir: globalChartRef.config.data.datasets[6],
 		sun: globalChartRef.config.data.datasets[7],
 		selected: globalChartRef.config.data.datasets[8],
 		relative: globalChartRef.config.data.datasets[12],
-		targetLim: globalChartRef.config.data.datasets[17],
+		targetLim: globalChartRef.config.data.datasets[19],
 		view: globalChartRef.config.data.datasets[11]
 	};
 	for (sat in app.players) {
@@ -360,15 +372,21 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 function setCurrentPoints(curTime, noPlot = false) {
 	var points = {};
 	let point1, point2, dt;
+	// console.log(Math.floor(curTime * 3600 / app.calcDt),Math.floor(curTime * 3600 / app.calcDt)+1)
 	for (sat in app.players) {
 		point1 = [
 			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)].y],
 			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)].x]
 		];
-		point2 = [
-			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)+1].y],
-			[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)+1].x]
-		];
+		if (Math.floor(curTime * 3600 / app.calcDt) + 1 === app.players[sat].dataLoc.trajectory.data.length) {
+			point2 = [...point1];
+		}
+		else {
+			point2 = [
+				[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)+1].y],
+				[app.players[sat].dataLoc.trajectory.data[Math.floor(curTime * 3600 / app.calcDt)+1].x]
+			];
+		}
 		dt = (curTime * 3600) % app.calcDt;
 		points[sat + 'R'] = [
 			[point1[0][0] + (point2[0][0]-point1[0][0]) * dt / app.calcDt],

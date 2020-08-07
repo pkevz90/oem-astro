@@ -1,10 +1,88 @@
 var teamNum, $turn = $('.selectable:first span');;
 createGraph();
+$('canvas').on('mousewheel',event => {
+    if (app.tactic === 'target') {
+        changeTargetTime(event.deltaY)
+        return;
+    }
+    else if (app.chosenWaypoint !== undefined) {
+        return;
+    }
+    app.axisLimits -= event.deltaY*5;
+    setAxisZoomPos();
+})
+$('canvas').mousedown(event => {
+    let X = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
+    let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+    
+    if (checkClose(X, Y)) {
+        app.tactic = 'burn';
+        app.players[app.chosenWaypoint[1]].burns.splice(app.chosenWaypoint[0],1, [0, 0]);
+        app.players[app.chosenWaypoint[1]].calculateTrajecory();
+        calcData();
+        app.chartData.burnDir.data = [{
+            x: 0,
+            y: 0
+        }, {
+            x: 0,
+            y: 0
+        }];
+        globalChartRef.update();
+        setTimeout(() => {
+            if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false) && app.chosenWaypoint !== undefined) {
+                $('canvas').css('cursor','crosshair')
+                startTarget();
+            }
+        },250)
+        return;
+    }
+    app.appDrag = [[event.offsetX,event.offsetY],
+                   [...app.axisCenter]];
+    $('canvas').css('cursor','grabbing')
+})
+$('canvas').mousemove(event => {
+    app.mouseCoor.x = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
+    app.mouseCoor.y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top); 
+    switch(app.tactic) {
+        case 'burn':
+            burnCalc(app.mouseCoor.x,app.mouseCoor.y);
+            return;
+        case 'target':
+            targetCalc(app.mouseCoor.x,app.mouseCoor.y);
+            return;
+        default:
+            break;
+    }
+    if (!app.appDrag) {
+        return;
+    }
+    app.axisCenter[0] = app.appDrag[1][0] + 2*(event.offsetX-app.appDrag[0][0])*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
+    app.axisCenter[1] = app.appDrag[1][1] + 2*(event.offsetY-app.appDrag[0][1])*0.5*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+    setAxisZoomPos();
+})
+$('canvas').mouseup(() => {
+    switch(app.tactic) {
+        case 'burn':
+            burnCalc(0,0,true);
+            break;
+        case 'target':
+            targetCalc(0, 0, true);
+            break;
+        default:
+            break;
+    }
+    app.appDrag = undefined;
+    $('canvas').css('cursor','grab')
+})
+
 $('.nav-element-right').on('click', () => {
     $('.instruction-screen').slideToggle(250);
 })
 $('.selectable:first').on('click', () => {
     let turn = Number($turn.text());
+    if (turn > app.redTurn && setupData.server) {
+        return;
+    }
     turn++;
     setSelectedWaypoint(turn - 1, 'blue');
     $('.selectable:first span').text(turn)
@@ -35,6 +113,18 @@ $('.selectable:first').on('click', () => {
         ii++;
     }, 15);
 
+})
+// Other control title buttons are handled by callback within Vue object
+$('.controlTitle :first').on('click', (a) => {
+    if ($(a.target).is('span')) {
+        a.target = $(a.target).parent();
+    }
+    if (!$(a.target).next().is(":hidden")) {
+        $(a.target).next().slideUp(250);
+        return;
+    }
+    $('.side-data').slideUp(250);
+    $(a.target).next().slideDown(250);
 })
 $('.start-button').on('click', () => {
     $('.setup-screen').fadeOut(500);
@@ -80,31 +170,32 @@ $('.start-button').on('click', () => {
         current: globalChartRef.config.data.datasets[10],
     });
     let init;
-    if (setupData.gray1.exist) {
+    if (setupData.green.exist) {
         init = stateFromRoe({
-            ae: Number(setupData.gray1.ae),
-            xd: Number(setupData.gray1.xd),
-            yd: Number(setupData.gray1.yd),
-            B: Number(setupData.gray1.B)
+            ae: Number(setupData.green.ae),
+            xd: Number(setupData.green.xd),
+            yd: Number(setupData.green.yd),
+            B: Number(setupData.green.B)
         });
-        app.players.gray1 = new Satellite(init, 'gray1', {
-            trajectory: globalChartRef.config.data.datasets[14],
-            current: globalChartRef.config.data.datasets[13]
+        app.players.green = new Satellite(init, 'green', {
+            trajectory: globalChartRef.config.data.datasets[15],
+            current: globalChartRef.config.data.datasets[14],
+            waypoints: globalChartRef.config.data.datasets[13]
         })
     }
-    if (setupData.gray2.exist) {
+    if (setupData.gray.exist) {
         init = stateFromRoe({
-            ae: Number(setupData.gray2.ae),
-            xd: Number(setupData.gray2.xd),
-            yd: Number(setupData.gray2.yd),
-            B:  Number(setupData.gray2.B)
+            ae: Number(setupData.gray.ae),
+            xd: Number(setupData.gray.xd),
+            yd: Number(setupData.gray.yd),
+            B:  Number(setupData.gray.B)
         });
-        app.players.gray2 = new Satellite(init, 'gray2', {
-            trajectory: globalChartRef.config.data.datasets[16],
-            current: globalChartRef.config.data.datasets[15]
+        app.players.gray = new Satellite(init, 'gray', {
+            waypoints: globalChartRef.config.data.datasets[16],
+            trajectory: globalChartRef.config.data.datasets[18],
+            current: globalChartRef.config.data.datasets[17]
         })
     }
-    app.deltaVAvail = Number(setupData.scenario_start.dVavail);
     app.reqCats = Number(setupData.scenario_start.reqCats) * Math.PI / 180;
     app.rangeReq = [Number(setupData.scenario_start.rangeReq[0]), Number(setupData.scenario_start.rangeReq[1])];
     if (setupData.server) {
@@ -113,7 +204,8 @@ $('.start-button').on('click', () => {
                 if (app.burnTransition) {
                     return;
                 }
-                let turn = Math.min(Number($turn.text()), snapshot.val().turn);
+                app.redTurn = snapshot.val().turn;
+                let turn = Math.min(Number($turn.text()), app.redTurn);
                 if (Number($turn.text()) > snapshot.val().turn) {
                     $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
                 }
@@ -126,13 +218,11 @@ $('.start-button').on('click', () => {
                     newNorm = math.norm(snapshot.val().burn[ii]);
                     change = (Math.abs(oldNorm-newNorm) > 1e-4) ? ii : change;
                 }
-                // console.log(change);
                 if (change !== undefined) {
                     let frames = 15, frame = 0;
                     app.burnTransition = true;
                     let intB = setInterval(() => {
-                        app.players.red.burns[change] = math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change])
-                        // console.log(app.players.red.burns);
+                        app.players.red.burns.splice(change,1,math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change]));
                         frame++;
                         app.players.red.calculateTrajecory();
                         calcData(app.currentTime);
@@ -151,17 +241,17 @@ $('.start-button').on('click', () => {
     startGame();
 
 })
-$('.controlTitle').on('click', (a) => {
-    if ($(a.target).is('span')) {
-        a.target = $(a.target).parent();
-    }
-    if (!$(a.target).next().is(":hidden")) {
-        $(a.target).next().slideUp(250);
-        return;
-    }
-    $('.side-data').slideUp(250);
-    $(a.target).next().slideDown(250);
-})
+// $('.controlTitle').on('click', (a) => {
+//     if ($(a.target).is('span')) {
+//         a.target = $(a.target).parent();
+//     }
+//     if (!$(a.target).next().is(":hidden")) {
+//         $(a.target).next().slideUp(250);
+//         return;
+//     }
+//     $('.side-data').slideUp(250);
+//     $(a.target).next().slideDown(250);
+// })
 $('.nav-element input').on('input', (a) => {
     $(a.target).parent().prev().find('p').find('span').text(hrsToTime(a.target.value));
     app.currentTime = Number(a.target.value);

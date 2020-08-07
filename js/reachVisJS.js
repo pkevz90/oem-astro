@@ -136,6 +136,10 @@ function createGraph() {
 window.addEventListener('DOMContentLoaded', function () {
 
 	createGraph();
+	
+	globalChartRef.chart.options.tooltips.enabled = false;
+	globalChartRef.chart.options.events = [];
+	console.log(globalChartRef)
 	sliders = document.getElementById("sliderDiv").querySelectorAll("input");
 	sliderLabels = document.getElementById("sliderDiv").querySelectorAll("span");
 	for (var ii = 0; ii < sliders.length; ii++) {
