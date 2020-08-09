@@ -302,18 +302,19 @@ function createGraph() {
 }
 
 function startGame() {
-	let colors = {
+	app.colors = {
 		blue:  'rgba(100,150,255,1)',
 		red:   'rgba(255,150,100,1)',
 		green: 'rgba(120,255,120,1)',
 		gray: 'rgba(150,150,150,1)'
 	}
-    $('.nav-element:first p').css('color',colors[setupData.team])
+    $('.nav-element:first p').css('color',app.colors[setupData.team])
 	for (sat in app.players) {
+		sideData.scenario_data.data[sat].exist = (sat === setupData.team) ? false : true;
 		Vue.set(sideData.scenario_data.players,sat,{})
 		Vue.set(sideData.scenario_data.players[sat],'burns',app.players[sat].burns)
 		Vue.set(sideData.scenario_data.players[sat],'name',sat)
-		Vue.set(sideData.scenario_data.players[sat],'color',colors[sat])
+		Vue.set(sideData.scenario_data.players[sat],'color',app.colors[sat])
 	}
 	app.chartData = {
 		burnDir: globalChartRef.config.data.datasets[6],

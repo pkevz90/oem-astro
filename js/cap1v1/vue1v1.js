@@ -81,7 +81,28 @@ var sideData = new Vue({
     data: {
         scenario_data: {
             curRange: 0,
-            curCats: 0,
+            data: {
+                blue: {
+                    cats: 0,
+                    exist: false,
+                    range: 0
+                },
+                red: {
+                    cats: 0,
+                    exist: false,
+                    range: 0
+                },
+                green: {
+                    cats: 0,
+                    exist: false,
+                    range: 0
+                },
+                gray: {
+                    cats: 0,
+                    exist: false,
+                    range: 0
+                }
+            },
             closeApproach: 0,
             closeTime: 0,
             players: {
@@ -288,7 +309,7 @@ var setupData = new Vue({
                     };
                     this.red = {
                         ae: 0,
-                        xd: 30,
+                        xd: 15,
                         yd: 0,
                         B:  0, 
                         dVavail: (6).toFixed(1),
@@ -305,7 +326,7 @@ var setupData = new Vue({
                     };
                     this.gray = {
                         ae: 0,
-                        xd: -30,
+                        xd: -15,
                         yd: 0,
                         B:  0,
                         dVavail: (6).toFixed(1),

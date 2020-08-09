@@ -68,23 +68,27 @@
     <div class="setup-screen" id="setup-data">
         <div class="setup-container">
             <p class="container-title" style="color: rgb(100,150,255)">Blue Satellite</p>
-            <p><u>Initial State</u></p>
             <p><em>A<sub>e</sub></em>: <input v-model="blue.ae"> km</p>
             <p><em>X<sub>d</em></sub>: <input v-model="blue.xd"> km</p>
             <p><em>Y<sub>d</sub></em>: <input v-model="blue.yd" placeholder="10.0"> km</p>
             <p><em>&#946</em>: <input v-model="blue.B"> <sup>o</sup></p>
             <p>&#916V Available: <input v-model.number="blue.dVavail"> m/s</p>
-            <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
-            <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
+            <div v-if="team === 'blue'">
+                <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
+                <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
+            </div>
         </div>
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,150,100)">Red Satellite</p>
-            <p><u>Initial State</u></p>
             <p><em>A<sub>e</sub></em>: <input v-model="red.ae"> km</p>
             <p><em>X<sub>d</em></sub>: <input v-model="red.xd"> km</p>
             <p><em>Y<sub>d</sub></em>: <input v-model="red.yd" placeholder="-10.0"> km</p>
             <p><em>&#946</em>: <input v-model="red.B"> <sup>o</sup></p>
             <p>&#916V Available: <input v-model="red.dVavail"> m/s</p>
+            <div v-if="team === 'red'">
+                <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
+                <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
+            </div>
         </div>
         <div class="setup-container">
             <p class="container-title" style="color: rgb(255,255,255)">Scenario Data</p>
@@ -116,24 +120,30 @@
         <div class="setup-container">
             <div style="display: none;">
                 <p class="container-title" style="color: rgb(160,255,160)">Green Satellite</p>
-                <p><u>Initial State</u></p>
                 <p><em>Ae</em>: <input v-model="green.ae"> km</p>
                 <p><em>X<sub>d</em></sub>: <input v-model="green.xd"> km</p>
                 <p><em>Y<sub>d</sub></em>: <input v-model="green.yd"> km</p>
                 <p><em>&#946</em>: <input v-model="green.B"> <sup>o</sup></p>
                 <p>&#916V Available: <input v-model="green.dVavail"> m/s</p>
+                <div v-if="team === 'green'">
+                    <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
+                    <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
+                </div>
             </div>
             <div class="add-button" v-on:click="addGray" id="green">+</div>
         </div>
         <div class="setup-container">
             <div style="display: none;">
                 <p class="container-title" style="color: rgb(150,150,150)">Grey Satellite</p>
-                <p><u>Initial State</u></p>
                 <p><em>Ae</em>: <input v-model="gray.ae"> km</p>
                 <p><em>X<sub>d</em></sub>: <input v-model="gray.xd"> km</p>
                 <p><em>Y<sub>d</sub></em>: <input v-model="gray.yd"> km</p>
                 <p><em>&#946</em>: <input v-model="gray.B"> <sup>o</sup></p>
                 <p>&#916V Available: <input v-model="gray.dVavail"> m/s</p>
+                <div v-if="team === 'gray'">
+                    <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
+                    <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
+                </div>
             </div>
             <div class="add-button" v-on:click="addGray" id="gray">+</div>
         </div>
@@ -143,9 +153,18 @@
     <div class="sideBar" id="side-data">
         <div class="controlTitle pointer"><span>Engagement Data</span></div>
         <div class="side-data" id="dataContainer">
-            <p>Current Range: {{ scenario_data.curRange.toFixed(2) }} km</p>
-            <p>Close Approach: {{ scenario_data.closeApproach.toFixed(2) }} km @ {{ scenario_data.closeTime }}</p>
-            <p>CATS Angle: {{ scenario_data.curCats.toFixed(2) }}<sup>o</sup></p>
+            <div>Range to: <br>
+                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.blue.exist"><span style="color: rgba(100,150,255,1);">Blue: </span>{{ scenario_data.data.blue.range.toFixed(2) }} km</p>
+                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.red.exist"><span style="color: rgba(255,150,100,1);">Red: </span>{{ scenario_data.data.red.range.toFixed(2) }} km</p>
+                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.green.exist"><span style="color: rgba(120,255,120,1);">Green: </span>{{ scenario_data.data.green.range.toFixed(2) }} km</p>
+                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.gray.exist"><span style="color: rgba(150,150,150,1);">Gray: </span>{{ scenario_data.data.gray.range.toFixed(2) }} km</p>
+            </div>
+            <div style="margin-top: 5%;">CATS Angle to: <br>
+                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.blue.exist"><span style="color: rgba(100,150,255,1);">Blue: </span>{{ scenario_data.data.blue.cats.toFixed(2) }}<sup>o</sup></p>
+                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.red.exist"><span style="color: rgba(255,150,100,1);">Red: </span>{{ scenario_data.data.red.cats.toFixed(2) }}<sup>o</sup></p>
+                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.green.exist"><span style="color: rgba(120,255,120,1);">Green: </span>{{ scenario_data.data.green.cats.toFixed(2) }}<sup>o</sup></p>
+                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.gray.exist"><span style="color: rgba(150,150,150,1);">Gray: </span>{{ scenario_data.data.gray.cats.toFixed(2) }}<sup>o</sup></p>
+            </div>
         </div>
         <player-data v-for="player in scenario_data.players" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>

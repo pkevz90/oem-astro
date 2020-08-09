@@ -55,22 +55,25 @@ function calculateTrajecory() {
 function calcData(curTime = 0) {
 	let redR, blueR;
 	let curPoints = setCurrentPoints(curTime);
-	let curSun = math.squeeze(drawSunVectors(curTime * 3600)),
-		relVector = [curPoints.blueR[0] - curPoints.redR[0], curPoints.blueR[1] - curPoints.redR[1]],
+	let curSun = math.squeeze(drawSunVectors(curTime * 3600)), relVector, catsAngle;
+	for (player in app.players) {
+		relVector = [curPoints[setupData.team+'R'][0] - curPoints[player+'R'][0], curPoints[setupData.team+'R'][1] - curPoints[player+'R'][1]],
 		catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
+		Object.assign(sideData.scenario_data.data[player], {
+			range: math.norm(relVector),
+			cats: catsAngle * 180 / Math.PI
+		});
+	}
 	
 	// Update Data
-	Object.assign(sideData.scenario_data, {
-		curRange: math.norm(relVector),
-		curCats: catsAngle * 180 / Math.PI
-	});
+	
 
-	if (catsAngle < app.reqCats && math.norm(relVector) >= app.rangeReq[0] && math.norm(relVector) <= app.rangeReq[1]) {
-		drawViewpoint([curPoints.blueR[0][0], curPoints.blueR[1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), 'blue');
-	} else {
-		app.chartData.view.data = [];
-		globalChartRef.update();
-	}
+	// if (catsAngle < app.reqCats && math.norm(relVector) >= app.rangeReq[0] && math.norm(relVector) <= app.rangeReq[1]) {
+	// 	drawViewpoint([curPoints.blueR[0][0], curPoints.blueR[1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), 'blue');
+	// } else {
+	// 	app.chartData.view.data = [];
+	// 	globalChartRef.update();
+	// }
 	let t1 = 1000,
 		t2 = 0,
 		range1, range2, t0 = 0,
