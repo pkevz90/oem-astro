@@ -8,8 +8,7 @@ $('canvas').on('mousewheel',event => {
     else if (app.chosenWaypoint !== undefined) {
         return;
     }
-	let curPoints = setCurrentPoints(app.currentTime, true);
-    drawSunVectors(app.currentTime * 3600, [curPoints.redR[0][0], curPoints.redR[1][0]]);
+    drawSunVectors(app.currentTime * 3600);
     app.axisLimits -= event.deltaY*5;
     setAxisZoomPos();
 })
@@ -59,7 +58,8 @@ $('canvas').mousemove(event => {
         return;
     }
     app.axisCenter[0] = app.appDrag[1][0] + 2*(event.offsetX-app.appDrag[0][0])*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
-    app.axisCenter[1] = app.appDrag[1][1] + 2*(event.offsetY-app.appDrag[0][1])*0.5*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+    app.axisCenter[1] = app.appDrag[1][1] + 2*(event.offsetY-app.appDrag[0][1])*0.5*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top); 
+    drawSunVectors(app.currentTime * 3600);
     setAxisZoomPos();
 })
 $('canvas').mouseup(() => {
@@ -76,7 +76,7 @@ $('canvas').mouseup(() => {
     app.appDrag = undefined;
     $('canvas').css('cursor','grab')
 })
-$('.nav-element-right').on('click', () => {
+$('.nav-element-right:first').on('click', () => {
     $('.instruction-screen').slideToggle(250);
 })
 $('.selectable:first').on('click', () => {
@@ -209,18 +209,13 @@ $('.start-button').on('click', () => {
                 if (app.burnTransition) {
                     return;
                 }
+                app.redTurn = 1000; // arbitrarily high number, will always be reduced
                 for (player in inData) {
-                    if (player == setupData.team) {
+                    if (player == setupData.team || app.players[player] === undefined) {
                         continue;
                     }
-                    app.redTurn = inData[player].turn;
+                    app.redTurn = inData[player].turn < app.redTurn ? inData[player].turn : app.redTurn;
                     let turn = Math.min(Number($turn.text()), inData[player].turn);
-                    if (Number($turn.text()) > inData[player].turn) {
-                        $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
-                    }
-                    else {
-                        $('.nav-element-right').prev().find('p').css("color","white")
-                    }
                     let oldNorm, newNorm, change = undefined, oldBurn = [...app.players[player].burns];
                     for (let ii = 0; ii < (turn - 1); ii++) {
                         oldNorm = math.norm(app.players[player].burns[ii]);
@@ -244,6 +239,12 @@ $('.start-button').on('click', () => {
                     }
                 }
                 
+                if (Number($turn.text()) > app.redTurn) {
+                    $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
+                }
+                else {
+                    $('.nav-element-right').prev().find('p').css("color","white")
+                }
             })//.catch(() => {
             //     console.log('error');
             // });

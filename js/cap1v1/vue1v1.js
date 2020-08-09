@@ -276,6 +276,42 @@ var setupData = new Vue({
                         exist: false
                     };
                     break;
+                case 'mayhem':
+                    this.blue = {
+                        ae: 0,
+                        xd: 0,
+                        yd: 30,
+                        B:  0, 
+                        dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+                    };
+                    this.red = {
+                        ae: 0,
+                        xd: 30,
+                        yd: 0,
+                        B:  0, 
+                        dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+                    };
+                    this.green = {
+                        ae: 0,
+                        xd: 0,
+                        yd: -30,
+                        B:  0,
+                        dVavail: (6).toFixed(1),
+                        exist: true
+                    };
+                    this.gray = {
+                        ae: 0,
+                        xd: -30,
+                        yd: 0,
+                        B:  0,
+                        dVavail: (6).toFixed(1),
+                        exist: true
+                    };
+                    break;
                 default:
                     this.green = {
                         ae: 0,

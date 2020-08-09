@@ -55,7 +55,7 @@ function calculateTrajecory() {
 function calcData(curTime = 0) {
 	let redR, blueR;
 	let curPoints = setCurrentPoints(curTime);
-	let curSun = math.squeeze(drawSunVectors(curTime * 3600, [curPoints.redR[0][0], curPoints.redR[1][0]])),
+	let curSun = math.squeeze(drawSunVectors(curTime * 3600)),
 		relVector = [curPoints.blueR[0] - curPoints.redR[0], curPoints.blueR[1] - curPoints.redR[1]],
 		catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
 	

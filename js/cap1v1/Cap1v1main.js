@@ -122,7 +122,7 @@ function createGraph() {
 				pointRadius: 0,
 				borderWidth: 6,
 				lineTension: 0,
-				borderColor: 'rgba(225,225,0,1)',
+				borderColor: 'rgba(225,225,0,0.5)',
 			}, {
 				// label: "Selected Waypoint",
 				data: [],
@@ -335,7 +335,7 @@ function startGame() {
 	globalChartRef.update();
 }
 
-function drawSunVectors(t, origin = [0, 0], plot = true) {
+function drawSunVectors(t, plot = true, origin = app.axisCenter) {
 	let n = 2 * Math.PI / 86164,
 		ct = Math.cos(-t * n),
 		st = Math.sin(-t * n),
@@ -348,23 +348,23 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 	let arrowLen = 2*app.axisLimits / 100;
 	if (plot) {
 		app.chartData.sun.data = [{
-			x: origin[1],
-			y: origin[0]
+			x: app.axisCenter[0],
+			y: app.axisCenter[1]
 		}, {
-			x: SunVector[1][0] + origin[1],
-			y: SunVector[0][0] + origin[0]
+			x: SunVector[1][0] + origin[0],
+			y: SunVector[0][0] + origin[1]
 		}, undefined, {
-			x: SunVector[1][0] + origin[1],
-			y: SunVector[0][0] + origin[0]
+			x: SunVector[1][0] + origin[0],
+			y: SunVector[0][0] + origin[1]
 		}, {
-			x: SunVector[1][0] + origin[1] - arrowLen * Math.cos(Math.PI / 6 - Number(setupData.scenario_start.initSun) * Math.PI / 180 + Math.PI / 2 + t * n),
-			y: SunVector[0][0] + origin[0] - arrowLen * Math.sin(Math.PI / 6 - Number(setupData.scenario_start.initSun) * Math.PI / 180 + Math.PI / 2 + t * n)
+			x: SunVector[1][0] + origin[0] - arrowLen * Math.cos(Math.PI / 6 - Number(setupData.scenario_start.initSun) * Math.PI / 180 + Math.PI / 2 + t * n),
+			y: SunVector[0][0] + origin[1] - arrowLen * Math.sin(Math.PI / 6 - Number(setupData.scenario_start.initSun) * Math.PI / 180 + Math.PI / 2 + t * n)
 		}, undefined, {
-			x: SunVector[1][0] + origin[1],
-			y: SunVector[0][0] + origin[0]
+			x: SunVector[1][0] + origin[0],
+			y: SunVector[0][0] + origin[1]
 		}, {
-			x: SunVector[1][0] + origin[1] - arrowLen * Math.cos(Math.PI / 6 + Number(setupData.scenario_start.initSun) * Math.PI / 180 - Math.PI / 2 - t * n),
-			y: SunVector[0][0] + origin[0] + arrowLen * Math.sin(Math.PI / 6 + Number(setupData.scenario_start.initSun) * Math.PI / 180 - Math.PI / 2 - t * n)
+			x: SunVector[1][0] + origin[0] - arrowLen * Math.cos(Math.PI / 6 + Number(setupData.scenario_start.initSun) * Math.PI / 180 - Math.PI / 2 - t * n),
+			y: SunVector[0][0] + origin[1] + arrowLen * Math.sin(Math.PI / 6 + Number(setupData.scenario_start.initSun) * Math.PI / 180 - Math.PI / 2 - t * n)
 		}];
 		globalChartRef.update();
 	}

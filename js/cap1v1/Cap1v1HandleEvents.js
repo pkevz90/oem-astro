@@ -138,6 +138,7 @@ function startTarget() {
             availDv: app.tacticData.availDv * ii / 12
         });
         app.currentTime += timeDelta / 13;
+        drawSunVectors(app.currentTime * 3600);
         $('.nav-element input').val(app.currentTime);
         $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
         if (ii === 12) {

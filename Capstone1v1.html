@@ -36,6 +36,9 @@
         <li class="nav-element-right">
             <p class="selectable">Instructions</p>
         </li>
+        <li class="nav-element-right">
+            <p class="selectable">Options</p>
+        </li>
     </ul>
     <div class="instruction-screen">
         <h4><u>Goal</u></h4>
@@ -46,18 +49,18 @@
         <p>User is able to plan a maneuver on their blue RSO (and speculate what the red side could do as well)</p>
         <ol>
             <li>- Click and hold on a desired waypoint to start the maneuver process</li>
-            <ol>
+            <ul>
                 <li>Move immediately to start a manual burn</li> 
                 <li>Hold for half a second in place to start a targeting sequence</li>
-            </ol>
-            <li>- For both options, the user will be constrained by the amount of fuel they have left. An example would be if a user has a total of 2.5 m/s and they used 1.5 m/s on the first burn, the second burn will 
-                be restricted to a magnitude of 1 m/s.
-            </li>
-            <li>- When planning a maneuver with waypoint targeting, keep the following in mind</li>
-            <ol>
-                <li>- The default targeted point is the next burn location, this can be changed with the [<] and [>] keys.</li>
-                <li>- The tranparent white ellipse that appears represents the area that is physically possible to reach in the chosen amount of time with fuel constraints.</li> <br>
-            </ol>
+            </ul>
+                <li>For both options, the user will be constrained by the amount of fuel they have left. An example would be if a user has a total of 2.5 m/s and they used 1.5 m/s on the first burn, the second burn will 
+                    be restricted to a magnitude of 1 m/s.
+                </li>
+                <li>When planning a maneuver with waypoint targeting, keep the following in mind</li>
+            <ul>
+                <li>The default targeted point is the next burn location, this can be changed with the [<] and [>] keys.</li>
+                <li>The tranparent white ellipse that appears represents the area that is physically possible to reach in the chosen amount of time with fuel constraints.</li> <br>
+            </ul>
         </ol>
         <p>The slider will allow user to view satellite/Sun positions at any scenario time</p>
         <p>Click and drag to move camera. Scroll wheel to zoom.</p>
@@ -104,6 +107,7 @@
                 <option value="knifefight">Knife Fight</option>
                 <option value="driveby"   >Drive-By</option>
                 <option value="defend"    >Defender</option>
+                <option value="mayhem"    >Mayhem</option>
             </select>
             </p>    
             <p>Game Server</p>
