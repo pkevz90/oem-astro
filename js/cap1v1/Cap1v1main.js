@@ -308,6 +308,7 @@ function startGame() {
 		green: 'rgba(120,255,120,1)',
 		gray: 'rgba(150,150,150,1)'
 	}
+    $('.nav-element:first p').css('color',colors[setupData.team])
 	for (sat in app.players) {
 		Vue.set(sideData.scenario_data.players,sat,{})
 		Vue.set(sideData.scenario_data.players[sat],'burns',app.players[sat].burns)

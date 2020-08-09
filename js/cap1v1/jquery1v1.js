@@ -76,7 +76,6 @@ $('canvas').mouseup(() => {
     app.appDrag = undefined;
     $('canvas').css('cursor','grab')
 })
-
 $('.nav-element-right').on('click', () => {
     $('.instruction-screen').slideToggle(250);
 })
@@ -86,7 +85,7 @@ $('.selectable:first').on('click', () => {
         return;
     }
     turn++;
-    setSelectedWaypoint(turn - 1, 'blue');
+    setSelectedWaypoint(turn - 1, setupData.team);
     $('.selectable:first span').text(turn)
     for (player in app.players) {
         app.players[player].calculateTrajecory();
@@ -95,11 +94,12 @@ $('.selectable:first').on('click', () => {
     if (setupData.server) {
         let outBurns = math.zeros(Number(setupData.scenario_start.bp), 2)._data;
         for (let ii = 0; ii < (turn - 1); ii++) {
-            outBurns[ii] = app.players.blue.burns[ii];
+            outBurns[ii] = app.players[setupData.team].burns[ii];
         }
-        firebase.database().ref('team' + setupData.teamNumber + '/').set({
+        firebase.database().ref('players/' + setupData.team + '/').set({
             burn: outBurns,
-            turn: turn
+            turn: turn,
+            init: app.players[setupData.team].initState
         });
     }
     let ii = 0;
@@ -133,16 +133,11 @@ $('.start-button').on('click', () => {
     $('.selectable:first').parent().fadeIn(500);
     $('.selectable:first').parent().prev().fadeIn(500);
     $('.selectable:first').parent().prev().prev().fadeIn(500);
+    // $('.nav-element:first p').css('color',sideData.scenario_data.players[setupData.team].name)
     app.initSunVector = [
         [Math.cos(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
         [Math.sin(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
     ];
-    if (setupData.server) {
-        firebase.database().ref('team' + setupData.teamNumber + '/').set({
-            burn: math.zeros(Number(setupData.scenario_start.bp), 2)._data,
-            turn: 1
-        });
-    }
     
     app.scenLength = Number(setupData.scenario_start.sl);
     app.numBurns = Number(setupData.scenario_start.bp);
@@ -198,62 +193,66 @@ $('.start-button').on('click', () => {
             current: globalChartRef.config.data.datasets[17]
         })
     }
+    if (setupData.server) {
+        firebase.database().ref('/players/' + setupData.team + '/').set({
+            burn: math.zeros(Number(setupData.scenario_start.bp), 2)._data,
+            turn: 1,
+            init: app.players[setupData.team].initState
+        });
+    }
     app.reqCats = Number(setupData.scenario_start.reqCats) * Math.PI / 180;
     app.rangeReq = [Number(setupData.scenario_start.rangeReq[0]), Number(setupData.scenario_start.rangeReq[1])];
     if (setupData.server) {
         setInterval(() => {
-            firebase.database().ref('team' + ((setupData.teamNumber == '1') ? '2' : '1') + '/').once('value').then(function (snapshot) {
+            firebase.database().ref('players/').once('value').then(function (snapshot) {
+                let inData = snapshot.val();
                 if (app.burnTransition) {
                     return;
                 }
-                app.redTurn = snapshot.val().turn;
-                let turn = Math.min(Number($turn.text()), app.redTurn);
-                if (Number($turn.text()) > snapshot.val().turn) {
-                    $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
+                for (player in inData) {
+                    if (player == setupData.team) {
+                        continue;
+                    }
+                    app.redTurn = inData[player].turn;
+                    let turn = Math.min(Number($turn.text()), inData[player].turn);
+                    if (Number($turn.text()) > inData[player].turn) {
+                        $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
+                    }
+                    else {
+                        $('.nav-element-right').prev().find('p').css("color","white")
+                    }
+                    let oldNorm, newNorm, change = undefined, oldBurn = [...app.players[player].burns];
+                    for (let ii = 0; ii < (turn - 1); ii++) {
+                        oldNorm = math.norm(app.players[player].burns[ii]);
+                        newNorm = math.norm(inData[player].burn[ii]);
+                        change = (Math.abs(oldNorm-newNorm) > 1e-4) ? ii : change;
+                    }
+                    if (change !== undefined) {
+                        let frames = 15, frame = 0;
+                        app.burnTransition = true;
+                        let changePlayer = player;
+                        let intB = setInterval(() => {
+                            app.players[changePlayer].burns.splice(change,1,math.add(math.dotMultiply(math.subtract(inData[changePlayer].burn[change],oldBurn[change]),frame/frames),oldBurn[change]));
+                            frame++;
+                            app.players[changePlayer].calculateTrajecory();
+                            calcData(app.currentTime);
+                            if (frame > frames) {
+                                clearInterval(intB)
+                                app.burnTransition = false;
+                            }
+                        },33)
+                    }
                 }
-                else {
-                    $('.nav-element-right').prev().find('p').css("color","white")
-                }
-                let oldNorm, newNorm, change = undefined, oldBurn = [...app.players.red.burns];
-                for (let ii = 0; ii < (turn - 1); ii++) {
-                    oldNorm = math.norm(app.players.red.burns[ii]);
-                    newNorm = math.norm(snapshot.val().burn[ii]);
-                    change = (Math.abs(oldNorm-newNorm) > 1e-4) ? ii : change;
-                }
-                if (change !== undefined) {
-                    let frames = 15, frame = 0;
-                    app.burnTransition = true;
-                    let intB = setInterval(() => {
-                        app.players.red.burns.splice(change,1,math.add(math.dotMultiply(math.subtract(snapshot.val().burn[change],oldBurn[change]),frame/frames),oldBurn[change]));
-                        frame++;
-                        app.players.red.calculateTrajecory();
-                        calcData(app.currentTime);
-                        if (frame > frames) {
-                            clearInterval(intB)
-                            app.burnTransition = false;
-                        }
-                    },33)
-                }
-            }).catch(() => {
-                console.log('error');
-            });
+                
+            })//.catch(() => {
+            //     console.log('error');
+            // });
         }, 500);
     }
     
     startGame();
 
 })
-// $('.controlTitle').on('click', (a) => {
-//     if ($(a.target).is('span')) {
-//         a.target = $(a.target).parent();
-//     }
-//     if (!$(a.target).next().is(":hidden")) {
-//         $(a.target).next().slideUp(250);
-//         return;
-//     }
-//     $('.side-data').slideUp(250);
-//     $(a.target).next().slideDown(250);
-// })
 $('.nav-element input').on('input', (a) => {
     $(a.target).parent().prev().find('p').find('span').text(hrsToTime(a.target.value));
     app.currentTime = Number(a.target.value);
@@ -263,21 +262,4 @@ $('.nav-element input').on('input', (a) => {
 
 function hrsToTime(hrs) {
     return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
-}
-
-function showNoteBar(s) {
-    $(".noteBar").stop();
-    $(".noteBar").stop();
-    $('.noteBar').hide();
-    $('.noteBar p')[0].textContent = s;
-    $('.noteBar').css('bottom', '0%');
-    $('.noteBar').css('opacity', '1');
-    $('.noteBar').show();
-    $('.noteBar').animate({
-        opacity: 0.99
-    }, 500);
-    $('.noteBar').animate({
-        bottom: '-=100px',
-    }, 250);
-
 }

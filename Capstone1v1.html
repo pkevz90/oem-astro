@@ -89,8 +89,14 @@
             <p>Burns/Player <input v-model="scenario_start.bp"></p>
             <p>Length <input v-model="scenario_start.sl"> hrs</p>
             <p>
-                Team 1<input type="radio" name="teamN" value="1" v-model="teamNumber" checked>
-                Team 2<input type="radio" name="teamN" value="2" v-model="teamNumber">
+                <input type="radio" name="teamN" value="blue" v-model="team" checked>
+                <label>Blue</label>
+                <input type="radio" name="teamN" value="red" v-model="team">
+                <label>Red</label>
+                <input type="radio" name="teamN" value="green" v-model="team" v-if="green.exist">
+                <label v-if="green.exist">Green</label>
+                <input type="radio" name="teamN" value="gray" v-model="team" v-if="gray.exist">
+                <label v-if="gray.exist">Gray</label>
             </p>
             <p> Scenario
             <select style="font-size: 1.5vw;" v-on:change="selectScenario">
