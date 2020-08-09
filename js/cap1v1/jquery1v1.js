@@ -8,6 +8,8 @@ $('canvas').on('mousewheel',event => {
     else if (app.chosenWaypoint !== undefined) {
         return;
     }
+	let curPoints = setCurrentPoints(app.currentTime, true);
+    drawSunVectors(app.currentTime * 3600, [curPoints.redR[0][0], curPoints.redR[1][0]]);
     app.axisLimits -= event.deltaY*5;
     setAxisZoomPos();
 })
@@ -132,8 +134,8 @@ $('.start-button').on('click', () => {
     $('.selectable:first').parent().prev().fadeIn(500);
     $('.selectable:first').parent().prev().prev().fadeIn(500);
     app.initSunVector = [
-        [15 * Math.cos(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
-        [15 * Math.sin(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
+        [Math.cos(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
+        [Math.sin(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
     ];
     if (setupData.server) {
         firebase.database().ref('team' + setupData.teamNumber + '/').set({

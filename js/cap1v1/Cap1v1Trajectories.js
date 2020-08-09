@@ -7,7 +7,7 @@ function calculateTrajecory() {
 		[this.initState[2][0]],
 		[this.initState[3][0]]
 	];
-	let numPoints = 12;
+	let numPoints = 5;
 	app.calcDt = (app.scenLength / app.numBurns) * 3600 / (numPoints + 1);
 	let pRR = PhiRR(app.calcDt),
 		pRV = PhiRV(app.calcDt),
@@ -54,29 +54,16 @@ function calculateTrajecory() {
 
 function calcData(curTime = 0) {
 	let redR, blueR;
-	drawSunVectors(curTime);
 	let curPoints = setCurrentPoints(curTime);
-
 	let curSun = math.squeeze(drawSunVectors(curTime * 3600, [curPoints.redR[0][0], curPoints.redR[1][0]])),
 		relVector = [curPoints.blueR[0] - curPoints.redR[0], curPoints.blueR[1] - curPoints.redR[1]],
 		catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
-
+	
 	// Update Data
 	Object.assign(sideData.scenario_data, {
-		curRange: math.norm([curPoints.redR[0][0] - curPoints.blueR[0][0], curPoints.redR[1][0] - curPoints.blueR[1][0]]),
+		curRange: math.norm(relVector),
 		curCats: catsAngle * 180 / Math.PI
 	});
-
-	for (let sat in app.players) {
-		let total = 0;
-		if (app.players[sat].name.substr(0, 4) === 'gray') {
-			continue;
-		}
-		app.players[sat].burns.forEach(element => {
-			total += math.norm(element);
-		});
-		sideData.scenario_data[sat + 'Dv'] = total;
-	}
 
 	if (catsAngle < app.reqCats && math.norm(relVector) >= app.rangeReq[0] && math.norm(relVector) <= app.rangeReq[1]) {
 		drawViewpoint([curPoints.blueR[0][0], curPoints.blueR[1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), 'blue');
@@ -130,9 +117,7 @@ function calcData(curTime = 0) {
 function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 	if (click) {
 		app.tactic = '';
-		// $('.info-right')[0].textContent = '';
 		app.chosenWaypoint = undefined;
-		// app.chartData.burnDir.data = [];
 		app.chartData.selected.data = [];
 		setBottomInfo();
 		globalChartRef.update();
@@ -180,10 +165,10 @@ function targetCalc(xMouse, yMouse, click = false) {
 		let inter = setInterval(() => {
 			showDeltaVLimit((app.chosenWaypoint[1] === app.players.blue.dataLoc.way) ? 'blue' : 'red', {
 				time: app.tacticData.time,
-				availDv: app.tacticData.availDv * (5 - ii) / 5
+				availDv: app.tacticData.availDv * (10 - ii) / 10
 			})
 			globalChartRef.update();
-			if (ii === 5) {
+			if (ii === 10) {
 				app.chartData.targetLim.data = [];
 				app.chosenWaypoint = undefined;
 				app.tacticData = undefined;
@@ -191,7 +176,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 			}
 			globalChartRef.update();
 			ii++;
-		}, 10);
+		}, 5);
 		globalChartRef.update();
 		return;
 	} else {
@@ -230,7 +215,6 @@ function targetCalc(xMouse, yMouse, click = false) {
 			y: r1[0][0] + dV[0][0] * 10000
 		}];
 		app.players[sat].calculateTrajecory();
-
 		calcData(app.currentTime);
 
 	}

@@ -21,7 +21,7 @@ let app = {
 	currentTime: 0,
 	initSunVector: [
 		[0],
-		[40 * 0.4]
+		[1]
 	],
 	mouseCoor: {
 		x: undefined,
@@ -343,7 +343,8 @@ function drawSunVectors(t, origin = [0, 0], plot = true) {
 			[st, ct]
 		];
 	let SunVector = math.multiply(R, app.initSunVector);
-	let arrowLen = 1.25;
+	SunVector = math.dotMultiply(SunVector,app.axisLimits*0.2);
+	let arrowLen = 2*app.axisLimits / 100;
 	if (plot) {
 		app.chartData.sun.data = [{
 			x: origin[1],
