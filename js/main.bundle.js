@@ -1,4 +1,5 @@
 var dat = [];
+var animBool=false;
 !function(t) {
     var e = {};
     function n(r) {
@@ -5439,7 +5440,7 @@ var dat = [];
             key: "update",
             value: function(t, e) {
                 var n = this;
-                if (this.animate) {
+                if (this.animate && document.getElementById('wave-draw').clicked) {
                     if (this.holdValueCount > 0)
                         return this.holdValueCount -= t,
                         void (this.holdValueCount <= 0 && (this.holdValueCount = 0));
@@ -9318,7 +9319,7 @@ var dat = [];
                 this.context.beginPath(),
                 this.context.arc(r, i, 2, 0, 2 * Math.PI),
                 this.context.stroke();
-                var o = "time = ".concat(n.toFixed(2), "\nvalue = ").concat(-e.toFixed(2));
+                //var o = "time = ".concat(n.toFixed(2), "\nvalue = ").concat(-e.toFixed(2));
                 ln(this.context, o, r, i, .1 * this.height, S, 0, this.width)
             }
         }]) && fn(e.prototype, n),
@@ -10517,8 +10518,9 @@ var dat = [];
             }
             ))
         }
-        if (Sr("wave-draw-slider") && ((a = new Vt("wave-draw-slider")).animate = !1,
+        if (Sr("wave-draw-slider") && ((a = new Vt("wave-draw-slider")).animate = true,
         t.push(a)),
+        
         Sr("wave-draw-split") && (y = new At("wave-draw-split"),
         null != o && (o.onDrawingStart.push((function() {
             y.splitAnim = !0,

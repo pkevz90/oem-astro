@@ -91,7 +91,7 @@
             transform: scale(0.95);
         }
         .instruction {
-            font-size: 30px;
+            font-size: 3vh;
             color: #e91e63;
             margin: auto;
             position: absolute;
@@ -111,6 +111,26 @@
 
             transition: opacity 0.2s ease-in-out;
         }
+        .instruction-credit {
+            font-size: 1vh;
+            color: #e91e63;
+            margin: 0;
+            position: absolute;
+            text-align: center;
+            left: 0;
+            right: 0;
+            bottom:.5vh;
+            opacity: 1;
+            pointer-events: none;
+            -moz-user-select: -moz-none;
+            -khtml-user-select: none;
+            -webkit-user-select: none;
+            -o-user-select: none;
+            user-select: none;
+
+            transition: opacity 0.2s ease-in-out;
+        }
+
         .wave-instruction {
             top: 25%;
         }
@@ -144,30 +164,42 @@
 <main id="content">
 <div class="multi-container">
 <p>The Fourier transform is a way of splitting something up into a bunch of sine waves.</p>
-<p>Try drawing a wave below, to see how it can be broken down.</p>
+<p style="width:100%; text-align: center;">Try drawing a wave below, to see how it can be broken down.</p>
 <div class="sketch" id="waveDrawBox">
     <canvas id="wave-draw" class="sketch-child" width=500 height=300></canvas>
     <p id="wave-draw-instruction" class="instruction wave-instruction">Draw here!</p>
 </div>
-<canvas id="wave-draw-split" class="sketch" width=500 height=500></canvas>
+<div class="sketch" id="waveDrawBox">
+    <canvas id="wave-draw-split" class="sketch-child" width=500 height=500></canvas>
+    <p id="wave-draw-instruction" class="instruction-credit">Created By: http://www.jezzamon.com/fourier/index.html</p>
 </div>
-<p><input id="wave-draw-slider" type="range" min="0" max="1" value="1" step="any">
+</div>
+<p><input id="wave-draw-slider" type="range" min="0" max="1" value="0" step="any">
 <button id="wave-draw-button" class="button">Play Wave</button></p>
 <p><em>Move the slider to see how as we add more sine waves, it gets closer and closer to your drawing</em></p>
-<p>Aside from the extra wigglyness, the wave looks pretty similar with just half of the sine waves.</p>
-<p>We can actually use the fact that the wave is pretty similar to our advantage. By using a Fourier transform, we can get the important parts of a sound, and only store those to end up with something that's pretty close to the original sound.</p>
-<p>What we can do is represent your wave as a bunch of sine waves. Then we can compress the sound by ignoring the smaller frequencies. Our end result won't be the same, but it'll sound pretty similar to a person.</p>
+<p>After you've added around half of the sine waves, the sound and drawing should both look similar to your input. This 
+    is essentially the way that an MP3 file eliminates the finer details in order to compress the file size, without much change to the sound.</p>
+ <p>But how can we tell which sine waves are the most important to keep?</p>
+ <p>The Wave is broken down using the following equation:</p>
+<div style="align-content: center; text-align: center;">
+<p style="display: inline-block;">F(<font face=symbol>w</font>) = <font face=symbol style="font-size: 4.5vh;position: relative; top:1vh">ò</font><table style="display:inline;position:relative;top:-1vh;"><tr><td style="padding:0px;" valign="top"><font face=symbol style="font-size: 2vh;">¥</font></td></tr><tr><td style="min-height:0px;vertical-align: text-top;padding:0px;">-<font face=symbol style="padding:0;margin:0;font-size: 2vh;">¥</font></td></tr></table>
+<td nowrap align=center>
+   f(t)e<sup>-i<font face=symbol>w</font> t</sup>
+</td>
+<td nowrap align=center>
+  dt
+</td></div>
 <div class="sketch">
     <canvas id="wave-frequencies" class="sketch-child" width=500 height=500></canvas>
     <p id="wave-freq-instruction" class="sketch-child instruction wave-instruction">Draw a wave above to begin!</p>
+    <p id="wave-draw-instruction" class="instruction-credit">Created By: http://www.jezzamon.com/fourier/index.html</p>
     </div>
 <input type="range" id="wave-frequencies-slider" min=".4" max=".8" value=".4" step="any">
 <p><em>Move the slider to see each component sine wave, its frequncy and its associated magnitude</em></p>
-<p>This is essentially what MP3s do, except they're more clever about which frequencies they keep and which ones they throw away.</p>
-<p>So in this case, we can use Fourier transforms to get an understanding of the fundamental properties of a wave, and then we can use that for things like compression.</p>
-<p>The Wave is broken down using the following equation:</p>
-<img src="" />
-<p>Finally, the information above can be presented in a frequency domain plot, where each spike represents a frequency that is highly present in the original wave.</p>
+<p>The frequencies with higher magnitude are more important to the look and sound of the original wave.</p>
+<p>We can use Fourier transforms to get an understanding of the fundamental components of a wave.</p>
+
+<p>The information from the Fourier transform can be presented in a frequency domain plot, where each spike represents a frequency that is highly present in the original wave.</p>
 <div class="sketch">
     <canvas id="freqPlot" width="60%"></canvas>
     <p id="freqPlot-instruction" class="instruction wave-instruction" style="width:auto; height:auto; position: absolute; left: 15%; top:40%">Draw a wave above to begin!</p>
@@ -179,7 +211,15 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
 <script>
+    $('#wave-draw')[0].clicked = false;    
+    // function updateSlider(a){
+        
+    //     a.value = a.value + .03;
+    //     console.log(a.value)
+    // }
+    //setInterval(function(){updateSlider($('#wave-draw-slider')[0])},100)
     $('#wave-draw').mousedown(()=>{
+        $('#wave-draw')[0].clicked = true;
         $('#wave-freq-instruction')[0].innerText = '';
         $('#freqPlot-instruction')[0].innerText = '';
         $('#wave-draw-instruction')[0].innerText = '';
