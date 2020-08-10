@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html >
 <head>
-	<title>An Interactive Introduction to Fourier Transforms</title>
+	<title>Fourier Transforms</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <style>
 		.navbar {
@@ -241,10 +241,10 @@
             let newChartData = dat.map((val) => {
                 return {x: val.freq*220, y: val.amplitude};
             })
-            newChartData.unshift({x:0,y:0})
+            //newChartData.unshift({x:0,y:0})
             newChartData = newChartData.sort(sortBy("x"));
             globalChartRef.config.data.datasets[0].data = newChartData;
-            globalChartRef.config.options.scales.xAxes[0].ticks.min = 0;
+            globalChartRef.config.options.scales.xAxes[0].ticks.min = 220;
             globalChartRef.config.options.scales.xAxes[0].ticks.max = math.max(newChartData.map(val=>{return val.x}));
             globalChartRef.config.options.scales.yAxes[0].ticks.min = 0;
             globalChartRef.config.options.scales.yAxes[0].ticks.max = math.max(newChartData.map(val=>{return val.y}));
