@@ -413,11 +413,14 @@ function setCurrentPoints(curTime, noPlot = false) {
 	return points;
 }
 
-function drawViewpoint(pos, az, range) {
+function drawViewpoint(pos, az, range, colorIn) {
+	let viewColor = app.colors[colorIn].substring(0,17) + '0.25)';
+	app.chartData.view.backgroundColor = viewColor;
 	app.chartData.view.data = [{
 		x: pos[1],
 		y: pos[0]
 	}];
+	
 	range *= 1.5;
 	let angWidth = Math.PI / 9;
 	for (var ii = az - angWidth / 2; ii <= az + angWidth / 2; ii += 0.01) {
