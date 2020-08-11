@@ -235,18 +235,18 @@ function createGraph() {
 				onProgress: function() {
 					let pixelX = (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / app.axisLimits;
 					let pixelY = (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / app.axisLimits / 2;
-					let canvas = globalChartRef.canvas;
-					let ctx=canvas.getContext("2d");
+					console.log(globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+					let ctx=globalChartRef.canvas.getContext("2d");
 					ctx.font="30px Arial";
 					ctx.fillStyle = 'rgba(255,255,255,0.3)';
 					ctx.textAlign = "center";
-					ctx.fillText("In-Track [km]", canvas.width/4, canvas.height*21/40 + app.axisCenter[1]*pixelY*2);
+					ctx.fillText("In-Track [km]", globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 4, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) * 11 / 20 + app.axisCenter[1]*pixelY*2);
 					
 					ctx.save();
 					ctx.font="30px Arial";
 					ctx.fillStyle = 'rgba(255,255,255,0.3)';
 					ctx.textAlign = "center";
-					ctx.translate(canvas.width*21/40 + app.axisCenter[0]*pixelX / 2, canvas.height*20/80);
+					ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) * 41 / 80 + app.axisCenter[0]*pixelX / 2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 4);
 					ctx.rotate(Math.PI/2)
 					ctx.fillText("Radial [km]", 0, 0);
 					ctx.restore();
