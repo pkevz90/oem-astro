@@ -276,7 +276,7 @@ function createGraph() {
 					afterBuildTicks: (a, ticks) => {
 						let newTicks = math.range(math.ceil((app.axisCenter[0] - app.axisLimits) / 10) * 10, math.floor((app.axisCenter[0] +app.axisLimits) / 10) * 10, 10,true)._data.reverse();
 						newTicks.pop();
-						newTicks.shift();
+						// newTicks.shift();
 						return newTicks;
 					}
 				}],
@@ -294,8 +294,8 @@ function createGraph() {
 					},
 					afterBuildTicks: (a, ticks) => {
 						let newTicks = math.range(math.ceil((app.axisCenter[1] - app.axisLimits / 2) / 10) * 10, math.floor((app.axisCenter[1] + app.axisLimits / 2) / 10) * 10, 10,true)._data.reverse();
-						newTicks.pop();
-						newTicks.shift();
+						// newTicks.pop();
+						// newTicks.shift();
 						return newTicks;
 					}
 				}]
