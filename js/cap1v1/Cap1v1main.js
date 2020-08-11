@@ -274,12 +274,10 @@ function createGraph() {
 						fontColor: 'rgba(255,255,255,0.5)'
 					},
 					afterBuildTicks: (a, ticks) => {
-
-						ticks.pop();
-						ticks.shift();
-						// console.log(ticks[ticks.length-1],ticks[0]);
-						// return math.range(ticks[ticks.length-1], ticks[0], 10,true)._data.reverse();
-						return ticks;
+						let newTicks = math.range(math.ceil((app.axisCenter[0] - app.axisLimits) / 10) * 10, math.floor((app.axisCenter[0] +app.axisLimits) / 10) * 10, 10,true)._data.reverse();
+						newTicks.pop();
+						newTicks.shift();
+						return newTicks;
 					}
 				}],
 				yAxes: [{
@@ -295,10 +293,10 @@ function createGraph() {
 						fontSize: 20
 					},
 					afterBuildTicks: (a, ticks) => {
-
-						ticks.pop();
-						ticks.shift();
-						return ticks;
+						let newTicks = math.range(math.ceil((app.axisCenter[1] - app.axisLimits / 2) / 10) * 10, math.floor((app.axisCenter[1] + app.axisLimits / 2) / 10) * 10, 10,true)._data.reverse();
+						newTicks.pop();
+						newTicks.shift();
+						return newTicks;
 					}
 				}]
 			},
