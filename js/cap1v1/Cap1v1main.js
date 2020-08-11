@@ -231,7 +231,26 @@ function createGraph() {
 		},
 		options: {
 			animation: {
-				duration: 0
+				duration: 10,
+				onProgress: function() {
+					let pixelX = (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / app.axisLimits;
+					let pixelY = (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / app.axisLimits / 2;
+					let canvas = globalChartRef.canvas;
+					let ctx=canvas.getContext("2d");
+					ctx.font="30px Arial";
+					ctx.fillStyle = 'rgba(255,255,255,0.3)';
+					ctx.textAlign = "center";
+					ctx.fillText("In-Track [km]", canvas.width/4, canvas.height*21/40 + app.axisCenter[1]*pixelY*2);
+					
+					ctx.save();
+					ctx.font="30px Arial";
+					ctx.fillStyle = 'rgba(255,255,255,0.3)';
+					ctx.textAlign = "center";
+					ctx.translate(canvas.width*21/40 + app.axisCenter[0]*pixelX / 2, canvas.height*20/80);
+					ctx.rotate(Math.PI/2)
+					ctx.fillText("Radial [km]", 0, 0);
+					ctx.restore();
+				}
 			},
 			tooltips: {
 				enabled: false
@@ -247,23 +266,19 @@ function createGraph() {
 					},
 					type: "linear",
 					display: true,
-					scaleLabel: {
-						display: true,
-						labelString: 'In-Track [km]',
-						fontColor: 'rgba(255,255,255,1)',
-						fontSize: 20
-					},
 					ticks: {
 						min: -app.axisLimits,
 						max: app.axisLimits,
 						fontSize: 20,
 						reverse: true,
-						fontColor: 'rgba(255,255,255,1)'
+						fontColor: 'rgba(255,255,255,0.5)'
 					},
 					afterBuildTicks: (a, ticks) => {
 
 						ticks.pop();
 						ticks.shift();
+						// console.log(ticks[ticks.length-1],ticks[0]);
+						// return math.range(ticks[ticks.length-1], ticks[0], 10,true)._data.reverse();
 						return ticks;
 					}
 				}],
@@ -273,16 +288,10 @@ function createGraph() {
 						color: 'rgba(255,255,255,0.25)'
 					},
 					display: true,
-					scaleLabel: {
-						display: true,
-						labelString: 'Radial [km]',
-						fontColor: 'rgba(255,255,255,1)',
-						fontSize: 20
-					},
 					ticks: {
 						min: -app.axisLimits * 0.5,
 						max: app.axisLimits * 0.5,
-						fontColor: 'rgba(255,255,255,1)',
+						fontColor: 'rgba(255,255,255,0.5)',
 						fontSize: 20
 					},
 					afterBuildTicks: (a, ticks) => {
