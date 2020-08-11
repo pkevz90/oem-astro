@@ -343,7 +343,7 @@ function startGame() {
 	globalChartRef.update();
 }
 
-function drawSunVectors(t, plot = true, origin = app.axisCenter) {
+function drawSunVectors(t, plot = true, origin = [app.axisCenter[0], 0]) {
 	let n = 2 * Math.PI / 86164,
 		ct = Math.cos(-t * n),
 		st = Math.sin(-t * n),
@@ -356,8 +356,8 @@ function drawSunVectors(t, plot = true, origin = app.axisCenter) {
 	let arrowLen = 2*app.axisLimits / 100;
 	if (plot) {
 		app.chartData.sun.data = [{
-			x: app.axisCenter[0],
-			y: app.axisCenter[1]
+			x: origin[0],
+			y: origin[1]
 		}, {
 			x: SunVector[1][0] + origin[0],
 			y: SunVector[0][0] + origin[1]
