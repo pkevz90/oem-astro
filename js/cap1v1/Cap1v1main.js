@@ -19,10 +19,7 @@ let app = {
 	axisCenter: [0, 0],
 	appDrag: undefined,
 	currentTime: 0,
-	initSunVector: [
-		[0],
-		[1]
-	],
+	initSunVector: undefined,
 	mouseCoor: {
 		x: undefined,
 		y: undefined
@@ -237,18 +234,47 @@ function createGraph() {
 					let pixelY = (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / app.axisLimits / 2;
 					console.log(globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
 					let ctx=globalChartRef.canvas.getContext("2d");
-					ctx.font="30px Arial";
+					ctx.font="20px Arial";
 					ctx.fillStyle = 'rgba(255,255,255,0.3)';
 					ctx.textAlign = "center";
 					ctx.fillText("In-Track [km]", globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 4, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) * 11 / 20 + app.axisCenter[1]*pixelY*2);
 					
 					ctx.save();
-					ctx.font="30px Arial";
+					ctx.font="20px Arial";
 					ctx.fillStyle = 'rgba(255,255,255,0.3)';
 					ctx.textAlign = "center";
 					ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) * 41 / 80 + app.axisCenter[0]*pixelX / 2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 4);
 					ctx.rotate(Math.PI/2)
 					ctx.fillText("Radial [km]", 0, 0);
+					ctx.restore();
+					// Draw Sun Arrow
+					let sunInit = -Number(setupData.scenario_start.initSun) * Math.PI / 180;
+					let n = 2 * Math.PI / 86164;
+					let ct = Math.cos(sunInit + n * app.currentTime * 3600 ),
+						st = Math.sin(sunInit + n * app.currentTime * 3600 );
+						R = [
+							[ct, -st],
+							[st, ct]
+						];
+					let arrow = [
+						[0,-100],
+						[3,-99],
+						[0,-105],
+						[-3,-99],
+						[0,-100]
+					];
+					let transformedArrow = math.transpose(math.multiply(R,math.transpose(arrow)));
+					ctx.save();
+					ctx.fillStyle = 'rgba(255,255,0,0.6)';
+					ctx.strokeStyle = 'rgba(255,255,0,0.6)';
+					ctx.beginPath();ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 2);
+					ctx.moveTo(0,0);
+					transformedArrow.forEach((point) => {
+						ctx.lineTo(point[0],point[1]);
+					});
+					ctx.lineWidth = 6;
+					ctx.stroke();
+					ctx.fill();
 					ctx.restore();
 				}
 			},
@@ -261,7 +287,7 @@ function createGraph() {
 			scales: {
 				xAxes: [{
 					gridLines: {
-						zeroLineColor: '#ffcc33',
+						zeroLineColor: '#fff',
 						color: 'rgba(255,255,255,0.25)'
 					},
 					type: "linear",
@@ -282,7 +308,7 @@ function createGraph() {
 				}],
 				yAxes: [{
 					gridLines: {
-						zeroLineColor: '#ffcc33',
+						zeroLineColor: '#fff',
 						color: 'rgba(255,255,255,0.25)'
 					},
 					display: true,
@@ -343,7 +369,7 @@ function startGame() {
 	globalChartRef.update();
 }
 
-function drawSunVectors(t, plot = true, origin = [app.axisCenter[0], 0]) {
+function drawSunVectors(t) {
 	let n = 2 * Math.PI / 86164,
 		ct = Math.cos(-t * n),
 		st = Math.sin(-t * n),
@@ -351,32 +377,9 @@ function drawSunVectors(t, plot = true, origin = [app.axisCenter[0], 0]) {
 			[ct, -st],
 			[st, ct]
 		];
-	let SunVector = math.multiply(R, app.initSunVector);
-	SunVector = math.dotMultiply(SunVector,app.axisLimits*0.2);
-	let arrowLen = 2*app.axisLimits / 100;
-	if (plot) {
-		app.chartData.sun.data = [{
-			x: origin[0],
-			y: origin[1]
-		}, {
-			x: SunVector[1][0] + origin[0],
-			y: SunVector[0][0] + origin[1]
-		}, undefined, {
-			x: SunVector[1][0] + origin[0],
-			y: SunVector[0][0] + origin[1]
-		}, {
-			x: SunVector[1][0] + origin[0] - arrowLen * Math.cos(Math.PI / 6 - Number(setupData.scenario_start.initSun) * Math.PI / 180 + Math.PI / 2 + t * n),
-			y: SunVector[0][0] + origin[1] - arrowLen * Math.sin(Math.PI / 6 - Number(setupData.scenario_start.initSun) * Math.PI / 180 + Math.PI / 2 + t * n)
-		}, undefined, {
-			x: SunVector[1][0] + origin[0],
-			y: SunVector[0][0] + origin[1]
-		}, {
-			x: SunVector[1][0] + origin[0] - arrowLen * Math.cos(Math.PI / 6 + Number(setupData.scenario_start.initSun) * Math.PI / 180 - Math.PI / 2 - t * n),
-			y: SunVector[0][0] + origin[1] + arrowLen * Math.sin(Math.PI / 6 + Number(setupData.scenario_start.initSun) * Math.PI / 180 - Math.PI / 2 - t * n)
-		}];
-		globalChartRef.update();
-	}
-	return SunVector;
+	let sunVector = math.multiply(R, app.initSunVector);
+	sunVector = math.dotMultiply(sunVector,app.axisLimits*0.2);
+	return sunVector;
 }
 
 function setCurrentPoints(curTime, noPlot = false) {
