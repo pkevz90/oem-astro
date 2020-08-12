@@ -60,7 +60,7 @@ function createGraph() {
 				data: [],
 				showLine: false,
 				fill: false,
-				pointRadius: 7,
+				pointRadius: 6,
 				borderColor: 'rgba(120,200,255,1)'
 			}, {
 				// label: "Blue Trajectory",
@@ -81,7 +81,7 @@ function createGraph() {
 				data: [],
 				showLine: false,
 				fill: false,
-				pointRadius: 7,
+				pointRadius: 6,
 				borderColor: 'rgba(255,200,120,1)'
 			}, {
 				// label: "Red Trajectory",
@@ -137,7 +137,7 @@ function createGraph() {
 				showLine: false,
 				pointRadius: 15,
 				pointStyle: 'triangle',
-				backgroundColor: 'rgba(120,200,255,1)',
+				backgroundColor: 'rgba(120,200,255,0)',
 			}, {
 				// label: "Current Red",
 				data: [{
@@ -148,7 +148,7 @@ function createGraph() {
 				showLine: false,
 				pointRadius: 15,
 				pointStyle: 'triangle',
-				backgroundColor: 'rgba(255,200,120,1)',
+				backgroundColor: 'rgba(255,200,120,0)',
 			}, {
 				// label: "Viewpoint",
 				data: [],
@@ -175,7 +175,7 @@ function createGraph() {
 				data: [],
 				showLine: false,
 				fill: false,
-				pointRadius: 7,
+				pointRadius: 6,
 				borderColor: 'rgba(160,255,160,1)'
 			},{
 				// label: "Current Green",
@@ -184,7 +184,7 @@ function createGraph() {
 				fill: false,
 				pointRadius: 15,
 				pointStyle: 'rect',
-				backgroundColor: 'rgba(160,255,160,1)',
+				backgroundColor: 'rgba(160,255,160,0)',
 			}, {
 				// label: "Green Trajectory",
 				data: [],
@@ -197,7 +197,7 @@ function createGraph() {
 				data: [],
 				showLine: false,
 				fill: false,
-				pointRadius: 7,
+				pointRadius: 6,
 				borderColor: 'rgba(150,150,150,1)'
 			}, {
 				// label: "Current Gray",
@@ -206,7 +206,7 @@ function createGraph() {
 				fill: false,
 				pointRadius: 15,
 				pointStyle: 'rect',
-				backgroundColor: 'rgba(150,150,150,1)',
+				backgroundColor: 'rgba(150,150,150,0)',
 			}, {
 				// label: "Gray Trajectory",
 				data: [],
@@ -277,7 +277,13 @@ function createGraph() {
 					ctx.stroke();
 					ctx.fill();
 					ctx.restore();
-					// drawSat(ctx,[100,100],0,15 / app.axisLimits);
+					let pos;
+					if (app.players['blue'] !== undefined) {
+						for (player in app.players) {
+							pos = [app.players[player].dataLoc.current.data[0].x, app.players[player].dataLoc.current.data[0].y];
+							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],0,20 / app.axisLimits,app.colors[player]);
+						}
+					}
 				}
 			},
 			tooltips: {
@@ -290,7 +296,7 @@ function createGraph() {
 				xAxes: [{
 					gridLines: {
 						zeroLineColor: '#fff',
-						color: 'rgba(255,255,255,0.25)'
+						color: 'rgba(255,255,255,0.125)'
 					},
 					type: "linear",
 					display: true,
@@ -301,7 +307,7 @@ function createGraph() {
 						reverse: true,
 						fontColor: 'rgba(255,255,255,0.5)'
 					},
-					afterBuildTicks: (a, ticks) => {
+					afterBuildTicks: () => {
 						let newTicks = math.range(math.ceil((app.axisCenter[0] - app.axisLimits) / 10) * 10, math.floor((app.axisCenter[0] +app.axisLimits) / 10) * 10, 10,true)._data.reverse();
 						newTicks.pop();
 						// newTicks.shift();
@@ -311,7 +317,7 @@ function createGraph() {
 				yAxes: [{
 					gridLines: {
 						zeroLineColor: '#fff',
-						color: 'rgba(255,255,255,0.25)'
+						color: 'rgba(255,255,255,0.125)'
 					},
 					display: true,
 					ticks: {
@@ -448,7 +454,7 @@ function drawViewpoint(pos, az, range, colorIn) {
 
 }
 
-function drawSat(ctx,location, ang = 0, size = 1) {
+function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
 	let ct = Math.cos(ang * Math.PI / 180),
 	  st = Math.sin(ang * Math.PI / 180),
 	  R = [
@@ -458,9 +464,8 @@ function drawSat(ctx,location, ang = 0, size = 1) {
 	ctx.save();
 	ctx.beginPath();
 	ctx.translate(location[0], location[1]);
-	ctx.fillStyle = '#AAA';
-	ctx.fillStyle = 'rgba(100,150,255,1)';
-	ctx.fillStyle = 'rgba(255,150,100,1)';
+	ctx.fillStyle = color;
+	ctx.strokeStyle = 'rgb(200,200,200)';
 	let sat = [
 	  [-25, -25],
 	  [25, -25],
@@ -483,16 +488,19 @@ function drawSat(ctx,location, ang = 0, size = 1) {
 	transformedSat.forEach((point, index) => {
 	  ctx.lineTo(point[0], point[1]);
 	  if (index === 4) {
-		ctx.fill()
+		ctx.fill();
+		ctx.stroke();
 		ctx.fillStyle = 'rgb(50,50,150)';
 		ctx.beginPath();
 		ctx.moveTo(transformedSat[8][0], transformedSat[8][1])
 	  } else if (index === 8) {
-		ctx.fill()
+		ctx.fill();
+		ctx.stroke();
 		ctx.beginPath();
 		ctx.moveTo(transformedSat[12][0], transformedSat[12][1])
 	  }
 	});
-	ctx.fill()
+	ctx.fill();
+	ctx.stroke();
 	ctx.restore();
 }
