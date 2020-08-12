@@ -281,7 +281,7 @@ function createGraph() {
 					if (app.players['blue'] !== undefined) {
 						for (player in app.players) {
 							pos = [app.players[player].dataLoc.current.data[0].x, app.players[player].dataLoc.current.data[0].y];
-							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],0,20 / app.axisLimits,app.colors[player]);
+							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],45,25 / app.axisLimits,app.colors[player]);
 						}
 					}
 				}
@@ -465,7 +465,7 @@ function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
 	ctx.beginPath();
 	ctx.translate(location[0], location[1]);
 	ctx.fillStyle = color;
-	ctx.strokeStyle = 'rgb(200,200,200)';
+	ctx.strokeStyle = 'rgb(225,225,225)';
 	let sat = [
 	  [-25, -25],
 	  [25, -25],

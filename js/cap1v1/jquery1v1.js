@@ -20,7 +20,7 @@ $('canvas').mousedown(event => {
         app.tactic = 'burn';
         app.players[app.chosenWaypoint[1]].burns.splice(app.chosenWaypoint[0],1, [0, 0]);
         app.players[app.chosenWaypoint[1]].calculateTrajecory();
-        calcData();
+        calcData(app.currentTime);
         app.chartData.burnDir.data = [{
             x: 0,
             y: 0
