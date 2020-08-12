@@ -257,17 +257,18 @@ function createGraph() {
 							[st, ct]
 						];
 					let arrow = [
-						[0,-100],
-						[3,-99],
-						[0,-105],
-						[-3,-99],
-						[0,-100]
+						[0,-200],
+						[3,-198],
+						[0,-210],
+						[-3,-198],
+						[0,-200]
 					];
 					let transformedArrow = math.transpose(math.multiply(R,math.transpose(arrow)));
 					ctx.save();
-					ctx.fillStyle = 'rgba(255,255,0,0.6)';
-					ctx.strokeStyle = 'rgba(255,255,0,0.6)';
-					ctx.beginPath();ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 2);
+					ctx.fillStyle = 'rgba(255,255,0,0.5)';
+					ctx.strokeStyle = 'rgba(255,255,0,0.5)';
+					ctx.beginPath();
+					ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 2 + app.axisCenter[1]*pixelY*2);
 					ctx.moveTo(0,0);
 					transformedArrow.forEach((point) => {
 						ctx.lineTo(point[0],point[1]);
@@ -276,6 +277,7 @@ function createGraph() {
 					ctx.stroke();
 					ctx.fill();
 					ctx.restore();
+					// drawSat(ctx,[100,100],0,15 / app.axisLimits);
 				}
 			},
 			tooltips: {
@@ -413,13 +415,13 @@ function setCurrentPoints(curTime, noPlot = false) {
 	if (noPlot) {
 		return points
 	}
-	app.chartData.relative.data = [{
-		x: points['redR'][1],
-		y: points['redR'][0]
-	}, {
-		x: points['blueR'][1],
-		y: points['blueR'][0]
-	}]
+	// app.chartData.relative.data = [{
+	// 	x: points['redR'][1],
+	// 	y: points['redR'][0]
+	// }, {
+	// 	x: points['blueR'][1],
+	// 	y: points['blueR'][0]
+	// }]
 	return points;
 }
 
@@ -446,3 +448,51 @@ function drawViewpoint(pos, az, range, colorIn) {
 
 }
 
+function drawSat(ctx,location, ang = 0, size = 1) {
+	let ct = Math.cos(ang * Math.PI / 180),
+	  st = Math.sin(ang * Math.PI / 180),
+	  R = [
+		[ct, -st],
+		[st, ct]
+	  ];
+	ctx.save();
+	ctx.beginPath();
+	ctx.translate(location[0], location[1]);
+	ctx.fillStyle = '#AAA';
+	ctx.fillStyle = 'rgba(100,150,255,1)';
+	ctx.fillStyle = 'rgba(255,150,100,1)';
+	let sat = [
+	  [-25, -25],
+	  [25, -25],
+	  [25, 25],
+	  [-25, 25],
+	  [-25, 0],
+	  [-150, 12.5],
+	  [-150, -12.5],
+	  [-25, -12.5],
+	  [-25, 12.5],
+	  [150, -12.5],
+	  [150, 12.5],
+	  [25, 12.5],
+	  [25, -12.5]
+	];
+  
+	let transformedSat = math.transpose(math.multiply(R, math.transpose(sat)));
+	transformedSat = math.dotMultiply(transformedSat, size);
+	ctx.moveTo(transformedSat[4][0], transformedSat[4][1])
+	transformedSat.forEach((point, index) => {
+	  ctx.lineTo(point[0], point[1]);
+	  if (index === 4) {
+		ctx.fill()
+		ctx.fillStyle = 'rgb(50,50,150)';
+		ctx.beginPath();
+		ctx.moveTo(transformedSat[8][0], transformedSat[8][1])
+	  } else if (index === 8) {
+		ctx.fill()
+		ctx.beginPath();
+		ctx.moveTo(transformedSat[12][0], transformedSat[12][1])
+	  }
+	});
+	ctx.fill()
+	ctx.restore();
+}
