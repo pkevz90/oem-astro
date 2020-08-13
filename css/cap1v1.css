@@ -262,3 +262,9 @@ input {
 canvas {
     cursor: grab;
 }
+.side-data table, .side-data table tr {
+    width: 100%;
+}
+.side-data table tr th, .side-data table tr td {
+    width: 20%;
+}

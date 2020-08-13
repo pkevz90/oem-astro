@@ -154,18 +154,184 @@
     <div class="sideBar" id="side-data">
         <div class="controlTitle pointer"><span>Engagement Data</span></div>
         <div class="side-data" id="dataContainer">
-            <div>Range to: <br>
-                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.blue.exist"><span style="color: rgba(100,150,255,1);">Blue: </span>{{ scenario_data.data.blue.range.toFixed(2) }} km</p>
-                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.red.exist"><span style="color: rgba(255,150,100,1);">Red: </span>{{ scenario_data.data.red.range.toFixed(2) }} km</p>
-                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.green.exist"><span style="color: rgba(120,255,120,1);">Green: </span>{{ scenario_data.data.green.range.toFixed(2) }} km</p>
-                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.gray.exist"><span style="color: rgba(150,150,150,1);">Gray: </span>{{ scenario_data.data.gray.range.toFixed(2) }} km</p>
-            </div>
-            <div style="margin-top: 5%;">CATS Angle to: <br>
-                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.blue.exist"><span style="color: rgba(100,150,255,1);">Blue: </span>{{ scenario_data.data.blue.cats.toFixed(2) }}<sup>o</sup></p>
-                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.red.exist"><span style="color: rgba(255,150,100,1);">Red: </span>{{ scenario_data.data.red.cats.toFixed(2) }}<sup>o</sup></p>
-                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.green.exist"><span style="color: rgba(120,255,120,1);">Green: </span>{{ scenario_data.data.green.cats.toFixed(2) }}<sup>o</sup></p>
-                <p style=" margin: 0; padding: 0;" v-if="scenario_data.data.gray.exist"><span style="color: rgba(150,150,150,1);">Gray: </span>{{ scenario_data.data.gray.cats.toFixed(2) }}<sup>o</sup></p>
-            </div>
+            <div>Range [km]</div>
+            <table>
+                <tr>
+                    <th style="position: relative;">
+                        <div style="font-size: 0.5em; position: absolute; bottom: 0%">From</div>
+                        <div style="font-size: 0.5em; position: absolute; top: 0%; right: 0%;">To</div>
+                    </th>
+                    <th>
+                        <div style="height: 20px; background-color: rgb(100,150,255);"></div>
+                    </th>
+                    <th>
+                        <div style="height: 20px; background-color: rgb(255,150,100);"></div>
+                    </th>
+                    <th>
+                        <div style="height: 20px; background-color: rgb(120,255,120);"></div>
+                    </th>
+                    <th>
+                        <div style="height: 20px; background-color: rgb(150,150,150);"></div>
+                    </th>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="height: 20px; background-color: rgb(100,150,255);"></div>
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="height: 20px; background-color: rgb(255,150,100);"></div>
+                    </td>
+                    <td>
+                        
+                    </td>
+                    <td>
+                         
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="height: 20px; background-color: rgb(120,255,120);"></div>
+                    </td>
+                    <td>
+                        
+                    </td>
+                    <td>
+                        
+                    </td>
+                    <td>
+                        
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="height: 20px; background-color: rgb(150,150,150);"></div>
+                    </td>
+                    <td>
+                        
+                    </td>
+                    <td>
+                        
+                    </td>
+                    <td>
+                        
+                    </td>
+                    <td>
+                        
+                    </td>
+                </tr>
+            </table>
+            <div>CATS [deg]</div>
+            <table>
+                <tr>
+                    <th style="position: relative;">
+                        <div style="font-size: 0.5em; position: absolute; bottom: 0%">From</div>
+                        <div style="font-size: 0.5em; position: absolute; top: 0%; right: 0%;">To</div>
+                    </th>
+                    <th>
+                        <div style="height: 20px; background-color: rgb(100,150,255);"></div>
+                    </th>
+                    <th>
+                        <div style="height: 20px; background-color: rgb(255,150,100);"></div>
+                    </th>
+                    <th>
+                        <div style="height: 20px; background-color: rgb(120,255,120);"></div>
+                    </th>
+                    <th>
+                        <div style="height: 20px; background-color: rgb(150,150,150);"></div>
+                    </th>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="height: 20px; background-color: rgb(100,150,255);"></div>
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="height: 20px; background-color: rgb(255,150,100);"></div>
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                         
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="height: 20px; background-color: rgb(120,255,120);"></div>
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="height: 20px; background-color: rgb(150,150,150);"></div>
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        0.00
+                    </td>
+                    <td>
+                        
+                    </td>
+                </tr>
+            </table>
         </div>
         <player-data v-for="player in scenario_data.players" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>
