@@ -82,10 +82,11 @@ function calcData(curTime = 0) {
 	}
 	// Set angle of the player's character
 	pointAngle = pointAngle < 0 ? pointAngle * 180 / Math.PI + 360 : pointAngle * 180 / Math.PI;
-	let pointDiff = pointAngle - app.players[setupData.team].attitude;
-	if (Math.abs(pointDiff) > 180) {
+	if (Math.abs(pointAngle - app.players[setupData.team].attitude) > 180) {
 		pointAngle = pointAngle > app.players[setupData.team].attitude ? pointAngle - 360 : pointAngle + 360;
 	}
+	let pointDiff = pointAngle - app.players[setupData.team].attitude;
+	console.log(pointAngle, app.players[setupData.team].attitude);
 	if (Math.abs(pointDiff) > app.maxSlew && app.players[setupData.team].attitude !== undefined) {
 		app.players[setupData.team].attitude += math.sign(pointDiff) * app.maxSlew;
 	} else {
