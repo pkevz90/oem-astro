@@ -7,6 +7,7 @@ class Satellite {
 		this.burns = math.zeros(app.numBurns,2)._data;
 		this.calculateTrajecory = calculateTrajecory;
 		this.dataLoc = dataLoc;
+		this.attitude = undefined;
 	}
 }
 let app = {
@@ -27,6 +28,7 @@ let app = {
 	calcDt: 240,
 	burnChange: false,
 	tactic: '',
+	maxSlew: 4,
 	tacticData: undefined,
 	scenLength: undefined,
 	numBurns: undefined,
@@ -232,7 +234,6 @@ function createGraph() {
 				onProgress: function() {
 					let pixelX = (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / app.axisLimits;
 					let pixelY = (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / app.axisLimits / 2;
-					console.log(globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
 					let ctx=globalChartRef.canvas.getContext("2d");
 					ctx.font="20px Arial";
 					ctx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -281,7 +282,7 @@ function createGraph() {
 					if (app.players['blue'] !== undefined) {
 						for (player in app.players) {
 							pos = [app.players[player].dataLoc.current.data[0].x, app.players[player].dataLoc.current.data[0].y];
-							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],45,25 / app.axisLimits,app.colors[player]);
+							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,20 / app.axisLimits,app.colors[player]);
 						}
 					}
 				}

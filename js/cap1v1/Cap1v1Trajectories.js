@@ -55,23 +55,41 @@ function calculateTrajecory() {
 function calcData(curTime = 0) {
 	let redR, blueR;
 	let curPoints = setCurrentPoints(curTime);
-	let curSun = math.squeeze(drawSunVectors(curTime * 3600)), relVector, catsAngle;
+	let curSun = math.squeeze(drawSunVectors(curTime * 3600)),
+		relVector, catsAngle, satRange, pointAngle;
 	let canSee = false;
+	let minRangeSat = 1000; //Arbitrarily Large
 	for (player in app.players) {
 		if (player === setupData.team) {
 			continue;
 		}
-		relVector = [curPoints[setupData.team+'R'][0] - curPoints[player+'R'][0], curPoints[setupData.team+'R'][1] - curPoints[player+'R'][1]],
-		catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
+		relVector = [curPoints[setupData.team + 'R'][0] - curPoints[player + 'R'][0], curPoints[setupData.team + 'R'][1] - curPoints[player + 'R'][1]],
+			// console.log(relVector);
+			catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
+		satRange = math.norm(relVector);
 		Object.assign(sideData.scenario_data.data[player], {
-			range: math.norm(relVector),
+			range: satRange,
 			cats: catsAngle * 180 / Math.PI
 		});
-		// console.log(Number(setupData.blue.rangeReq[0]), Number(setupData.blue.rangeReq[1]));
+		if (minRangeSat > satRange) {
+			pointAngle = Math.atan2(relVector[1], -relVector[0]);
+			minRangeSat = satRange;
+		}
 		if (catsAngle < (Number(setupData.blue.reqCats) * Math.PI / 180) && math.norm(relVector) >= Number(setupData.blue.rangeReq[0]) && math.norm(relVector) <= Number(setupData.blue.rangeReq[1])) {
-			drawViewpoint([curPoints[setupData.team+'R'][0][0], curPoints[setupData.team+'R'][1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), setupData.team);
+			drawViewpoint([curPoints[setupData.team + 'R'][0][0], curPoints[setupData.team + 'R'][1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), setupData.team);
 			canSee = true;
-		} 
+		}
+	}
+	// Set angle of the player's character
+	pointAngle = pointAngle < 0 ? pointAngle * 180 / Math.PI + 360 : pointAngle * 180 / Math.PI;
+	let pointDiff = pointAngle - app.players[setupData.team].attitude;
+	if (Math.abs(pointDiff) > 180) {
+		pointAngle = pointAngle > app.players[setupData.team].attitude ? pointAngle - 360 : pointAngle + 360;
+	}
+	if (Math.abs(pointDiff) > app.maxSlew && app.players[setupData.team].attitude !== undefined) {
+		app.players[setupData.team].attitude += math.sign(pointDiff) * app.maxSlew;
+	} else {
+		app.players[setupData.team].attitude = pointAngle;
 	}
 	if (!canSee) {
 		app.chartData.view.data = [];
@@ -148,7 +166,7 @@ function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 		maxDv = setupData[sat].dVavail - totalDv;
 		distance = (distance > 10 * maxDv) ? 10 * maxDv : distance;
 		// app.players[sat].burns[app.chosenWaypoint[0]] = [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)];
-		app.players[sat].burns.splice(app.chosenWaypoint[0],1,[distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)]);
+		app.players[sat].burns.splice(app.chosenWaypoint[0], 1, [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)]);
 		setBottomInfo('R: ' + (distance / 10 * Math.sin(az)).toFixed(3) + ' m/s, I: ' + (distance / 10 * Math.cos(az)).toFixed(3) + ' m/s');
 		app.chartData.burnDir.data = [{
 			x: xPoint,
@@ -201,7 +219,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 			],
 			v1f = math.multiply(math.inv(PhiRV(app.tacticData.targetPos * app.scenLength / app.numBurns * 3600)), math.subtract(r2, math.multiply(PhiRR(app.tacticData.targetPos * app.scenLength / app.numBurns * 3600), r1))),
 			dV = math.subtract(v1f, v10);
-			
+
 		if ((1000 * math.norm(math.squeeze(dV))) > app.tacticData.availDv) {
 			let newNorm = app.tacticData.availDv / 1000;
 			let newR = dV[0][0] / math.norm(math.squeeze(dV)) * newNorm;
@@ -212,7 +230,7 @@ function targetCalc(xMouse, yMouse, click = false) {
 			];
 		}
 		let sat = app.chosenWaypoint[1];
-		app.players[sat].burns.splice(app.chosenWaypoint[0],1, [dV[0][0] * 1000, dV[1][0] * 1000]);
+		app.players[sat].burns.splice(app.chosenWaypoint[0], 1, [dV[0][0] * 1000, dV[1][0] * 1000]);
 		setBottomInfo('R: ' + (dV[0][0] * 1000).toFixed(3) + ' m/s, I: ' + (dV[1][0] * 1000).toFixed(3) + ' m/s');
 		app.chartData.burnDir.data = [{
 			x: r1[1][0],
@@ -296,9 +314,9 @@ function PhiVV(t, n = 2 * Math.PI / 86164) {
 
 function stateFromRoe(roe, n = 2 * Math.PI / 86164) {
 	return [
-        [-roe.ae / 2 * Math.cos(roe.B * Math.PI / 180) + roe.xd],
-        [roe.ae * Math.sin(roe.B * Math.PI / 180) + roe.yd],
-        [roe.ae * n / 2 * Math.sin(roe.B * Math.PI / 180)],
-        [roe.ae * n * Math.cos(roe.B * Math.PI / 180) - 1.5 * roe.xd * n]
-    ];
-} 
+		[-roe.ae / 2 * Math.cos(roe.B * Math.PI / 180) + roe.xd],
+		[roe.ae * Math.sin(roe.B * Math.PI / 180) + roe.yd],
+		[roe.ae * n / 2 * Math.sin(roe.B * Math.PI / 180)],
+		[roe.ae * n * Math.cos(roe.B * Math.PI / 180) - 1.5 * roe.xd * n]
+	];
+}
