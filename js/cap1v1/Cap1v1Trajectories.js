@@ -86,7 +86,6 @@ function calcData(curTime = 0) {
 		pointAngle = pointAngle > app.players[setupData.team].attitude ? pointAngle - 360 : pointAngle + 360;
 	}
 	let pointDiff = pointAngle - app.players[setupData.team].attitude;
-	console.log(pointAngle, app.players[setupData.team].attitude);
 	if (Math.abs(pointDiff) > app.maxSlew && app.players[setupData.team].attitude !== undefined) {
 		app.players[setupData.team].attitude += math.sign(pointDiff) * app.maxSlew;
 	} else {
