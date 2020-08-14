@@ -208,7 +208,7 @@
                         0.00
                     </td>
                 </tr>
-                <tr>
+                <tr v-if="scenario_data.data.green.exist">
                     <td>
                         <div style="height: 20px; background-color: rgb(120,255,120);"></div>
                     </td>
@@ -225,7 +225,7 @@
                         0.00
                     </td>
                 </tr>
-                <tr>
+                <tr v-if="scenario_data.data.gray.exist">
                     <td>
                         <div style="height: 20px; background-color: rgb(150,150,150);"></div>
                     </td>
@@ -256,10 +256,10 @@
                     <th>
                         <div style="height: 20px; background-color: rgb(255,150,100);"></div>
                     </th>
-                    <th>
+                    <th v-if="scenario_data.data.green.exist">
                         <div style="height: 20px; background-color: rgb(120,255,120);"></div>
                     </th>
-                    <th>
+                    <th v-if="scenario_data.data.gray.exist">
                         <div style="height: 20px; background-color: rgb(150,150,150);"></div>
                     </th>
                 </tr>
@@ -273,10 +273,10 @@
                     <td>
                         0.00
                     </td>
-                    <td>
+                    <td v-if="scenario_data.data.green.exist">
                         0.00
                     </td>
-                    <td>
+                    <td v-if="scenario_data.data.gray.exist">
                         0.00
                     </td>
                 </tr>
@@ -290,14 +290,14 @@
                     <td>
                          
                     </td>
-                    <td>
+                    <td v-if="scenario_data.data.green.exist">
                         0.00
                     </td>
-                    <td>
+                    <td v-if="scenario_data.data.gray.exist">
                         0.00
                     </td>
                 </tr>
-                <tr>
+                <tr v-if="scenario_data.data.green.exist">
                     <td>
                         <div style="height: 20px; background-color: rgb(120,255,120);"></div>
                     </td>
@@ -310,11 +310,11 @@
                     <td>
                         
                     </td>
-                    <td>
+                    <td v-if="scenario_data.data.gray.exist">
                         0.00
                     </td>
                 </tr>
-                <tr>
+                <tr v-if="scenario_data.data.gray.exist">
                     <td>
                         <div style="height: 20px; background-color: rgb(150,150,150);"></div>
                     </td>
