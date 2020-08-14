@@ -82,7 +82,7 @@ function checkClose(X, Y, change = true) {
         for (var ii = turn; ii < app.players[sat].dataLoc.waypoints.data.length; ii++) {
             xPoint = app.players[sat].dataLoc.waypoints.data[ii].x;
             yPoint = app.players[sat].dataLoc.waypoints.data[ii].y;
-            if (math.norm([xPoint - X, yPoint - Y]) < app.axisLimits / 25) {
+            if (math.norm([xPoint - X, yPoint - Y]) < app.axisLimits / 50) {
                 if (change) {
                     setSelectedWaypoint(ii, sat);
                     globalChartRef.update();

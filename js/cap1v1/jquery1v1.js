@@ -1,6 +1,7 @@
 var teamNum, $turn = $('.selectable:first span');;
 createGraph();
 $('canvas').on('mousewheel',event => {
+    // console.log(app.tactic);
     if (app.tactic === 'target') {
         changeTargetTime(event.deltaY)
         return;
@@ -31,8 +32,8 @@ $('canvas').mousedown(event => {
         globalChartRef.update();
         setTimeout(() => {
             if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false) && app.chosenWaypoint !== undefined) {
-                $('canvas').css('cursor','crosshair')
                 startTarget();
+                $('canvas').css('cursor','crosshair');
             }
         },250)
         return;
