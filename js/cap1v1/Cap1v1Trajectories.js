@@ -173,6 +173,9 @@ function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 			totalDv += math.norm(app.players[sat].burns[ii]);
 		}
 		maxDv = setupData[sat].dVavail - totalDv;
+		if (app.chosenWaypoint[1] === setupData.team) {
+			maxDv = Math.min(maxDv,setupData.blue.maxDv)
+		}
 		distance = (distance > 10 * maxDv) ? 10 * maxDv : distance;
 		// app.players[sat].burns[app.chosenWaypoint[0]] = [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)];
 		app.players[sat].burns.splice(app.chosenWaypoint[0], 1, [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)]);
@@ -228,7 +231,6 @@ function targetCalc(xMouse, yMouse, click = false) {
 			],
 			v1f = math.multiply(math.inv(PhiRV(app.tacticData.targetPos * app.scenLength / app.numBurns * 3600)), math.subtract(r2, math.multiply(PhiRR(app.tacticData.targetPos * app.scenLength / app.numBurns * 3600), r1))),
 			dV = math.subtract(v1f, v10);
-
 		if ((1000 * math.norm(math.squeeze(dV))) > app.tacticData.availDv) {
 			let newNorm = app.tacticData.availDv / 1000;
 			let newR = dV[0][0] / math.norm(math.squeeze(dV)) * newNorm;

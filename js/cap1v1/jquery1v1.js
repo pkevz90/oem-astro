@@ -106,11 +106,11 @@ $('.selectable:first').on('click', () => {
     let ii = 0;
     let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
     let inter = setInterval(() => {
-        app.currentTime += timeDelta / 6;
+        app.currentTime += timeDelta / 31;
         $('.nav-element input')[0].value = app.currentTime;
         $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
         calcData(app.currentTime);
-        if (ii === 5) {
+        if (ii === 30) {
             clearInterval(inter);
         }
         ii++;

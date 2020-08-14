@@ -193,6 +193,7 @@ var setupData = new Vue({
             dVavail: (6).toFixed(1),
             reqCats: (90).toFixed(0),
             rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+            maxDv: (2).toFixed(1)
         },
         red: {
             ae: (0).toFixed(1),
@@ -352,6 +353,7 @@ var setupData = new Vue({
                         dVavail: (0).toFixed(1),
                         exist: false
                     };
+                    this.scenario_start.bp = 15;
                     break;
                     case '2defend':
                         this.blue = {

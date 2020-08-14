@@ -130,6 +130,9 @@ function startTarget() {
         availDv: setupData[app.chosenWaypoint[1]].dVavail - totalDv,
         targetPos: 1
     };
+    if (app.chosenWaypoint[1] === setupData.team) {
+        app.tacticData.availDv = Math.min(app.tacticData.availDv,setupData.blue.maxDv);
+    }
     let ii = 0;
     let timeDelta = (app.tacticData.targetPos + app.chosenWaypoint[0]) * (app.scenLength / app.numBurns) - app.currentTime;
     let inter = setInterval(() => {
