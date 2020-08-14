@@ -456,6 +456,7 @@ function drawViewpoint(pos, az, range, colorIn) {
 }
 
 function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
+	
 	let ct = Math.cos(ang * Math.PI / 180),
 	  st = Math.sin(ang * Math.PI / 180),
 	  R = [
@@ -468,19 +469,27 @@ function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
 	ctx.fillStyle = color;
 	ctx.strokeStyle = 'rgb(225,225,225)';
 	let sat = [
+  // main body
 	  [-25, -25],
 	  [25, -25],
 	  [25, 25],
 	  [-25, 25],
 	  [-25, 0],
+    //solar panel 1
 	  [-150, 12.5],
 	  [-150, -12.5],
 	  [-25, -12.5],
 	  [-25, 12.5],
+    //solar panel 2
 	  [150, -12.5],
 	  [150, 12.5],
 	  [25, 12.5],
-	  [25, -12.5]
+	  [25, -12.5],
+    //sensor
+    [-9, -30],
+  	[9,-30],
+    [4,-25],
+    [-4,-25]
 	];
   
 	let transformedSat = math.transpose(math.multiply(R, math.transpose(sat)));
@@ -499,6 +508,12 @@ function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
 		ctx.stroke();
 		ctx.beginPath();
 		ctx.moveTo(transformedSat[12][0], transformedSat[12][1])
+	  } else if (index === 12) {
+		ctx.fill();
+		ctx.stroke();
+		ctx.fillStyle = 'rgb(225,225,225)';
+		ctx.beginPath();
+		ctx.moveTo(transformedSat[16][0], transformedSat[16][1])
 	  }
 	});
 	ctx.fill();
