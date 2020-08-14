@@ -282,7 +282,7 @@ function createGraph() {
 					if (app.players['blue'] !== undefined) {
 						for (player in app.players) {
 							pos = [app.players[player].dataLoc.current.data[0].x, app.players[player].dataLoc.current.data[0].y];
-							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,20 / app.axisLimits,app.colors[player]);
+							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,20 / app.axisLimits,app.colors[player],sunInit + n * app.currentTime * 3600 );
 						}
 					}
 				}
@@ -455,8 +455,7 @@ function drawViewpoint(pos, az, range, colorIn) {
 
 }
 
-function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
-	
+function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA', sunAngle = 0) {
 	let ct = Math.cos(ang * Math.PI / 180),
 	  st = Math.sin(ang * Math.PI / 180),
 	  R = [
@@ -466,10 +465,14 @@ function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
 	ctx.save();
 	ctx.beginPath();
 	ctx.translate(location[0], location[1]);
-	ctx.fillStyle = color;
-	ctx.strokeStyle = 'rgb(225,225,225)';
+	ctx.strokeStyle = color;
+	var grd = ctx.createLinearGradient(-20*size*Math.sin(-sunAngle),-20*size*Math.cos(-sunAngle),20*size*Math.sin(-sunAngle),20*size*Math.cos(-sunAngle));
+	grd.addColorStop(0,color);
+	grd.addColorStop(1,"black");
+	ctx.fillStyle = grd;
+	ctx.lineWidth = 4 * size;
 	let sat = [
-  // main body
+  	// main body
 	  [-25, -25],
 	  [25, -25],
 	  [25, 25],
@@ -486,10 +489,10 @@ function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
 	  [25, 12.5],
 	  [25, -12.5],
     //sensor
-    [-9, -30],
-  	[9,-30],
-    [4,-25],
-    [-4,-25]
+	[-9, -30],
+	[9,-30],
+	[4,-25],
+	[-4,-25]
 	];
   
 	let transformedSat = math.transpose(math.multiply(R, math.transpose(sat)));
@@ -501,6 +504,8 @@ function drawSat(ctx,location, ang = 0, size = 1, color = '#AAA') {
 		ctx.fill();
 		ctx.stroke();
 		ctx.fillStyle = 'rgb(50,50,150)';
+		ctx.strokeStyle = 'rgb(255,255,255)';
+		ctx.lineWidth = 0.5;
 		ctx.beginPath();
 		ctx.moveTo(transformedSat[8][0], transformedSat[8][1])
 	  } else if (index === 8) {
