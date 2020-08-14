@@ -167,10 +167,10 @@
                     <th>
                         <div style="height: 20px; background-color: rgb(255,150,100);"></div>
                     </th>
-                    <th>
+                    <th v-if="scenario_data.data.green.exist">
                         <div style="height: 20px; background-color: rgb(120,255,120);"></div>
                     </th>
-                    <th>
+                    <th v-if="scenario_data.data.gray.exist">
                         <div style="height: 20px; background-color: rgb(150,150,150);"></div>
                     </th>
                 </tr>
@@ -182,13 +182,13 @@
 
                     </td>
                     <td>
-                        0.00
+                        {{ scenario_data.data.blue.data.red.range.toFixed(1) }}
                     </td>
-                    <td>
-                        0.00
+                    <td v-if="scenario_data.data.green.exist">
+                        {{ scenario_data.data.blue.data.green.range.toFixed(1) }}
                     </td>
-                    <td>
-                        0.00
+                    <td v-if="scenario_data.data.gray.exist">
+                        {{ scenario_data.data.blue.data.gray.range.toFixed(1) }}
                     </td>
                 </tr>
                 <tr>
@@ -196,16 +196,15 @@
                         <div style="height: 20px; background-color: rgb(255,150,100);"></div>
                     </td>
                     <td>
-                        
                     </td>
                     <td>
                          
                     </td>
-                    <td>
-                        0.00
+                    <td v-if="scenario_data.data.green.exist">
+                        {{ scenario_data.data.red.data.green.range.toFixed(1) }}
                     </td>
-                    <td>
-                        0.00
+                    <td v-if="scenario_data.data.gray.exist">
+                        {{ scenario_data.data.red.data.green.range.toFixed(1) }}
                     </td>
                 </tr>
                 <tr v-if="scenario_data.data.green.exist">
@@ -213,16 +212,14 @@
                         <div style="height: 20px; background-color: rgb(120,255,120);"></div>
                     </td>
                     <td>
-                        
+                    </td>
+                    <td>
                     </td>
                     <td>
                         
                     </td>
-                    <td>
-                        
-                    </td>
-                    <td>
-                        0.00
+                    <td v-if="scenario_data.data.gray.exist">
+                        {{ scenario_data.data.green.data.gray.range.toFixed(1) }}
                     </td>
                 </tr>
                 <tr v-if="scenario_data.data.gray.exist">
@@ -230,13 +227,10 @@
                         <div style="height: 20px; background-color: rgb(150,150,150);"></div>
                     </td>
                     <td>
-                        
                     </td>
                     <td>
-                        
                     </td>
                     <td>
-                        
                     </td>
                     <td>
                         
@@ -271,13 +265,13 @@
 
                     </td>
                     <td>
-                        0.00
+                        {{ scenario_data.data.blue.data.red.cats.toFixed(1) }}
                     </td>
                     <td v-if="scenario_data.data.green.exist">
-                        0.00
+                        {{ scenario_data.data.blue.data.green.cats.toFixed(1) }}
                     </td>
                     <td v-if="scenario_data.data.gray.exist">
-                        0.00
+                        {{ scenario_data.data.blue.data.gray.cats.toFixed(1) }}
                     </td>
                 </tr>
                 <tr>
@@ -285,16 +279,16 @@
                         <div style="height: 20px; background-color: rgb(255,150,100);"></div>
                     </td>
                     <td>
-                        0.00
+                        {{ scenario_data.data.red.data.blue.cats.toFixed(1) }}
                     </td>
                     <td>
                          
                     </td>
                     <td v-if="scenario_data.data.green.exist">
-                        0.00
+                        {{ scenario_data.data.red.data.green.cats.toFixed(1) }}
                     </td>
                     <td v-if="scenario_data.data.gray.exist">
-                        0.00
+                        {{ scenario_data.data.red.data.green.cats.toFixed(1) }}
                     </td>
                 </tr>
                 <tr v-if="scenario_data.data.green.exist">
@@ -302,16 +296,16 @@
                         <div style="height: 20px; background-color: rgb(120,255,120);"></div>
                     </td>
                     <td>
-                        0.00
+                        {{ scenario_data.data.green.data.blue.cats.toFixed(1) }}
                     </td>
                     <td>
-                        0.00
+                        {{ scenario_data.data.green.data.red.cats.toFixed(1) }}
                     </td>
                     <td>
                         
                     </td>
                     <td v-if="scenario_data.data.gray.exist">
-                        0.00
+                        {{ scenario_data.data.green.data.gray.cats.toFixed(1) }}
                     </td>
                 </tr>
                 <tr v-if="scenario_data.data.gray.exist">
@@ -319,13 +313,13 @@
                         <div style="height: 20px; background-color: rgb(150,150,150);"></div>
                     </td>
                     <td>
-                        0.00
+                        {{ scenario_data.data.gray.data.blue.cats.toFixed(1) }}
                     </td>
                     <td>
-                        0.00
+                        {{ scenario_data.data.gray.data.red.cats.toFixed(1) }}
                     </td>
                     <td>
-                        0.00
+                        {{ scenario_data.data.gray.data.green.cats.toFixed(1) }}
                     </td>
                     <td>
                         

@@ -85,22 +85,78 @@ var sideData = new Vue({
                 blue: {
                     cats: 0,
                     exist: false,
-                    range: 0
+                    range: 0,
+                    data: {
+                        red: {
+                            range: 0,
+                            cats: 0
+                        },
+                        green: {
+                            range: 0,
+                            cats: 0
+                        },
+                        gray: {
+                            range: 0,
+                            cats: 0
+                        }
+                    }
                 },
                 red: {
                     cats: 0,
                     exist: false,
-                    range: 0
+                    range: 0,
+                    data: {
+                        blue: {
+                            range: 0,
+                            cats: 0
+                        },
+                        green: {
+                            range: 0,
+                            cats: 0
+                        },
+                        gray: {
+                            range: 0,
+                            cats: 0
+                        }
+                    }
                 },
                 green: {
                     cats: 0,
                     exist: false,
-                    range: 0
+                    range: 0,
+                    data: {
+                        red: {
+                            range: 0,
+                            cats: 0
+                        },
+                        blue: {
+                            range: 0,
+                            cats: 0
+                        },
+                        gray: {
+                            range: 0,
+                            cats: 0
+                        }
+                    }
                 },
                 gray: {
                     cats: 0,
                     exist: false,
-                    range: 0
+                    range: 0,
+                    data: {
+                        red: {
+                            range: 0,
+                            cats: 0
+                        },
+                        green: {
+                            range: 0,
+                            cats: 0
+                        },
+                        blue: {
+                            range: 0,
+                            cats: 0
+                        }
+                    }
                 }
             },
             closeApproach: 0,

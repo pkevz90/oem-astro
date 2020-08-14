@@ -56,45 +56,54 @@ function calcData(curTime = 0) {
 	let redR, blueR;
 	let curPoints = setCurrentPoints(curTime);
 	let curSun = math.squeeze(drawSunVectors(curTime * 3600)),
-		relVector, catsAngle, satRange, pointAngle;
-	let canSee = false;
-	let minRangeSat = 1000; //Arbitrarily Large
-	for (player in app.players) {
-		if (player === setupData.team) {
-			continue;
-		}
-		relVector = [curPoints[setupData.team + 'R'][0] - curPoints[player + 'R'][0], curPoints[setupData.team + 'R'][1] - curPoints[player + 'R'][1]],
-			// console.log(relVector);
+		relVector, catsAngle, satRange, pointAngle, canSee, minRangeSat;
+	for (playerFrom in app.players) {
+		canSee = false;
+		minRangeSat = 1000; //Arbitrarily Large
+		for (playerTo in app.players) {
+			if (playerTo === playerFrom) {
+				continue;
+			}
+			relVector = [curPoints[playerFrom + 'R'][0] - curPoints[playerTo + 'R'][0], curPoints[playerFrom + 'R'][1] - curPoints[playerTo + 'R'][1]],
+				// console.log(relVector);
 			catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
-		satRange = math.norm(relVector);
-		Object.assign(sideData.scenario_data.data[player], {
-			range: satRange,
-			cats: catsAngle * 180 / Math.PI
-		});
-		if (minRangeSat > satRange) {
-			pointAngle = Math.atan2(relVector[1], -relVector[0]);
-			minRangeSat = satRange;
+			satRange = math.norm(relVector);
+			Object.assign(sideData.scenario_data.data[playerFrom].data[playerTo], {
+				range: satRange,
+				cats: catsAngle * 180 / Math.PI
+			});
+			if (minRangeSat > satRange) {
+				pointAngle = Math.atan2(relVector[1], -relVector[0]);
+				minRangeSat = satRange;
+			}
+			if (playerFrom === setupData.team) {
+				if (catsAngle < (Number(setupData.blue.reqCats) * Math.PI / 180) && math.norm(relVector) >= Number(setupData.blue.rangeReq[0]) && math.norm(relVector) <= Number(setupData.blue.rangeReq[1])) {
+					drawViewpoint([curPoints[setupData.team + 'R'][0][0], curPoints[setupData.team + 'R'][1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), setupData.team);
+					canSee = true;
+				}
+			}
+			
 		}
-		if (catsAngle < (Number(setupData.blue.reqCats) * Math.PI / 180) && math.norm(relVector) >= Number(setupData.blue.rangeReq[0]) && math.norm(relVector) <= Number(setupData.blue.rangeReq[1])) {
-			drawViewpoint([curPoints[setupData.team + 'R'][0][0], curPoints[setupData.team + 'R'][1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), setupData.team);
-			canSee = true;
+		// Set angle of the player's character
+		pointAngle = pointAngle < 0 ? pointAngle * 180 / Math.PI + 360 : pointAngle * 180 / Math.PI;
+		if (Math.abs(pointAngle - app.players[playerFrom].attitude) > 180) {
+			pointAngle = pointAngle > app.players[playerFrom].attitude ? pointAngle - 360 : pointAngle + 360;
 		}
+		let pointDiff = pointAngle - app.players[playerFrom].attitude;
+		if (Math.abs(pointDiff) > app.maxSlew && app.players[playerFrom].attitude !== undefined) {
+			app.players[playerFrom].attitude += math.sign(pointDiff) * app.maxSlew;
+		} else {
+			app.players[playerFrom].attitude = pointAngle;
+		}
+		if (playerFrom === setupData.team) {
+			if (!canSee) {
+				app.chartData.view.data = [];
+				globalChartRef.update();
+			}
+		}
+		
 	}
-	// Set angle of the player's character
-	pointAngle = pointAngle < 0 ? pointAngle * 180 / Math.PI + 360 : pointAngle * 180 / Math.PI;
-	if (Math.abs(pointAngle - app.players[setupData.team].attitude) > 180) {
-		pointAngle = pointAngle > app.players[setupData.team].attitude ? pointAngle - 360 : pointAngle + 360;
-	}
-	let pointDiff = pointAngle - app.players[setupData.team].attitude;
-	if (Math.abs(pointDiff) > app.maxSlew && app.players[setupData.team].attitude !== undefined) {
-		app.players[setupData.team].attitude += math.sign(pointDiff) * app.maxSlew;
-	} else {
-		app.players[setupData.team].attitude = pointAngle;
-	}
-	if (!canSee) {
-		app.chartData.view.data = [];
-		globalChartRef.update();
-	}
+	
 
 	let t1 = 1000,
 		t2 = 0,
