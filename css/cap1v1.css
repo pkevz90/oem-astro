@@ -268,3 +268,6 @@ canvas {
 .side-data table tr th, .side-data table tr td {
     width: 20%;
 }
+.side-data table tr th div {
+    width: 100%;
+}
