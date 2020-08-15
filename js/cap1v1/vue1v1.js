@@ -320,29 +320,34 @@ var setupData = new Vue({
                     break;
                 case 'defend':
                     this.blue = {
-                        ae: 20,
+                        ae: 0,
                         xd: 0,
-                        yd: 0,
+                        yd: 25,
                         B:  0, 
-                        dVavail: (6).toFixed(1),
-                        reqCats: (90).toFixed(0),
-                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+                        dVavail: (9).toFixed(1),
+                        reqCats: (135).toFixed(0),
+                        maxDv: (1.5).toFixed(2),
+                        rangeReq: [(10).toFixed(0), (60).toFixed(0)],
                     };
                     this.red = {
                         ae: 0,
-                        xd: -30,
-                        yd: -80,
+                        xd: -40,
+                        yd: -90,
                         B:  0, 
-                        dVavail: (6).toFixed(1),
+                        dVavail: (9).toFixed(1),
                         reqCats: (90).toFixed(0),
-                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+                        maxDv: (1.75).toFixed(2),
+                        rangeReq: [(0).toFixed(0), (40).toFixed(0)],
                     };
                     this.green = {
                         ae: 0,
                         xd: 0,
                         yd: 0,
                         B:  0,
-                        dVavail: (0.5).toFixed(1),
+                        dVavail: (9).toFixed(1),
+                        maxDv: (0.2).toFixed(2),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(0).toFixed(0), (5).toFixed(0)],
                         exist: true
                     };
                     this.gray = {
@@ -353,7 +358,8 @@ var setupData = new Vue({
                         dVavail: (0).toFixed(1),
                         exist: false
                     };
-                    this.scenario_start.bp = 15;
+                    this.scenario_start.bp = 18;
+                    this.scenario_start.sl = 36;
                     break;
                     case '2defend':
                         this.blue = {

@@ -174,7 +174,7 @@ function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 		}
 		maxDv = setupData[sat].dVavail - totalDv;
 		if (app.chosenWaypoint[1] === setupData.team) {
-			maxDv = Math.min(maxDv,setupData.blue.maxDv)
+			maxDv = Math.min(maxDv,setupData[setupData.team].maxDv)
 		}
 		distance = (distance > 10 * maxDv) ? 10 * maxDv : distance;
 		// app.players[sat].burns[app.chosenWaypoint[0]] = [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)];

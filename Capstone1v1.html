@@ -87,9 +87,9 @@
             <p><em>&#946</em>: <input v-model="red.B"> <sup>o</sup></p>
             <p>&#916V Available: <input v-model="red.dVavail"> m/s</p>
             <div v-if="team === 'red'">
-                <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
-                <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
-                <p>Max &#916V/Burn: <input v-model="blue.maxDv"> m/s</p>
+                <p>Required CATS: <input v-model="red.reqCats"> <sup>o</sup></p>
+                <p>Range: <input v-model="red.rangeReq[0]"> to <input v-model="red.rangeReq[1]">
+                <p>Max &#916V/Burn: <input v-model="red.maxDv"> m/s</p>
             </div>
         </div>
         <div class="setup-container">
@@ -129,9 +129,9 @@
                 <p><em>&#946</em>: <input v-model="green.B"> <sup>o</sup></p>
                 <p>&#916V Available: <input v-model="green.dVavail"> m/s</p>
                 <div v-if="team === 'green'">
-                    <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
-                    <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
-                    <p>Max &#916V/Burn: <input v-model="blue.maxDv"> m/s</p>
+                    <p>Required CATS: <input v-model="green.reqCats"> <sup>o</sup></p>
+                    <p>Range: <input v-model="green.rangeReq[0]"> to <input v-model="green.rangeReq[1]">
+                    <p>Max &#916V/Burn: <input v-model="green.maxDv"> m/s</p>
                 </div>
             </div>
             <div class="add-button" v-on:click="addGray" id="green">+</div>
