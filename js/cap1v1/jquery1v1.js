@@ -70,6 +70,20 @@ $('canvas').mouseup(() => {
             break;
         case 'target':
             targetCalc(0, 0, true);
+            let turn = Number($turn.text());
+            let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
+            let ii = 0;
+            let inter = setInterval(() => {
+                app.currentTime += timeDelta / 11;
+                app.currentTime = app.currentTime < 0 ? 0 : app.currentTime;
+                $('.nav-element input')[0].value = app.currentTime;
+                $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
+                calcData(app.currentTime);
+                if (ii === 10) {
+                    clearInterval(inter);
+                }
+                ii++;
+            }, 15);
             break;
         default:
             break;

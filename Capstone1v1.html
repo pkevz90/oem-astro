@@ -170,10 +170,10 @@
                 <option value="gray" v-if="scenario_data.players.gray !== undefined" :disabled="scenario_data.engageData[0] === 'gray'">Gray</option>
             </select>
             </div>
-            <div style="font-size: 1.2em">
+            <div style="font-size: 1.2em; padding: 5%">
                 <div>Range: {{ scenario_data.data[scenario_data.engageData[0]].data[scenario_data.engageData[1]].range.toFixed(2) }} km</div> 
                 <div>CATS: {{ scenario_data.data[scenario_data.engageData[0]].data[scenario_data.engageData[1]].cats.toFixed(2) }}<sup>o</sup></div>
-                <div>POCA: km</div>
+                <!-- <div>POCA: km</div> -->
             </div>
             
         </div>
