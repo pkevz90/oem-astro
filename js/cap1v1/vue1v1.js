@@ -171,6 +171,7 @@ var sideData = new Vue({
                     name: 'red'
                 },
             },
+            engageData: ['blue','red'],
             scenLength: 15,
             numBurns: 5
         }
@@ -180,6 +181,18 @@ var sideData = new Vue({
             return this.scenario_data.scenLength / this.scenario_data.numBurns;
         }
     },
+    methods: {
+        engageChange: function(event) {
+            if (event.target.value !== this.scenario_data.engageData[1]) {
+                return;
+            }
+            for (player in this.scenario_data.players) {
+                if (player !== event.target.value) {
+                    this.scenario_data.engageData[1] = player;
+                }
+            }
+        }
+    }
 });
 
 var setupData = new Vue({

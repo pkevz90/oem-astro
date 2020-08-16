@@ -158,178 +158,24 @@
     <div class="sideBar" id="side-data">
         <div class="controlTitle pointer"><span>Engagement Data</span></div>
         <div class="side-data" id="dataContainer">
-            <div>Range [km]</div>
-            <table>
-                <tr>
-                    <th style="position: relative;">
-                        <div style="font-size: 0.5em; position: absolute; bottom: 0%; text-align: left;">From</div>
-                        <div style="font-size: 0.5em; position: absolute; top: 0%; right: 0%; text-align: right;">To</div>
-                    </th>
-                    <th>
-                        <div style="height: 20px; background-color: rgb(100,150,255);"></div>
-                    </th>
-                    <th>
-                        <div style="height: 20px; background-color: rgb(255,150,100);"></div>
-                    </th>
-                    <th v-if="scenario_data.data.green.exist">
-                        <div style="height: 20px; background-color: rgb(120,255,120);"></div>
-                    </th>
-                    <th v-if="scenario_data.data.gray.exist">
-                        <div style="height: 20px; background-color: rgb(150,150,150);"></div>
-                    </th>
-                </tr>
-                <tr>
-                    <td>
-                        <div style="height: 20px; background-color: rgb(100,150,255);"></div>
-                    </td>
-                    <td>
-
-                    </td>
-                    <td>
-                        {{ scenario_data.data.blue.data.red.range.toFixed(1) }}
-                    </td>
-                    <td v-if="scenario_data.data.green.exist">
-                        {{ scenario_data.data.blue.data.green.range.toFixed(1) }}
-                    </td>
-                    <td v-if="scenario_data.data.gray.exist">
-                        {{ scenario_data.data.blue.data.gray.range.toFixed(1) }}
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div style="height: 20px; background-color: rgb(255,150,100);"></div>
-                    </td>
-                    <td>
-                    </td>
-                    <td>
-                         
-                    </td>
-                    <td v-if="scenario_data.data.green.exist">
-                        {{ scenario_data.data.red.data.green.range.toFixed(1) }}
-                    </td>
-                    <td v-if="scenario_data.data.gray.exist">
-                        {{ scenario_data.data.red.data.green.range.toFixed(1) }}
-                    </td>
-                </tr>
-                <tr v-if="scenario_data.data.green.exist">
-                    <td>
-                        <div style="height: 20px; background-color: rgb(120,255,120);"></div>
-                    </td>
-                    <td>
-                    </td>
-                    <td>
-                    </td>
-                    <td>
-                        
-                    </td>
-                    <td v-if="scenario_data.data.gray.exist">
-                        {{ scenario_data.data.green.data.gray.range.toFixed(1) }}
-                    </td>
-                </tr>
-                <tr v-if="scenario_data.data.gray.exist">
-                    <td>
-                        <div style="height: 20px; background-color: rgb(150,150,150);"></div>
-                    </td>
-                    <td>
-                    </td>
-                    <td>
-                    </td>
-                    <td>
-                    </td>
-                    <td>
-                        
-                    </td>
-                </tr>
-            </table>
-            <div>CATS [deg]</div>
-            <table>
-                <tr>
-                    <th style="position: relative;">
-                        <div style="font-size: 0.5em; position: absolute; bottom: 0%; text-align: left;">From</div>
-                        <div style="font-size: 0.5em; position: absolute; top: 0%; right: 0%; text-align: right;">To</div>
-                    </th>
-                    <th>
-                        <div style="height: 20px; background-color: rgb(100,150,255);"></div>
-                    </th>
-                    <th>
-                        <div style="height: 20px; background-color: rgb(255,150,100);"></div>
-                    </th>
-                    <th v-if="scenario_data.data.green.exist">
-                        <div style="height: 20px; background-color: rgb(120,255,120);"></div>
-                    </th>
-                    <th v-if="scenario_data.data.gray.exist">
-                        <div style="height: 20px; background-color: rgb(150,150,150);"></div>
-                    </th>
-                </tr>
-                <tr>
-                    <td>
-                        <div style="height: 20px; background-color: rgb(100,150,255);"></div>
-                    </td>
-                    <td>
-
-                    </td>
-                    <td>
-                        {{ scenario_data.data.blue.data.red.cats.toFixed(1) }}
-                    </td>
-                    <td v-if="scenario_data.data.green.exist">
-                        {{ scenario_data.data.blue.data.green.cats.toFixed(1) }}
-                    </td>
-                    <td v-if="scenario_data.data.gray.exist">
-                        {{ scenario_data.data.blue.data.gray.cats.toFixed(1) }}
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div style="height: 20px; background-color: rgb(255,150,100);"></div>
-                    </td>
-                    <td>
-                        {{ scenario_data.data.red.data.blue.cats.toFixed(1) }}
-                    </td>
-                    <td>
-                         
-                    </td>
-                    <td v-if="scenario_data.data.green.exist">
-                        {{ scenario_data.data.red.data.green.cats.toFixed(1) }}
-                    </td>
-                    <td v-if="scenario_data.data.gray.exist">
-                        {{ scenario_data.data.red.data.green.cats.toFixed(1) }}
-                    </td>
-                </tr>
-                <tr v-if="scenario_data.data.green.exist">
-                    <td>
-                        <div style="height: 20px; background-color: rgb(120,255,120);"></div>
-                    </td>
-                    <td>
-                        {{ scenario_data.data.green.data.blue.cats.toFixed(1) }}
-                    </td>
-                    <td>
-                        {{ scenario_data.data.green.data.red.cats.toFixed(1) }}
-                    </td>
-                    <td>
-                        
-                    </td>
-                    <td v-if="scenario_data.data.gray.exist">
-                        {{ scenario_data.data.green.data.gray.cats.toFixed(1) }}
-                    </td>
-                </tr>
-                <tr v-if="scenario_data.data.gray.exist">
-                    <td>
-                        <div style="height: 20px; background-color: rgb(150,150,150);"></div>
-                    </td>
-                    <td>
-                        {{ scenario_data.data.gray.data.blue.cats.toFixed(1) }}
-                    </td>
-                    <td>
-                        {{ scenario_data.data.gray.data.red.cats.toFixed(1) }}
-                    </td>
-                    <td>
-                        {{ scenario_data.data.gray.data.green.cats.toFixed(1) }}
-                    </td>
-                    <td>
-                        
-                    </td>
-                </tr>
-            </table>
+            <div> <select id="engage1" style="background-color: black; color: white; font-size: 1.05em;" v-model="scenario_data.engageData[0]" @input="engageChange">
+                <option value="blue">Blue</option>
+                <option value="red">Red</option>
+                <option value="green" v-if="scenario_data.players.green !== undefined">Green</option>
+                <option value="gray" v-if="scenario_data.players.gray !== undefined">Gray</option>
+            </select> &#8594 <select style="background-color: black; color: white; font-size: 1.05em;" v-model="scenario_data.engageData[1]">
+                <option value="blue" :disabled="scenario_data.engageData[0] === 'blue'">Blue</option>
+                <option value="red" :disabled="scenario_data.engageData[0] === 'red'">Red</option>
+                <option value="green" v-if="scenario_data.players.green !== undefined" :disabled="scenario_data.engageData[0] === 'green'">Green</option>
+                <option value="gray" v-if="scenario_data.players.gray !== undefined" :disabled="scenario_data.engageData[0] === 'gray'">Gray</option>
+            </select>
+            </div>
+            <div style="font-size: 1.2em">
+                <div>Range: {{ scenario_data.data[scenario_data.engageData[0]].data[scenario_data.engageData[1]].range.toFixed(2) }} km</div> 
+                <div>CATS: {{ scenario_data.data[scenario_data.engageData[0]].data[scenario_data.engageData[1]].cats.toFixed(2) }}<sup>o</sup></div>
+                <div>POCA: km</div>
+            </div>
+            
         </div>
         <player-data v-for="player in scenario_data.players" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>
