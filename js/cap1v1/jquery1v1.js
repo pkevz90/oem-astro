@@ -285,6 +285,25 @@ $('.nav-element input').on('input', (a) => {
     calcData(app.currentTime);
 })
 
+$('.nav-element input').on('change', (a) => {
+    let turn = Number($turn.text());
+    let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
+    let limit = Math.abs(Math.floor(timeDelta / (app.scenLength / app.numBurns) * 7));
+    // console.log((turn - 1) * (app.scenLength / app.numBurns), app.currentTime, timeDelta, limit);
+    let ii = 0;
+    let inter = setInterval(() => {
+        app.currentTime += timeDelta / (limit + 1);
+        app.currentTime = app.currentTime < 0 ? 0 : app.currentTime;
+        $('.nav-element input').val(app.currentTime);
+        $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
+        calcData(app.currentTime);
+        if (ii === limit) {
+            clearInterval(inter);
+        }
+        ii++;
+    }, 15);
+})
+
 function hrsToTime(hrs) {
     return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
 }
