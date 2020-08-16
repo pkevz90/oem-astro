@@ -173,7 +173,13 @@ var sideData = new Vue({
             },
             engageData: ['blue','red'],
             scenLength: 15,
-            numBurns: 5
+            numBurns: 5,
+            colors: {
+                blue:  'rgba(100,150,255,1)',
+                red:   'rgba(255,150,100,1)',
+                green: 'rgba(120,255,120,1)',
+                gray: 'rgba(150,150,150,1)'
+            }
         }
     },
     computed: {

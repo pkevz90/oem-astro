@@ -158,12 +158,12 @@
     <div class="sideBar" id="side-data">
         <div class="controlTitle pointer"><span>Engagement Data</span></div>
         <div class="side-data" id="dataContainer">
-            <div> <select id="engage1" style="background-color: black; color: white; font-size: 1.05em;" v-model="scenario_data.engageData[0]" @input="engageChange">
+            <div v-bind:style="{ 'background-image': 'linear-gradient(to right,' + scenario_data.colors[scenario_data.engageData[0]] + ',rgb(100,100,100),' + scenario_data.colors[scenario_data.engageData[1]] + ')' }"> <select id="engage1" style="background-color: black; color: white; font-size: 1.05em;" v-model="scenario_data.engageData[0]" @input="engageChange">
                 <option value="blue">Blue</option>
                 <option value="red">Red</option>
                 <option value="green" v-if="scenario_data.players.green !== undefined">Green</option>
                 <option value="gray" v-if="scenario_data.players.gray !== undefined">Gray</option>
-            </select> &#8594 <select style="background-color: black; color: white; font-size: 1.05em;" v-model="scenario_data.engageData[1]">
+            </select> &#10146 <select style="background-color: black; color: white; font-size: 1.05em;" v-model="scenario_data.engageData[1]">
                 <option value="blue" :disabled="scenario_data.engageData[0] === 'blue'">Blue</option>
                 <option value="red" :disabled="scenario_data.engageData[0] === 'red'">Red</option>
                 <option value="green" v-if="scenario_data.players.green !== undefined" :disabled="scenario_data.engageData[0] === 'green'">Green</option>

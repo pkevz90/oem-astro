@@ -366,6 +366,7 @@ function startGame() {
 		default: 
 			break;
 	}
+	// $('#dataContainer div:first').css('background-image','linear-gradient(to right,' + app.colors.blue + ',rgb(100,100,100),' + app.colors.red + ')')
 	for (sat in app.players) {
 		sideData.scenario_data.data[sat].exist = (sat === setupData.team) ? false : true;
 		Vue.set(sideData.scenario_data.players,sat,{})

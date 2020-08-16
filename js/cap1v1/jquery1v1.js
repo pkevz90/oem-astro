@@ -1,5 +1,12 @@
 var teamNum, $turn = $('.selectable:first span');;
 createGraph();
+document.getElementById('ChartCnvs').addEventListener('touchstart',event=>{
+    console.log(event);
+    let X = app.axisCenter[0] + app.axisLimits - 2*(event.touches[0].clientX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
+    let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.touches[0].clientY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
+    console.log(X,Y);
+})
+
 $('canvas').on('mousewheel',event => {
     // console.log(app.tactic);
     if (app.tactic === 'target') {
