@@ -350,7 +350,22 @@ function startGame() {
 		green: 'rgba(120,255,120,1)',
 		gray: 'rgba(150,150,150,1)'
 	}
-    $('.nav-element:first p').css('color',app.colors[setupData.team])
+	switch(setupData.team) {
+		case 'blue': 
+			$('.navbar').css('background-image','linear-gradient(to right,rgb(25,35,100), rgb(12,17,50),#06090c)')
+			break;
+		case 'red':
+			$('.navbar').css('background-image','linear-gradient(to right,rgb(100,35,25), rgb(50,17,12),#06090c)')
+			break;
+		case 'green':
+			$('.navbar').css('background-image','linear-gradient(to right,rgb(35,100,25), rgb(17,50,12),#06090c)')
+			break;
+		case 'gray': 
+			$('.navbar').css('background-image','linear-gradient(to right,rgb(100,100,100), rgb(50,50,50),#06090c)')
+			break;
+		default: 
+			break;
+	}
 	for (sat in app.players) {
 		sideData.scenario_data.data[sat].exist = (sat === setupData.team) ? false : true;
 		Vue.set(sideData.scenario_data.players,sat,{})

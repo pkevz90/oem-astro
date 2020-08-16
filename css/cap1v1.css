@@ -4,7 +4,10 @@
     padding: 0;
     width: 100%;
     overflow: hidden;
-    background-color: #1f3a52;
+    // background-color: #06090c;
+    // background-color: #1f3a52;
+    // background-image: linear-gradient(to right, #06090c, rgb(50,75,125), #06090c, rgb(50,75,125));
+    // background-image: linear-gradient(to right,rgb(70,35,25), rgb(35,17,12),#06090c);
 }
 
 body {
@@ -12,6 +15,7 @@ body {
     background: #06090c;
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#111b24', endColorstr='#0c4161', GradientType=0);
     height: 100%;
+    width: 100%;
     font-family: "open_sansregular";
     color: rgb(201, 203, 206);
     overflow: hidden;
@@ -67,7 +71,7 @@ li p {
     height: auto;
     color: white;
     text-align: center;
-    background-color: rgba(50, 50, 50, 0.35);
+    background-color: rgba(25, 25, 25, 1);
     font-weight: bold;
     padding: 2% 0;
     z-index: 2;
@@ -146,7 +150,7 @@ input {
 }
 
 .side-data {
-    background-color: rgba(50, 50, 50, 0.35);
+    background-color: rgba(25, 25, 25, 1);
     padding: 0;
     z-index: 3;
 }
