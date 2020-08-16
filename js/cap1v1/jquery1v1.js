@@ -285,7 +285,7 @@ $('.nav-element input').on('input', (a) => {
     calcData(app.currentTime);
 })
 
-$('.nav-element input').on('change', (a) => {
+$('.nav-element input').on('change', () => {
     let turn = Number($turn.text());
     let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
     let limit = Math.abs(Math.floor(timeDelta / (app.scenLength / app.numBurns) * 7));
@@ -305,5 +305,6 @@ $('.nav-element input').on('change', (a) => {
 })
 
 function hrsToTime(hrs) {
+    hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
     return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
 }
