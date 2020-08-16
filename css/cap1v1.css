@@ -155,6 +155,7 @@ input {
     z-index: 3;
 }
 
+
 #dataContainer {
     font-size: 1.6vw;
     text-align: center;
@@ -262,6 +263,10 @@ input {
 .burn-container {
     max-height: 35vh;
     overflow-y: scroll;
+}
+
+.burn-container::-webkit-scrollbar {
+    display: none;
 }
 canvas {
     cursor: grab;
