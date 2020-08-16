@@ -17,8 +17,10 @@ $('canvas').on('mousewheel',event => {
         return;
     }
     drawSunVectors(app.currentTime * 3600);
-    app.axisLimits -= event.deltaY*5;
-    setAxisZoomPos();
+    if (app.axisLimits > 5 || event.deltaY < 0) {
+        app.axisLimits -= event.deltaY*5;
+        setAxisZoomPos();
+    }
 })
 $('canvas').mousedown(event => {
     let X = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
@@ -107,7 +109,7 @@ $('.selectable:first').on('click', () => {
         return;
     }
     turn++;
-    setSelectedWaypoint(turn - 1, setupData.team);
+    // setSelectedWaypoint(turn - 1, setupData.team);
     $('.selectable:first span').text(turn)
     for (player in app.players) {
         app.players[player].calculateTrajecory();
