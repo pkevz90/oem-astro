@@ -222,6 +222,7 @@ var setupData = new Vue({
             dVavail: (6).toFixed(1),
             reqCats: (90).toFixed(0),
             rangeReq: [(10).toFixed(0), (15).toFixed(0)],
+            maxDv: (2).toFixed(1)
         },
         green: {
             exist: false,
@@ -230,6 +231,7 @@ var setupData = new Vue({
             yd: (0).toFixed(1),
             B:  (0).toFixed(1),
             dVavail: (6).toFixed(1),
+            maxDv: (2).toFixed(1)
         },
         gray: {
             exist: false,
@@ -238,6 +240,7 @@ var setupData = new Vue({
             yd: (0).toFixed(1),
             B:  (0).toFixed(1),
             dVavail: (6).toFixed(1),
+            maxDv: (2).toFixed(1)
         },
         scenario_start: {
             dVavail: (6).toFixed(1),
@@ -486,6 +489,19 @@ var setupData = new Vue({
             else {
                 $('#green').prev().hide();
                 $('#green').show();
+            }
+        },
+        checkServer: function (event) {
+            if ($(event.target).prev().val() === '533trs') {
+                $(event.target).parent().prev().text('Server On');
+                $('.server-button').css('background-color','rgb(100,200,100)');
+                $('.server-button').animate({
+                    height: '5%'
+                },300)
+                this.server = true;
+            }
+            else {
+                $(event.target).prev().css('color','red')
             }
         }
     }

@@ -280,3 +280,12 @@ canvas {
 .side-data table tr th div {
     width: 100%;
 }
+.server-button {
+    width: 80%;
+    height: 5%;
+    background-color: rgb(225,100,100);
+    margin-left: 10%;
+    cursor: pointer;
+    overflow: hidden;
+    border-radius: 10px;
+}

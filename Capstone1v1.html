@@ -116,9 +116,14 @@
                 <option value="2defend"    >Defenders</option>
                 <option value="mayhem"    >Mayhem</option>
             </select>
-            </p>    
-            <p>Game Server</p>
-            <p>On<input type="radio"  name="serverSelect" value="true" v-model="server">Off<input type="radio" name="serverSelect" value="false" v-model="server" checked></p>
+            </p>
+            <div class="server-button">
+                <p style="color: white; font-size: 2.4vw; margin: 0">Server Off</p>
+                <div style="margin-top: 10%; margin-left: 5%; color: white;">
+                    Password: <input style="color: black; margin-top: 2%; background-color: white; width: 70%">
+                    <button @click="checkServer">Connect to Server</button>
+                </div>
+            </div>    
         </div>
         <div class="setup-container">
             <div style="display: none;">

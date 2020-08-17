@@ -308,3 +308,9 @@ function hrsToTime(hrs) {
     hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
     return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
 }
+
+$('.server-button p').click(()=>{
+    $('.server-button').animate({
+        height: '20%'
+    },300)
+})
