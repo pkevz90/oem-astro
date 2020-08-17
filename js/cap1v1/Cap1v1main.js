@@ -271,7 +271,7 @@ function createGraph() {
 					ctx.beginPath();
 					let positionX = app.chartData === undefined ? 0 : app.chartData.relative.data[1].x[0];
 					let positionY = app.chartData === undefined ? 0 : app.chartData.relative.data[1].y[0];
-					ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2  - positionX*pixelX/2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 2 - positionY*pixelY*2);
+					ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2  - positionX*pixelX/2 + app.axisCenter[0]*pixelX/2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 2 + app.axisCenter[1]*pixelY*2 - positionY*pixelY*2);
 					ctx.moveTo(0,0);
 					transformedArrow.forEach((point) => {
 						ctx.lineTo(point[0],point[1]);

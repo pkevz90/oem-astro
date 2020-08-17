@@ -197,6 +197,7 @@ var sideData = new Vue({
                     this.scenario_data.engageData[1] = player;
                 }
             }
+            this.scenario_data.engageData[0] = event.target.value;
             calcData(app.currentTime);
         }
     }
