@@ -156,7 +156,7 @@ function startTarget() {
 }
 
 function changeTargetTime(direction) {
-    if (!((app.tacticData.targetPos > 1 && direction < 0) || (direction > 0 && (app.tacticData.targetPos + 2 + app.chosenWaypoint[0]) < app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data.length))) {
+    if (!((app.tacticData.targetPos > 1 && direction < 0) || (direction > 0 && (app.tacticData.targetPos  + app.chosenWaypoint[0]) < app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data.length))) {
         return;
     }
     let {
