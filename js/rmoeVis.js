@@ -17,9 +17,13 @@ var orbitParams = [{
     shown: true
 }];
 
-var Earth, clouds, sidTime = 0, stopRotate, Sunlight, stars, sunVec, satPoint = [], orbit = [], r = 2, scene, scale = 10, camera, renderer, controls, ecef = false, timeStep = 60;
+var Earth, clouds, sidTime = 0, stopRotate, Sunlight, stars, sunVec, satPoint = [], orbit = [], r = 2, scene, scale = 10, camera, renderer, controls, ecef = false;
 var ECI = [], ECEF = [], RIC = [], pari = [];
 var jdUTI0 = julianDateCalcStruct(time);
+var timeStep = 1000/60,
+    timeMult = 1000,
+    stopwatch = new Date().getTime(),
+    lastTenSpeeds = [];
 
 var $orbitsControls = $('.controls span');
 setupScene();
@@ -30,6 +34,17 @@ drawRIC();
 drawOrbit(orbitParams);
 
 var render = function() {
+    let updatedTime = new Date().getTime();
+    let persec = 1000/(updatedTime-stopwatch);
+    if (lastTenSpeeds.length < 10){
+        lastTenSpeeds.push(persec);
+    }else{
+        lastTenSpeeds = lastTenSpeeds.slice(1,10);
+        lastTenSpeeds.push(persec);
+        timeStep = timeMult/math.mean(lastTenSpeeds);
+    }
+    stopwatch = new Date().getTime();
+
     let n = 2*Math.PI/86164;
     for (let ii = 0; ii < orbitParams.length; ii++){
         orbitParams[ii].b += timeStep/86164*2*Math.PI;
@@ -59,7 +74,7 @@ render();
 function setupScene() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.01);
-    camera.position.set( -scale*42164/6371-scale*0.01, scale*0.0025, scale*0.0025 );
+    camera.position.set( -scale*42164/6371-scale*0.0125, scale*0.0025, -scale*0.0025 );
     renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setSize(window.innerWidth,window.innerHeight);
     $('body').append(renderer.domElement);
@@ -78,6 +93,7 @@ function drawOrbit(orbitParams) {
     let r,v,rf, itAng, ctAng, rAng, cosB, sinB;
     let n = 2*Math.PI/86164;
     tailLength = 0.5; let numObjects = $('.controls').length;
+    //console.log(orbitParams)
     for (var orbitNum = 0; orbitNum < numObjects; orbitNum++) {
         cosB = Math.cos(orbitParams[orbitNum].b);
         sinB = Math.sin(orbitParams[orbitNum].b);
@@ -110,7 +126,7 @@ function drawOrbit(orbitParams) {
         if (orbit[orbitNum] === undefined){
             var geometry = new THREE.SphereGeometry( 0.00035, 6, 6 );
             var material = new THREE.MeshBasicMaterial({
-                color: 0xFFC300});
+                color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value});
             satPoint[orbitNum] = new THREE.Mesh( geometry, material );
             satPoint[orbitNum].position.x = -scale*42164/6371-scale*r[0][0]/6371;
             satPoint[orbitNum].position.y = scale*r[2][0]/6371;
@@ -118,7 +134,7 @@ function drawOrbit(orbitParams) {
 
             var curve = new THREE.CatmullRomCurve3(points);
             var geometry = new THREE.TubeGeometry(curve, 25, 0.0001, 4, true);
-            orbit[orbitNum] = new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color: 0xFFC300}));
+            orbit[orbitNum] = new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value}));
 
             scene.add(satPoint[orbitNum]);
             scene.add(orbit[orbitNum]);
@@ -299,12 +315,28 @@ function sliderInput(a) {
 document.addEventListener('keypress', function(key){
     let k = key.key;
     if (k === '.' || k === '>') {
-        timeStep += 10;
-        $('.timeStepDiv span')[0].textContent = timeStep.toFixed(0);
+        //constTaTailPts = [];
+        //constTailPts = [];
+        if (timeMult == 1) {
+            timeMult = 0;
+        }
+        timeMult += 100;
+        if (timeMult == 0) {
+            timeMult = 1;
+        }
+        $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
     }
-    else if (k === ',' || k === '<') {
-        timeStep -= 10;
-        $('.timeStepDiv span')[0].textContent = timeStep.toFixed(0);
+    if (k === ',' || k === '<') {
+        //constTaTailPts = [];
+        //constTailPts = [];
+        if (timeMult == 1) {
+            timeMult = 0;
+        }
+        timeMult -= 100;
+        if (timeMult == 0) {
+            timeMult = 1;
+        }
+        $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
     }
     else if (k.toLowerCase() === 's') {
         stars.visible = !stars.visible;

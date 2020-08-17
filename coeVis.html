@@ -65,27 +65,6 @@
         .slidercontainer p {
             margin: 1%;
         }
-        .referenceDiv {
-            position: fixed;
-            bottom: 0%;
-            color: white;
-            width: 30%;
-            left: 35%;
-            text-align: center;
-            font-size: 1.5vw;
-            opacity: 0.8;
-        }
-        .timeStepDiv {
-            position: fixed;
-            bottom: 0%;
-            color: white;
-            /* width: 20%; */
-            right: 0%;
-            text-align: center;
-            padding-right: 1%;
-            font-size: 1.5vw;
-            opacity: 0.8;
-        }
         .addButton {
             float: right;
             border: 1px solid white;
@@ -100,6 +79,15 @@
             padding: 1% 2%;
             border-radius: 50%;
             font-size: 1.5vw;
+        }
+        #constClose {
+            float: right;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 2%;
+            border-radius: 50%;
+            font-size: 1.5vw;
+            cursor: pointer;
         }
         .addButton:hover {
             background-color: rgba(50,50,50,0.75);
@@ -174,13 +162,59 @@
         .pointer {
             cursor: pointer;
         }
+        @media only screen and (min-width: 1300px) {
+            .referenceDiv {
+            position: fixed;
+            bottom: 0%;
+            color: white;
+            width: 30%;
+            left: 35%;
+            text-align: center;
+            font-size: 1.5vw;
+            opacity: 0.8;
+        }
+        .timeStepDiv {
+            position: fixed;
+            bottom: 0%;
+            color: white;
+            /* width: 20%; */
+            right: 0%;
+            text-align: center;
+            padding-right: 1%;
+            font-size: 1.5vw;
+            opacity: 0.8;
+        }
+        }
+        @media only screen and (max-width: 1300px) {
+            .referenceDiv {
+            position: relative;
+            bottom: 0%;
+            color: white;
+            width: 30%;
+            left: 35%;
+            text-align: center;
+            font-size: 1.5vw;
+            opacity: 0.8;
+        }
+        .timeStepDiv {
+            position: relative;
+            bottom: 0%;
+            color: white;
+            /* width: 20%; */
+            right: 0%;
+            text-align: center;
+            padding-right: 1%;
+            font-size: 1.5vw;
+            opacity: 0.8;
+        }
+        }
     </style>
 </head>
 <body>
     <div class="loadingScreen">
         <div>Loading...</div>
     </div>
-    <div class="constPane pointer" style="display: none;">
+    <div class="constPane pointer">
         <p>
             Constellations
         </p>
@@ -190,12 +224,12 @@
             Common Orbits
         </p>
     </div>
-    <div id="constList" style="text-align: center; display: none; position: fixed; right: 45%; top: 5%; width: 20%; z-index: 3; color: white;">
+    <div id="constList" style="background-color:  rgba(50,50,50,0.5); text-align: center; display: none; position: fixed; right: 45%; top: 5%; width: 20%; z-index: 3; color: white;">
         <p class="pointer">GPS (24 Satellites)</p>
         <p class="pointer">Molniya (3 Satellites)</p>
         <p class="pointer">Iridium (66 Satellites)</p>
     </div>
-    <div id="orbitList" style="text-align: center; display: none; position: fixed; right: 25%; top: 5%; width: 20%; z-index: 3; color: white;">
+    <div id="orbitList" style="background-color:  rgba(50,50,50,0.5); text-align: center; display: none; position: fixed; right: 25%; top: 5%; width: 20%; z-index: 3; color: white;">
         <span>Replace opened orbit with:</span>
         <p class="pointer">ISS</p>
         <p class="pointer">GPS</p>
@@ -209,7 +243,7 @@
             Options
         </p>
     </div>
-    <div id="optionsList" style="text-align: center; display: none; position: fixed; right: 5%; top: 5%; width: 20%; z-index: 3; color: white;">
+    <div id="optionsList" style="background-color:  rgba(50,50,50,0.5); text-align: center; display: none; position: fixed; right: 5%; top: 5%; width: 21%; z-index: 3; color: white;">
         <p>Tail length: <span>50</span>%</p>
         <input type="range" class="slider" min="0" max="300" value="50" step="1">
         <input type="checkbox" checked>
@@ -219,11 +253,11 @@
         <input type="checkbox" checked>
         <p style="display: inline-block;color: #4444ff">Show ECEF Axes</p>
         <br>
-        <input type="checkbox" />
-        <p style="display: inline-block;color: #ffffff">Show Constellations</p>
-        <br>
         <input type="checkbox" checked>
-        <p style="display: inline-block;color: #ffffff">Show User Orbits</p>
+        <p style="display: inline-block;color: #ffffff">Show Ground Visibility (Local Horizon)</p>
+        <br>
+        <input type="checkbox" />
+        <p style="display: inline-block;color: #ffffff">Hide User Orbits (Constellation only)</p>
         <!--<p class='resetButton'>Reset</p>-->
         
         
@@ -261,7 +295,7 @@
         </div>
         <div class="addButton pointer">+</div>
         <div class="constInfo" style="display:none">
-            <span id="constName">GPS (24 Satellites)</span>
+            <span id="constName">GPS (24 Satellites)</span> <span id='constClose'>X</span><br />
             <input type="color" value="#00FFFF"/><br /><br />
             <div><em>a</em>: <span class='value'>26561.7 km</span></div>
             <div><em>e</em>: <span class='value'>0</span></div>
@@ -314,6 +348,21 @@
         })
         $('#constList').on('mouseleave',()=>{
             $('#constList').hide(); 
+        })
+        $('.orbitsPane').on('click',()=>{
+            if($('#orbitList')[0].style.display != "none"){
+                $('#orbitList').hide()
+            }
+        })
+        $('.optionsPane').on('click',()=>{
+            if($('#optionsList')[0].style.display != "none"){
+                $('#optionsList').hide()
+            }
+        })
+        $('.constPane').on('click',()=>{
+            if($('#constList')[0].style.display != "none"){
+                $('#constList').hide()
+            }
         })
         var editTarget;
         function changeColor (a) {

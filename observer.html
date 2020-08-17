@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="./SupportLibraries/vue.js"></script>
+</head>
+<body>
+    <div id="main-app">
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Team 1 R</th>
+                <th>Team 1 I</th>
+            </tr>
+            <tr v-for="(burn,index) in team1">
+                <td>{{ index + 1 }}</td>
+                <td>{{ burn[0].toFixed(2) }}</td>
+                <td>{{ burn[1].toFixed(2) }}</td>
+            </tr>
+            <tr style="font-size: 10vw;">
+                <td>Turn</td>
+                <td>{{ team1Turn }}</td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Team 2 R</th>
+                <th>Team 2 I</th>
+            </tr>
+            <tr v-for="(burn,index) in team2">
+                <td>{{ index + 1 }}</td>
+                <td>{{ burn[0].toFixed(2) }}</td>
+                <td>{{ burn[1].toFixed(2) }}</td>
+            </tr>
+            <tr style="font-size: 10vw;">
+                <td>Turn</td>
+                <td>{{ team2Turn }}</td>
+            </tr>
+        </table>
+    </div>
+    <script>
+        let app = new Vue({
+            el: "#main-app",
+            data: {
+                team1: [
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0]
+                ],
+                team1Turn: 1,
+                team2: [
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0]
+                ],
+                team2Turn: 1,
+            }
+        })
+        window.addEventListener('DOMContentLoaded',() => {
+            firebase.database().ref('team1/').once('value').then(function (snapshot) {
+                app.team1 = snapshot.val().burn;
+                app.team1Turn = snapshot.val().turn;
+            });
+            firebase.database().ref('team2/').once('value').then(function (snapshot) {
+                app.team2 = snapshot.val().burn;
+                app.team2Turn = snapshot.val().turn;
+            }); 
+        })
+        setInterval(() => {
+            console.log('Data retrieved: ' + Date());
+            firebase.database().ref('team1/').once('value').then(function (snapshot) {
+                app.team1 = snapshot.val().burn;
+                app.team1Turn = snapshot.val().turn;
+            });
+            firebase.database().ref('team2/').once('value').then(function (snapshot) {
+                app.team2 = snapshot.val().burn;
+                app.team2Turn = snapshot.val().turn;
+            });
+        },10000)
+    </script>
+
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/7.16.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.16.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.16.0/firebase-database.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+        https://firebase.google.com/docs/web/setup#available-libraries -->
+    <script src="https://www.gstatic.com/firebasejs/7.16.0/firebase-analytics.js"></script>
+
+    <script>
+    // Your web app's Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyBHT3uSihCK6myGAdY5Tmvkyng3MXhCHzQ",
+            authDomain: "ow1v1back.firebaseapp.com",
+            databaseURL: "https://ow1v1back.firebaseio.com",
+            projectId: "ow1v1back",
+            storageBucket: "ow1v1back.appspot.com",
+            messagingSenderId: "494304290567",
+            appId: "1:494304290567:web:6108eefc4382c3a9d147a2",
+            measurementId: "G-T17DB2EXYP"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+
+        var database = firebase.database();
+    </script>
+</body>
+</html>

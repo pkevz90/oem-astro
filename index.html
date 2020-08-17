@@ -34,7 +34,7 @@
                 min-width: 200px;
                 height: 280px;
                 margin-top: 2.5%;
-                background-color: rgba(201, 203, 206,0.25);
+                background-color: rgb(66, 67, 68);
                 border-radius: 2%;
                 color: white;
                 text-align: center;
@@ -73,11 +73,45 @@
                 width: 30%;
                 right: 10%;
             }
+            .credits {
+                position: relative;
+                right: 1em;
+                border: 1px solid white;
+                padding: 2px;
+                background-color: white;
+                color: black;
+                cursor: pointer;
+                border-radius: 5px;
+            }
+            #creditsWindow {
+                background-color: rgb(66, 67, 68);
+                position: absolute;
+                left: 20%;
+                right: 20%;
+                top: 20%;
+                color: white;
+                border-radius: 5%;
+                padding:5%;
+                border: 1px solid white
+            }
+
+            #creditsWindow h1 {
+                margin-bottom: 5%;
+            }
+
+            #creditsWindow h4 {
+                margin-left: 3%;
+            }
+
+            #creditsWindow p {
+                margin-left: 6%;
+            }
         </style>
     </head>
     <body>
         <div class="navbar">
-            <h1 class="display-4">Repository for OW Web Applications</h1>
+             <h1 class="display-4" style="width:fit-content;float: left;">Repository for OW Web Applications</h1>
+             <h1 class="credits" style="float:right" onclick="getElementById('creditsWindow').style.display = 'block'">Credits</div>
         </div>
           
         <div class="flexDiv">
@@ -112,6 +146,29 @@
                 <p>Calculate constant direction finite burns within the HCW framework.</p>
                 <a href="./rpoFinite.html"><button class="link-center">Open</button></a>
             </div>
+            <div>
+                <h1>Fourier Transforms</h1>
+                <p>Explains the fundementals of Fourier Transforms using a hand-drawn wave.</p>
+                <a href="./fourier.html"><button class="link-center">Open</button></a>
+            </div>
+        </div>
+        <div id="creditsWindow" style="display: none;">
+            <span style="float: right; border: 1px solid white; border-radius: 50%;width:1em;text-align: center;cursor: pointer;" onclick="getElementById('creditsWindow').style.display = 'none'">X</span><br />
+            <h2>Credits</h2>
+            <h4>1v1 Sim</h4>
+            <p>Captain Perry VanZandt</p>
+            <h4>Classical Orbital Elements</h4>
+            <p>2d Lt Joshua Daniels and Captain Perry VanZandt</p>
+            <h4>Relative Motion Elements</h4>
+            <p>Captain Perry VanZandt and 2d Lt Joshua Daniels</p>
+            <h4>Waypoint Planner</h4>
+            <p>Captain Perry VanZandt</p>
+            <h4>Reachability</h4>
+            <p>Captain Perry VanZandt</p>
+            <h4>Finite Burn</h4>
+            <p>Captain Perry VanZandt</p>
+            <h4>Fourier</h4>
+            <p>2d Lt Joshua Daniels</p>
         </div>
     </body>
 </html>
