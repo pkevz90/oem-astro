@@ -269,7 +269,9 @@ function createGraph() {
 					ctx.fillStyle = 'rgba(255,255,0,0.5)';
 					ctx.strokeStyle = 'rgba(255,255,0,0.5)';
 					ctx.beginPath();
-					ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 2 + app.axisCenter[1]*pixelY*2);
+					let positionX = app.chartData === undefined ? 0 : app.chartData.relative.data[1].x[0];
+					let positionY = app.chartData === undefined ? 0 : app.chartData.relative.data[1].y[0];
+					ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2  - positionX*pixelX/2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top) / 2 - positionY*pixelY*2);
 					ctx.moveTo(0,0);
 					transformedArrow.forEach((point) => {
 						ctx.lineTo(point[0],point[1]);
@@ -278,6 +280,7 @@ function createGraph() {
 					ctx.stroke();
 					ctx.fill();
 					ctx.restore();
+					// Draw satellite images
 					let pos;
 					if (app.players['blue'] !== undefined) {
 						for (player in app.players) {
@@ -350,23 +353,7 @@ function startGame() {
 		green: 'rgba(120,255,120,1)',
 		gray: 'rgba(150,150,150,1)'
 	}
-	switch(setupData.team) {
-		case 'blue': 
-			$('.navbar').css('background-image','linear-gradient(to right,rgb(25,35,100), rgb(12,17,50),#06090c)')
-			break;
-		case 'red':
-			$('.navbar').css('background-image','linear-gradient(to right,rgb(100,35,25), rgb(50,17,12),#06090c)')
-			break;
-		case 'green':
-			$('.navbar').css('background-image','linear-gradient(to right,rgb(35,100,25), rgb(17,50,12),#06090c)')
-			break;
-		case 'gray': 
-			$('.navbar').css('background-image','linear-gradient(to right,rgb(100,100,100), rgb(50,50,50),#06090c)')
-			break;
-		default: 
-			break;
-	}
-	// $('#dataContainer div:first').css('background-image','linear-gradient(to right,' + app.colors.blue + ',rgb(100,100,100),' + app.colors.red + ')')
+    $('.nav-element:first p').css('color',app.colors[setupData.team])
 	for (sat in app.players) {
 		sideData.scenario_data.data[sat].exist = (sat === setupData.team) ? false : true;
 		Vue.set(sideData.scenario_data.players,sat,{})
@@ -438,13 +425,13 @@ function setCurrentPoints(curTime, noPlot = false) {
 	if (noPlot) {
 		return points
 	}
-	// app.chartData.relative.data = [{
-	// 	x: points['redR'][1],
-	// 	y: points['redR'][0]
-	// }, {
-	// 	x: points['blueR'][1],
-	// 	y: points['blueR'][0]
-	// }]
+	app.chartData.relative.data = [{
+		x: points[sideData.scenario_data.engageData[0] + 'R'][1],
+		y: points[sideData.scenario_data.engageData[0] + 'R'][0]
+	}, {
+		x: points[sideData.scenario_data.engageData[1] + 'R'][1],
+		y: points[sideData.scenario_data.engageData[1] + 'R'][0]
+	}]
 	return points;
 }
 

@@ -197,6 +197,7 @@ var sideData = new Vue({
                     this.scenario_data.engageData[1] = player;
                 }
             }
+            calcData(app.currentTime);
         }
     }
 });
