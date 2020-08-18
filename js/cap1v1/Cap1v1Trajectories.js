@@ -72,12 +72,14 @@ function calcData(curTime = 0) {
 				range: satRange,
 				cats: catsAngle * 180 / Math.PI
 			});
-			if (minRangeSat > satRange) {
+			let targets = setupData[playerFrom].targets;
+			targets = targets === undefined ? [] : targets;
+			if (minRangeSat > satRange && (targets.includes(playerTo) || targets.length === 0)) {
 				pointAngle = Math.atan2(relVector[1], -relVector[0]);
 				minRangeSat = satRange;
 			}
-			if (playerFrom === setupData.team) {
-				if (catsAngle < (Number(setupData.blue.reqCats) * Math.PI / 180) && math.norm(relVector) >= Number(setupData.blue.rangeReq[0]) && math.norm(relVector) <= Number(setupData.blue.rangeReq[1])) {
+			if (playerFrom === setupData.team && (targets.includes(playerTo) || targets.length === 0)) {
+				if (catsAngle < (Number(setupData[playerFrom].reqCats) * Math.PI / 180) && math.norm(relVector) >= Number(setupData[playerFrom].rangeReq[0]) && math.norm(relVector) <= Number(setupData[playerFrom].rangeReq[1])) {
 					drawViewpoint([curPoints[setupData.team + 'R'][0][0], curPoints[setupData.team + 'R'][1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), setupData.team);
 					canSee = true;
 				}

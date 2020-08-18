@@ -197,6 +197,7 @@ var sideData = new Vue({
                     this.scenario_data.engageData[1] = player;
                 }
             }
+            this.scenario_data.engageData[0] = event.target.value;
             calcData(app.currentTime);
         }
     }
@@ -213,7 +214,8 @@ var setupData = new Vue({
             dVavail: (6).toFixed(1),
             reqCats: (90).toFixed(0),
             rangeReq: [(10).toFixed(0), (15).toFixed(0)],
-            maxDv: (2).toFixed(1)
+            maxDv: (2).toFixed(1),
+            targets: []
         },
         red: {
             ae: (0).toFixed(1),
@@ -223,7 +225,8 @@ var setupData = new Vue({
             dVavail: (6).toFixed(1),
             reqCats: (90).toFixed(0),
             rangeReq: [(10).toFixed(0), (15).toFixed(0)],
-            maxDv: (2).toFixed(1)
+            maxDv: (2).toFixed(1),
+            targets: []
         },
         green: {
             exist: false,
@@ -232,7 +235,8 @@ var setupData = new Vue({
             yd: (0).toFixed(1),
             B:  (0).toFixed(1),
             dVavail: (6).toFixed(1),
-            maxDv: (2).toFixed(1)
+            maxDv: (2).toFixed(1),
+            targets: []
         },
         gray: {
             exist: false,
@@ -241,7 +245,8 @@ var setupData = new Vue({
             yd: (0).toFixed(1),
             B:  (0).toFixed(1),
             dVavail: (6).toFixed(1),
-            maxDv: (2).toFixed(1)
+            maxDv: (2).toFixed(1),
+            targets: []
         },
         scenario_start: {
             dVavail: (6).toFixed(1),
@@ -351,6 +356,7 @@ var setupData = new Vue({
                         reqCats: (135).toFixed(0),
                         maxDv: (1.5).toFixed(2),
                         rangeReq: [(10).toFixed(0), (60).toFixed(0)],
+                        targets: ['red']
                     };
                     this.red = {
                         ae: 0,
@@ -361,6 +367,7 @@ var setupData = new Vue({
                         reqCats: (90).toFixed(0),
                         maxDv: (1.75).toFixed(2),
                         rangeReq: [(0).toFixed(0), (40).toFixed(0)],
+                        targets: ['green']
                     };
                     this.green = {
                         ae: 0,

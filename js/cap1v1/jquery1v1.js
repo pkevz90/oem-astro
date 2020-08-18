@@ -288,7 +288,7 @@ $('.nav-element input').on('input', (a) => {
 $('.nav-element input').on('change', () => {
     let turn = Number($turn.text());
     let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
-    let limit = Math.abs(Math.floor(timeDelta / (app.scenLength / app.numBurns) * 7));
+    let limit = Math.abs(Math.floor(timeDelta / (app.scenLength / app.numBurns) * 12));
     // console.log((turn - 1) * (app.scenLength / app.numBurns), app.currentTime, timeDelta, limit);
     let ii = 0;
     let inter = setInterval(() => {

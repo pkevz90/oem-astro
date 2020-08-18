@@ -14,14 +14,14 @@
                 <th>Team 1 R</th>
                 <th>Team 1 I</th>
             </tr>
-            <tr v-for="(burn,index) in team1">
+            <tr v-for="(burn,index) in blue">
                 <td>{{ index + 1 }}</td>
                 <td>{{ burn[0].toFixed(2) }}</td>
                 <td>{{ burn[1].toFixed(2) }}</td>
             </tr>
-            <tr style="font-size: 10vw;">
+            <tr style="font-size: 10vw; color: rgb(0,0,150)">
                 <td>Turn</td>
-                <td>{{ team1Turn }}</td>
+                <td>{{ blueTurn }}</td>
             </tr>
         </table>
         <table>
@@ -30,14 +30,46 @@
                 <th>Team 2 R</th>
                 <th>Team 2 I</th>
             </tr>
-            <tr v-for="(burn,index) in team2">
+            <tr v-for="(burn,index) in red">
                 <td>{{ index + 1 }}</td>
                 <td>{{ burn[0].toFixed(2) }}</td>
                 <td>{{ burn[1].toFixed(2) }}</td>
             </tr>
-            <tr style="font-size: 10vw;">
+            <tr style="font-size: 10vw; color: rgb(150,0,0)">
                 <td>Turn</td>
-                <td>{{ team2Turn }}</td>
+                <td>{{ redTurn }}</td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Team 2 R</th>
+                <th>Team 2 I</th>
+            </tr>
+            <tr v-for="(burn,index) in green">
+                <td>{{ index + 1 }}</td>
+                <td>{{ burn[0].toFixed(2) }}</td>
+                <td>{{ burn[1].toFixed(2) }}</td>
+            </tr>
+            <tr style="font-size: 10vw; color: rgb(0,150,0)">
+                <td>Turn</td>
+                <td>{{ redTurn }}</td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Team 2 R</th>
+                <th>Team 2 I</th>
+            </tr>
+            <tr v-for="(burn,index) in gray">
+                <td>{{ index + 1 }}</td>
+                <td>{{ burn[0].toFixed(2) }}</td>
+                <td>{{ burn[1].toFixed(2) }}</td>
+            </tr>
+            <tr style="font-size: 10vw; color: rgb(150,150,150)">
+                <td>Turn</td>
+                <td>{{ redTurn }}</td>
             </tr>
         </table>
     </div>
@@ -45,7 +77,7 @@
         let app = new Vue({
             el: "#main-app",
             data: {
-                team1: [
+                blue: [
                     [0,0],
                     [0,0],
                     [0,0],
@@ -53,36 +85,49 @@
                     [0,0],
                     [0,0]
                 ],
-                team1Turn: 1,
-                team2: [
+                blueTurn: 1,
+                red: [
                     [0,0],
                     [0,0],
                     [0,0],
                     [0,0],
                     [0,0]
                 ],
-                team2Turn: 1,
+                redTurn: 1,
+                green: [
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0]
+                ],
+                greenTurn: 1,
+                gray: [
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0],
+                    [0,0]
+                ],
+                grayTurn: 1,
             }
         })
         window.addEventListener('DOMContentLoaded',() => {
-            firebase.database().ref('team1/').once('value').then(function (snapshot) {
-                app.team1 = snapshot.val().burn;
-                app.team1Turn = snapshot.val().turn;
+            firebase.database().ref('players/').once('value').then(function (snapshot) {
+                for (team in snapshot.val()) {
+                    app[team] = snapshot.val()[team].burn
+                    app[team + 'Turn'] = snapshot.val()[team].turn
+                }
             });
-            firebase.database().ref('team2/').once('value').then(function (snapshot) {
-                app.team2 = snapshot.val().burn;
-                app.team2Turn = snapshot.val().turn;
-            }); 
         })
         setInterval(() => {
             console.log('Data retrieved: ' + Date());
-            firebase.database().ref('team1/').once('value').then(function (snapshot) {
-                app.team1 = snapshot.val().burn;
-                app.team1Turn = snapshot.val().turn;
-            });
-            firebase.database().ref('team2/').once('value').then(function (snapshot) {
-                app.team2 = snapshot.val().burn;
-                app.team2Turn = snapshot.val().turn;
+            firebase.database().ref('players/').once('value').then(function (snapshot) {
+                for (team in snapshot.val()) {
+                    app[team] = snapshot.val()[team].burn
+                    app[team + 'Turn'] = snapshot.val()[team].turn
+                }
             });
         },10000)
     </script>
