@@ -285,7 +285,7 @@ function createGraph() {
 					if (app.players['blue'] !== undefined) {
 						for (player in app.players) {
 							pos = [app.players[player].dataLoc.current.data[0].x, app.players[player].dataLoc.current.data[0].y];
-							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,20 / app.axisLimits,app.colors[player],sunInit + n * app.currentTime * 3600 );
+							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,0.2,app.colors[player],sunInit + n * app.currentTime * 3600 );
 						}
 					}
 				}

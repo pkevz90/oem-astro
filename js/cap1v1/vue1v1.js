@@ -355,7 +355,7 @@ var setupData = new Vue({
                         dVavail: (9).toFixed(1),
                         reqCats: (120).toFixed(0),
                         maxDv: (1.5).toFixed(2),
-                        rangeReq: [(10).toFixed(0), (60).toFixed(0)],
+                        rangeReq: [(0).toFixed(0), (50).toFixed(0)],
                         targets: ['red']
                     };
                     this.red = {
