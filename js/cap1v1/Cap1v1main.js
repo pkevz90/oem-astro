@@ -41,10 +41,6 @@ let app = {
 		scenData: undefined
 	},
 	chartData: undefined,
-	dataLoc: {
-		blueFormer: 2,
-		redFormer: 5,
-	},
 	updateApp: function () {
 		for (var sat in app.players) {
 			app.players[sat].calculateTrajecory();
@@ -61,96 +57,38 @@ function createGraph() {
 				// label: "Blue Waypoints",
 				data: [],
 				showLine: false,
-				fill: false,
 				pointRadius: 6,
 				borderColor: 'rgba(120,200,255,1)'
 			}, {
 				// label: "Blue Trajectory",
 				data: [],
 				showLine: true,
-				fill: false,
 				pointRadius: 0,
 				borderColor: 'rgba(120,200,255,1)'
-			}, {
-				// label: "Blue Former Trajectory",
-				data: [],
-				showLine: true,
-				fill: false,
-				pointRadius: 0,
-				borderColor: 'rgba(120,200,255,0.5)'
 			}, {
 				// label: "Red Waypoints",
 				data: [],
 				showLine: false,
-				fill: false,
 				pointRadius: 6,
 				borderColor: 'rgba(255,200,120,1)'
 			}, {
 				// label: "Red Trajectory",
 				data: [],
 				showLine: true,
-				fill: false,
 				pointRadius: 0,
 				borderColor: 'rgba(255,200,120,1)'
 			}, {
-				// label: "Red Former Trajectory",
-				data: [],
-				showLine: true,
-				fill: false,
-				pointRadius: 0,
-				borderColor: 'rgba(60,100,255,0.5)'
-			}, {
-				// label: "Burn Directions",
-				data: [],
-				showLine: true,
-				fill: false,
-				pointRadius: 0,
-				borderWidth: 6,
-				borderColor: 'rgba(255,255,255,0.25)',
-			}, {
-				// label: "Sun",
-				data: [{
-					x: 0,
-					y: 0
-				}, {
-					x: 0,
-					y: 0
-				}],
-				fill: false,
-				showLine: true,
-				pointRadius: 0,
-				borderWidth: 6,
-				lineTension: 0,
-				borderColor: 'rgba(225,225,0,0.5)',
-			}, {
 				// label: "Selected Waypoint",
 				data: [],
-				fill: false,
 				showLine: false,
 				pointRadius: 5,
 				backgroundColor: 'rgba(255,255,255,1)',
 			}, {
 				// label: "Current Blue",
-				data: [{
-					x: 0,
-					y: 0
-				}],
-				fill: false,
-				showLine: false,
-				pointRadius: 15,
-				pointStyle: 'triangle',
-				backgroundColor: 'rgba(120,200,255,0)',
+				data: []
 			}, {
 				// label: "Current Red",
-				data: [{
-					x: 0,
-					y: 0
-				}],
-				fill: false,
-				showLine: false,
-				pointRadius: 15,
-				pointStyle: 'triangle',
-				backgroundColor: 'rgba(255,200,120,0)',
+				data: []
 			}, {
 				// label: "Viewpoint",
 				data: [],
@@ -167,7 +105,6 @@ function createGraph() {
 					x: 0,
 					y: 0
 				}],
-				fill: false,
 				showLine: true,
 				pointRadius: 0,
 				borderDash: [10, 10],
@@ -176,21 +113,14 @@ function createGraph() {
 				// label: "Green Waypoints",
 				data: [],
 				showLine: false,
-				fill: false,
 				pointRadius: 6,
 				borderColor: 'rgba(160,255,160,1)'
 			},{
 				// label: "Current Green",
-				data: [],
-				showLine: false,
-				fill: false,
-				pointRadius: 15,
-				pointStyle: 'rect',
-				backgroundColor: 'rgba(160,255,160,0)',
+				data: []
 			}, {
 				// label: "Green Trajectory",
 				data: [],
-				fill: false,
 				showLine: true,
 				pointRadius: 0,
 				borderColor: 'rgba(160,255,160,1)',
@@ -198,21 +128,14 @@ function createGraph() {
 				// label: "Gray Waypoints",
 				data: [],
 				showLine: false,
-				fill: false,
 				pointRadius: 6,
 				borderColor: 'rgba(150,150,150,1)'
 			}, {
 				// label: "Current Gray",
-				data: [],
-				showLine: false,
-				fill: false,
-				pointRadius: 15,
-				pointStyle: 'rect',
-				backgroundColor: 'rgba(150,150,150,0)',
+				data: []
 			}, {
 				// label: "Gray Trajectory",
 				data: [],
-				fill: false,
 				showLine: true,
 				pointRadius: 0,
 				borderColor: 'rgba(150,150,150,1)',
@@ -262,7 +185,6 @@ function createGraph() {
 						positionY = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].y;
 						let burnX = app.players[app.chosenWaypoint[1]].burns[app.chosenWaypoint[0]][0];
 						let burnY = app.players[app.chosenWaypoint[1]].burns[app.chosenWaypoint[0]][1];
-						console.log(burnX, burnY);
 						drawArrow(ctx, pixelX, pixelY, math.norm([burnX, burnY]) * 10, [positionX, positionY], Math.atan2(-burnY, burnX), sideData.scenario_data.colors[app.chosenWaypoint[1]], 3);
 					}
 
@@ -271,7 +193,7 @@ function createGraph() {
 					if (app.players['blue'] !== undefined) {
 						for (player in app.players) {
 							pos = [app.players[player].dataLoc.current.data[0].x, app.players[player].dataLoc.current.data[0].y];
-							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,0.2,app.colors[player],sunInit + n * app.currentTime * 3600 );
+							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,0.2,sideData.scenario_data.colors[player],sunInit + n * app.currentTime * 3600 );
 						}
 					}
 				}
@@ -330,12 +252,6 @@ function createGraph() {
 }
 
 function startGame() {
-	app.colors = {
-		blue:  'rgba(100,150,255,1)',
-		red:   'rgba(255,150,100,1)',
-		green: 'rgba(120,255,120,1)',
-		gray: 'rgba(150,150,150,1)'
-	}
 	switch(setupData.team) {
 		case 'blue': 
 			$('.navbar').css('background-image','linear-gradient(to right,rgb(25,35,100), rgb(12,17,50),#06090c)')
@@ -352,21 +268,18 @@ function startGame() {
 		default: 
 			break;
 	}
-    // $('.nav-element:first p').css('color',app.colors[setupData.team])
-	for (sat in app.players) {
+    for (sat in app.players) {
 		sideData.scenario_data.data[sat].exist = (sat === setupData.team) ? false : true;
 		Vue.set(sideData.scenario_data.players,sat,{})
 		Vue.set(sideData.scenario_data.players[sat],'burns',app.players[sat].burns)
 		Vue.set(sideData.scenario_data.players[sat],'name',sat)
-		Vue.set(sideData.scenario_data.players[sat],'color',app.colors[sat])
+		Vue.set(sideData.scenario_data.players[sat],'color',sideData.scenario_data.colors[sat])
 	}
 	app.chartData = {
-		burnDir: globalChartRef.config.data.datasets[6],
-		sun: globalChartRef.config.data.datasets[7],
-		selected: globalChartRef.config.data.datasets[8],
-		relative: globalChartRef.config.data.datasets[12],
-		targetLim: globalChartRef.config.data.datasets[19],
-		view: globalChartRef.config.data.datasets[11]
+		selected: globalChartRef.config.data.datasets[4],
+		relative: globalChartRef.config.data.datasets[8],
+		targetLim: globalChartRef.config.data.datasets[15],
+		view: globalChartRef.config.data.datasets[7]
 	};
 	for (sat in app.players) {
 		app.players[sat].calculateTrajecory();
@@ -464,7 +377,7 @@ function setCurrentPoints(curTime, noPlot = false) {
 }
 
 function drawViewpoint(pos, az, range, colorIn) {
-	let viewColor = app.colors[colorIn].substring(0,17) + '0.25)';
+	let viewColor = sideData.scenario_data.colors[colorIn].substring(0,17) + '0.25)';
 	app.chartData.view.backgroundColor = viewColor;
 	app.chartData.view.data = [{
 		x: pos[1],

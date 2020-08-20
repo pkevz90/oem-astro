@@ -65,13 +65,6 @@ function setSelectedWaypoint(index, side) {
         x: xPoint,
         y: yPoint
     }];
-    app.chartData.burnDir.data = [{
-        x: xPoint,
-        y: yPoint
-    }, {
-        x: xPoint + app.players[side].burns[index][1] * 10,
-        y: yPoint + app.players[side].burns[index][0] * 10
-    }];
     globalChartRef.update();
 }
 
@@ -80,6 +73,7 @@ function checkClose(X, Y, change = true) {
     let turn = Number($turn.text()) - 1;
 
     for (sat in app.players) {
+        // console.log(app.players[sat]);
         for (var ii = turn; ii < app.players[sat].dataLoc.waypoints.data.length; ii++) {
             xPoint = app.players[sat].dataLoc.waypoints.data[ii].x;
             yPoint = app.players[sat].dataLoc.waypoints.data[ii].y;

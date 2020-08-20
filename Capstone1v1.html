@@ -150,9 +150,9 @@
                 <p><em>&#946</em>: <input v-model="gray.B"> <sup>o</sup></p>
                 <p>&#916V Available: <input v-model="gray.dVavail"> m/s</p>
                 <div v-if="team === 'gray'">
-                    <p>Required CATS: <input v-model="blue.reqCats"> <sup>o</sup></p>
-                    <p>Range: <input v-model="blue.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
-                    <p>Max &#916V/Burn: <input v-model="blue.maxDv"> m/s</p>
+                    <p>Required CATS: <input v-model="gray.reqCats"> <sup>o</sup></p>
+                    <p>Range: <input v-model="gray.rangeReq[0]"> to <input v-model="blue.rangeReq[1]">
+                    <p>Max &#916V/Burn: <input v-model="gray.maxDv"> m/s</p>
                 </div>
             </div>
             <div class="add-button" v-on:click="addGray" id="gray">+</div>
@@ -178,13 +178,12 @@
             <div style="font-size: 1.2em; padding: 5%">
                 <div>Range: {{ scenario_data.data[scenario_data.engageData[0]].data[scenario_data.engageData[1]].range.toFixed(2) }} km</div> 
                 <div>CATS: {{ scenario_data.data[scenario_data.engageData[0]].data[scenario_data.engageData[1]].cats.toFixed(2) }}<sup>o</sup></div>
-                <!-- <div>POCA: km</div> -->
             </div>
             
         </div>
         <player-data v-for="player in scenario_data.players" :inburns="player" :in_turn_length="turnLength"></player-data>
     </div>
-    <div style="width:90%; height:auto; margin: auto; padding-top: 1%; z-index: 1;">
+    <div style="width:85%; height:auto; margin-left:2%; padding-top: 1%; z-index: 1;">
         <canvas id="ChartCnvs" width="46" height="23"></canvas>
     </div>
     <div class="team-number"></div>

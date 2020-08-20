@@ -40,6 +40,7 @@ function calculateTrajecory() {
 		}
 		// console.log(turn,index);
 		// if ((index !== (app.burns[sat].length-1)) && (index >= (Number($turn.textContent)-1))) {
+		
 		if (index !== (this.burns.length - 1)) {
 			this.dataLoc.waypoints.data.push({
 				x: turn > index + 1 ? NaN : r[1][0],
@@ -182,13 +183,6 @@ function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 		// app.players[sat].burns[app.chosenWaypoint[0]] = [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)];
 		app.players[sat].burns.splice(app.chosenWaypoint[0], 1, [distance / 10 * Math.sin(az), distance / 10 * Math.cos(az)]);
 		setBottomInfo('R: ' + (distance / 10 * Math.sin(az)).toFixed(3) + ' m/s, I: ' + (distance / 10 * Math.cos(az)).toFixed(3) + ' m/s');
-		// app.chartData.burnDir.data = [{
-		// 	x: xPoint,
-		// 	y: yPoint
-		// }, {
-		// 	x: xPoint + distance * Math.cos(az),
-		// 	y: yPoint + distance * Math.sin(az)
-		// }];
 		app.players[sat].calculateTrajecory();
 		calcData(app.currentTime);
 	}
@@ -245,13 +239,6 @@ function targetCalc(xMouse, yMouse, click = false) {
 		let sat = app.chosenWaypoint[1];
 		app.players[sat].burns.splice(app.chosenWaypoint[0], 1, [dV[0][0] * 1000, dV[1][0] * 1000]);
 		setBottomInfo('R: ' + (dV[0][0] * 1000).toFixed(3) + ' m/s, I: ' + (dV[1][0] * 1000).toFixed(3) + ' m/s');
-		// app.chartData.burnDir.data = [{
-		// 	x: r1[1][0],
-		// 	y: r1[0][0]
-		// }, {
-		// 	x: r1[1][0] + dV[1][0] * 10000,
-		// 	y: r1[0][0] + dV[0][0] * 10000
-		// }];
 		app.players[sat].calculateTrajecory();
 		calcData(app.currentTime);
 

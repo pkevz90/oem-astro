@@ -234,6 +234,8 @@ var setupData = new Vue({
             xd: (0).toFixed(1),
             yd: (0).toFixed(1),
             B:  (0).toFixed(1),
+            reqCats: (90).toFixed(0),
+            rangeReq: [(10).toFixed(0), (15).toFixed(0)],
             dVavail: (6).toFixed(1),
             maxDv: (2).toFixed(1),
             targets: []
@@ -244,6 +246,8 @@ var setupData = new Vue({
             xd: (0).toFixed(1),
             yd: (0).toFixed(1),
             B:  (0).toFixed(1),
+            reqCats: (90).toFixed(0),
+            rangeReq: [(10).toFixed(0), (15).toFixed(0)],
             dVavail: (6).toFixed(1),
             maxDv: (2).toFixed(1),
             targets: []
@@ -453,6 +457,8 @@ var setupData = new Vue({
                         yd: -30,
                         B:  0,
                         dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
                         exist: true
                     };
                     this.gray = {
@@ -461,6 +467,8 @@ var setupData = new Vue({
                         yd: 0,
                         B:  0,
                         dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
                         exist: true
                     };
                     break;

@@ -31,13 +31,6 @@ $('canvas').mousedown(event => {
         app.players[app.chosenWaypoint[1]].burns.splice(app.chosenWaypoint[0],1, [0, 0]);
         app.players[app.chosenWaypoint[1]].calculateTrajecory();
         calcData(app.currentTime);
-        app.chartData.burnDir.data = [{
-            x: 0,
-            y: 0
-        }, {
-            x: 0,
-            y: 0
-        }];
         globalChartRef.update();
         setTimeout(() => {
             if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false) && app.chosenWaypoint !== undefined) {
@@ -183,12 +176,12 @@ $('.start-button').on('click', () => {
     app.players.blue = new Satellite(blueInit, 'blue', {
         waypoints: globalChartRef.config.data.datasets[0],
         trajectory: globalChartRef.config.data.datasets[1],
-        current: globalChartRef.config.data.datasets[9],
+        current: globalChartRef.config.data.datasets[5],
     });
     app.players.red = new Satellite(redInit, 'red', {
-        waypoints: globalChartRef.config.data.datasets[3],
-        trajectory: globalChartRef.config.data.datasets[4],
-        current: globalChartRef.config.data.datasets[10],
+        waypoints: globalChartRef.config.data.datasets[2],
+        trajectory: globalChartRef.config.data.datasets[3],
+        current: globalChartRef.config.data.datasets[6],
     });
     let init;
     if (setupData.green.exist) {
@@ -199,9 +192,9 @@ $('.start-button').on('click', () => {
             B: Number(setupData.green.B)
         });
         app.players.green = new Satellite(init, 'green', {
-            trajectory: globalChartRef.config.data.datasets[15],
-            current: globalChartRef.config.data.datasets[14],
-            waypoints: globalChartRef.config.data.datasets[13]
+            trajectory: globalChartRef.config.data.datasets[11],
+            current: globalChartRef.config.data.datasets[10],
+            waypoints: globalChartRef.config.data.datasets[9]
         })
     }
     if (setupData.gray.exist) {
@@ -212,9 +205,9 @@ $('.start-button').on('click', () => {
             B:  Number(setupData.gray.B)
         });
         app.players.gray = new Satellite(init, 'gray', {
-            waypoints: globalChartRef.config.data.datasets[16],
-            trajectory: globalChartRef.config.data.datasets[18],
-            current: globalChartRef.config.data.datasets[17]
+            waypoints: globalChartRef.config.data.datasets[12],
+            trajectory: globalChartRef.config.data.datasets[14],
+            current: globalChartRef.config.data.datasets[13]
         })
     }
     if (setupData.server) {
