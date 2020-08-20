@@ -20,6 +20,8 @@ function calculateTrajecory() {
 	this.dataLoc.waypoints.data.push({
 		x: turn > 0 ? NaN : r[1][0],
 		y: turn > 0 ? NaN : r[0][0],
+		rad: r[0][0],
+		it: r[1][0],
 		dRad: v[0][0],
 		dIt: v[1][0]
 	});
@@ -56,6 +58,7 @@ function calculateTrajecory() {
 function calcData(curTime = 0) {
 	let redR, blueR;
 	let curPoints = {};
+	console.log(curTime);
 	for (sat in app.players) {
 		curPoints[sat + 'R'] = calcCurrentPoint(curTime, sat)[0];
 		app.players[sat].dataLoc.current.data = [{
@@ -80,9 +83,9 @@ function calcData(curTime = 0) {
 				continue;
 			}
 			relVector = [curPoints[playerFrom + 'R'][0] - curPoints[playerTo + 'R'][0], curPoints[playerFrom + 'R'][1] - curPoints[playerTo + 'R'][1]],
-				// console.log(relVector);
 			catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
 			satRange = math.norm(relVector);
+			console.log(curPoints);
 			Object.assign(sideData.scenario_data.data[playerFrom].data[playerTo], {
 				range: satRange,
 				cats: catsAngle * 180 / Math.PI
@@ -95,7 +98,7 @@ function calcData(curTime = 0) {
 			}
 			if (playerFrom === setupData.team && (targets.includes(playerTo) || targets.length === 0)) {
 				if (catsAngle < (Number(setupData[playerFrom].reqCats) * Math.PI / 180) && math.norm(relVector) >= Number(setupData[playerFrom].rangeReq[0]) && math.norm(relVector) <= Number(setupData[playerFrom].rangeReq[1])) {
-					drawViewpoint([curPoints[setupData.team + 'R'][0], curPoints[setupData.team + 'R'][1]], Math.atan2(-relVectors[0], -relVector[1]), math.norm(relVector), setupData.team);
+					drawViewpoint([curPoints[setupData.team + 'R'][0], curPoints[setupData.team + 'R'][1]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), setupData.team);
 					canSee = true;
 				}
 			}
@@ -167,14 +170,16 @@ function calcData(curTime = 0) {
 function calcCurrentPoint(curTime, sat, pRR, pRV, pVR, pVV) {
 	let priorWaypoint = Math.floor(curTime / (app.scenLength / app.numBurns));
 	let timeDelta = 3600 * (curTime - priorWaypoint * app.scenLength / app.numBurns);
+	console.log(priorWaypoint, timeDelta, app.players[sat].dataLoc.waypoints.data[priorWaypoint]);
 	pRR = PhiRR(timeDelta);
 	pRV = PhiRV(timeDelta);
 	pVR = PhiVR(timeDelta);
 	pVV = PhiVV(timeDelta);
-	let waypointState = [[app.players[sat].dataLoc.waypoints.data[priorWaypoint].y],
-						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].x],
+	let waypointState = [[app.players[sat].dataLoc.waypoints.data[priorWaypoint].rad],
+						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].it],
 						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].dRad + app.players[sat].burns[priorWaypoint][0] / 1000],
 						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].dIt + app.players[sat].burns[priorWaypoint][1] / 1000]];
+	console.log(waypointState);
 	let r = math.add(math.multiply(pRR, waypointState.slice(0,2)), math.multiply(pRV, waypointState.slice(2,4)));
 	let v = math.add(math.multiply(pVR, waypointState.slice(0,2)), math.multiply(pVV, waypointState.slice(2,4)));
 	return [math.squeeze(r),math.squeeze(v)];

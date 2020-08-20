@@ -134,6 +134,7 @@ function startTarget() {
             targetPos: app.tacticData.targetPos,
             availDv: app.tacticData.availDv * ii / 12
         });
+        console.log(app.chosenWaypoint);
         app.currentTime += timeDelta / 13;
         drawSunVectors(app.currentTime * 3600);
         $('.nav-element input').val(app.currentTime);
