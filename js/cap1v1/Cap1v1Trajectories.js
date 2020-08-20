@@ -55,7 +55,21 @@ function calculateTrajecory() {
 
 function calcData(curTime = 0) {
 	let redR, blueR;
-	let curPoints = setCurrentPoints(curTime);
+	let curPoints = {};
+	for (sat in app.players) {
+		curPoints[sat + 'R'] = calcCurrentPoint(curTime, sat)[0];
+		app.players[sat].dataLoc.current.data = [{
+			x: curPoints[sat + 'R'][1],
+			y: curPoints[sat + 'R'][0]
+		}];
+	}
+	app.chartData.relative.data = [{
+		x: curPoints[sideData.scenario_data.engageData[0] + 'R'][1],
+		y: curPoints[sideData.scenario_data.engageData[0] + 'R'][0]
+	}, {
+		x: curPoints[sideData.scenario_data.engageData[1] + 'R'][1],
+		y: curPoints[sideData.scenario_data.engageData[1] + 'R'][0]
+	}]
 	let curSun = math.squeeze(drawSunVectors(curTime * 3600)),
 		relVector, catsAngle, satRange, pointAngle, canSee, minRangeSat;
 	for (playerFrom in app.players) {
@@ -81,7 +95,7 @@ function calcData(curTime = 0) {
 			}
 			if (playerFrom === setupData.team && (targets.includes(playerTo) || targets.length === 0)) {
 				if (catsAngle < (Number(setupData[playerFrom].reqCats) * Math.PI / 180) && math.norm(relVector) >= Number(setupData[playerFrom].rangeReq[0]) && math.norm(relVector) <= Number(setupData[playerFrom].rangeReq[1])) {
-					drawViewpoint([curPoints[setupData.team + 'R'][0][0], curPoints[setupData.team + 'R'][1][0]], Math.atan2(-relVector[0], -relVector[1]), math.norm(relVector), setupData.team);
+					drawViewpoint([curPoints[setupData.team + 'R'][0], curPoints[setupData.team + 'R'][1]], Math.atan2(-relVectors[0], -relVector[1]), math.norm(relVector), setupData.team);
 					canSee = true;
 				}
 			}
@@ -150,6 +164,22 @@ function calcData(curTime = 0) {
 	globalChartRef.update();
 }
 
+function calcCurrentPoint(curTime, sat, pRR, pRV, pVR, pVV) {
+	let priorWaypoint = Math.floor(curTime / (app.scenLength / app.numBurns));
+	let timeDelta = 3600 * (curTime - priorWaypoint * app.scenLength / app.numBurns);
+	pRR = PhiRR(timeDelta);
+	pRV = PhiRV(timeDelta);
+	pVR = PhiVR(timeDelta);
+	pVV = PhiVV(timeDelta);
+	let waypointState = [[app.players[sat].dataLoc.waypoints.data[priorWaypoint].y],
+						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].x],
+						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].dRad + app.players[sat].burns[priorWaypoint][0] / 1000],
+						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].dIt + app.players[sat].burns[priorWaypoint][1] / 1000]];
+	let r = math.add(math.multiply(pRR, waypointState.slice(0,2)), math.multiply(pRV, waypointState.slice(2,4)));
+	let v = math.add(math.multiply(pVR, waypointState.slice(0,2)), math.multiply(pVV, waypointState.slice(2,4)));
+	return [math.squeeze(r),math.squeeze(v)];
+	
+}
 
 function burnCalc(xMouse = 0, yMouse = 0, click = false) {
 	if (click) {

@@ -175,8 +175,8 @@ function createGraph() {
 					// Draw Sun Arrow
 					let sunInit = -Number(setupData.scenario_start.initSun) * Math.PI / 180;
 					let n = 2 * Math.PI / 86164;
-					let positionX = app.chartData === undefined ? 0 : app.chartData.relative.data[1].x[0];
-					let positionY = app.chartData === undefined ? 0 : app.chartData.relative.data[1].y[0];
+					let positionX = app.chartData === undefined ? 0 : app.chartData.relative.data[1].x;
+					let positionY = app.chartData === undefined ? 0 : app.chartData.relative.data[1].y;
 					drawArrow(ctx, pixelX, pixelY, app.axisLimits / 3, [positionX, positionY], sunInit + n * app.currentTime * 3600);
 					
 					// Draw Burn if applicable
@@ -193,7 +193,7 @@ function createGraph() {
 					if (app.players['blue'] !== undefined) {
 						for (player in app.players) {
 							pos = [app.players[player].dataLoc.current.data[0].x, app.players[player].dataLoc.current.data[0].y];
-							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0][0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1][0])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,0.2,sideData.scenario_data.colors[player],sunInit + n * app.currentTime * 3600 );
+							drawSat(ctx,[(app.axisCenter[0] + app.axisLimits - pos[0])*pixelX / 2 + globalChartRef.chartArea.left,(app.axisCenter[1] + app.axisLimits / 2 - pos[1])*pixelY*2  + globalChartRef.chartArea.top],app.players[player].attitude,0.2,sideData.scenario_data.colors[player],sunInit + n * app.currentTime * 3600 );
 						}
 					}
 				}
@@ -359,10 +359,6 @@ function setCurrentPoints(curTime, noPlot = false) {
 			[point1[0][0] + (point2[0][0]-point1[0][0]) * dt / app.calcDt],
 			[point1[1][0] + (point2[1][0]-point1[1][0]) * dt / app.calcDt]
 		];
-		app.players[sat].dataLoc.current.data = [{
-			x: points[sat + 'R'][1],
-			y: points[sat + 'R'][0]
-		}];
 	}
 	if (!noPlot) {
 		app.chartData.relative.data = [{
