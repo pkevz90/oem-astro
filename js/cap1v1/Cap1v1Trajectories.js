@@ -48,7 +48,9 @@ function calculateTrajecory() {
 				x: turn > index + 1 ? NaN : r[1][0],
 				y: turn > index + 1 ? NaN : r[0][0],
 				dRad: v[0][0],
-				dIt: v[1][0]
+				dIt: v[1][0],
+				rad: r[0][0],
+				it: r[1][0],
 			});
 		}
 	})
@@ -58,7 +60,6 @@ function calculateTrajecory() {
 function calcData(curTime = 0) {
 	let redR, blueR;
 	let curPoints = {};
-	console.log(curTime);
 	for (sat in app.players) {
 		curPoints[sat + 'R'] = calcCurrentPoint(curTime, sat)[0];
 		app.players[sat].dataLoc.current.data = [{
@@ -85,7 +86,6 @@ function calcData(curTime = 0) {
 			relVector = [curPoints[playerFrom + 'R'][0] - curPoints[playerTo + 'R'][0], curPoints[playerFrom + 'R'][1] - curPoints[playerTo + 'R'][1]],
 			catsAngle = Math.acos(math.dot(curSun, relVector) / math.norm(relVector) / math.norm(curSun));
 			satRange = math.norm(relVector);
-			console.log(curPoints);
 			Object.assign(sideData.scenario_data.data[playerFrom].data[playerTo], {
 				range: satRange,
 				cats: catsAngle * 180 / Math.PI
@@ -169,8 +169,8 @@ function calcData(curTime = 0) {
 
 function calcCurrentPoint(curTime, sat, pRR, pRV, pVR, pVV) {
 	let priorWaypoint = Math.floor(curTime / (app.scenLength / app.numBurns));
+	priorWaypoint = priorWaypoint > (app.numBurns - 1) ? app.numBurns - 1 : priorWaypoint;
 	let timeDelta = 3600 * (curTime - priorWaypoint * app.scenLength / app.numBurns);
-	console.log(priorWaypoint, timeDelta, app.players[sat].dataLoc.waypoints.data[priorWaypoint]);
 	pRR = PhiRR(timeDelta);
 	pRV = PhiRV(timeDelta);
 	pVR = PhiVR(timeDelta);
@@ -179,7 +179,6 @@ function calcCurrentPoint(curTime, sat, pRR, pRV, pVR, pVV) {
 						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].it],
 						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].dRad + app.players[sat].burns[priorWaypoint][0] / 1000],
 						 [app.players[sat].dataLoc.waypoints.data[priorWaypoint].dIt + app.players[sat].burns[priorWaypoint][1] / 1000]];
-	console.log(waypointState);
 	let r = math.add(math.multiply(pRR, waypointState.slice(0,2)), math.multiply(pRV, waypointState.slice(2,4)));
 	let v = math.add(math.multiply(pVR, waypointState.slice(0,2)), math.multiply(pVV, waypointState.slice(2,4)));
 	return [math.squeeze(r),math.squeeze(v)];
