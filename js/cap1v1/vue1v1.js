@@ -89,15 +89,21 @@ var sideData = new Vue({
                     data: {
                         red: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         green: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         gray: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         }
                     }
                 },
@@ -108,15 +114,21 @@ var sideData = new Vue({
                     data: {
                         blue: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         green: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         gray: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         }
                     }
                 },
@@ -127,15 +139,21 @@ var sideData = new Vue({
                     data: {
                         red: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         blue: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         gray: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         }
                     }
                 },
@@ -146,15 +164,21 @@ var sideData = new Vue({
                     data: {
                         red: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         green: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         blue: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         }
                     }
                 }
@@ -234,6 +258,8 @@ var setupData = new Vue({
             xd: (0).toFixed(1),
             yd: (0).toFixed(1),
             B:  (0).toFixed(1),
+            reqCats: (90).toFixed(0),
+            rangeReq: [(10).toFixed(0), (15).toFixed(0)],
             dVavail: (6).toFixed(1),
             maxDv: (2).toFixed(1),
             targets: []
@@ -244,6 +270,8 @@ var setupData = new Vue({
             xd: (0).toFixed(1),
             yd: (0).toFixed(1),
             B:  (0).toFixed(1),
+            reqCats: (90).toFixed(0),
+            rangeReq: [(10).toFixed(0), (15).toFixed(0)],
             dVavail: (6).toFixed(1),
             maxDv: (2).toFixed(1),
             targets: []
@@ -353,9 +381,9 @@ var setupData = new Vue({
                         yd: 25,
                         B:  0, 
                         dVavail: (9).toFixed(1),
-                        reqCats: (135).toFixed(0),
+                        reqCats: (120).toFixed(0),
                         maxDv: (1.5).toFixed(2),
-                        rangeReq: [(10).toFixed(0), (60).toFixed(0)],
+                        rangeReq: [(0).toFixed(0), (50).toFixed(0)],
                         targets: ['red']
                     };
                     this.red = {
@@ -366,7 +394,7 @@ var setupData = new Vue({
                         dVavail: (9).toFixed(1),
                         reqCats: (90).toFixed(0),
                         maxDv: (1.75).toFixed(2),
-                        rangeReq: [(0).toFixed(0), (40).toFixed(0)],
+                        rangeReq: [(0).toFixed(0), (35).toFixed(0)],
                         targets: ['green']
                     };
                     this.green = {
@@ -390,6 +418,7 @@ var setupData = new Vue({
                     };
                     this.scenario_start.bp = 18;
                     this.scenario_start.sl = 36;
+                    this.scenario_start.initSun = (45).toFixed(0);
                     break;
                     case '2defend':
                         this.blue = {
@@ -452,6 +481,8 @@ var setupData = new Vue({
                         yd: -30,
                         B:  0,
                         dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
                         exist: true
                     };
                     this.gray = {
@@ -460,6 +491,8 @@ var setupData = new Vue({
                         yd: 0,
                         B:  0,
                         dVavail: (6).toFixed(1),
+                        reqCats: (90).toFixed(0),
+                        rangeReq: [(10).toFixed(0), (15).toFixed(0)],
                         exist: true
                     };
                     break;

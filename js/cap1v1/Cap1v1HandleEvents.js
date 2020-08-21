@@ -65,13 +65,6 @@ function setSelectedWaypoint(index, side) {
         x: xPoint,
         y: yPoint
     }];
-    app.chartData.burnDir.data = [{
-        x: xPoint,
-        y: yPoint
-    }, {
-        x: xPoint + app.players[side].burns[index][1] * 10,
-        y: yPoint + app.players[side].burns[index][0] * 10
-    }];
     globalChartRef.update();
 }
 
