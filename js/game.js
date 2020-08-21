@@ -1,5 +1,5 @@
 // 1 sec prep leaderboard:
-//Daniels 27.343
+//Daniels 26.704
 //System variables
 var w = $(window).width();
 var h = $(window).height();
@@ -27,14 +27,14 @@ var prepTime = 1; //In game seconds between burns
 //Gameplay Non-Tunable Variables
 var omega = 2*Math.PI/period;
 var perc = 0;
-var winner = "";
-var player = 'red';
+var p2Perc = 0;
+var player = 'blue';
 var p1Col,p2Col,p1LightCol,p2LightCol;
+var winner = "",winTime=0;
+var p2Winner="",p2WinTime=0;
 
 //Graphics Variables
 var frcst = 1.5*period;
-var zoom = 1;
-var minZoom = .4;
 var sunRange = .15;
 
 
@@ -66,7 +66,7 @@ function resize(){
     orig.clear(); //This seems wrong, but it may be right
     orig.fillStyle(0xFFFFFF,1);
     orig.fillCircle(i2x(0),r2y(0),6);
-    orig.lineStyle(3/zoom, 0xFFFFFF, 1);
+    orig.lineStyle(3, 0xFFFFFF, 1);
     orig.beginPath();
     orig.moveTo(i2x(0),r2y(0));
     orig.lineTo(i2x(.1),r2y(0));
@@ -88,8 +88,10 @@ function resize(){
         backgroundImg.displayHeight=h;
         backgroundImg.scaleX = backgroundImg.scaleY;
     }
-    timeIndicText = this.add.text(w/6,.8*h,'Preparing\n to Burn');
-    let textwid = timeIndicText.width;
+    percText.setFontSize((.015*h).toString().concat('px'))
+    p2PercText.setFontSize((.015*h).toString().concat('px'))
+    timeIndicText.setFontSize((.02*h).toString().concat('px'))
+    
 };
 
 function preload ()
@@ -105,7 +107,6 @@ function preload ()
 function create ()
 {
     camera = this.cameras.main;
-    camera.zoomTo(zoom, 1);
     
     backgroundImg = this.add.image(w/2,h/2,'stars');
     if (w/h > backgroundImg.width/backgroundImg.height){
@@ -168,22 +169,33 @@ function create ()
     targetFuture = this.add.graphics();
    
     sunVect = this.add.graphics();
+    
 
     timeIndic = this.add.graphics();
     percIndic = this.add.graphics();
+    percText = this.add.text(w/6,.625*h,"")
+    percText.setAlign('center')
+    percText.setX(percText.x-percText.width/2)
+    percText.setFontSize((.015*h).toString().concat('px'))
+    p2PercIndic = this.add.graphics();
+    p2PercText = this.add.text(5*w/6,.625*h,"")
+    p2PercText.setAlign('center')
+    p2PercText.setX(p2PercText.x-p2PercText.width/2)
+    p2PercText.setFontSize((.015*h).toString().concat('px'))
     timeIndicText = this.add.text(w/6,.8*h,'Preparing\n to Burn');
     timeIndicText.setAlign('center')
-    timeIndicText.setFontSize('30px')
+    timeIndicText.setFontSize((.02*h).toString().concat('px'))
     timeIndicText.setX(timeIndicText.x-timeIndicText.width/2)
     timeIndicText.setY(timeIndicText.y-timeIndicText.height/2)
 
     clock = this.add.text(0,0,"");
-
+    winText = this.add.text(0,0,"");
+    winText.setFontSize((.1*h).toString().concat('px'))
 
 //Initialize graphics objects
     orig.fillStyle(0xFFFFFF,1)
     orig.fillCircle(i2x(0),r2y(0),6);
-    orig.lineStyle(3/zoom, 0xFFFFFF, 1);
+    orig.lineStyle(3, 0xFFFFFF, 1);
     orig.beginPath();
     orig.moveTo(i2x(0),r2y(0));
     orig.lineTo(i2x(.1),r2y(0));
@@ -231,6 +243,13 @@ function update ()
     if (winner == ""){
         clock.setText(((Date.now() - initTime)/1000).toString())
     }
+// Update from server
+if (t%1==0){
+    //p2.rmoe = 
+    //p2Perc = 
+    //p2Winner = 
+    //p2WinTime =
+}
 //Update Positions
     p = RMOE2PosVel(p1.rmoe,p1.t0,t);
     p1.x = i2x(p.i);
@@ -255,13 +274,37 @@ if (d<=smallPx){
         perc += gdistgsunPPS/fps;
     } else if(cats<=pezCATS){
         perc += gdistysunPPS/fps;
+    } else if (cats>=Math.PI-wezCATS){
+        p2Perc += gdistgsunPPS/fps;
+    } else if (cats>=Math.PI-pezCATS){
+        p2Perc += gdistysunPPS/fps;
     }
 }else if(d<=largePx){
     if (cats<=wezCATS){
         perc += ydistgsunPPS/fps;
     } else if(cats<=pezCATS){
         perc += ydistysunPPS/fps;
+    } else if (cats>=Math.PI-wezCATS){
+        p2Perc += ydistgsunPPS/fps;
+    } else if (cats>=Math.PI-pezCATS){
+        p2Perc += ydistysunPPS/fps;
     }
+}
+if (perc>100){
+    winner = "p1"
+    winTime = t;
+}else if (p2Perc > 100){
+    winner = "p2"
+    winTime = t;
+}
+if (winner == "p1"){
+    winText.setText("You Win!")
+    winText.setX(w/2-winText.width/2);
+    winText.setY(h/10);
+} else if(winner == "p2"){
+    winText.setText("You Lose!")
+    winText.setX(w/2-winText.width/2);
+    winText.setY(h/10);
 }
 
 //Arrow Keys
@@ -281,9 +324,6 @@ if (d<=smallPx){
         p1.target.idot = maxBurnDV * p1.target.idot/math.norm([p1.target.idot,p1.target.rdot]);
         p1.target.rdot = maxBurnDV * p1.target.rdot/math.norm([p1.target.idot,p1.target.rdot])
     }
-    if (cursors.space.isDown && perc>100){
-        winner = "p1"
-    }
     if (cursors.space.isDown && (t-p1.t0)/prepTime >= 1){
         p = RMOE2PosVel(p1.rmoe,p1.t0,t);
         p1.rmoe = posVel2RMOE(p.r,p.i,p.rdot+p1.target.rdot,p.idot+p1.target.idot); 
@@ -301,7 +341,7 @@ if (d<=smallPx){
         targetPtRange.fillCircle(p1.x,p1.y,w*maxBurnDV*visualDVMult + 10)
     }
     if (p1.target.idot != 0 || p1.target.rdot != 0){
-        targetPt.lineStyle(2/zoom, 0xFFFFFF, 1.0)
+        targetPt.lineStyle(2, 0xFFFFFF, 1.0)
         targetPt.beginPath();
         targetPt.moveTo(p1.x,p1.y)
         targetPt.lineTo(p1.x + w*p1.target.idot*visualDVMult,
@@ -316,7 +356,7 @@ if (d<=smallPx){
                               p1.y + w*p1.target.rdot*visualDVMult,
                               8);
         
-        targetFuture.lineStyle(5/zoom, 0xFFFFFF, .6)
+        targetFuture.lineStyle(5, 0xFFFFFF, .6)
         targetFuture.beginPath()
         targetFuture.moveTo(p1.x, p1.y);
         p = RMOE2PosVel(p1.rmoe,p1.t0,t);
@@ -333,18 +373,13 @@ if (d<=smallPx){
     timeIndic.fillCircle(w/6,.8*h,h/10);
     timeIndic.beginPath();
     
-    timeIndic.lineStyle(30 /zoom,p1Col,1);
+    timeIndic.lineStyle(.025*h,p1Col,1);
     timeIndic.moveTo(w/6,.7*h);
     
     timeIndic.arc(w/6,.8*h,h/10,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min((t-p1.t0)/prepTime,1),false)
     
     timeIndic.stroke();
-    if (winner=='p1'){
-        timeIndicText.setText("You Win")
-    }
-    else if (perc>100){
-        timeIndicText.setText("Press space\nto disable\nopponent")
-    }else if ((t-p1.t0)/prepTime >= 1){
+    if ((t-p1.t0)/prepTime >= 1){
         timeIndicText.setText("Press space\nto burn")
     }else{
         timeIndicText.setText("Preparing\n to Burn")
@@ -353,30 +388,39 @@ if (d<=smallPx){
     timeIndicText.setY(.8*h-timeIndicText.height/2)
 
     percIndic.clear();
-    percIndic.beginPath();
-    percIndic.lineStyle(30 /zoom,p2Col,math.max(math.min(perc/100,1),.5));
-    percIndic.moveTo(w/6,.65*h);
-    percIndic.arc(w/6,.8*h,.15*h,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(perc/100,1),false)
     
+    
+    percIndic.beginPath();
+    percIndic.lineStyle(.025*h,p2LightCol,.2);
+    percIndic.arc(w/6,.8*h,.125*h,-Math.PI/2,3*Math.PI/2);
+    percIndic.closePath();
     percIndic.stroke();
-//Auto Zoom
-    // var rightBound = w/(2*zoom)-100;
-    // var leftBound = -w/(2*zoom)+100;
-    // if(ip1.slice(t,t+frcst).some(el => el >= rightBound) || ip1.slice(t,t+frcst).some(el => el <= leftBound)){
-    //     zoom = zoom-0.01*zoom;
-    //     camera.setZoom(zoom);
-    // }else if(ip1.slice(t,t+frcst).every(function (e) { return e < rightBound-200;}) && ip1.slice(t,t+frcst).every(function (e) { return e > leftBound+200;}) && zoom<minZoom){
-    //     zoom = zoom+0.01*zoom;
-    //     camera.setZoom(zoom);
-    // }
-    // backgroundImg.displayWidth=w/zoom;
-    // backgroundImg.scaleY = backgroundImg.scaleX;
+    percIndic.beginPath();
+    percIndic.lineStyle(30 ,p2Col,math.max(math.min(perc/100,1),.5));
+    percIndic.arc(w/6,.8*h,.125*h,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(perc/100,1),false)
+    percIndic.stroke();
+    percText.setText("You are \n".concat(math.min(math.round(perc,0),100).toString().concat('% Done Researching')))
+    percText.setX(w/6-percText.width/2)
+    percText.setY(.625*h)
 
+    p2PercIndic.clear();
+    p2PercIndic.beginPath();
+    p2PercIndic.lineStyle(.025*h,p1LightCol,.2);
+    p2PercIndic.arc(5*w/6,.8*h,.05*h,-Math.PI/2,3*Math.PI/2);
+    p2PercIndic.closePath();
+    p2PercIndic.stroke();
+    p2PercIndic.beginPath();
+    p2PercIndic.lineStyle(.025*h,p1Col,math.max(math.min(p2Perc/100,1),.5));
+    p2PercIndic.arc(5*w/6,.8*h,.05*h,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(p2Perc/100,1),false)
+    p2PercIndic.stroke();
+    p2PercText.setText("They are \n".concat(math.min(math.round(p2Perc,0),100).toString().concat('% Done Researching')))
+    p2PercText.setX(5*w/6-p2PercText.width/2)
+    p2PercText.setY(.7*h)
 
 //Sun Vector
 sunVect.clear();
 sunVect.beginPath();
-sunVect.lineStyle(5/zoom, 0xFFFF00, 1);
+sunVect.lineStyle(5, 0xFFFF00, 1);
 sunVect.moveTo(p2.x, p2.y);
 
 sunVect.lineTo(svec_at_p2.x, svec_at_p2.y);
@@ -385,7 +429,7 @@ sunVect.stroke();
 //Trajectories
     p1FutrTraj.clear();
     p1FutrTraj.beginPath();
-    p1FutrTraj.lineStyle(5/zoom, p1LightCol, .8);
+    p1FutrTraj.lineStyle(5, p1LightCol, .8);
     p1FutrTraj.moveTo(p1.x, p1.y);
     for(j = 1/fps; j <= frcst; j+=1/fps) {
         p = RMOE2PosVel(p1.rmoe,p1.t0,t+j);
@@ -399,14 +443,14 @@ sunVect.stroke();
     p2FutrTraj.clear();
     p2FutrTraj.beginPath();
     if (cats<Math.PI-sezCATS){
-        p2FutrTraj.lineStyle(5/zoom, p2LightCol, 1.0);
+        p2FutrTraj.lineStyle(5, p2LightCol, 1.0);
         if (player == 'blue'){
             p2.setTexture('red')
         }else{
             p2.setTexture('blue')
         }
     }else{
-        p2FutrTraj.lineStyle(5/zoom, p2LightCol, .2);
+        p2FutrTraj.lineStyle(5, p2LightCol, .2);
         if (player == 'blue'){
             p2.setTexture('red-invisible')
         }else{
@@ -440,9 +484,9 @@ sunVect.stroke();
     distReqCirc.fillStyle(0xCCCCCC,math.min(math.max((d-largePx)/largePx,0),.15));
     distReqCirc.fillCircle(p2.x,p2.y,largePx);
     distReqCirc.beginPath();
-    distReqCirc.lineStyle(2/zoom,0xFFFF00,.6-math.min(math.max((d-largePx)/largePx,0),.55));
+    distReqCirc.lineStyle(2,0xFFFF00,.6-math.min(math.max((d-largePx)/largePx,0),.55));
     distReqCirc.strokeCircle(p2.x,p2.y,largePx);
-    distReqCirc.lineStyle(2/zoom,0x00FF00,.6-math.min(math.max((d-largePx)/largePx,0),.55));
+    distReqCirc.lineStyle(2,0x00FF00,.6-math.min(math.max((d-largePx)/largePx,0),.55));
     distReqCirc.strokeCircle(p2.x,p2.y,smallPx);
     distReqCirc.stroke();
     //distReqCirc.fill();
