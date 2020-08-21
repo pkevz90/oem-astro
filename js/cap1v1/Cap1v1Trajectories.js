@@ -60,8 +60,10 @@ function calculateTrajecory() {
 function calcData(curTime = 0) {
 	let redR, blueR;
 	let curPoints = {};
+	let curVel = {};
 	for (sat in app.players) {
 		curPoints[sat + 'R'] = calcCurrentPoint(curTime, sat)[0];
+		curVel[sat + 'R'] = calcCurrentPoint(curTime, sat)[1];
 		app.players[sat].dataLoc.current.data = [{
 			x: curPoints[sat + 'R'][1],
 			y: curPoints[sat + 'R'][0]
@@ -88,7 +90,8 @@ function calcData(curTime = 0) {
 			satRange = math.norm(relVector);
 			Object.assign(sideData.scenario_data.data[playerFrom].data[playerTo], {
 				range: satRange,
-				cats: catsAngle * 180 / Math.PI
+				rangeRate: 1000 * math.dot(relVector,math.subtract(curVel[playerFrom + 'R'],curVel[playerTo + 'R'])) / math.norm(relVector),
+				cats: catsAngle * 180 / Math.PI,
 			});
 			let targets = setupData[playerFrom].targets;
 			targets = targets === undefined ? [] : targets;

@@ -89,15 +89,21 @@ var sideData = new Vue({
                     data: {
                         red: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         green: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         gray: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         }
                     }
                 },
@@ -108,15 +114,21 @@ var sideData = new Vue({
                     data: {
                         blue: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         green: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         gray: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         }
                     }
                 },
@@ -127,15 +139,21 @@ var sideData = new Vue({
                     data: {
                         red: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         blue: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         gray: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         }
                     }
                 },
@@ -146,15 +164,21 @@ var sideData = new Vue({
                     data: {
                         red: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         green: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         },
                         blue: {
                             range: 0,
-                            cats: 0
+                            rangeRate: 0,
+                            cats: 0,
+                            catsRate: 0
                         }
                     }
                 }
