@@ -61,7 +61,7 @@ var main_app = new Vue({
         },
         scenario_data: {
             scenario_length: 30,
-            burns_per_player: 5
+            burns_per_player: 2.5
         },
         display_data: {
             center: [0,0],
@@ -114,10 +114,13 @@ function resizeCanvas() {
     $('#main-canvas')[0].width = window.innerWidth;
     $('#main-canvas')[0].height = window.innerHeight;
 }
-function getScreenPixel(cnvs, rad, it, limit, center) {
+function getScreenPixel(cnvs, rad, it, limit, center, object = false) {
     let height = cnvs.height,
         width = cnvs.width,
         yxRatio = height / width;
+    if (object) {
+        return {x: width / 2 + ((center[0] - it) / limit) * width / 2, y: height / 2 + ((center[1] - rad) / limit / yxRatio) * height / 2}
+    }
     return [width / 2 + ((center[0] - it) / limit) * width / 2, height / 2 + ((center[1] - rad) / limit / yxRatio) * height / 2]
 }
 function drawAxes(cnvs, ctx, center, limit) {
@@ -185,7 +188,7 @@ function drawAxes(cnvs, ctx, center, limit) {
 }
 
 function drawSatInfo(ctx, cnvs, limit, center, sat) {
-    // drawSatTrajectory(ctx, cnvs, limit, center, {satellite: sat, nBurns: main_app.scenario_data.burns_per_player, tBurns: main_app.turn_length});
+    drawSatTrajectory(ctx, cnvs, limit, center, {satellite: sat, nBurns: main_app.scenario_data.burns_per_player, tBurns: main_app.turn_length});
 
 }
 
@@ -210,50 +213,23 @@ function drawBurnPoints(ctx, cnvs, satellite_burns) {
 }
 
 function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
-    console.time()
     let init_state = math.transpose([input_object.satellite.initial_state]);
     let points = [], r, v, pixelPos = [];
-    let pRR = PhiRR(input_object.tBurns * 3600 / 12),
-        pRV = PhiRV(input_object.tBurns * 3600 / 12),
-        pVR = PhiVR(input_object.tBurns * 3600 / 12),
-        pVV = PhiVV(input_object.tBurns * 3600 / 12);
+    let pRR = PhiRR(input_object.tBurns * 450),
+        pRV = PhiRV(input_object.tBurns * 450),
+        pVR = PhiVR(input_object.tBurns * 450),
+        pVV = PhiVV(input_object.tBurns * 450);
     points.push(init_state);
-    pixelPos.push(getScreenPixel(cnvs, init_state[0][0], init_state[1][0], limit, center))
-    for (ii = 0; ii < 12; ii++) {
+    pixelPos.push(getScreenPixel(cnvs, init_state[0][0], init_state[1][0], limit, center, true))
+    for (ii = 0; ii < 8; ii++) {
         r = math.add(math.multiply(pRR, points[ii].slice(0,2)), math.multiply(pRV, points[ii].slice(2,4)));
         v = math.add(math.multiply(pVR, points[ii].slice(0,2)), math.multiply(pVV, points[ii].slice(2,4)));
         points.push(math.concat(r,v,0))
-        pixelPos.push(getScreenPixel(cnvs, r[0][0], r[1][0], limit, center))
+        pixelPos.push(getScreenPixel(cnvs, r[0][0], r[1][0], limit, center, true))
     }
-    ctx.strokeStyle = 'red';
+    ctx.strokeStyle = input_object.satellite.color;
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(pixelPos[0][0],pixelPos[0][1]);
-    // for (ii = 0; ii < 12 / 3; ii++) {
-    //     ctx.bezierCurveTo(pixelPos[1 + ii*3][0],pixelPos[1 + ii*3][1],pixelPos[2 + ii*3][0],pixelPos[2 + ii*3][1],pixelPos[3 + ii*3][0],pixelPos[3 + ii*3][1]);
-    // }
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.strokeStyle = 'white';
-    for (ii = 0; ii < 12 / 2; ii++) {
-        ctx.quadraticCurveTo(pixelPos[1 + ii*2][0],pixelPos[1 + ii*2][1],pixelPos[2 + ii*2][0],pixelPos[2 + ii*2][1]);
-    }
-    ctx.stroke();
-    ctx.beginPath();
-
-    ctx.strokeStyle = 'green';
-    ctx.moveTo(pixelPos[0][0],pixelPos[0][1]);
-    // for (ii = 0; ii < 12; ii++) {
-    //     ctx.lineTo(pixelPos[1 + ii][0],pixelPos[1 + ii][1]);
-    // }
-    // ctx.bezierCurveTo(pixelPos[4][0],pixelPos[4][1],pixelPos[5][0],pixelPos[5][1],pixelPos[6][0],pixelPos[6][1]);
-    // ctx.bezierCurveTo(pixelPos[7][0],pixelPos[7][1],pixelPos[8][0],pixelPos[8][1],pixelPos[9][0],pixelPos[9][1]);
-    // ctx.bezierCurveTo(pixelPos[10][0],pixelPos[10][1],pixelPos[11][0],pixelPos[11][1],pixelPos[12][0],pixelPos[12][1]);
-    // ctx.bezierCurveTo(pixelPos[13][0],pixelPos[13][1],pixelPos[14][0],pixelPos[14][1],pixelPos[15][0],pixelPos[15][1]);
-    ctx.stroke();
-    console.timeEnd()
-
-
+    drawCurve(ctx, pixelPos, 1);
 
 }
 
@@ -386,8 +362,8 @@ resizeCanvas();
 window.requestAnimationFrame(animation);
 function animation(time) {
     main_app.players.blue.current_state[0] += 0.1;
-    main_app.players.red.current_state[0] += (0.2 * Math.random()) - 0.1;
-    main_app.players.red.current_state[1] += (0.2 * Math.random()) - 0.1;
+    main_app.players.red.current_state[0] += (0.1 * Math.random()) - 0.05;
+    main_app.players.red.current_state[1] += (0.1 * Math.random()) - 0.05;
     main_app.updateScreen();
     window.requestAnimationFrame(animation);
 }
@@ -422,4 +398,28 @@ function PhiVV(t, n = 2 * Math.PI / 86164) {
 		[Math.cos(nt), 2 * Math.sin(nt)],
 		[-2 * Math.sin(nt), 4 * Math.cos(nt) - 3]
 	];
+}
+
+function drawCurve(ctx, points, tension) {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+		
+    var t = (tension != null) ? tension : 1;
+    // console.log(t,points)
+    for (var i = 0; i < points.length - 1; i++) {
+        var p0 = (i > 0) ? points[i - 1] : points[0];
+        var p1 = points[i];
+        var p2 = points[i + 1];
+        var p3 = (i != points.length - 2) ? points[i + 2] : p2;
+
+        var cp1x = p1.x + (p2.x - p0.x) / 6 * t;
+        var cp1y = p1.y + (p2.y - p0.y) / 6 * t;
+
+        var cp2x = p2.x - (p3.x - p1.x) / 6 * t;
+        var cp2y = p2.y - (p3.y - p1.y) / 6 * t;
+
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+        // console.log(cp1x, cp1y, cp2x, cp2y)
+    }
+    ctx.stroke();
 }
