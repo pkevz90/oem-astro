@@ -1,10 +1,26 @@
 // 1 sec prep leaderboard:
-//Daniels 26.704
+//Daniels 26.704 Blue
+//Daniels 20.464 Red
 //System variables
+
+
 var w = $(window).width();
 var h = $(window).height();
 var fps = 60;
 var initTime = Date.now();
+
+//Network Variables
+var player = "";
+var gameStart = false;
+var timerStart = false;
+var startTime = 0;
+
+
+var winner = "";
+var winTime=0;
+var networkWinner="";
+var networkWinTime=0;
+
 
 //Gameplay Tunable Variables
 var t = 0; 
@@ -26,12 +42,15 @@ var prepTime = 1; //In game seconds between burns
 
 //Gameplay Non-Tunable Variables
 var omega = 2*Math.PI/period;
-var perc = 0;
+var p1Perc = 0;
 var p2Perc = 0;
-var player = 'blue';
 var p1Col,p2Col,p1LightCol,p2LightCol;
-var winner = "",winTime=0;
-var p2Winner="",p2WinTime=0;
+var blueCol = 0x0000FF;
+var redCol = 0xFF0000;
+var blueLightCol = 0x7777FF;
+var redLightCol = 0xFF7777;
+
+
 
 //Graphics Variables
 var frcst = 1.5*period;
@@ -130,40 +149,21 @@ function create ()
     
 
     targetPtRange = this.add.graphics();
-    if (player=='blue'){
-        p1 = this.add.image(0, 0, 'blue');
-        p2 = this.add.image(0, 0, 'red');
-        p1Col = 0x0000FF;
-        p2Col = 0xFF0000;
-        p1LightCol = 0x7777FF;
-        p2LightCol = 0xFF7777;
-        p1.rmoe = posVel2RMOE(0,.25,.125*omega,0);
-        p1.x = i2x(0);
-        p1.y = r2y(.25);
-    
-        p2.rmoe = posVel2RMOE(0,-.25,-.125*omega,0);
-        p2.x = i2x(0);
-        p2.y = r2y(-.25);
-    }else{
-        p2 = this.add.image(0, 0, 'blue');
-        p1 = this.add.image(0, 0, 'red');
-        p2Col = 0x0000FF;
-        p1Col = 0xFF0000;
-        p2LightCol = 0x7777FF;
-        p1LightCol = 0xFF7777;
-        p2.rmoe = posVel2RMOE(0,.25,.125*omega,0);
-        p2.x = i2x(0);
-        p2.y = r2y(.25);
-        
-        p1.rmoe = posVel2RMOE(0,-.25,-.125*omega,0);
-        p1.x = i2x(0);
-        p1.y = r2y(-.25);
-    }
-    p1.target = {idot:0,rdot:0};
-    p1.t0 = 0;
-    p2.t0 = 0;
-    p1.setScale(.6);
-    p2.setScale(.6);
+    pBlue = this.add.image(0, 0, 'blue');
+    pRed = this.add.image(0, 0, 'red');
+
+    pBlue.rmoe = posVel2RMOE(0,.25,.125*omega,0);
+    pBlue.x = i2x(0);
+    pBlue.y = r2y(.25);
+
+    pRed.rmoe = posVel2RMOE(0,-.25,-.125*omega,0);
+    pRed.x = i2x(0);
+    pRed.y = r2y(-.25);
+
+    pBlue.t0 = 0;
+    pRed.t0 = 0;
+    pBlue.setScale(.6);
+    pRed.setScale(.6);
 
     targetPt = this.add.graphics();
     targetFuture = this.add.graphics();
@@ -190,7 +190,7 @@ function create ()
 
     clock = this.add.text(0,0,"");
     winText = this.add.text(0,0,"");
-    winText.setFontSize((.1*h).toString().concat('px'))
+    winText.setFontSize((.05*h).toString().concat('px'))
 
 //Initialize graphics objects
     orig.fillStyle(0xFFFFFF,1)
@@ -238,6 +238,7 @@ function i2x(i){return(w/2+(i * w))};
 function r2y(r){return(h/2+(r * w))};//scaling using w keeps it scaled correctly
 function update ()
 {
+if (gameStart){
 //Game Timer
     t+=1/fps;
     if (winner == ""){
@@ -247,8 +248,8 @@ function update ()
 if (t%1==0){
     //p2.rmoe = 
     //p2Perc = 
-    //p2Winner = 
-    //p2WinTime =
+    //networkWinner = 
+    //networkWinTime =
 }
 //Update Positions
     p = RMOE2PosVel(p1.rmoe,p1.t0,t);
@@ -257,12 +258,14 @@ if (t%1==0){
     p = RMOE2PosVel(p2.rmoe,p2.t0,t);
     p2.x = i2x(p.i);
     p2.y = r2y(p.r);
+    
 
 //Pixel Value
 sunPx = i2x(sunRange) - w/2;
 smallPx = i2x(smallRange) - w/2;
 largePx = i2x(largeRange) - w/2;
 let d = math.norm([p2.x-p1.x,p2.y-p1.y]);
+let isBlue
 let svec_at_p2 = {x: p2.x+(sunPx)*Math.sin((t/period)*2*Math.PI), 
             y: p2.y-(sunPx)*Math.cos((t/period)*2*Math.PI)}
 
@@ -271,9 +274,9 @@ let cats = math.acos(math.dot([svec_at_p2.x-p2.x,svec_at_p2.y-p2.y],[p1.x-p2.x,p
 //Cats goes from 0 to pi (pi is bad)
 if (d<=smallPx){
     if (cats<=wezCATS){
-        perc += gdistgsunPPS/fps;
+        p1Perc += gdistgsunPPS/fps;
     } else if(cats<=pezCATS){
-        perc += gdistysunPPS/fps;
+        p1Perc += gdistysunPPS/fps;
     } else if (cats>=Math.PI-wezCATS){
         p2Perc += gdistgsunPPS/fps;
     } else if (cats>=Math.PI-pezCATS){
@@ -281,16 +284,16 @@ if (d<=smallPx){
     }
 }else if(d<=largePx){
     if (cats<=wezCATS){
-        perc += ydistgsunPPS/fps;
+        p1Perc += ydistgsunPPS/fps;
     } else if(cats<=pezCATS){
-        perc += ydistysunPPS/fps;
+        p1Perc += ydistysunPPS/fps;
     } else if (cats>=Math.PI-wezCATS){
         p2Perc += ydistgsunPPS/fps;
     } else if (cats>=Math.PI-pezCATS){
         p2Perc += ydistysunPPS/fps;
     }
 }
-if (perc>100){
+if (p1Perc>100){
     winner = "p1"
     winTime = t;
 }else if (p2Perc > 100){
@@ -324,12 +327,13 @@ if (winner == "p1"){
         p1.target.idot = maxBurnDV * p1.target.idot/math.norm([p1.target.idot,p1.target.rdot]);
         p1.target.rdot = maxBurnDV * p1.target.rdot/math.norm([p1.target.idot,p1.target.rdot])
     }
-    if (cursors.space.isDown && (t-p1.t0)/prepTime >= 1){
+    if (cursors.space.isDown && (t-p1.t0)/prepTime >= 1 && (p1.target.idot + p1.target.rdot != 0)){
         p = RMOE2PosVel(p1.rmoe,p1.t0,t);
         p1.rmoe = posVel2RMOE(p.r,p.i,p.rdot+p1.target.rdot,p.idot+p1.target.idot); 
         p1.target.idot=0;
         p1.target.rdot=0;
         p1.t0=t;
+        channel.publish('data',{from:player,startTime:null,rmoe:p1.rmoe,winner:winner,t0:p1.t0, winTime:winTime});
     }
     targetPtRange.clear();
 
@@ -396,10 +400,10 @@ if (winner == "p1"){
     percIndic.closePath();
     percIndic.stroke();
     percIndic.beginPath();
-    percIndic.lineStyle(30 ,p2Col,math.max(math.min(perc/100,1),.5));
-    percIndic.arc(w/6,.8*h,.125*h,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(perc/100,1),false)
+    percIndic.lineStyle(30 ,p2Col,math.max(math.min(p1Perc/100,1),.5));
+    percIndic.arc(w/6,.8*h,.125*h,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(p1Perc/100,1),false)
     percIndic.stroke();
-    percText.setText("You are \n".concat(math.min(math.round(perc,0),100).toString().concat('% Done Researching')))
+    percText.setText("You are \n".concat(math.min(math.round(p1Perc,0),100).toString().concat('% Done Researching')))
     percText.setX(w/6-percText.width/2)
     percText.setY(.625*h)
 
@@ -435,10 +439,7 @@ sunVect.stroke();
         p = RMOE2PosVel(p1.rmoe,p1.t0,t+j);
         p1FutrTraj.lineTo(i2x(p.i), r2y(p.r));
     }
-    p1FutrTraj.stroke();
-
-    //Dot = abcos(th)
-    
+    p1FutrTraj.stroke();    
 
     p2FutrTraj.clear();
     p2FutrTraj.beginPath();
@@ -457,7 +458,7 @@ sunVect.stroke();
             p2.setTexture('blue-invisible')
         }
     }
-    p1FutrTraj.moveTo(p2.x, p2.y);
+    p2FutrTraj.moveTo(p2.x, p2.y);
     for(j = 1/fps; j <= frcst; j+=1/fps) {
         p = RMOE2PosVel(p2.rmoe,p2.t0,t+j);
         p2FutrTraj.lineTo(i2x(p.i), r2y(p.r));
@@ -529,5 +530,33 @@ sunVect.stroke();
   
 //Test CATS State
     
-    
+}else{
+    let time = new Date().getTime();
+    if (timerStart && !gameStart && time >= startTime){
+        winText.setText("");
+        gameStart=true;
+    }
+    if (timerStart && time < startTime){
+        winText.setText("T-"+(-1*math.round((time - startTime)/1000,1)).toFixed(1))
+        winText.setX(w/2-winText.width/2);
+        winText.setY(h/10);
+    }
+    if (player=="red"){
+        p1=pRed;
+        p1.target = {idot:0,rdot:0};
+        p2=pBlue;
+        p2Col = blueCol;
+        p1Col = redCol;
+        p2LightCol = blueLightCol;
+        p1LightCol = redLightCol;
+    }else if(player=="blue"){
+        p1=pBlue;
+        p1.target = {idot:0,rdot:0};
+        p2=pRed;
+        p1Col = blueCol;
+        p2Col = redCol;
+        p1LightCol = blueLightCol;
+        p2LightCol = redLightCol;
+    }
+}   
 }
