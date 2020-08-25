@@ -74,7 +74,9 @@ var main_app = new Vue({
                 point: null
             },
             game_time: 0,
-            display_time: null
+            display_time: null,
+            mousedown_location: null,
+            tactic_data: null
         },
         display_data: {
             center: [0, 0],
@@ -267,8 +269,8 @@ function drawBurnPoints(sat) {
     ctx.strokeStyle = main_app.players[sat].color;
     main_app.players[sat].burn_points.forEach((point) => {
         pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
-        ctx.fillRect(pixel_point[0] - 5, pixel_point[1] - 5, 10, 10);
-        ctx.strokeRect(pixel_point[0] - 5, pixel_point[1] - 5, 10, 10);
+        ctx.fillRect(pixel_point[0] - 2.5, pixel_point[1] - 2.5, 5, 5);
+        ctx.strokeRect(pixel_point[0] - 2.5, pixel_point[1] - 2.5, 5, 5);
     })
 }
 
@@ -368,7 +370,6 @@ function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAng
     ctx.restore();
 }
 
-
 function drawArrow(ctx, pixelLocation, length = 15, origin = [0, 0], angle = 0, color = 'rgba(255,255,0,0.5)', width = 6) {
     pixelX = pixelLocation[0];
     pixelY = pixelLocation[1];
@@ -403,7 +404,11 @@ function drawArrow(ctx, pixelLocation, length = 15, origin = [0, 0], angle = 0, 
 
 function setMouseCallbacks() {
     $('#main-canvas').mousedown(event => {
-        let cart_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
+        main_app.scenario_data.mousedown_location = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
+        if (checkClose(main_app.scenario_data.mousedown_location[0], main_app.scenario_data.mousedown_location[1])) {
+            main_app.scenario_data.tactic_data = ['burn']
+            return;
+        }
         main_app.display_data.drag_data = [
             [event.offsetX, event.offsetY],
             [...main_app.display_data.center]
@@ -411,6 +416,15 @@ function setMouseCallbacks() {
     })
     $('#main-canvas').mousemove(event => {
         let cart_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
+        if (main_app.scenario_data.tactic_data !== null) {
+            switch(main_app.scenario_data.tactic_data[0]) {
+                case 'burn': 
+                    burnCalc(cart_point);
+                    break;
+                default: 
+                    break;
+            }
+        }
         if (main_app.display_data.drag_data !== null) {
             main_app.display_data.center[0] = (event.offsetX - main_app.display_data.drag_data[0][0]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][0];
             main_app.display_data.center[1] = (event.offsetY - main_app.display_data.drag_data[0][1]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][1];
@@ -500,9 +514,9 @@ function checkClose(x, y, change = true) {
     let turn = main_app.scenario_data.turn;
     for (sat in main_app.players) {
         for (var ii = turn; ii < main_app.players[sat].burn_points.length; ii++) {
-            xPoint = main_app.players[sat].burn_points[1];
-            yPoint = main_app.players[sat].burn_points[0];
-            if (math.norm([xPoint - x, yPoint - x]) < main_app.display_data.axis_limit / 50) {
+            xPoint = main_app.players[sat].burn_points[ii][1][0];
+            yPoint = main_app.players[sat].burn_points[ii][0][0];
+            if (math.norm([xPoint - x, yPoint - y]) < main_app.display_data.axis_limit / 50) {
                 if (change) {
                     main_app.scenario_data.selected_burn_point = {
                         satellite: sat,
@@ -528,4 +542,8 @@ function calcCurrentPoint(curTime, sat, pRR, pRV, pVR, pVV) {
 	let r = math.add(math.multiply(pRR, waypointState.slice(0,2)), math.multiply(pRV, waypointState.slice(2,4)));
     let v = math.add(math.multiply(pVR, waypointState.slice(0,2)), math.multiply(pVV, waypointState.slice(2,4)));
 	return math.concat(math.squeeze(r),math.squeeze(v),0);
+}
+
+function burnCalc(sat, position) {
+    
 }
