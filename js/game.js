@@ -7,13 +7,14 @@
 var w = $(window).width();
 var h = $(window).height();
 var fps = 60;
-var initTime = Date.now();
+var initTime;
 
 //Network Variables
 var player = "";
 var gameStart = false;
 var timerStart = false;
 var startTime = 0;
+var local = false;
 
 
 var winner = "";
@@ -170,9 +171,9 @@ function create ()
    
     sunVect = this.add.graphics();
     
-
-    timeIndic = this.add.graphics();
     percIndic = this.add.graphics();
+    timeIndic = this.add.graphics();
+    
     percText = this.add.text(w/6,.625*h,"")
     percText.setAlign('center')
     percText.setX(percText.x-percText.width/2)
@@ -333,7 +334,9 @@ if (winner == "p1"){
         p1.target.idot=0;
         p1.target.rdot=0;
         p1.t0=t;
-        channel.publish('data',{from:player,startTime:null,rmoe:p1.rmoe,winner:winner,t0:p1.t0, winTime:winTime});
+        if (!local){
+            channel.publish('data',{from:player,startTime:null,rmoe:p1.rmoe,winner:winner,t0:p1.t0, winTime:winTime});
+        }
     }
     targetPtRange.clear();
 
@@ -535,6 +538,7 @@ sunVect.stroke();
     if (timerStart && !gameStart && time >= startTime){
         winText.setText("");
         gameStart=true;
+        initTime = Date.now();
     }
     if (timerStart && time < startTime){
         winText.setText("T-"+(-1*math.round((time - startTime)/1000,1)).toFixed(1))

@@ -8,6 +8,7 @@ function publish(title,message){
 window.addEventListener('DOMContentLoaded', (event) => {
     swal("What color would you like?", {
         buttons: {
+            blue1P: "Blue/1 Player",
             red: "Red",
             blue: "Blue",
         },
@@ -55,6 +56,12 @@ window.addEventListener('DOMContentLoaded', (event) => {
                     }
                 });
                 channel.publish('data',{from:'red',startTime:null,rmoe:{rd: 0, id0: 0, B0: -1.5707963267948966, a: 0.25}, t0: 0,winner:"",winTime:0});
+            }else{
+                player = 'blue';
+                gameStart = false;
+                timerStart = true;
+                startTime = new Date().getTime() + 2000;
+                local = true;
             }
         }
     )
