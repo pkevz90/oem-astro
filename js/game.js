@@ -13,6 +13,7 @@ var initTime;
 //Network Variables
 var player = "";
 var gameStart = false;
+var gameDone = false;
 var timerStart = false;
 var startTime = 0;
 var local = false;
@@ -254,23 +255,26 @@ function i2x(i,zoom=1){return(w/2-(i * (1/zoom) * w))};
 function r2y(r,zoom=1){return(h/2-(r * (1/zoom) * w))};//scaling using w keeps it scaled correctly
 function update ()
 {
-if (gameStart){
+if (gameStart && !gameDone){
     //Game Timer
-    t=((Date.now() - initTime)/1000);
+    t=(((new Date().getTime()) - initTime)/1000);
     if (winner == ""){
         clock.setText(t.toString())
     }
     if (t>3+winTime){
-        gameStart=false;
+        gameDone=true;
     }
 
     //Network Winner disagreements
-    if (winnerNet != winner){
+    if (!local && winnerNet != winner){
         if (winner == ""){
             winner = winnerNet;
             winTime = winTimeNet;
         }else if(winnerNet == ""){
-            publishMsg(player,p1,winner,winTime);
+            if (t-lastMsgT > 2){
+                publishMsg(player,p1,winner,winTime);
+                lastMsgT = t;
+            }
         } else {
             if (winTime > winTimeNet){
                 winner = winnerNet;
@@ -360,10 +364,10 @@ if (gameStart){
         lastMsgT = t;
     }
 
-    if (p1Perc>100){
+    if (p1Perc>100 && winner==""){
         winner = "p1"
         winTime = t;
-    }else if (p2Perc > 100){
+    }else if (p2Perc > 100 && winner==""){
         winner = "p2"
         winTime = t;
     }
@@ -641,7 +645,7 @@ if (gameStart){
     if (timerStart && !gameStart && time >= startTime){
         winText.setText("");
         gameStart=true;
-        initTime = Date.now();
+        initTime = time;
         console.log("starting")
     }
     if (timerStart && time < startTime){

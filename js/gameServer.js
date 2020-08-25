@@ -34,6 +34,9 @@ window.addEventListener('DOMContentLoaded', (event) => {
                             p2.t0=message.data.t0;
                             p2PercNet = message.data.perc;
                             winTimeNet = message.data.winTime;
+                            winnerNet = message.data.winner;
+                            winnerNet = winnerNet.replace("1","t").replace("2","1").replace("t","2");
+                            lastMsgT = t;
                         }
                     }
                 });
@@ -56,6 +59,9 @@ window.addEventListener('DOMContentLoaded', (event) => {
                             p2.t0=message.data.t0;
                             p2PercNet = message.data.perc;
                             winTimeNet = message.data.winTime;
+                            winnerNet = message.data.winner;
+                            winnerNet = winnerNet.replace("1","t").replace("2","1").replace("t","2");
+                            lastMsgT = t;
                         }
                     }
                 });
