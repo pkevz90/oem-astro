@@ -96,6 +96,9 @@ var main_app = new Vue({
             this.display_data.width = cnvs.width;
             ctx.clearRect(0, 0, cnvs.width, cnvs.height);
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
+
+            drawArrow(ctx, getScreenPixel(cnvs, 0, 0, this.display_data.axis_limit, this.display_data.center), 90, this.scenario_data.init_sun_angl + 2*Math.PI / 86164 * this.scenario_data.game_time * 3600);
+
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     drawSatInfo(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.players[sat]);
@@ -275,8 +278,8 @@ function drawBurnPoints(sat) {
     ctx.strokeStyle = main_app.players[sat].color;
     main_app.players[sat].burn_points.forEach((point) => {
         pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
-        ctx.fillRect(pixel_point[0] - 2.5, pixel_point[1] - 2.5, 5, 5);
-        ctx.strokeRect(pixel_point[0] - 2.5, pixel_point[1] - 2.5, 5, 5);
+        ctx.fillRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
+        ctx.strokeRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
     })
 }
 
@@ -284,7 +287,7 @@ function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
     let points, r, v, pixelPos;
     ctx.strokeStyle = input_object.satellite.color;
     ctx.lineWidth = 3;
-    let nodes = 4;
+    let nodes = 8;
     let pRR = PhiRR(input_object.tBurns * 3600 / nodes),
         pRV = PhiRV(input_object.tBurns * 3600 / nodes),
         pVR = PhiVR(input_object.tBurns * 3600 / nodes),
