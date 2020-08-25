@@ -219,10 +219,6 @@ function create ()
     orig.lineTo(i2x(-.01),r2y(.09));
     orig.stroke()
     
-    
-
-
-    
     //collider = this.physics.add.collider(p1, p2);
     cursors = this.input.keyboard.createCursorKeys();
 }
@@ -321,7 +317,7 @@ if (gameStart){
     let p2real = {x:i2x(realir.i,zoom),y:r2y(realir.r,zoom)}
     let cats = math.acos(math.dot([svec_at_p2.x-p2real.x,svec_at_p2.y-p2real.y],[p1.x-p2real.x,p1.y-p2real.y])/(math.norm([svec_at_p2.x-p2real.x,svec_at_p2.y-p2real.y])*math.norm([p1.x-p2real.x,p1.y-p2real.y])));
     //Cats goes from 0 to pi (pi is bad)
-    let minMsgWait = .5;
+    let minMsgWait = 1;
     if (d<=smallPx){
         if (cats<=wezCATS){
             p1Perc += gdistgsunPPS/fps;
@@ -347,7 +343,7 @@ if (gameStart){
         } else if (cats>=Math.PI-pezCATS){
             p2Perc += ydistysunPPS/fps;
         }else{
-            minMsgWait=3;
+            minMsgWait=5;
             if (math.round(p2Perc,1) != math.round(p2PercNet,1)){
                 p2Perc += math.sign(p2PercNet-p2Perc)*.03
             }
