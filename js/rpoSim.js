@@ -69,10 +69,7 @@ var main_app = new Vue({
             init_sun_angl: 0,
             turn: 0,
             server: false,
-            selected_burn_point: {
-                satellite: null,
-                point: null
-            },
+            selected_burn_point: null,
             game_time: 0,
             display_time: null,
             mousedown_location: null,
@@ -109,6 +106,15 @@ var main_app = new Vue({
                     this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time,sat); 
                     drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.2, this.players[sat].color);
                 }
+            }
+            // Draw burn if point is focused upon
+            if (this.scenario_data.selected_burn_point !== null) {
+                let location = main_app.players[this.scenario_data.selected_burn_point.satellite].burn_points[this.scenario_data.selected_burn_point.point];
+                let burn = main_app.players[this.scenario_data.selected_burn_point.satellite].burns[this.scenario_data.selected_burn_point.point];
+                let burnN = math.norm(burn);
+                if (burnN > 1e-6) {
+                    drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 30 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[this.scenario_data.selected_burn_point.satellite].color, 3);
+                } 
             }
         }
     },
@@ -370,7 +376,7 @@ function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAng
     ctx.restore();
 }
 
-function drawArrow(ctx, pixelLocation, length = 15, origin = [0, 0], angle = 0, color = 'rgba(255,255,0,0.5)', width = 6) {
+function drawArrow(ctx, pixelLocation, length = 15, angle = 0, color = 'rgba(255,255,0,0.5)', width = 6) {
     pixelX = pixelLocation[0];
     pixelY = pixelLocation[1];
     let ct = Math.cos(angle),
@@ -380,18 +386,19 @@ function drawArrow(ctx, pixelLocation, length = 15, origin = [0, 0], angle = 0, 
         [st, ct]
     ];
     let arrow = [
-        [0, -length * pixelY * 2 + 10],
-        [3, -length * pixelY * 2 + 12],
-        [0, -length * pixelY * 2],
-        [-3, -length * pixelY * 2 + 12],
-        [0, -length * pixelY * 2 + 10]
+        [0, -length *  2 + 10],
+        [3, -length *  2 + 12],
+        [0, -length *  2],
+        [-3, -length * 2 + 12],
+        [0, -length *  2 + 10]
     ];
     let transformedArrow = math.transpose(math.multiply(rotMat, math.transpose(arrow)));
     ctx.save();
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
     ctx.beginPath();
-    ctx.translate(globalChartRef.chartArea.left + (globalChartRef.chartArea.right - globalChartRef.chartArea.left) / 2 - origin[0] * pixelX / 2 + app.axisCenter[0] * pixelX / 2, globalChartRef.chartArea.top + (globalChartRef.chartArea.bottom - globalChartRef.chartArea.top) / 2 + app.axisCenter[1] * pixelY * 2 - origin[1] * pixelY * 2);
+    // ctx.translate(cnvs.width / 2 - origin[0] * pixelX / 2 + main_app.display_data.center[0] * pixelX / 2, cnvs.heihgt / 2 + main_app.display_data.center[1] * pixelY * 2 - origin[1] * pixelY * 2);
+    ctx.translate(pixelX, pixelY)
     ctx.moveTo(0, 0);
     transformedArrow.forEach((point) => {
         ctx.lineTo(point[0], point[1]);
@@ -404,8 +411,9 @@ function drawArrow(ctx, pixelLocation, length = 15, origin = [0, 0], angle = 0, 
 
 function setMouseCallbacks() {
     $('#main-canvas').mousedown(event => {
-        main_app.scenario_data.mousedown_location = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
-        if (checkClose(main_app.scenario_data.mousedown_location[0], main_app.scenario_data.mousedown_location[1])) {
+        main_app.scenario_data.mousedown_location = [event.offsetX, event.offsetY];
+        let location_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
+        if (checkClose(location_point[0], location_point[1])) {
             main_app.scenario_data.tactic_data = ['burn']
             return;
         }
@@ -419,7 +427,7 @@ function setMouseCallbacks() {
         if (main_app.scenario_data.tactic_data !== null) {
             switch(main_app.scenario_data.tactic_data[0]) {
                 case 'burn': 
-                    burnCalc(cart_point);
+                    burnCalc(main_app.scenario_data.selected_burn_point, [event.offsetX, event.offsetY]);
                     break;
                 default: 
                     break;
@@ -431,6 +439,7 @@ function setMouseCallbacks() {
         }
     })
     $('#main-canvas').mouseup(() => {
+        main_app.scenario_data.tactic_data = null;
         if (main_app.display_data.drag_data !== null) {
             main_app.display_data.drag_data = null;
         }
@@ -544,6 +553,11 @@ function calcCurrentPoint(curTime, sat, pRR, pRV, pVR, pVV) {
 	return math.concat(math.squeeze(r),math.squeeze(v),0);
 }
 
-function burnCalc(sat, position) {
-    
+function burnCalc(sat, position2) {
+    let position1 = main_app.scenario_data.mousedown_location;
+    let rel = math.subtract(position1, position2);
+    rel = rel.reverse();
+    let dist = math.norm(rel);
+    let magnitude = dist / 60; 
+    main_app.players[sat.satellite].burns.splice(sat.point,1,math.dotMultiply(magnitude, math.dotDivide(rel,dist)))
 }
