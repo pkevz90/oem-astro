@@ -127,7 +127,10 @@ var main_app = new Vue({
                 } 
             }
             if (main_app.scenario_data.tactic_data[0] === 'target') {
-                drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, 0.0005, 3 * this.scenario_data.target_display)
+                if ((1-main_app.scenario_data.target_display) > 1e-6) {
+                    main_app.scenario_data.target_display += 0.08333333;
+                }
+                drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, 0.0005, main_app.scenario_data.tactic_data[1] * this.scenario_data.target_display)
             }
         }
     },
@@ -457,7 +460,7 @@ function setMouseCallbacks() {
             setTimeout(()=>{
                 let newPoint = getScreenPoint(main_app.scenario_data.mousemove_location[0], main_app.scenario_data.mousemove_location[1], main_app.display_data.axis_limit, main_app.display_data.center);
                 if (math.norm(math.subtract(location_point, newPoint)) < main_app.display_data.axis_limit / 50) {
-                    main_app.scenario_data.tactic_data = ['target'];
+                    main_app.scenario_data.tactic_data = ['target', main_app.scenario_data.scenario_length / main_app.scenario_data.burns_per_player, main_app.players[main_app.scenario_data.selected_burn_point.satellite].burn_points[main_app.scenario_data.selected_burn_point.point].slice(2,4)];
                     main_app.scenario_data.target_display = 0;
                 }
             },250)
@@ -476,6 +479,8 @@ function setMouseCallbacks() {
                 case 'burn': 
                     burnCalc(main_app.scenario_data.selected_burn_point, [event.offsetX, event.offsetY]);
                     break;
+                case 'target':
+                    targetCalc(main_app.scenario_data.selected_burn_point, math.transpose([cart_point]));
                 default: 
                     break;
             }
@@ -491,6 +496,19 @@ function setMouseCallbacks() {
             main_app.display_data.drag_data = null;
         }
     })
+    $('#main-canvas').on('mousewheel',event => {
+        if (main_app.scenario_data.tactic_data[0] === 'target') {
+            if (main_app.scenario_data.tactic_data[1] > 1 || event.deltaY > 0) {
+                main_app.scenario_data.tactic_data[1] += event.deltaY / 10
+            }
+            let cart_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
+            targetCalc(main_app.scenario_data.selected_burn_point, math.transpose([cart_point]));
+            return;
+        }
+        if (main_app.display_data.axis_limit > 2 || event.deltaY < 0) {
+            main_app.display_data.axis_limit -= event.deltaY * 2;
+        }
+    })
 }
 
 setMouseCallbacks()
@@ -504,10 +522,7 @@ for (player in main_app.players) {
 function animation(time) {
     main_app.updateScreen();
     main_app.scenario_data.game_time += 20/3600;
-    if ((1-main_app.scenario_data.target_display) > 1e-6) {
-        main_app.scenario_data.target_display += 0.08333333;
-        console.log(main_app.scenario_data.target_display)
-    }
+    
     window.requestAnimationFrame(animation);
 }
 
@@ -617,11 +632,20 @@ function burnCalc(sat, position2) {
     main_app.players[sat.satellite].burns.splice(sat.point,1,math.dotMultiply(magnitude, math.dotDivide(rel,dist)))
 }
 
+function targetCalc(sat, r2) {
+    let r1 = main_app.players[sat.satellite].burn_points[sat.point].slice(0,2),
+        v10 = main_app.scenario_data.tactic_data[2];
+    r2 = r2.reverse();
+    let v1f = math.multiply(math.inv(PhiRV(3600 * main_app.scenario_data.tactic_data[1])), math.subtract(r2, math.multiply(PhiRR(3600 * main_app.scenario_data.tactic_data[1]), r1)));
+    let dV = math.squeeze(math.transpose(math.subtract(v1f, v10)));
+    main_app.players[sat.satellite].burns.splice(sat.point,1,math.dotMultiply(dV, 1000));
+}
+
 function drawTargetLimit(ctx, cnvs, sat,dV, t) {
     let first_state = main_app.players[sat].burn_points[main_app.scenario_data.selected_burn_point.point];
     // console.log(first_state, sat, main_app.scenario_data.selected_burn_point)
     let r = first_state.slice(0,2);
-    let v = first_state.slice(2,4);
+    let v = main_app.scenario_data.tactic_data[2];
     // console.log(r,v)
     let ang, dVcomponents, r2, pixelPos = [];
     let pRR = PhiRR(t * 3600), pRV = PhiRV(t * 3600);
