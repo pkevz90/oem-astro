@@ -76,9 +76,10 @@ var main_app = new Vue({
             selected_burn_point: null,
             game_time: 0,
             display_time: 0,
+            target_display: 1,
             mousedown_location: null,
             mousemove_location: null,
-            tactic_data: null
+            tactic_data: ['none']
         },
         display_data: {
             center: [0, 0],
@@ -124,6 +125,9 @@ var main_app = new Vue({
                 if (burnN > 1e-6) {
                     drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 30 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[this.scenario_data.selected_burn_point.satellite].color, 4 * burnN);
                 } 
+            }
+            if (main_app.scenario_data.tactic_data[0] === 'target') {
+                drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, 0.0005, 3 * this.scenario_data.target_display)
             }
         }
     },
@@ -453,9 +457,10 @@ function setMouseCallbacks() {
             setTimeout(()=>{
                 let newPoint = getScreenPoint(main_app.scenario_data.mousemove_location[0], main_app.scenario_data.mousemove_location[1], main_app.display_data.axis_limit, main_app.display_data.center);
                 if (math.norm(math.subtract(location_point, newPoint)) < main_app.display_data.axis_limit / 50) {
-                    console.log('start target');
+                    main_app.scenario_data.tactic_data = ['target'];
+                    main_app.scenario_data.target_display = 0;
                 }
-            },500)
+            },250)
             return;
         }
         main_app.display_data.drag_data = [
@@ -481,7 +486,7 @@ function setMouseCallbacks() {
         }
     })
     $('#main-canvas').mouseup(() => {
-        main_app.scenario_data.tactic_data = null;
+        main_app.scenario_data.tactic_data = ['none'];
         if (main_app.display_data.drag_data !== null) {
             main_app.display_data.drag_data = null;
         }
@@ -499,6 +504,10 @@ for (player in main_app.players) {
 function animation(time) {
     main_app.updateScreen();
     main_app.scenario_data.game_time += 20/3600;
+    if ((1-main_app.scenario_data.target_display) > 1e-6) {
+        main_app.scenario_data.target_display += 0.08333333;
+        console.log(main_app.scenario_data.target_display)
+    }
     window.requestAnimationFrame(animation);
 }
 
@@ -534,7 +543,7 @@ function PhiVV(t, n = 2 * Math.PI / 86164) {
     ];
 }
 
-function drawCurve(ctx, points, tension) {
+function drawCurve(ctx, points, tension, type = 'stroke') {
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
 
@@ -551,11 +560,16 @@ function drawCurve(ctx, points, tension) {
 
         var cp2x = p2.x - (p3.x - p1.x) / 6 * t;
         var cp2y = p2.y - (p3.y - p1.y) / 6 * t;
-
+        
         ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
         // console.log(cp1x, cp1y, cp2x, cp2y)
     }
-    ctx.stroke();
+    if (type === 'stroke') {
+        ctx.stroke();
+    }
+    else {
+        ctx.fill();
+    }
 }
 
 function checkClose(x, y, change = true) {
@@ -598,10 +612,28 @@ function burnCalc(sat, position2) {
     let rel = math.subtract(position1, position2);
     rel = rel.reverse();
     let dist = math.norm(rel);
+    dist = dist < 1e-6 ? 1 : dist;
     let magnitude = dist / 60; 
     main_app.players[sat.satellite].burns.splice(sat.point,1,math.dotMultiply(magnitude, math.dotDivide(rel,dist)))
 }
 
-function drawTargetLimit(sat,dV) {
-
+function drawTargetLimit(ctx, cnvs, sat,dV, t) {
+    let first_state = main_app.players[sat].burn_points[main_app.scenario_data.selected_burn_point.point];
+    // console.log(first_state, sat, main_app.scenario_data.selected_burn_point)
+    let r = first_state.slice(0,2);
+    let v = first_state.slice(2,4);
+    // console.log(r,v)
+    let ang, dVcomponents, r2, pixelPos = [];
+    let pRR = PhiRR(t * 3600), pRV = PhiRV(t * 3600);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    for (ii = 0; ii <= 20; ii++) {
+        ang = 2 * Math.PI * ii / 20;
+        dVcomponents = [[dV * Math.cos(ang)], [dV * Math.sin(ang)]];
+        r2 = math.add(math.multiply(pRR, r), math.multiply(pRV, math.add(v,dVcomponents)));    
+        pixelPos.push(getScreenPixel(cnvs, r2[0][0], r2[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true)); 
+    }
+    drawCurve(ctx, pixelPos)
+    drawCurve(ctx, pixelPos,1,'fill')
 }
