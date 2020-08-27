@@ -62,6 +62,8 @@ var lastMsgT = 0;
 //Graphics Variables
 var frcst = 1.5*period;
 var sunRange = .15;
+var flame1Timer = 0;
+var flame2TImer = 0;
 
 
 
@@ -130,6 +132,7 @@ function preload ()
     this.load.image('red', fold.concat('red.png'));
     this.load.image('red-invisible', fold.concat('red-invisible.png'));
     this.load.image('blue-invisible', fold.concat('blue-invisible.png'));
+    this.load.image('flame',fold.concat('flame.png'))
 }
 
 function create ()
@@ -156,6 +159,10 @@ function create ()
     wez = this.add.graphics();
     sez = this.add.graphics();
 
+    flame1 = this.add.image(0,0,'flame');
+    flame2 = this.add.image(0,0,'flame');
+    flame1.visible = false;
+    flame2.visible = false;
     
 
     targetPtRange = this.add.graphics();
@@ -359,7 +366,7 @@ if (gameStart && !gameDone){
         }
     }
 
-    if (t-lastMsgT > minMsgWait){
+    if (!local && t-lastMsgT > minMsgWait){
         publishMsg(player,p1,winner,winTime)
         lastMsgT = t;
     }
@@ -401,6 +408,9 @@ if (gameStart && !gameDone){
     if (cursors.space.isDown && (t-p1.t0)/prepTime >= 1 && (p1.target.idot + p1.target.rdot != 0)){
         p = RMOE2PosVel(p1.rmoe,p1.t0,t);
         p1.rmoe = posVel2RMOE(p.r,p.i,p.rdot+p1.target.rdot,p.idot+p1.target.idot); 
+        
+        flame1Timer = t+math.min(.5,prepTime/2);
+        flame1.setAngle(-90+math.atan2(p1.target.rdot,p1.target.idot)*180/math.PI);
         p1.target.idot=0;
         p1.target.rdot=0;
         p1.t0=t;
@@ -409,6 +419,7 @@ if (gameStart && !gameDone){
             lastMsgT = t;
         }
     }
+    
     targetPtRange.clear();
 
     targetPt.clear();
@@ -588,7 +599,18 @@ if (gameStart && !gameDone){
         p1.angle = -Math.atan((p1.x-p2.x)/(p1.y-p2.y))*180/Math.PI - 180;
         p2.angle = -Math.atan((p1.x-p2.x)/(p1.y-p2.y))*180/Math.PI;
         angR2B = -Math.atan((p1.x-p2.x)/(p1.y-p2.y));
-    }  
+    } 
+
+    if (flame1Timer>t){
+        flame1.visible = true;
+        //console.log(flame1.angle)
+        flame1.x=p1.x-(p1.height/4)*math.sin(flame1.angle*math.PI/180);
+        flame1.y=p1.y+(p1.height/4)*math.cos(flame1.angle*math.PI/180);
+        flame1.setScale(.4/zoom);
+        //flame1.rotation = flame1.angle;
+    }else{
+        flame1.visible = false;
+    }
     
     //CATS Zones
     distReqCirc.clear();
