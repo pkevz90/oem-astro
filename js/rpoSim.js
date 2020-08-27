@@ -86,7 +86,8 @@ var main_app = new Vue({
             axis_limit: 100,
             width: null,
             height: null,
-            drag_data: null
+            drag_data: null,
+            stars: math.random([100,3], -0.5, 0.5)
         }
     },
     computed: {
@@ -101,6 +102,7 @@ var main_app = new Vue({
             this.display_data.height = cnvs.height;
             this.display_data.width = cnvs.width;
             ctx.clearRect(0, 0, cnvs.width, cnvs.height);
+            drawStars(cnvs, ctx);
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
 
             drawArrow(ctx, getScreenPixel(cnvs, 0, 0, this.display_data.axis_limit, this.display_data.center), 90, this.scenario_data.init_sun_angl + 2*Math.PI / 86164 * this.scenario_data.game_time * 3600);
@@ -123,14 +125,14 @@ var main_app = new Vue({
                 let burn = main_app.players[this.scenario_data.selected_burn_point.satellite].burns[this.scenario_data.selected_burn_point.point];
                 let burnN = math.norm(burn);
                 if (burnN > 1e-6) {
-                    drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 30 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[this.scenario_data.selected_burn_point.satellite].color, 4 * burnN);
+                    drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 30 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[this.scenario_data.selected_burn_point.satellite].color, 4);
                 } 
             }
             if (main_app.scenario_data.tactic_data[0] === 'target') {
                 if ((1-main_app.scenario_data.target_display) > 1e-6) {
                     main_app.scenario_data.target_display += 0.08333333;
                 }
-                drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, 0.0005, main_app.scenario_data.tactic_data[1] * this.scenario_data.target_display)
+                drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, main_app.scenario_data.tactic_data[3] / 1000, main_app.scenario_data.tactic_data[1] * this.scenario_data.target_display)
             }
         }
     },
@@ -163,6 +165,25 @@ window.addEventListener('resize', () => {
 function resizeCanvas() {
     $('#main-canvas')[0].width = window.innerWidth;
     $('#main-canvas')[0].height = window.innerHeight;
+}
+
+function drawStars(cnvs, ctx) {
+    let w = cnvs.width, h = cnvs.height;
+    let ct = Math.cos(main_app.scenario_data.game_time *3600 * Math.PI * 2 / 86164),
+        st = Math.sin(main_app.scenario_data.game_time *3600 * Math.PI * 2 / 86164);
+    let rotMat = [
+        [ct, -st, 0],
+        [st, ct, 0],
+        [0,0,1]
+        ];
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+    let starR = math.transpose(math.multiply(rotMat, math.transpose(main_app.display_data.stars)));
+    ctx.fillStyle = "rgb(255,255,255)";
+    starR.forEach(star => {
+        ctx.fillRect((w > h ? w : h) * star[0], (w > h ? w : h) * star[1], 3 * (star[2] + 0.5), 3 * (star[2] + 0.5));
+    });
+    ctx.restore();
 }
 
 function getScreenPixel(cnvs, rad, it, limit, center, object = false) {
@@ -222,20 +243,20 @@ function drawAxes(cnvs, ctx, center, limit) {
         otherPoint = axis_center[1]
     }
     while (point > 0) {
-        point -= 10 / limit / 2 * width;
+        point -= 7.359 / limit / 2 * width;
         ctx.moveTo(point, otherPoint - height / 70);
         ctx.lineTo(point, otherPoint + height / 70);
         ii++;
-        ctx.fillText(ii*10,point, otherPoint + height / 30);
+        ctx.fillText(ii*0.01,point, otherPoint + height / 30);
     }
     ii = 0;
     point = axis_center[0] + 0;
     while (point < width) {
-        point += 10 / limit / 2 * width;
+        point += 7.359 / limit / 2 * width;
         ctx.moveTo(point, otherPoint - height / 70);
         ctx.lineTo(point, otherPoint + height / 70);
         ii++;
-        ctx.fillText(-ii*10,point, otherPoint + height / 30);
+        ctx.fillText(-ii*0.01,point, otherPoint + height / 30);
     }
     point = axis_center[1] + 0;
     ii = 0;
@@ -247,19 +268,19 @@ function drawAxes(cnvs, ctx, center, limit) {
         otherPoint = axis_center[0]
     }
     while (point < height) {
-        point += 10 / limit / 2 / yxRatio * height;
+        point += 5 / limit / 2 / yxRatio * height;
         ctx.moveTo(otherPoint - height / 70, point);
         ctx.lineTo(otherPoint + height / 70, point);
         ii++
-        ctx.fillText(-ii*10,otherPoint - height / 30, point+5);
+        ctx.fillText(-ii*5,otherPoint - height / 30, point+5);
     }
     point = axis_center[1] + 0; ii = 0;
     while (point > 0) {
-        point -= 10 / limit / 2 / yxRatio * height;
+        point -= 5 / limit / 2 / yxRatio * height;
         ctx.moveTo(otherPoint - height / 70, point);
         ctx.lineTo(otherPoint + height / 70, point);
         ii++
-        ctx.fillText(ii*10,otherPoint - height / 30, point+5);
+        ctx.fillText(ii*5,otherPoint - height / 30, point+5);
     }
     ctx.stroke()
 
@@ -456,11 +477,16 @@ function setMouseCallbacks() {
         main_app.scenario_data.mousedown_location = [event.offsetX, event.offsetY];
         let location_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
         if (checkClose(location_point[0], location_point[1])) {
-            main_app.scenario_data.tactic_data = ['burn']
+            let total_burn = 0;
+            for (let ii = 0; ii < main_app.scenario_data.selected_burn_point.point; ii++) {
+                total_burn += math.norm(main_app.players[main_app.scenario_data.selected_burn_point.satellite].burns[ii]);
+            }
+            main_app.scenario_data.tactic_data = ['burn',math.min(main_app.players[main_app.scenario_data.selected_burn_point.satellite].scenario_fuel - total_burn, main_app.players[main_app.scenario_data.selected_burn_point.satellite].turn_fuel)]
+            console.log(main_app.scenario_data.tactic_data[1]);
             setTimeout(()=>{
                 let newPoint = getScreenPoint(main_app.scenario_data.mousemove_location[0], main_app.scenario_data.mousemove_location[1], main_app.display_data.axis_limit, main_app.display_data.center);
                 if (math.norm(math.subtract(location_point, newPoint)) < main_app.display_data.axis_limit / 50) {
-                    main_app.scenario_data.tactic_data = ['target', main_app.scenario_data.scenario_length / main_app.scenario_data.burns_per_player, main_app.players[main_app.scenario_data.selected_burn_point.satellite].burn_points[main_app.scenario_data.selected_burn_point.point].slice(2,4)];
+                    main_app.scenario_data.tactic_data = ['target', main_app.scenario_data.scenario_length / main_app.scenario_data.burns_per_player, main_app.players[main_app.scenario_data.selected_burn_point.satellite].burn_points[main_app.scenario_data.selected_burn_point.point].slice(2,4), main_app.scenario_data.tactic_data[1]];
                     main_app.scenario_data.target_display = 0;
                 }
             },250)
@@ -629,6 +655,7 @@ function burnCalc(sat, position2) {
     let dist = math.norm(rel);
     dist = dist < 1e-6 ? 1 : dist;
     let magnitude = dist / 60; 
+    magnitude = magnitude > main_app.scenario_data.tactic_data[1] ? main_app.scenario_data.tactic_data[1] : magnitude;
     main_app.players[sat.satellite].burns.splice(sat.point,1,math.dotMultiply(magnitude, math.dotDivide(rel,dist)))
 }
 
@@ -638,6 +665,7 @@ function targetCalc(sat, r2) {
     r2 = r2.reverse();
     let v1f = math.multiply(math.inv(PhiRV(3600 * main_app.scenario_data.tactic_data[1])), math.subtract(r2, math.multiply(PhiRR(3600 * main_app.scenario_data.tactic_data[1]), r1)));
     let dV = math.squeeze(math.transpose(math.subtract(v1f, v10)));
+    dV = math.norm(dV) > main_app.scenario_data.tactic_data[3] / 1000 ? math.dotMultiply(main_app.scenario_data.tactic_data[3] / 1000,math.dotDivide(dV,math.norm(dV))) : dV;
     main_app.players[sat.satellite].burns.splice(sat.point,1,math.dotMultiply(dV, 1000));
 }
 
