@@ -11,12 +11,34 @@
     <script src="./SupportLibraries/jquery.min.js"></script>
     <script src="./SupportLibraries/jquery.mousewheel.min.js"></script>
     <title>RPO Simulator</title>
-    <link rel="stylesheet" type="text/css" href="css/cap1v1.css">
+    <link rel="stylesheet" type="text/css" href="css/rpoSim.css">
     
 </head>
 
+
 <body class="noselect">
     <div id="main-app">
+        <div id="data-container">
+            <div class="inner-data-container">
+                Options
+            </div>
+            <div class="inner-data-container">
+                Blue
+            </div>
+            <div class="inner-data-container">
+                Red
+            </div>
+            <div class="inner-data-container">
+                Green
+            </div>
+            <div class="inner-data-container">
+                Gray
+            </div>
+        </div>
+        <div id="game-data-container">
+            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km</div>
+            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup></div>
+        </div>
         <div style="width:100%; height:100%;">
             <canvas id="main-canvas" width="100%" height="100%"></canvas>
         </div>

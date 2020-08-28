@@ -6,7 +6,7 @@ var main_app = new Vue({
                 exist: true,
                 name: 'blue',
                 color: 'rgba(100,150,255,1)',
-                initial_state: [0, 30, 0.0005, 0],
+                initial_state: [0, 30, 0, 0],
                 display_state: [0, 30, 0, 0],
                 current_state: [0, 30, 0, 0],
                 burns: [],
@@ -35,7 +35,7 @@ var main_app = new Vue({
                 engine: null
             },
             green: {
-                exist: true,
+                exist: false,
                 name: 'green',
                 color: 'rgba(120,255,120,1)',
                 initial_state: [30, -30, 0, 0],
@@ -51,7 +51,7 @@ var main_app = new Vue({
                 engine: null
             },
             gray: {
-                exist: true,
+                exist: false,
                 name: 'gray',
                 color: 'rgba(150,150,150,1)',
                 initial_state: [-30, -30, 0, 0],
@@ -72,6 +72,16 @@ var main_app = new Vue({
             burns_per_player: 10,
             init_sun_angl: 0,
             turn: 0,
+            sat_data: {
+                origin:'blue',
+                target: 'red',
+                data: {
+                    range: 0,
+                    cats: 0,
+                    range_rate: 0,
+                    poca: 0
+                }
+            },
             server: false,
             selected_burn_point: null,
             game_time: 0,
@@ -134,6 +144,7 @@ var main_app = new Vue({
                 }
                 drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, main_app.scenario_data.tactic_data[3] / 1000, main_app.scenario_data.tactic_data[1] * this.scenario_data.target_display)
             }
+            calcData(this.scenario_data.sat_data.origin, this.scenario_data.sat_data.target)
         }
     },
     watch: {
@@ -161,6 +172,14 @@ var main_app = new Vue({
 window.addEventListener('resize', () => {
     resizeCanvas();
 });
+
+function calcData(origin, target) {
+    let rel_vector = math.subtract(main_app.players[origin].current_state.slice(0,2),main_app.players[target].current_state.slice(0,2));
+    main_app.scenario_data.sat_data.data.range = math.norm(rel_vector);
+    let sunVector = [[Math.cos(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)], [-Math.sin(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)]];
+    console.log(sunVector);
+    main_app.scenario_data.sat_data.data.cats = Math.acos(math.dot(rel_vector, sunVector) / math.norm(rel_vector)) * 180 / Math.PI;
+}   
 
 function resizeCanvas() {
     $('#main-canvas')[0].width = window.innerWidth;
@@ -547,7 +566,9 @@ for (player in main_app.players) {
 
 function animation(time) {
     main_app.updateScreen();
-    main_app.scenario_data.game_time += 20/3600;
+    if (main_app.scenario_data.game_time < main_app.scenario_data.scenario_length) {
+        main_app.scenario_data.game_time += 20/3600;
+    }
     
     window.requestAnimationFrame(animation);
 }
