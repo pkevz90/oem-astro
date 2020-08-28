@@ -36,11 +36,15 @@
             </div>
         </div>
         <div id="game-data-container">
-            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km</div>
-            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup></div>
+            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (0.00 km)</div>
+            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup> (0.00<sup>o</sup>)</div>
+            <div>{{ scenario_data.game_time_string }} ({{ scenario_data.game_time_string }})</div>
         </div>
         <div style="width:100%; height:100%;">
             <canvas id="main-canvas" width="100%" height="100%"></canvas>
+        </div>
+        <div id="time-slider">
+            <input type="range" min="1" max="100" value="50" class="slider" class="slider">
         </div>
     </div>
     <script src="./js/rpoSim.js"></script>

@@ -85,6 +85,7 @@ var main_app = new Vue({
             server: false,
             selected_burn_point: null,
             game_time: 0,
+            game_time_string: 0,
             display_time: 0,
             target_display: 1,
             mousedown_location: null,
@@ -177,7 +178,6 @@ function calcData(origin, target) {
     let rel_vector = math.subtract(main_app.players[origin].current_state.slice(0,2),main_app.players[target].current_state.slice(0,2));
     main_app.scenario_data.sat_data.data.range = math.norm(rel_vector);
     let sunVector = [[Math.cos(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)], [-Math.sin(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)]];
-    console.log(sunVector);
     main_app.scenario_data.sat_data.data.cats = Math.acos(math.dot(rel_vector, sunVector) / math.norm(rel_vector)) * 180 / Math.PI;
 }   
 
@@ -565,11 +565,13 @@ for (player in main_app.players) {
 
 
 function animation(time) {
+    // console.time()
     main_app.updateScreen();
     if (main_app.scenario_data.game_time < main_app.scenario_data.scenario_length) {
-        main_app.scenario_data.game_time += 20/3600;
+        main_app.scenario_data.game_time += 0.25/3600;
+        main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
     }
-    
+    // console.timeEnd();
     window.requestAnimationFrame(animation);
 }
 
@@ -709,4 +711,9 @@ function drawTargetLimit(ctx, cnvs, sat,dV, t) {
     }
     drawCurve(ctx, pixelPos)
     drawCurve(ctx, pixelPos,1,'fill')
+}
+
+function hrsToTime(hrs) {
+    hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
+    return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
 }
