@@ -55,8 +55,8 @@ body, html {
     position: fixed;
     bottom: 2%;
     height: auto;
-    width: 40%;
-    height: 2%;
+    width: 20%;
+    height: 1%;
     left: 2%;
     z-index: 2;
 }
@@ -80,15 +80,15 @@ body, html {
   .slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 3%;
-    height: 25px;
+    width: 2%;
+    height: 20px;
     background: rgb(112, 111, 111);
     cursor: pointer;
   }
   
   .slider::-moz-range-thumb {
-    width: 25px;
-    height: 25px;
+    width: 2%;
+    height: 20px;
     background: #000;
     cursor: pointer;
   }

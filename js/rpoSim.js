@@ -87,6 +87,7 @@ var main_app = new Vue({
             game_time: 0,
             game_time_string: 0,
             display_time: 0,
+            display_time_string: '00:00',
             target_display: 1,
             mousedown_location: null,
             mousemove_location: null,
@@ -146,6 +147,10 @@ var main_app = new Vue({
                 drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, main_app.scenario_data.tactic_data[3] / 1000, main_app.scenario_data.tactic_data[1] * this.scenario_data.target_display)
             }
             calcData(this.scenario_data.sat_data.origin, this.scenario_data.sat_data.target)
+        },
+        slider_change: function(event) {
+            this.scenario_data.display_time = event.target.value;
+            this.scenario_data.display_time_string = hrsToTime(event.target.value);
         }
     },
     watch: {
