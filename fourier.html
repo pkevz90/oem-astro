@@ -211,6 +211,7 @@
 <script src="./SupportLibraries/jquery.min.js"></script>
 <script src="./SupportLibraries/bootstrap.bundle.min.js"></script>
 <script>
+    try{
     $('#wave-draw')[0].clicked = false;    
     // function updateSlider(a){
         
@@ -362,6 +363,9 @@
         createGraph();
         globalChartRef.update();
         });
+    }catch(error){
+        alert(error)
+    }
 </script>
 </body>
 </html>

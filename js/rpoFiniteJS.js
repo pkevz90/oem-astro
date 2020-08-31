@@ -1,3 +1,4 @@
+try{
 let globalChartRef,
     dragPoint, state1, state2,a,tf, $spanList = $('table span');
 let meanFocusDist
@@ -399,4 +400,7 @@ function checkClose(X,Y) {
         return true;
     }
     return false;
+}
+}catch(error){
+    alert(error)
 }

@@ -1,3 +1,4 @@
+try{
 var time = {
     year: 2020,
     month: 6,
@@ -349,3 +350,6 @@ document.addEventListener('keypress', function(key){
 window.addEventListener('load', (event) => {
     $('.loadingScreen').fadeOut(500);
 });
+}catch(error){
+    alert(error)
+}
