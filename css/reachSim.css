@@ -37,3 +37,16 @@ body, html {
     padding-bottom: 6%;
     padding-top: 1%;
 }
+
+#number-container {
+    position: fixed;
+    z-index: 2;
+    bottom: 1%;
+    left: 1%;
+}
+
+#number-container input {
+    width: 6%;
+    background-color: black;
+    color: white;
+}

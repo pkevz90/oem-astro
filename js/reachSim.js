@@ -18,6 +18,11 @@ var main_app = new Vue({
             },
             mousedown_location: null,
             mousemove_location: null,
+            time: {
+                start: 2,
+                step: 2,
+                end: 24
+            }
         },
         display_data: {
             center: [0, 0],
@@ -39,7 +44,8 @@ var main_app = new Vue({
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             drawSatShape(ctx, getScreenPixel(cnvs, this.satellite.current_state[0][0], this.satellite.current_state[1][0], this.display_data.axis_limit, this.display_data.center), 0, 0.4, '#AAA', sunAngle = 0, transparency = 1)
             drawSatTrajectory(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.satellite.current_state);
-            for (let kk = 2; kk <= 24; kk += 2) {
+            let step = this.scenario_data.time.step <= 0 ? 1 : this.scenario_data.time.step;
+            for (let kk = this.scenario_data.time.start; kk <= this.scenario_data.time.end; kk += step) {
                 drawTargetLimit(cnvs, ctx, this.satellite.current_state,this.scenario_data.roes.delta_v, kk)
             }
         },
@@ -440,7 +446,7 @@ function drawTargetLimit(cnvs, ctx, first_state,dV, t) {
     ctx.beginPath();
     // ctx.strokeStyle = 'rgba(255,255,255,0.4)';
     
-    ctx.strokeStyle = 'hsl(' + 15 * t + ', 100%, 50%)';
+    ctx.strokeStyle = 'hsl(' + (360 / (main_app.scenario_data.time.end / main_app.scenario_data.time.step)) * t + ', 100%, 50%)';
     for (ii = 0; ii <= 20; ii++) {
         ang = 2 * Math.PI * ii / 20;
         dVcomponents = [[dV * Math.cos(ang)], [dV * Math.sin(ang)]];
