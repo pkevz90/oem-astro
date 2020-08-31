@@ -1,0 +1,37 @@
+body, html {
+    background-color: black;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+
+#main-canvas {
+    position: relative;
+    z-index: 1;
+}
+
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+      -webkit-user-select: none; /* Safari */
+       -khtml-user-select: none; /* Konqueror HTML */
+         -moz-user-select: none; /* Firefox */
+          -ms-user-select: none; /* Internet Explorer/Edge */
+              user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome and Opera */
+}
+#input-container {
+    position: fixed;
+    display: flex;
+    justify-content: space-around;
+    top: 1%;
+    width: 100%;
+    color: white;
+    z-index: 2;
+}
+
+#input-container div {
+    font-size: 2vw;
+    text-align: center;
+}

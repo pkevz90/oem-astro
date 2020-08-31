@@ -84,8 +84,9 @@ var main_app = new Vue({
             },
             server: false,
             selected_burn_point: null,
+            game_started: false,
             game_time: 0,
-            game_time_string: 0,
+            game_time_string: '00:00',
             display_time: 0,
             display_time_string: '00:00',
             target_display: 1,
@@ -253,7 +254,7 @@ function drawAxes(cnvs, ctx, center, limit) {
     ctx.stroke();
     // Draw Markers
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.textAlign = "center";
     ctx.font = "15px Arial";
     ctx.lineWidth = 3;
@@ -267,20 +268,23 @@ function drawAxes(cnvs, ctx, center, limit) {
         otherPoint = axis_center[1]
     }
     while (point > 0) {
-        point -= 7.359 / limit / 2 * width;
+        // point -= 7.359 / limit / 2 * width;
+        point -= 10 / limit / 2 * width;
         ctx.moveTo(point, otherPoint - height / 70);
         ctx.lineTo(point, otherPoint + height / 70);
         ii++;
-        ctx.fillText(ii*0.01,point, otherPoint + height / 30);
+        ctx.fillText(ii*5,point, otherPoint + height / 30);
     }
     ii = 0;
     point = axis_center[0] + 0;
     while (point < width) {
-        point += 7.359 / limit / 2 * width;
+        // point += 7.359 / limit / 2 * width;
+        point += 10 / limit / 2 * width;
         ctx.moveTo(point, otherPoint - height / 70);
         ctx.lineTo(point, otherPoint + height / 70);
         ii++;
-        ctx.fillText(-ii*0.01,point, otherPoint + height / 30);
+        ctx.fillText(-ii*10,point, otherPoint + height / 30);
+        // ctx.fillText(-ii*0.01,point, otherPoint + height / 30);
     }
     point = axis_center[1] + 0;
     ii = 0;
@@ -292,19 +296,19 @@ function drawAxes(cnvs, ctx, center, limit) {
         otherPoint = axis_center[0]
     }
     while (point < height) {
-        point += 5 / limit / 2 / yxRatio * height;
+        point += 10 / limit / 2 / yxRatio * height;
         ctx.moveTo(otherPoint - height / 70, point);
         ctx.lineTo(otherPoint + height / 70, point);
         ii++
-        ctx.fillText(-ii*5,otherPoint - height / 30, point+5);
+        ctx.fillText(-ii*10,otherPoint - height / 30, point+5);
     }
     point = axis_center[1] + 0; ii = 0;
     while (point > 0) {
-        point -= 5 / limit / 2 / yxRatio * height;
+        point -= 10 / limit / 2 / yxRatio * height;
         ctx.moveTo(otherPoint - height / 70, point);
         ctx.lineTo(otherPoint + height / 70, point);
         ii++
-        ctx.fillText(ii*5,otherPoint - height / 30, point+5);
+        ctx.fillText(ii*10,otherPoint - height / 30, point+5);
     }
     ctx.stroke()
 
@@ -505,6 +509,9 @@ function setMouseCallbacks() {
             for (let ii = 0; ii < main_app.scenario_data.selected_burn_point.point; ii++) {
                 total_burn += math.norm(main_app.players[main_app.scenario_data.selected_burn_point.satellite].burns[ii]);
             }
+            for (let ii = main_app.scenario_data.selected_burn_point.point; ii < main_app.scenario_data.burns_per_player; ii++) {
+                main_app.players[main_app.scenario_data.selected_burn_point.satellite].burns.splice(ii,1,[0,0]);
+            }
             main_app.scenario_data.tactic_data = ['burn',math.min(main_app.players[main_app.scenario_data.selected_burn_point.satellite].scenario_fuel - total_burn, main_app.players[main_app.scenario_data.selected_burn_point.satellite].turn_fuel)]
             console.log(main_app.scenario_data.tactic_data[1]);
             setTimeout(()=>{
@@ -572,7 +579,7 @@ for (player in main_app.players) {
 function animation(time) {
     // console.time()
     main_app.updateScreen();
-    if (main_app.scenario_data.game_time < main_app.scenario_data.scenario_length) {
+    if (main_app.scenario_data.game_started && main_app.scenario_data.game_time < main_app.scenario_data.scenario_length) {
         main_app.scenario_data.game_time += 0.25/3600;
         main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
     }

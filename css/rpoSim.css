@@ -20,7 +20,8 @@ body, html {
     width: 100%;
     color: white;
     z-index: 2;
-    background-color: rgba(25,25,50,0.75);
+    background-color: rgba(50,50,50,0.75);
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 .inner-data-container {
@@ -28,6 +29,7 @@ body, html {
     width: 20%;
     font-size: 3vw;
     text-align: center;
+    cursor: pointer;
 }
 
 #game-data-container {
@@ -38,7 +40,7 @@ body, html {
     height: auto;
     bottom: 5%;
     left: 2%;
-    font-family: arial;
+    font-family: 'Courier New', Courier, monospace;
 }
 
 .noselect {

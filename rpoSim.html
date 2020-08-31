@@ -20,9 +20,6 @@
     <div id="main-app">
         <div id="data-container">
             <div class="inner-data-container">
-                Options
-            </div>
-            <div class="inner-data-container">
                 Blue
             </div>
             <div class="inner-data-container">
@@ -44,7 +41,10 @@
             <canvas id="main-canvas" width="100%" height="100%"></canvas>
         </div>
         <div id="time-slider">
-            <input type="range" step="0.01" min="0" :max="scenario_data.scenario_length" value="0" class="slider" class="slider" @input="slider_change">
+            <input type="range" step="0.001" min="0" :max="scenario_data.scenario_length" value="0" class="slider" class="slider" @input="slider_change">
+        </div>
+        <div id="setup-zone">
+            
         </div>
     </div>
     <script src="./js/rpoSim.js"></script>
