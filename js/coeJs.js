@@ -1,3 +1,5 @@
+alert("Test Alert")
+try {
 var time = {
     year: 2020,
     month: 6,
@@ -785,3 +787,6 @@ $('#orbitList p').on('click', (a) => {
     $('.controls span')[3+kk*6].textContent = $('.slidercontainer input')[3+kk*6].value;
     $('.controls span')[4+kk*6].textContent = $('.slidercontainer input')[4+kk*6].value;
 })
+}catch(error){
+    alert(error)
+}
