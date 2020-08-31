@@ -340,7 +340,7 @@ if (gameStart && !gameDone){
             p2Perc += gdistysunPPS/fps;
         }else{
             minMsgWait=3;
-            if (math.round(p2Perc,1) != math.round(p2PercNet,1)){
+            if (math.round(p2Perc,1) != math.round(p2PercNet,1) && !local){
                 p2Perc += math.sign(p2PercNet-p2Perc)*.03
             }
         }
@@ -355,13 +355,13 @@ if (gameStart && !gameDone){
             p2Perc += ydistysunPPS/fps;
         }else{
             minMsgWait=5;
-            if (math.round(p2Perc,1) != math.round(p2PercNet,1)){
+            if (math.round(p2Perc,1) != math.round(p2PercNet,1) && !local){
                 p2Perc += math.sign(p2PercNet-p2Perc)*.03
             }
         }
     }else{
         minMsgWait=3;
-        if (math.round(p2Perc,1) != math.round(p2PercNet,1)){
+        if (math.round(p2Perc,1) != math.round(p2PercNet,1) && !local){
             p2Perc += math.sign(p2PercNet-p2Perc)*.03
         }
     }

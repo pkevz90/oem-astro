@@ -65,6 +65,27 @@
         .slidercontainer p {
             margin: 1%;
         }
+        .referenceDiv {
+            position: fixed;
+            bottom: 0%;
+            color: white;
+            width: 30%;
+            left: 35%;
+            text-align: center;
+            font-size: 1.5vw;
+            opacity: 0.8;
+        }
+        .timeStepDiv {
+            position: fixed;
+            bottom: 0%;
+            color: white;
+            /* width: 20%; */
+            right: 0%;
+            text-align: center;
+            padding-right: 1%;
+            font-size: 1.5vw;
+            opacity: 0.8;
+        }
         .addButton {
             float: right;
             border: 1px solid white;
@@ -161,52 +182,6 @@
         }
         .pointer {
             cursor: pointer;
-        }
-        @media only screen and (min-width: 1300px) {
-            .referenceDiv {
-            position: fixed;
-            bottom: 0%;
-            color: white;
-            width: 30%;
-            left: 35%;
-            text-align: center;
-            font-size: 1.5vw;
-            opacity: 0.8;
-        }
-        .timeStepDiv {
-            position: fixed;
-            bottom: 0%;
-            color: white;
-            /* width: 20%; */
-            right: 0%;
-            text-align: center;
-            padding-right: 1%;
-            font-size: 1.5vw;
-            opacity: 0.8;
-        }
-        }
-        @media only screen and (max-width: 1300px) {
-            .referenceDiv {
-            position: relative;
-            bottom: 0%;
-            color: white;
-            width: 30%;
-            left: 35%;
-            text-align: center;
-            font-size: 1.5vw;
-            opacity: 0.8;
-        }
-        .timeStepDiv {
-            position: relative;
-            bottom: 0%;
-            color: white;
-            /* width: 20%; */
-            right: 0%;
-            text-align: center;
-            padding-right: 1%;
-            font-size: 1.5vw;
-            opacity: 0.8;
-        }
         }
     </style>
 </head>
@@ -348,21 +323,6 @@
         })
         $('#constList').on('mouseleave',()=>{
             $('#constList').hide(); 
-        })
-        $('.orbitsPane').on('click',()=>{
-            if($('#orbitList')[0].style.display != "none"){
-                $('#orbitList').hide()
-            }
-        })
-        $('.optionsPane').on('click',()=>{
-            if($('#optionsList')[0].style.display != "none"){
-                $('#optionsList').hide()
-            }
-        })
-        $('.constPane').on('click',()=>{
-            if($('#constList')[0].style.display != "none"){
-                $('#constList').hide()
-            }
         })
         var editTarget;
         function changeColor (a) {
