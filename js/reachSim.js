@@ -8,7 +8,6 @@ var main_app = new Vue({
         },
         scenario_data: {
             delta_v: 0.5,
-            time: 0,
             roes: {
                 ae: 0,
                 xd: 0,
@@ -21,7 +20,8 @@ var main_app = new Vue({
             time: {
                 start: 2,
                 step: 2,
-                end: 24
+                end: 24,
+                current: 0
             }
         },
         display_data: {
@@ -77,8 +77,8 @@ function resizeCanvas() {
 
 function drawStars(cnvs, ctx) {
     let w = cnvs.width, h = cnvs.height;
-    let ct = Math.cos(main_app.scenario_data.time *3600 * Math.PI * 2 / 86164),
-        st = Math.sin(main_app.scenario_data.time *3600 * Math.PI * 2 / 86164);
+    let ct = Math.cos(main_app.scenario_data.time.current *3600 * Math.PI * 2 / 86164),
+        st = Math.sin(main_app.scenario_data.time.current *3600 * Math.PI * 2 / 86164);
     let rotMat = [
         [ct, -st, 0],
         [st, ct, 0],
@@ -89,6 +89,7 @@ function drawStars(cnvs, ctx) {
     let starR = math.transpose(math.multiply(rotMat, math.transpose(main_app.display_data.stars)));
     ctx.fillStyle = "rgba(255,255,255)";
     starR.forEach(star => {
+        // console.log(star);
         ctx.fillRect((w > h ? w : h) * star[0], (w > h ? w : h) * star[1], 3 * (star[2] + 0.5), 3 * (star[2] + 0.5));
     });
     ctx.restore();
