@@ -39,7 +39,7 @@ var main_app = new Vue({
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             drawSatShape(ctx, getScreenPixel(cnvs, this.satellite.current_state[0][0], this.satellite.current_state[1][0], this.display_data.axis_limit, this.display_data.center), 0, 0.4, '#AAA', sunAngle = 0, transparency = 1)
             drawSatTrajectory(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.satellite.current_state);
-            for (let kk = 1; kk <= 12; kk += 1) {
+            for (let kk = 2; kk <= 24; kk += 2) {
                 drawTargetLimit(cnvs, ctx, this.satellite.current_state,this.scenario_data.roes.delta_v, kk)
             }
         },
@@ -81,7 +81,7 @@ function drawStars(cnvs, ctx) {
     ctx.save();
     ctx.translate(w / 2, h / 2);
     let starR = math.transpose(math.multiply(rotMat, math.transpose(main_app.display_data.stars)));
-    ctx.fillStyle = "rgb(255,255,255)";
+    ctx.fillStyle = "rgba(255,255,255)";
     starR.forEach(star => {
         ctx.fillRect((w > h ? w : h) * star[0], (w > h ? w : h) * star[1], 3 * (star[2] + 0.5), 3 * (star[2] + 0.5));
     });
@@ -202,14 +202,14 @@ function drawSatInfo(ctx, cnvs, limit, center, sat) {
 
 function drawSatTrajectory(ctx, cnvs, limit, center, state) {
     let r, pixelPos;
-    ctx.strokeStyle = 'rgb(255,255,255)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
     ctx.lineWidth = 3;
     let nodes = 40;
     pixelPos = [];
     points = [];
     pixelPos.push(getScreenPixel(cnvs, state[0][0], state[1][0], limit, center, true))
     for (ii = 0; ii < nodes; ii++) {
-        r = math.add(math.multiply(PhiRR(ii*(86164 / 2 / nodes)), state.slice(0, 2)), math.multiply(PhiRV(ii*86164 / 2 / nodes), state.slice(2, 4)));
+        r = math.add(math.multiply(PhiRR(ii*(86164 / 1 / nodes)), state.slice(0, 2)), math.multiply(PhiRV(ii*86164 / 1 / nodes), state.slice(2, 4)));
         pixelPos.push(getScreenPixel(cnvs, r[0][0], r[1][0], limit, center, true))
     }
     drawCurve(ctx, pixelPos, 1);
@@ -440,7 +440,7 @@ function drawTargetLimit(cnvs, ctx, first_state,dV, t) {
     ctx.beginPath();
     // ctx.strokeStyle = 'rgba(255,255,255,0.4)';
     
-    ctx.strokeStyle = 'hsl(' + 30 * t + ', 100%, 50%)';
+    ctx.strokeStyle = 'hsl(' + 15 * t + ', 100%, 50%)';
     for (ii = 0; ii <= 20; ii++) {
         ang = 2 * Math.PI * ii / 20;
         dVcomponents = [[dV * Math.cos(ang)], [dV * Math.sin(ang)]];
