@@ -303,13 +303,6 @@ function drawArrow(ctx, pixelLocation, length = 15, angle = 0, color = 'rgba(255
         [ct, -st],
         [st, ct]
     ];
-    // let arrow = [
-    //     [0, -length *  2 + 10 * length / 60],
-    //     [3, -length *  2 + 12 * length / 60],
-    //     [0, -length *  2],
-    //     [-3, -length * 2 + 12 * length / 60],
-    //     [0, -length *  2 + 10 * length / 60]
-    // ];
     let arrow = [
         [0, -length *  2 + 10 * length / 60],
         [3, -length *  2 + 12 * length / 60],
@@ -445,8 +438,7 @@ function drawTargetLimit(cnvs, ctx, first_state,dV, t) {
     let pRR = PhiRR(t * 3600), pRV = PhiRV(t * 3600);
     ctx.beginPath();
     // ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    
-    ctx.strokeStyle = 'hsl(' + (360 / (main_app.scenario_data.time.end / main_app.scenario_data.time.step)) * t + ', 100%, 50%)';
+    ctx.strokeStyle = 'hsl(' + (360 / (main_app.scenario_data.time.end / main_app.scenario_data.time.step)) * t /main_app.scenario_data.time.step  + ', 100%, 50%)';
     for (ii = 0; ii <= 20; ii++) {
         ang = 2 * Math.PI * ii / 20;
         dVcomponents = [[dV * Math.cos(ang)], [dV * Math.sin(ang)]];

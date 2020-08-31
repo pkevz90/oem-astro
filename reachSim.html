@@ -19,7 +19,7 @@
 <body class="noselect">
     <div id="main-app">
         <div id="input-container">
-            <div>
+            <div class="slider-container">
                 <div>
                     <em>A<sub>e</sub></em>: {{ scenario_data.roes.ae.toFixed(2) }} km
                 </div>
@@ -27,7 +27,7 @@
                     <input id="ae" min="0" max="30"  step="0.01" value="0" type="range" @input="roeChange">
                 </div>
             </div>
-            <div>
+            <div class="slider-container">
                 <div>
                     <em>x<sub>d</sub></em>: {{ scenario_data.roes.xd.toFixed(2) }} km
                 </div>
@@ -35,7 +35,7 @@
                     <input id="xd" min="-30" max="30"  step="0.01" value="0"  type="range" @input="roeChange">
                 </div>
             </div>
-            <div>
+            <div class="slider-container">
                 <div>
                     <em>y<sub>d</sub></em>: {{ scenario_data.roes.yd.toFixed(2) }} km
                 </div>
@@ -43,7 +43,7 @@
                     <input id="yd" min="-30" max="30" step="0.01"  value="0"  type="range" @input="roeChange">
                 </div>
             </div>
-            <div>
+            <div class="slider-container">
                 <div>
                     <em>B</em>:{{ scenario_data.roes.b.toFixed(2) }}<sup>o</sup>
                 </div>
@@ -51,7 +51,7 @@
                     <input id="b" min="0" max="360" step="0.01"  value="0"  type="range" @input="roeChange">
                 </div>
             </div>
-            <div>
+            <div class="slider-container">
                 <div>
                     <em>Delta-V</em>: {{ (scenario_data.roes.delta_v * 1000).toFixed(2) }} m/s
                 </div>

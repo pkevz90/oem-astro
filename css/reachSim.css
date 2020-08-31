@@ -45,8 +45,16 @@ body, html {
     left: 1%;
 }
 
-#number-container input {
-    width: 6%;
+.slider-container div input {
+    width: 100%;
     background-color: black;
     color: white;
+    
+}
+
+.slider-container {
+    width: 18%;
+}
+.slider-container div {
+    width: 100%;
 }
