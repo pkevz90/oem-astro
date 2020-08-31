@@ -34,4 +34,6 @@ body, html {
 #input-container div {
     font-size: 2vw;
     text-align: center;
+    padding-bottom: 6%;
+    padding-top: 1%;
 }
