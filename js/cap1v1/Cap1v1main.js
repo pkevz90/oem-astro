@@ -180,7 +180,7 @@ function createGraph() {
 					drawArrow(ctx, pixelX, pixelY, app.axisLimits / 3, [positionX, positionY], sunInit + n * app.currentTime * 3600);
 					
 					// Draw Burn if applicable
-					if (app.tactic !== '') {
+					if (app.tactic !== '' && app.chosenWaypoint !== undefined) {
 						positionX = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].x;
 						positionY = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].y;
 						let burnX = app.players[app.chosenWaypoint[1]].burns[app.chosenWaypoint[0]][0];

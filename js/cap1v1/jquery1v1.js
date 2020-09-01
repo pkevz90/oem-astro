@@ -1,4 +1,4 @@
-var teamNum, $turn = $('.selectable:first span');;
+var teamNum, $turn = $('.selectable:first span'), down = false;
 createGraph();
 document.getElementById('ChartCnvs').addEventListener('touchstart',event=>{
     console.log(event);
@@ -25,21 +25,27 @@ $('canvas').on('mousewheel',event => {
 $('canvas').mousedown(event => {
     let X = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
     let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
-    
-    if (checkClose(X, Y)) {
-        app.tactic = 'burn';
-        app.players[app.chosenWaypoint[1]].burns.splice(app.chosenWaypoint[0],1, [0, 0]);
-        app.players[app.chosenWaypoint[1]].calculateTrajecory();
-        calcData(app.currentTime);
-        globalChartRef.update();
-        setTimeout(() => {
-            if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false) && app.chosenWaypoint !== undefined) {
-                startTarget();
-                $('canvas').css('cursor','crosshair');
+    down = true;
+    if (app.tactic === '') {
+        if (checkClose(X, Y)) {
+            if (!down) {
+                return;
             }
-        },250)
-        return;
+            app.tactic = 'burn';
+            app.players[app.chosenWaypoint[1]].burns.splice(app.chosenWaypoint[0],1, [0, 0]);
+            app.players[app.chosenWaypoint[1]].calculateTrajecory();
+            calcData(app.currentTime);
+            globalChartRef.update();
+            setTimeout(() => {
+                if (checkClose(app.mouseCoor.x, app.mouseCoor.y, false) && app.chosenWaypoint !== undefined) {
+                    startTarget();
+                    $('canvas').css('cursor','crosshair');
+                }
+            },250)
+            return;
+        }
     }
+    
     app.appDrag = [[event.offsetX,event.offsetY],
                    [...app.axisCenter]];
     $('canvas').css('cursor','grabbing')
@@ -66,32 +72,40 @@ $('canvas').mousemove(event => {
     setAxisZoomPos();
 })
 $('canvas').mouseup(() => {
-    switch(app.tactic) {
-        case 'burn':
-            burnCalc(0,0,true);
-            break;
-        case 'target':
-            targetCalc(0, 0, true);
-            let turn = Number($turn.text());
-            let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
-            let ii = 0;
-            let inter = setInterval(() => {
-                app.currentTime += timeDelta / 11;
-                app.currentTime = app.currentTime < 0 ? 0 : app.currentTime;
-                $('.nav-element input')[0].value = app.currentTime;
-                $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
-                calcData(app.currentTime);
-                if (ii === 10) {
-                    clearInterval(inter);
-                }
-                ii++;
-            }, 15);
-            break;
-        default:
-            break;
-    }
-    app.appDrag = undefined;
-    $('canvas').css('cursor','grab')
+    down = false;
+    setTimeout(() => {
+        if (down) {
+            console.log('saved');
+            return;
+        }
+        switch(app.tactic) {
+            case 'burn':
+                burnCalc(0,0,true);
+                break;
+            case 'target':
+                targetCalc(0, 0, true);
+                let turn = Number($turn.text());
+                let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
+                let ii = 0;
+                let inter = setInterval(() => {
+                    app.currentTime += timeDelta / 11;
+                    app.currentTime = app.currentTime < 0 ? 0 : app.currentTime;
+                    $('.nav-element input')[0].value = app.currentTime;
+                    $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
+                    calcData(app.currentTime);
+                    if (ii === 10) {
+                        clearInterval(inter);
+                    }
+                    ii++;
+                }, 15);
+                break;
+            default:
+                break;
+        }
+        app.appDrag = undefined;
+        $('canvas').css('cursor','grab')
+    },50)
+    
 })
 $('.nav-element-right:first').on('click', () => {
     $('.instruction-screen').slideToggle(250);
