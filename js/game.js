@@ -92,7 +92,17 @@ function resize(){
     wdraw = math.min([math.max([w,750]),1000])
     h = $(window).height();
     game.scale.resize(w,h);
-    orig.clear(); //This seems wrong, but it may be right
+
+    keyspic.x = .8*w;
+    keyspic.y = .85*h;
+    spacebarpic.x = .8*w;
+    spacebarpic.y = .85*h+keyspic.height*keyspic.scale;
+    keystext.x = .8*w+keyspic.width*keyspic.scale*.5+20;
+    keystext.y = .85*h - keystext.height/2
+    spacetext.x = .8*w+spacebarpic.width*spacebarpic.scale*.5+20;
+    spacetext.y = spacebarpic.y - spacetext.height/2
+
+    orig.clear();
     orig.fillStyle(0xFFFFFF,1);
     orig.fillCircle(i2x(0),r2y(0),6);
     orig.lineStyle(3, 0xFFFFFF, 1);
@@ -133,6 +143,8 @@ function preload ()
     this.load.image('red-invisible', fold.concat('red-invisible.png'));
     this.load.image('blue-invisible', fold.concat('blue-invisible.png'));
     this.load.image('flame',fold.concat('flame.png'))
+    this.load.image('keys',fold.concat('arrowkeys.png'))
+    this.load.image('spacebar',fold.concat('spacebar.png'))
 }
 
 function create ()
@@ -149,6 +161,15 @@ function create ()
     }
     //Graphics in order of lyers bottom to top
     warnRegion = this.add.graphics();
+    keyspic = this.add.image(.8*w,.85*h,'keys')
+    keyspic.setScale(.3)
+    spacebarpic = this.add.image(.8*w,.85*h+keyspic.height*keyspic.scale,'spacebar')
+    spacebarpic.setScale(.3)
+    keystext = this.add.text(.8*w+keyspic.width*keyspic.scale*.5+20,.85*h,"Choose ∆V\nDirection")
+    keystext.y = keystext.y - keystext.height/2
+    spacetext = this.add.text(.8*w+spacebarpic.width*spacebarpic.scale*.5+20,spacebarpic.y,"Execute Burn")
+    spacetext.y = spacetext.y - spacetext.height/2
+
     orig = this.add.graphics();  
     p2FutrTraj = this.add.graphics();
     p1FutrTraj = this.add.graphics();

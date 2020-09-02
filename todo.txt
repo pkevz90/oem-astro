@@ -26,3 +26,11 @@
     -- More precise physics?
         --- Maybe just update to more precise physics once user stops changing burn
     -- Continue to optimize
+
+Game
+    -- Fuzzy image updates on score
+    -- Server Lobby
+    -- Powerups
+    -- Choose speed on lobby
+    -- Royalty free music
+    -- Help menu
