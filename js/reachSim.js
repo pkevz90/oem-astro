@@ -48,6 +48,7 @@ var main_app = new Vue({
             for (let kk = this.scenario_data.time.start; kk <= this.scenario_data.time.end; kk += step) {
                 drawTargetLimit(cnvs, ctx, this.satellite.current_state,this.scenario_data.roes.delta_v, kk)
             }
+            drawDirectionSet(cnvs, ctx);
         },
         roeChange: function(event) {
             let type = event.target.id;
@@ -205,7 +206,6 @@ function drawSatInfo(ctx, cnvs, limit, center, sat) {
         tBurns: main_app.turn_length
     });
 }
-
 
 function drawSatTrajectory(ctx, cnvs, limit, center, state) {
     let r, pixelPos;
@@ -453,4 +453,18 @@ function drawTargetLimit(cnvs, ctx, first_state,dV, t) {
 function hrsToTime(hrs) {
     hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
     return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
+}
+
+function drawDirectionSet(cnvs, ctx) {
+    let size = cnvs.width * 0.1;
+    ctx.strokeStyle = 'white';
+    let center = [cnvs.width - cnvs.width * 0.06, cnvs.height - cnvs.width * 0.06];
+    ctx.beginPath();
+    ctx.arc(center[0], center[1], size / 2, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5';
+    ctx.beginPath();
+    ctx.arc(center[0], center[1], size / 4, 0, 2 * Math.PI);
+    ctx.stroke();
+
 }

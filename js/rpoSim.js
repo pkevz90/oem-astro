@@ -92,7 +92,8 @@ var main_app = new Vue({
             target_display: 1,
             mousedown_location: null,
             mousemove_location: null,
-            tactic_data: ['none']
+            tactic_data: ['none'],
+            turn: 0
         },
         display_data: {
             center: [0, 0],
@@ -254,10 +255,10 @@ function drawAxes(cnvs, ctx, center, limit) {
     ctx.stroke();
     // Draw Markers
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.textAlign = "center";
     ctx.font = "15px Arial";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 0.25;
     let point = axis_center[0] + 0, ii = 0;
     if (axis_center[1] < 0) {
         otherPoint = 0;
@@ -270,8 +271,10 @@ function drawAxes(cnvs, ctx, center, limit) {
     while (point > 0) {
         // point -= 7.359 / limit / 2 * width;
         point -= 10 / limit / 2 * width;
-        ctx.moveTo(point, otherPoint - height / 70);
-        ctx.lineTo(point, otherPoint + height / 70);
+        // ctx.moveTo(point, otherPoint - height / 70);
+        // ctx.lineTo(point, otherPoint + height / 70);
+        ctx.moveTo(point, 0);
+        ctx.lineTo(point, height);
         ii++;
         ctx.fillText(ii*5,point, otherPoint + height / 30);
     }
@@ -280,8 +283,10 @@ function drawAxes(cnvs, ctx, center, limit) {
     while (point < width) {
         // point += 7.359 / limit / 2 * width;
         point += 10 / limit / 2 * width;
-        ctx.moveTo(point, otherPoint - height / 70);
-        ctx.lineTo(point, otherPoint + height / 70);
+        // ctx.moveTo(point, otherPoint - height / 70);
+        // ctx.lineTo(point, otherPoint + height / 70);
+        ctx.moveTo(point, 0);
+        ctx.lineTo(point, height);
         ii++;
         ctx.fillText(-ii*10,point, otherPoint + height / 30);
         // ctx.fillText(-ii*0.01,point, otherPoint + height / 30);
@@ -297,16 +302,20 @@ function drawAxes(cnvs, ctx, center, limit) {
     }
     while (point < height) {
         point += 10 / limit / 2 / yxRatio * height;
-        ctx.moveTo(otherPoint - height / 70, point);
-        ctx.lineTo(otherPoint + height / 70, point);
+        // ctx.moveTo(otherPoint - height / 70, point);
+        // ctx.lineTo(otherPoint + height / 70, point);
+        ctx.moveTo(0, point);
+        ctx.lineTo(width, point);
         ii++
         ctx.fillText(-ii*10,otherPoint - height / 30, point+5);
     }
     point = axis_center[1] + 0; ii = 0;
     while (point > 0) {
         point -= 10 / limit / 2 / yxRatio * height;
-        ctx.moveTo(otherPoint - height / 70, point);
-        ctx.lineTo(otherPoint + height / 70, point);
+        // ctx.moveTo(otherPoint - height / 70, point);
+        // ctx.lineTo(otherPoint + height / 70, point);
+        ctx.moveTo(0, point);
+        ctx.lineTo(width, point);
         ii++
         ctx.fillText(ii*10,otherPoint - height / 30, point+5);
     }
@@ -579,11 +588,8 @@ for (player in main_app.players) {
 function animation(time) {
     // console.time()
     main_app.updateScreen();
-    if (main_app.scenario_data.game_started && main_app.scenario_data.game_time < main_app.scenario_data.scenario_length) {
-        main_app.scenario_data.game_time += 0.25/3600;
-        main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
-    }
-    // console.timeEnd();
+    main_app.scenario_data.game_time = main_app.scenario_data.turn * main_app.scenario_data.scenario_length / main_app.scenario_data.burns_per_player;
+    main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
     window.requestAnimationFrame(animation);
 }
 
