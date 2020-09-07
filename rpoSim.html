@@ -19,18 +19,7 @@
 <body class="noselect">
     <div id="main-app">
         <div id="data-container">
-            <div class="inner-data-container">
-                Blue
-            </div>
-            <div class="inner-data-container">
-                Red
-            </div>
-            <div class="inner-data-container">
-                Green
-            </div>
-            <div class="inner-data-container">
-                Gray
-            </div>
+            <player-data :burntime="turn_length" :inplayer="players[player]" v-for="player in active_players"></player-data>
         </div>
         <div id="game-data-container">
             <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (0.00 km)</div>
@@ -41,7 +30,7 @@
             <canvas id="main-canvas" width="100%" height="100%"></canvas>
         </div>
         <div id="time-slider">
-            <input type="range" step="0.001" min="0" :max="scenario_data.scenario_length" value="0" class="slider" class="slider" @input="slider_change">
+            <input type="range" step="0.0001" min="0" :max="scenario_data.scenario_length" value="0" class="slider" class="slider" @input="slider_change" @mousedown="slider_click(false)"  @mouseup="slider_click(true)">
         </div>
         <div id="setup-zone">
             

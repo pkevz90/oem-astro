@@ -1,3 +1,52 @@
+Vue.component('burn-data', {
+    props: ['inburns','inburntime'],
+    data: function() {
+        return {};
+    },
+    methods: {
+        hrsToTime: function(hrs) {
+        hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
+        return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
+    }
+
+    },
+    template: '<div style="width: 100%; display: none">\
+                <table> \
+                <tr>  \
+                    <th>Time</th> \
+                    <th>Radial</th> \
+                    <th>In-Track</th> \
+                </tr> \
+                <tr v-for="(burn,index) in inburns.burns"> \
+                    <td>{{hrsToTime(index * inburntime)}}</td> \
+                    <td>{{ burn[0].toFixed(3) }} m/s</td> \
+                    <td>{{ burn[1].toFixed(3) }} m/s</td> \
+                </tr> \
+                </table> \
+               </div>'
+})
+
+Vue.component('player-data', {
+    props: ['inplayer','burntime'],
+    data: function () {
+        return {};
+    },
+    template: '<div style="width: 25%" :style="{color: inplayer.color}"> \
+                <div  class="inner-data-container" @mouseover="mousedover" @mouseleave="mousedleft"> \
+                    {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }}\
+                </div> \
+                <burn-data :inburns="inplayer" :inburntime="burntime"></burn-data> \
+               </div>',
+    methods: {
+        mousedover: function(event) {
+            $(event.target).next().slideDown(150);
+        },
+        mousedleft: function(event) {
+            $(event.target).next().slideUp(100);
+        }
+    }
+})
+
 var main_app = new Vue({
     el: "#main-app",
     data: {
@@ -101,12 +150,22 @@ var main_app = new Vue({
             width: null,
             height: null,
             drag_data: null,
-            stars: math.random([100,3], -0.5, 0.5)
+            stars: math.random([100,3], -0.5, 0.5),
+            update_time: true
         }
     },
     computed: {
         turn_length: function () {
             return this.scenario_data.scenario_length / this.scenario_data.burns_per_player;
+        },
+        active_players: function() {
+            let players = [];
+            for (player in this.players) {
+                if (this.players[player].exist) {
+                    players.push(this.players[player].name);
+                }
+            }
+            return players;
         }
     },
     methods: {
@@ -129,7 +188,6 @@ var main_app = new Vue({
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time,sat); 
-                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].display_state[0], this.players[sat].display_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.2, this.players[sat].color,0,0.5);
                     drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.2, this.players[sat].color);
                 }
             }
@@ -151,8 +209,11 @@ var main_app = new Vue({
             calcData(this.scenario_data.sat_data.origin, this.scenario_data.sat_data.target)
         },
         slider_change: function(event) {
-            this.scenario_data.display_time = event.target.value;
-            this.scenario_data.display_time_string = hrsToTime(event.target.value);
+            this.scenario_data.game_time = event.target.value;
+            this.scenario_data.game_time_string = hrsToTime(event.target.value);
+        },
+        slider_click: function(event) {
+            this.display_data.update_time = event;
         }
     },
     watch: {
@@ -522,7 +583,6 @@ function setMouseCallbacks() {
                 main_app.players[main_app.scenario_data.selected_burn_point.satellite].burns.splice(ii,1,[0,0]);
             }
             main_app.scenario_data.tactic_data = ['burn',math.min(main_app.players[main_app.scenario_data.selected_burn_point.satellite].scenario_fuel - total_burn, main_app.players[main_app.scenario_data.selected_burn_point.satellite].turn_fuel)]
-            console.log(main_app.scenario_data.tactic_data[1]);
             setTimeout(()=>{
                 let newPoint = getScreenPoint(main_app.scenario_data.mousemove_location[0], main_app.scenario_data.mousemove_location[1], main_app.display_data.axis_limit, main_app.display_data.center);
                 if (math.norm(math.subtract(location_point, newPoint)) < main_app.display_data.axis_limit / 50) {
@@ -588,8 +648,25 @@ for (player in main_app.players) {
 function animation(time) {
     // console.time()
     main_app.updateScreen();
-    main_app.scenario_data.game_time = main_app.scenario_data.turn * main_app.scenario_data.scenario_length / main_app.scenario_data.burns_per_player;
-    main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
+    if (main_app.display_data.update_time) {
+        let expected_time;
+        if (main_app.scenario_data.tactic_data[0] === 'target') {
+            expected_time = main_app.scenario_data.selected_burn_point.point * main_app.turn_length + main_app.scenario_data.tactic_data[1];
+        }
+        else {
+            expected_time = main_app.scenario_data.turn * main_app.turn_length;
+        }
+        let game_time = Number(main_app.scenario_data.game_time);
+        if (Math.abs(expected_time - game_time) > 1/10) {
+            game_time += Math.sign(expected_time - game_time)*1/10;
+        }
+        else {
+            game_time = expected_time;
+        }
+        $('#time-slider input').val(game_time);
+        main_app.scenario_data.game_time = game_time;
+        main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);  
+    }
     window.requestAnimationFrame(animation);
 }
 
