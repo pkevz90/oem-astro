@@ -19,32 +19,25 @@
 <body class="noselect">
     <div id="main-app">
         <div id="data-container">
-            <div class="inner-data-container">
-                Blue
-            </div>
-            <div class="inner-data-container">
-                Red
-            </div>
-            <div class="inner-data-container">
-                Green
-            </div>
-            <div class="inner-data-container">
-                Gray
-            </div>
+            <player-data :burntime="turn_length" :inplayer="players[player]" v-for="player in active_players"></player-data>
         </div>
         <div id="game-data-container">
-            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (0.00 km)</div>
-            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup> (0.00<sup>o</sup>)</div>
-            <div>{{ scenario_data.game_time_string }} ({{ scenario_data.display_time_string }})</div>
+            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km </div>
+            <!-- <div>POCA: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (00:00)</div> -->
+            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup></div>
+            <div>Time: +{{ scenario_data.game_time_string }} </div>
         </div>
         <div style="width:100%; height:100%;">
             <canvas id="main-canvas" width="100%" height="100%"></canvas>
         </div>
         <div id="time-slider">
-            <input type="range" step="0.001" min="0" :max="scenario_data.scenario_length" value="0" class="slider" class="slider" @input="slider_change">
+            <input type="range" step="0.0001" min="0" :max="scenario_data.scenario_length" value="0" class="slider" class="slider" @input="slider_change" @mousedown="slider_click(false)"  @mouseup="slider_click(true)">
         </div>
         <div id="setup-zone">
             
+        </div>
+        <div id="turn-button" @click="scenario_data.turn++">
+            Turn {{ scenario_data.turn }}
         </div>
     </div>
     <script src="./js/rpoSim.js"></script>

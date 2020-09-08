@@ -1,3 +1,78 @@
+Vue.component('state-setup', {
+    props: ['initstate','sat'],
+    methods: {
+        changed: function(event) {
+            let newState = [...this.initstate];
+            newState[Number(event.target.id)] = Number(event.target.value);
+            main_app.players[this.sat].initial_state = newState;
+        }
+    },
+    template: '<div> \
+                <div class="setup-input-div">  \
+                    A<sub>e</sub> <input type="number" id="0" :value="initstate[0]" @input="changed">\
+                </div> \
+                <div class="setup-input-div">  \
+                    X<sub>d</sub> <input type="number" id="1" :value="initstate[1]" @input="changed">\
+                </div> \
+                <div class="setup-input-div">  \
+                    Y<sub>d</sub> <input type="number" id="2" :value="initstate[2]" @input="changed">\
+                </div> \
+                <div class="setup-input-div">  \
+                    B <input id="3" type="number" step="1" :value="initstate[3]" @input="changed">\
+                </div> \
+              </div>'
+})
+
+Vue.component('burn-data', {
+    props: ['inburns','inburntime'],
+    data: function() {
+        return {};
+    },
+    methods: {
+        hrsToTime: function(hrs) {
+        hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
+        return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
+    }
+
+    },
+    template: '<div style="width: 100%; display: none">\
+                <table> \
+                <tr>  \
+                    <th>Time</th> \
+                    <th>Radial</th> \
+                    <th>In-Track</th> \
+                </tr> \
+                <tr v-for="(burn,index) in inburns.burns"> \
+                    <td>{{hrsToTime(index * inburntime)}}</td> \
+                    <td>{{ burn[0].toFixed(3) }} m/s</td> \
+                    <td>{{ burn[1].toFixed(3) }} m/s</td> \
+                </tr> \
+                </table> \
+               </div>'
+})
+
+Vue.component('player-data', {
+    props: ['inplayer','burntime'],
+    data: function () {
+        return {};
+    },
+    template: '<div style="width: 25%" :style="{color: inplayer.color}"> \
+                <div  class="inner-data-container" @mouseover="mousedover" @mouseleave="mousedleft"> \
+                    {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }}\
+                </div> \
+                <burn-data :inburns="inplayer" :inburntime="burntime"></burn-data> \
+                <state-setup :initstate="inplayer.initial_state" :sat="inplayer.name"></state-setup> \
+               </div>',
+    methods: {
+        mousedover: function(event) {
+            $(event.target).next().slideDown(150);
+        },
+        mousedleft: function(event) {
+            $(event.target).next().slideUp(100);
+        }
+    }
+})
+
 var main_app = new Vue({
     el: "#main-app",
     data: {
@@ -6,9 +81,8 @@ var main_app = new Vue({
                 exist: true,
                 name: 'blue',
                 color: 'rgba(100,150,255,1)',
-                initial_state: [0, 30, 0, 0],
-                display_state: [0, 30, 0, 0],
-                current_state: [0, 30, 0, 0],
+                initial_state: [20,20, 0, 0],
+                current_state: null,
                 burns: [],
                 burn_points: [],
                 scenario_fuel: 6,
@@ -22,9 +96,8 @@ var main_app = new Vue({
                 exist: true,
                 name: 'red',
                 color: 'rgba(255,150,100,1)',
-                initial_state: [0, -30, 0, 0],
-                display_state: [0, -30, 0, 0],
-                current_state: [0, -30, 0, 0],
+                initial_state: [30, 0, 0, 0],
+                current_state: null,
                 burns: [],
                 burn_points: [],
                 scenario_fuel: 6,
@@ -38,9 +111,8 @@ var main_app = new Vue({
                 exist: false,
                 name: 'green',
                 color: 'rgba(120,255,120,1)',
-                initial_state: [30, -30, 0, 0],
-                display_state: [30, -30, 0, 0],
-                current_state: [30, -30, 0, 0],
+                initial_state: [30, 30, 0, 0],
+                current_state: null,
                 burns: [],
                 burn_points: [],
                 scenario_fuel: 6,
@@ -54,9 +126,8 @@ var main_app = new Vue({
                 exist: false,
                 name: 'gray',
                 color: 'rgba(150,150,150,1)',
-                initial_state: [-30, -30, 0, 0],
-                display_state: [-30, -30, 0, 0],
-                current_state: [-30, -30, 0, 0],
+                initial_state: [30, -30, 0, 0],
+                current_state: null,
                 burns: [],
                 burn_points: [],
                 scenario_fuel: 6,
@@ -87,12 +158,11 @@ var main_app = new Vue({
             game_started: false,
             game_time: 0,
             game_time_string: '00:00',
-            display_time: 0,
-            display_time_string: '00:00',
             target_display: 1,
             mousedown_location: null,
             mousemove_location: null,
-            tactic_data: ['none']
+            tactic_data: ['none'],
+            turn: 0
         },
         display_data: {
             center: [0, 0],
@@ -100,12 +170,22 @@ var main_app = new Vue({
             width: null,
             height: null,
             drag_data: null,
-            stars: math.random([100,3], -0.5, 0.5)
+            stars: math.random([100,3], -0.5, 0.5),
+            update_time: true
         }
     },
     computed: {
         turn_length: function () {
             return this.scenario_data.scenario_length / this.scenario_data.burns_per_player;
+        },
+        active_players: function() {
+            let players = [];
+            for (player in this.players) {
+                if (this.players[player].exist) {
+                    players.push(this.players[player].name);
+                }
+            }
+            return players;
         }
     },
     methods: {
@@ -122,14 +202,14 @@ var main_app = new Vue({
 
             for (sat in this.players) {
                 if (this.players[sat].exist) {
+                    this.players[sat].burn_points = calculateBurnPoints('blue', this.players[sat].burns, this.players[sat].initial_state);
                     drawSatInfo(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.players[sat]);
                 }
             }
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time,sat); 
-                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].display_state[0], this.players[sat].display_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.2, this.players[sat].color,0,0.5);
-                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.2, this.players[sat].color);
+                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.225, this.players[sat].color);
                 }
             }
             // Draw burn if point is focused upon
@@ -150,23 +230,14 @@ var main_app = new Vue({
             calcData(this.scenario_data.sat_data.origin, this.scenario_data.sat_data.target)
         },
         slider_change: function(event) {
-            this.scenario_data.display_time = event.target.value;
-            this.scenario_data.display_time_string = hrsToTime(event.target.value);
+            this.scenario_data.game_time = event.target.value;
+            this.scenario_data.game_time_string = hrsToTime(event.target.value);
+        },
+        slider_click: function(event) {
+            this.display_data.update_time = event;
         }
     },
     watch: {
-        'players.blue.burns': function () {
-            this.players.blue.burn_points = calculateBurnPoints('blue', this.players.blue.burns, this.players.blue.initial_state);
-        },
-        'players.red.burns': function () {
-            this.players.red.burn_points = calculateBurnPoints('red', this.players.red.burns, this.players.red.initial_state);
-        },
-        'players.green.burns': function () {
-            this.players.green.burn_points = calculateBurnPoints('green', this.players.green.burns, this.players.green.initial_state);
-        },
-        'players.gray.burns': function () {
-            this.players.gray.burn_points = calculateBurnPoints('gray', this.players.gray.burns, this.players.gray.initial_state);
-        },
         'scenario_data.display_time': function () {
             for (player in this.players) {
                 this.players[player].display_state = calcCurrentPoint(this.scenario_data.display_time,player);
@@ -273,7 +344,7 @@ function drawAxes(cnvs, ctx, center, limit) {
         ctx.moveTo(point, otherPoint - height / 70);
         ctx.lineTo(point, otherPoint + height / 70);
         ii++;
-        ctx.fillText(ii*5,point, otherPoint + height / 30);
+        ctx.fillText(ii*10,point, otherPoint + height / 30);
     }
     ii = 0;
     point = axis_center[0] + 0;
@@ -324,12 +395,12 @@ function drawSatInfo(ctx, cnvs, limit, center, sat) {
 }
 
 function calculateBurnPoints(sat, burns, initial_state) {
-
+    let n = 2 * Math.PI / 86164;
     let state = [
-        [initial_state[0]],
-        [initial_state[1]],
-        [initial_state[2]],
-        [initial_state[3]]
+        [-initial_state[0] / 2 * Math.cos(initial_state[3] * Math.PI / 180) + initial_state[1]],
+        [initial_state[0] * Math.sin(initial_state[3] * Math.PI / 180) + initial_state[2]],
+        [initial_state[0] * n / 2 * Math.sin(initial_state[3] * Math.PI / 180)],
+        [initial_state[0] * n * Math.cos(initial_state[3] * Math.PI / 180) - n * initial_state[1] * 3/2],
     ];
     state[2][0] += burns[0][0] / 1000;
     state[3][0] += burns[0][1] / 1000;
@@ -513,7 +584,6 @@ function setMouseCallbacks() {
                 main_app.players[main_app.scenario_data.selected_burn_point.satellite].burns.splice(ii,1,[0,0]);
             }
             main_app.scenario_data.tactic_data = ['burn',math.min(main_app.players[main_app.scenario_data.selected_burn_point.satellite].scenario_fuel - total_burn, main_app.players[main_app.scenario_data.selected_burn_point.satellite].turn_fuel)]
-            console.log(main_app.scenario_data.tactic_data[1]);
             setTimeout(()=>{
                 let newPoint = getScreenPoint(main_app.scenario_data.mousemove_location[0], main_app.scenario_data.mousemove_location[1], main_app.display_data.axis_limit, main_app.display_data.center);
                 if (math.norm(math.subtract(location_point, newPoint)) < main_app.display_data.axis_limit / 50) {
@@ -579,11 +649,25 @@ for (player in main_app.players) {
 function animation(time) {
     // console.time()
     main_app.updateScreen();
-    if (main_app.scenario_data.game_started && main_app.scenario_data.game_time < main_app.scenario_data.scenario_length) {
-        main_app.scenario_data.game_time += 0.25/3600;
-        main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
+    if (main_app.display_data.update_time) {
+        let expected_time;
+        if (main_app.scenario_data.tactic_data[0] === 'target') {
+            expected_time = main_app.scenario_data.selected_burn_point.point * main_app.turn_length + main_app.scenario_data.tactic_data[1];
+        }
+        else {
+            expected_time = main_app.scenario_data.turn * main_app.turn_length;
+        }
+        let game_time = Number(main_app.scenario_data.game_time);
+        if (Math.abs(expected_time - game_time) > 1/10) {
+            game_time += Math.sign(expected_time - game_time)*1/10;
+        }
+        else {
+            game_time = expected_time;
+        }
+        $('#time-slider input').val(game_time);
+        main_app.scenario_data.game_time = game_time;
+        main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);  
     }
-    // console.timeEnd();
     window.requestAnimationFrame(animation);
 }
 
