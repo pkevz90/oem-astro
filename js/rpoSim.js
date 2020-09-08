@@ -1,17 +1,25 @@
 Vue.component('state-setup', {
-    props: ['initstate'],
+    props: ['initstate','sat'],
+    methods: {
+        changed: function(event) {
+            console.log(this.sat);
+            let newState = [...this.initstate];
+            newState[Number(event.target.id)] = Number(event.target.value);
+            main_app.players[this.sat].initial_state = newState;
+        }
+    },
     template: '<div> \
                 <div class="setup-input-div">  \
-                    A<sub>e</sub> <input :value="initstate[0]">\
+                    A<sub>e</sub> <input id="0" :value="initstate[0]" @input="changed">\
                 </div> \
                 <div class="setup-input-div">  \
-                    X<sub>d</sub> <input :value="initstate[1]">\
+                    X<sub>d</sub> <input id="1" :value="initstate[1]">\
                 </div> \
                 <div class="setup-input-div">  \
-                    Y<sub>d</sub> <input :value="initstate[2]">\
+                    Y<sub>d</sub> <input id="2" :value="initstate[2]">\
                 </div> \
                 <div class="setup-input-div">  \
-                    B <input :value="initstate[3]">\
+                    B <input id="3" :value="initstate[3]">\
                 </div> \
               </div>'
 })
@@ -54,7 +62,7 @@ Vue.component('player-data', {
                     {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }}\
                 </div> \
                 <burn-data :inburns="inplayer" :inburntime="burntime"></burn-data> \
-                <state-setup :initstate="inplayer.initial_state"></state-setup> \
+                <state-setup :initstate="inplayer.initial_state" :sat="inplayer.name"></state-setup> \
                </div>',
     methods: {
         mousedover: function(event) {
