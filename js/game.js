@@ -127,8 +127,8 @@ function resize(){
         backgroundImg.displayHeight=h;
         backgroundImg.scaleX = backgroundImg.scaleY;
     }
-    percText.setFontSize((.02*wdraw).toString().concat('px'))
-    p2PercText.setFontSize((.02*wdraw).toString().concat('px'))
+    percText.setFontSize((.018*wdraw).toString().concat('px'))
+    p2PercText.setFontSize((.018*wdraw).toString().concat('px'))
     timeIndicText.setFontSize((.02*wdraw).toString().concat('px'))
     winText.setFontSize((.035*wdraw).toString().concat('px'))
     wdraw = 1000
@@ -214,12 +214,12 @@ function create ()
     percText = this.add.text(w/6,.625*h,"")
     percText.setAlign('center')
     percText.setX(percText.x-percText.width/2)
-    percText.setFontSize((.02*wdraw).toString().concat('px'))
+    percText.setFontSize((.018*wdraw).toString().concat('px'))
     p2PercIndic = this.add.graphics();
     p2PercText = this.add.text(5*w/6,.625*h,"")
     p2PercText.setAlign('center')
     p2PercText.setX(p2PercText.x-p2PercText.width/2)
-    p2PercText.setFontSize((.02*wdraw).toString().concat('px'))
+    p2PercText.setFontSize((.018*wdraw).toString().concat('px'))
     timeIndicText = this.add.text(w/6,.8*h,'');
     timeIndicText.setAlign('center')
     timeIndicText.setFontSize((.02*wdraw).toString().concat('px'))
@@ -509,21 +509,20 @@ if (gameStart && !gameDone){
     percIndic.stroke();
     percText.setText("You are \n".concat(math.min(math.round(p1Perc,0),100).toString().concat('% Done Researching')))
     percText.setX(w/6-percText.width/2)
-    percText.setY(.8*h-.2*wdraw)
+    percText.setY(.8*h-.175*wdraw)
+
 
     p2PercIndic.clear();
-    p2PercIndic.beginPath();
-    p2PercIndic.lineStyle(.025*h,p1LightCol,.2);
-    p2PercIndic.arc(5*w/6,.8*h,.075*wdraw,-Math.PI/2,3*Math.PI/2);
-    p2PercIndic.closePath();
-    p2PercIndic.stroke();
-    p2PercIndic.beginPath();
-    p2PercIndic.lineStyle(.025*h,p1Col,math.max(math.min(p2Perc/100,1),.5));
-    p2PercIndic.arc(5*w/6,.8*h,.075*wdraw,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(p2Perc/100,1),false)
-    p2PercIndic.stroke();
-    p2PercText.setText("They are \n".concat(math.min(math.round(p2Perc,0),100).toString().concat('% Done Researching')))
-    p2PercText.setX(5*w/6-p2PercText.width/2)
-    p2PercText.setY(.7*h)
+    p2PercIndic.fillStyle(p1LightCol,.5)
+    let indicw=.28*wdraw;
+    p2Perc=math.min(p2Perc,100);
+    p2PercIndic.fillRect(w/6-.5*indicw+(p2Perc/100)*indicw,.925*h,indicw-(p2Perc/100)*indicw,.02*h);
+    p2PercIndic.fill();
+    p2PercIndic.fillStyle(p2LightCol,.5)
+    p2PercIndic.fillRect(w/6-.5*indicw,.925*h,indicw-((100-p2Perc)/100)*indicw,.02*h);
+    p2PercText.setText("Opponent is ".concat(math.min(math.round(p2Perc,0),100).toString().concat('% Done Researching')))
+    p2PercText.setX(w/6-.5*p2PercText.width)
+    p2PercText.setY(.95*h)
 
 
     //Sun Vector

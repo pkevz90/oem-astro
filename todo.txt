@@ -12,9 +12,6 @@
         --- Starlink
             ---- Double Yikes
         --- Different satcom constellations
-    -- Fix axis representations
-    -- Ability to turn off stars
-    -- Add delete functionality (necessary to switch between scenarios)
     -- Merge with RMOE Vis?
 
 - RMOE Vis
@@ -30,7 +27,7 @@
 Game
     -- Fuzzy image updates on score
     -- Server Lobby
+    -- fast mode vs slow mode
     -- Powerups
     -- Choose speed on lobby
     -- Royalty free music
-    -- Help menu

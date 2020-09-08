@@ -57,13 +57,15 @@ function enumerateChannels() {
 }
 enumerateChannels()
 
-window.addEventListener('DOMContentLoaded', (event) => {
+window.addEventListener('DOMContentLoaded', (event) => {mainPrompt()});
+function mainPrompt(){
     swal("What game-mode/color would you like?", {
         buttons: {
             blue: "1 Player - Blue",
             red: "1 Player - Red",
             rednet: "Network - Red",
             bluenet: "Network - Blue",
+            help: "Instructions"
         },
         closeOnClickOutside: false,
     }).then(
@@ -118,7 +120,9 @@ window.addEventListener('DOMContentLoaded', (event) => {
                     }
                 });
                 channel.publish('data',{from:'red',startTime:null,rmoe:{rd: 0, id0: 0, B0: -1.5707963267948966, a: 0.25}, t0: 0,winner:"",winTime:0});
-            }else{
+            }else if(value == 'help'){
+                swal(getHelpText()).then(()=>{mainPrompt()})
+            } else {
                 player = value;
                 gameStart = false;
                 timerStart = true;
@@ -127,7 +131,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
             }
         }
     )
-});
+};
 //examplemsg = {timer=null,rmoe={rd: 0, id0: 0, B0: 0, a: 0},winner="",winTime=0};
 //On choosing a color
     //Establish subscription to other channel
