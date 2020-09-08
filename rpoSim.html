@@ -22,9 +22,10 @@
             <player-data :burntime="turn_length" :inplayer="players[player]" v-for="player in active_players"></player-data>
         </div>
         <div id="game-data-container">
-            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (0.00 km)</div>
-            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup> (0.00<sup>o</sup>)</div>
-            <div>{{ scenario_data.game_time_string }} ({{ scenario_data.display_time_string }})</div>
+            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km </div>
+            <!-- <div>POCA: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (00:00)</div> -->
+            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup></div>
+            <div>Time: +{{ scenario_data.game_time_string }} </div>
         </div>
         <div style="width:100%; height:100%;">
             <canvas id="main-canvas" width="100%" height="100%"></canvas>

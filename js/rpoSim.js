@@ -1,3 +1,21 @@
+Vue.component('state-setup', {
+    props: ['initstate'],
+    template: '<div> \
+                <div class="setup-input-div">  \
+                    A<sub>e</sub> <input :value="initstate[0]">\
+                </div> \
+                <div class="setup-input-div">  \
+                    X<sub>d</sub> <input :value="initstate[1]">\
+                </div> \
+                <div class="setup-input-div">  \
+                    Y<sub>d</sub> <input :value="initstate[2]">\
+                </div> \
+                <div class="setup-input-div">  \
+                    B <input :value="initstate[3]">\
+                </div> \
+              </div>'
+})
+
 Vue.component('burn-data', {
     props: ['inburns','inburntime'],
     data: function() {
@@ -36,6 +54,7 @@ Vue.component('player-data', {
                     {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }}\
                 </div> \
                 <burn-data :inburns="inplayer" :inburntime="burntime"></burn-data> \
+                <state-setup :initstate="inplayer.initial_state"></state-setup> \
                </div>',
     methods: {
         mousedover: function(event) {
@@ -55,9 +74,9 @@ var main_app = new Vue({
                 exist: true,
                 name: 'blue',
                 color: 'rgba(100,150,255,1)',
-                initial_state: [0, 30, 0, 0],
-                display_state: [0, 30, 0, 0],
-                current_state: [0, 30, 0, 0],
+                initial_state: [20,20, 0, 0],
+                display_state: [0, 0, 30, 0],
+                current_state: [0, 0, 30, 0],
                 burns: [],
                 burn_points: [],
                 scenario_fuel: 6,
@@ -71,9 +90,9 @@ var main_app = new Vue({
                 exist: true,
                 name: 'red',
                 color: 'rgba(255,150,100,1)',
-                initial_state: [0, -30, 0, 0],
-                display_state: [0, -30, 0, 0],
-                current_state: [0, -30, 0, 0],
+                initial_state: [30, 0, 0, 0],
+                display_state: [0, 0, -30, 0],
+                current_state: [0, 0, -30, 0],
                 burns: [],
                 burn_points: [],
                 scenario_fuel: 6,
@@ -188,7 +207,7 @@ var main_app = new Vue({
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time,sat); 
-                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.2, this.players[sat].color);
+                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.225, this.players[sat].color);
                 }
             }
             // Draw burn if point is focused upon
@@ -279,11 +298,12 @@ function getScreenPixel(cnvs, rad, it, limit, center, object = false) {
         yxRatio = height / width;
     if (object) {
         return {
-            x: width / 2 + ((center[0] - it) / limit) * width / 2,
-            y: height / 2 + ((center[1] - rad) / limit / yxRatio) * height / 2
+            x: width / 2 - width * (it - center[0] * yxRatio) / limit,
+            y: height / 2 - height * (rad - center[1]*yxRatio) / limit / yxRatio
         }
     }
-    return [width / 2 + ((center[0] - it) / limit) * width / 2, height / 2 + ((center[1] - rad) / limit / yxRatio) * height / 2]
+    return [width / 2 - width * (it - center[0] * yxRatio) / limit, height / 2 - height * (rad - center[1]*yxRatio) / limit / yxRatio];
+    // return [width / 2 + ((center[0] - it) / limit) * width / 2, height / 2 + ((center[1] - rad) / limit / yxRatio) * height / 2]
 }
 
 function getScreenPoint(x, y, limit, center, object = false) {
@@ -293,11 +313,12 @@ function getScreenPoint(x, y, limit, center, object = false) {
         yxRatio = height / width;
     if (object) {
         return {
-            it: center[0] - (x - width / 2) / (width / 2) * limit,
-            rad: center[1] - (y - height / 2) / (height / 2) * limit * yxRatio,
+            it:(width / 2 - x) * limit * yxRatio / width + center[0] * yxRatio,
+            rad: (height / 2 - y) * limit / height + center[1] * yxRatio,
         }
     }
-    return [center[0] - (x - width / 2) / (width / 2) * limit, center[1] - (y - height / 2) / (height / 2) * limit * yxRatio];
+    return [(width / 2 - x) * limit / width + center[0] * yxRatio, (height / 2 - y) * limit * yxRatio / height + center[1] * yxRatio];
+    // return [center[0] - (x - width / 2) / (width / 2) * limit, center[1] - (y - height / 2) / (height / 2) * limit * yxRatio];
 }
 
 function drawAxes(cnvs, ctx, center, limit) {
@@ -307,7 +328,7 @@ function drawAxes(cnvs, ctx, center, limit) {
         axis_center = [width / 2 + (center[0] / limit) * width / 2, height / 2 + (center[1] / limit / yxRatio) * height / 2];
     // Draw Radial and In-Track Axes
     ctx.strokeStyle = 'rgb(255,255,255)';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(axis_center[0], 0);
     ctx.lineTo(axis_center[0], height);
@@ -331,19 +352,19 @@ function drawAxes(cnvs, ctx, center, limit) {
     }
     while (point > 0) {
         // point -= 7.359 / limit / 2 * width;
-        point -= 10 / limit / 2 * width;
+        point -= 10 / limit  * width;
         // ctx.moveTo(point, otherPoint - height / 70);
         // ctx.lineTo(point, otherPoint + height / 70);
         ctx.moveTo(point, 0);
         ctx.lineTo(point, height);
         ii++;
-        ctx.fillText(ii*5,point, otherPoint + height / 30);
+        ctx.fillText(ii*10,point, otherPoint + height / 30);
     }
     ii = 0;
     point = axis_center[0] + 0;
     while (point < width) {
         // point += 7.359 / limit / 2 * width;
-        point += 10 / limit / 2 * width;
+        point += 10 / limit  * width;
         // ctx.moveTo(point, otherPoint - height / 70);
         // ctx.lineTo(point, otherPoint + height / 70);
         ctx.moveTo(point, 0);
@@ -362,7 +383,7 @@ function drawAxes(cnvs, ctx, center, limit) {
         otherPoint = axis_center[0]
     }
     while (point < height) {
-        point += 10 / limit / 2 / yxRatio * height;
+        point += 10 / limit  / yxRatio * height;
         // ctx.moveTo(otherPoint - height / 70, point);
         // ctx.lineTo(otherPoint + height / 70, point);
         ctx.moveTo(0, point);
@@ -372,7 +393,7 @@ function drawAxes(cnvs, ctx, center, limit) {
     }
     point = axis_center[1] + 0; ii = 0;
     while (point > 0) {
-        point -= 10 / limit / 2 / yxRatio * height;
+        point -= 10 / limit  / yxRatio * height;
         // ctx.moveTo(otherPoint - height / 70, point);
         // ctx.lineTo(otherPoint + height / 70, point);
         ctx.moveTo(0, point);
@@ -394,12 +415,12 @@ function drawSatInfo(ctx, cnvs, limit, center, sat) {
 }
 
 function calculateBurnPoints(sat, burns, initial_state) {
-
+    let n = 2 * Math.PI / 86164;
     let state = [
-        [initial_state[0]],
-        [initial_state[1]],
-        [initial_state[2]],
-        [initial_state[3]]
+        [-initial_state[0] / 2 * Math.cos(initial_state[3]) + initial_state[1]],
+        [initial_state[0] * Math.sin(initial_state[3]) + initial_state[2]],
+        [initial_state[0] * n / 2 * Math.sin(initial_state[3])],
+        [initial_state[0] * n * Math.cos(initial_state[3]) - n * initial_state[1] * 3/2],
     ];
     state[2][0] += burns[0][0] / 1000;
     state[3][0] += burns[0][1] / 1000;

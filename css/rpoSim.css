@@ -40,6 +40,7 @@ body, html {
     height: auto;
     bottom: 5%;
     left: 2%;
+    font-size: 1.8vw;
     font-family: 'Courier New', Courier, monospace;
 }
 
@@ -113,8 +114,20 @@ body, html {
 
   table, tr {
     width: 100%;
+    font-family: 'Courier New', Courier, monospace;
   }
 
   tr {
     text-align: center;
+  }
+
+  .setup-input-div {
+    text-align: center;
+    font-size: 1.5vw;
+  }
+
+  .setup-input-div input {
+    background-color: rgba(0,0,0,0);
+    color: white;
+    width: 10%;
   }
