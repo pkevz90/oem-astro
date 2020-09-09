@@ -9,16 +9,28 @@ Vue.component('state-setup', {
     },
     template: '<div> \
                 <div class="setup-input-div">  \
-                    A<sub>e</sub> <input type="number" id="0" :value="initstate[0]" @input="changed">\
+                    A<sub>e</sub> <input min="0" type="number" id="0" :value="initstate[0]" @input="changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
-                    X<sub>d</sub> <input type="number" id="1" :value="initstate[1]" @input="changed">\
+                    X<sub>d</sub> <input type="number" id="1" :value="initstate[1]" @input="changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
-                    Y<sub>d</sub> <input type="number" id="2" :value="initstate[2]" @input="changed">\
+                    Y<sub>d</sub> <input type="number" id="2" :value="initstate[2]" @input="changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
-                    B <input id="3" type="number" step="1" :value="initstate[3]" @input="changed">\
+                    B <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"><sup>o</sup>\
+                </div> \
+                <div class="setup-input-div">  \
+                    &#916V<sub>tot</sub> <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> m/s\
+                </div> \
+                <div class="setup-input-div">  \
+                    &#916V<sub>turn</sub> <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> m/s\
+                </div> \
+                <div class="setup-input-div">  \
+                   CATS <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"><sup>o</sup>\
+                </div> \
+                <div class="setup-input-div">  \
+                <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> < Range(km) < <input id="3" type="number" step="1" :value="initstate[3]" @input="changed">\
                 </div> \
               </div>'
 })
