@@ -92,7 +92,17 @@ function resize(){
     wdraw = math.min([math.max([w,750]),1000])
     h = $(window).height();
     game.scale.resize(w,h);
-    orig.clear(); //This seems wrong, but it may be right
+
+    keyspic.x = .8*w;
+    keyspic.y = .85*h;
+    spacebarpic.x = .8*w;
+    spacebarpic.y = .85*h+keyspic.height*keyspic.scale;
+    keystext.x = .8*w+keyspic.width*keyspic.scale*.5+20;
+    keystext.y = .85*h - keystext.height/2
+    spacetext.x = .8*w+spacebarpic.width*spacebarpic.scale*.5+20;
+    spacetext.y = spacebarpic.y - spacetext.height/2
+
+    orig.clear();
     orig.fillStyle(0xFFFFFF,1);
     orig.fillCircle(i2x(0),r2y(0),6);
     orig.lineStyle(3, 0xFFFFFF, 1);
@@ -117,8 +127,8 @@ function resize(){
         backgroundImg.displayHeight=h;
         backgroundImg.scaleX = backgroundImg.scaleY;
     }
-    percText.setFontSize((.02*wdraw).toString().concat('px'))
-    p2PercText.setFontSize((.02*wdraw).toString().concat('px'))
+    percText.setFontSize((.018*wdraw).toString().concat('px'))
+    p2PercText.setFontSize((.018*wdraw).toString().concat('px'))
     timeIndicText.setFontSize((.02*wdraw).toString().concat('px'))
     winText.setFontSize((.035*wdraw).toString().concat('px'))
     wdraw = 1000
@@ -133,6 +143,8 @@ function preload ()
     this.load.image('red-invisible', fold.concat('red-invisible.png'));
     this.load.image('blue-invisible', fold.concat('blue-invisible.png'));
     this.load.image('flame',fold.concat('flame.png'))
+    this.load.image('keys',fold.concat('arrowkeys.png'))
+    this.load.image('spacebar',fold.concat('spacebar.png'))
 }
 
 function create ()
@@ -149,6 +161,15 @@ function create ()
     }
     //Graphics in order of lyers bottom to top
     warnRegion = this.add.graphics();
+    keyspic = this.add.image(.8*w,.85*h,'keys')
+    keyspic.setScale(.3)
+    spacebarpic = this.add.image(.8*w,.85*h+keyspic.height*keyspic.scale,'spacebar')
+    spacebarpic.setScale(.3)
+    keystext = this.add.text(.8*w+keyspic.width*keyspic.scale*.5+20,.85*h,"Choose ∆V\nDirection")
+    keystext.y = keystext.y - keystext.height/2
+    spacetext = this.add.text(.8*w+spacebarpic.width*spacebarpic.scale*.5+20,spacebarpic.y,"Execute Burn")
+    spacetext.y = spacetext.y - spacetext.height/2
+
     orig = this.add.graphics();  
     p2FutrTraj = this.add.graphics();
     p1FutrTraj = this.add.graphics();
@@ -193,12 +214,12 @@ function create ()
     percText = this.add.text(w/6,.625*h,"")
     percText.setAlign('center')
     percText.setX(percText.x-percText.width/2)
-    percText.setFontSize((.02*wdraw).toString().concat('px'))
+    percText.setFontSize((.018*wdraw).toString().concat('px'))
     p2PercIndic = this.add.graphics();
     p2PercText = this.add.text(5*w/6,.625*h,"")
     p2PercText.setAlign('center')
     p2PercText.setX(p2PercText.x-p2PercText.width/2)
-    p2PercText.setFontSize((.02*wdraw).toString().concat('px'))
+    p2PercText.setFontSize((.018*wdraw).toString().concat('px'))
     timeIndicText = this.add.text(w/6,.8*h,'');
     timeIndicText.setAlign('center')
     timeIndicText.setFontSize((.02*wdraw).toString().concat('px'))
@@ -488,21 +509,20 @@ if (gameStart && !gameDone){
     percIndic.stroke();
     percText.setText("You are \n".concat(math.min(math.round(p1Perc,0),100).toString().concat('% Done Researching')))
     percText.setX(w/6-percText.width/2)
-    percText.setY(.8*h-.2*wdraw)
+    percText.setY(.8*h-.175*wdraw)
+
 
     p2PercIndic.clear();
-    p2PercIndic.beginPath();
-    p2PercIndic.lineStyle(.025*h,p1LightCol,.2);
-    p2PercIndic.arc(5*w/6,.8*h,.075*wdraw,-Math.PI/2,3*Math.PI/2);
-    p2PercIndic.closePath();
-    p2PercIndic.stroke();
-    p2PercIndic.beginPath();
-    p2PercIndic.lineStyle(.025*h,p1Col,math.max(math.min(p2Perc/100,1),.5));
-    p2PercIndic.arc(5*w/6,.8*h,.075*wdraw,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(p2Perc/100,1),false)
-    p2PercIndic.stroke();
-    p2PercText.setText("They are \n".concat(math.min(math.round(p2Perc,0),100).toString().concat('% Done Researching')))
-    p2PercText.setX(5*w/6-p2PercText.width/2)
-    p2PercText.setY(.7*h)
+    p2PercIndic.fillStyle(p1LightCol,.5)
+    let indicw=.28*wdraw;
+    p2Perc=math.min(p2Perc,100);
+    p2PercIndic.fillRect(w/6-.5*indicw+(p2Perc/100)*indicw,.925*h,indicw-(p2Perc/100)*indicw,.02*h);
+    p2PercIndic.fill();
+    p2PercIndic.fillStyle(p2LightCol,.5)
+    p2PercIndic.fillRect(w/6-.5*indicw,.925*h,indicw-((100-p2Perc)/100)*indicw,.02*h);
+    p2PercText.setText("Opponent is ".concat(math.min(math.round(p2Perc,0),100).toString().concat('% Done Researching')))
+    p2PercText.setX(w/6-.5*p2PercText.width)
+    p2PercText.setY(.95*h)
 
 
     //Sun Vector
