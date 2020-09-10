@@ -21,7 +21,7 @@
         <div id="data-container">
             <player-data :burntime="turn_length" :inplayer="players[player]" v-for="player in active_players"></player-data>
         </div>
-        <div id="game-data-container">
+        <div id="game-data-container" style="display: none;">
             <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km </div>
             <!-- <div>POCA: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (00:00)</div> -->
             <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup></div>
@@ -30,14 +30,29 @@
         <div style="width:100%; height:100%;">
             <canvas id="main-canvas" width="100%" height="100%"></canvas>
         </div>
-        <div id="time-slider">
+        <div id="time-slider" style="display: none;">
             <input type="range" step="0.0001" min="0" :max="scenario_data.scenario_length" value="0" class="slider" class="slider" @input="slider_change" @mousedown="slider_click(false)"  @mouseup="slider_click(true)">
         </div>
-        <div id="setup-zone">
-            
+        <div class="setup-zone">
+            <div>
+                Game Length <input value="30">
+            </div>
+            <div>
+                # Burns <input value="15">
+            </div>
+            <div>
+                Initial Sun <input value="15">
+            </div>
+            <div>
+                Server <input>
+            </div>
+            <div>
+                Scenario <input>
+            </div>
         </div>
-        <div id="turn-button" @click="scenario_data.turn++">
-            Turn {{ scenario_data.turn }}
+        <div id="turn-button" @click="scenario_data.turn++" >
+            <span style="display: none;">Turn {{ scenario_data.turn }}</span>
+            <span>Start</span>
         </div>
     </div>
     <script src="./js/rpoSim.js"></script>
