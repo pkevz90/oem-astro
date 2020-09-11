@@ -126,8 +126,23 @@ body, html {
     font-size: 1.5vw;
   }
 
-  .setup-input-div input {
+  input {
     background-color: rgba(0,0,0,0);
     color: white;
-    width: 10%;
+    width: 15%;
+    font-size: 2vw;
+    text-align: center;
   }
+
+  .setup-zone {
+    position: fixed;
+    bottom: 2%;
+    left: 1%;
+    width: 90%;
+    z-index: 5;
+    display: flex;
+    font-size: 2vw;
+    justify-content: left;
+    color: white;
+  }
+  
