@@ -5,8 +5,6 @@ body, html {
     overflow: hidden;
 }
 
-#main-app {
-}
 
 #main-canvas {
     position: relative;
@@ -126,10 +124,18 @@ body, html {
     font-size: 1.5vw;
   }
 
-  input {
+  .setup-input-div input {
     background-color: rgba(0,0,0,0);
     color: white;
     width: 15%;
+    font-size: 2vw;
+    text-align: center;
+  }
+
+  .setup-zone input {
+    background-color: rgba(0,0,0,0);
+    color: white;
+    width: 30%;
     font-size: 2vw;
     text-align: center;
   }

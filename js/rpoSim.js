@@ -27,10 +27,10 @@ Vue.component('state-setup', {
                     &#916V<sub>turn</sub> <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> m/s\
                 </div> \
                 <div class="setup-input-div">  \
-                   CATS <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"><sup>o</sup>\
+                    <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> < CATS(deg) < <input id="3" type="number" step="1" :value="initstate[3]" @input="changed">\
                 </div> \
                 <div class="setup-input-div">  \
-                <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> < Range(km) < <input id="3" type="number" step="1" :value="initstate[3]" @input="changed">\
+                    <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> < Range(km) < <input id="3" type="number" step="1" :value="initstate[3]" @input="changed">\
                 </div> \
               </div>'
 })
@@ -154,7 +154,7 @@ var main_app = new Vue({
             scenario_length: 30,
             burns_per_player: 10,
             init_sun_angl: 0,
-            turn: 0,
+            turn: null,
             sat_data: {
                 origin:'blue',
                 target: 'red',
@@ -247,6 +247,27 @@ var main_app = new Vue({
         },
         slider_click: function(event) {
             this.display_data.update_time = event;
+        },
+        turn_button_click: function(event) {
+            if (!this.scenario_data.game_started) {
+                this.scenario_data.turn = 0;
+                this.scenario_data.game_started = true;
+                $('#turn-button span').hide();
+                $('#turn-button span').first().show();
+                $('.setup-zone').fadeOut(500);
+                $('#game-data-container').fadeIn(500);
+                $('#time-slider').fadeIn(500);
+                $('.setup-input-div').fadeOut(500);
+            }
+            else {
+                this.scenario_data.turn++;
+            }
+        },
+        change_num_burns: function(event) {
+            this.scenario_data.burns_per_player = Number(event.target.value);
+            for (player in this.players) {
+                this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
+            }
         }
     },
     watch: {
