@@ -1,37 +1,43 @@
+
 // window.addEventListener('DOMContentLoaded', (event) => {
 //     let dropdown = document.createElement("select");
 //     dropdown.id = "myDrop"
-//     let op1 = document.createElement("option")
-//     op1.value = "OP1";
-//     let newContent = document.createTextNode("OP1!");
-//     op1.appendChild(newContent)
-//     dropdown.appendChild(op1)
-
-//     let op2 = document.createElement("option")
-//     op2.value = "OP2";
-//     newContent = document.createTextNode("OP2!");
-//     op2.appendChild(newContent)
-//     dropdown.appendChild(op2)
-
-//     dropdown.value = ""
-//     dropdown.onclick = "console.log('CHANGE'); swal.setActionValue({confirm: this.value })"
-//     console.log(dropdown)
-//     function out(dropvalue, defaultText){
-//         if (dropvalue=="OP1"){
-//             return(defaultText);
+//     enumerateChannels.then(function (chanlist) {
+//         console.log(chanlist)
+//         for (let ii = 0; ii<chanlist.length; ii++){
+//             console.log("TEST")
+//             let top1 = document.createElement("option")
+//             top1.value = chanlist[ii].name;
+//             let newContent = document.createTextNode(chanlist[ii].name);
+//             top1.appendChild(newContent)
+//             dropdown.appendChild(top1)
 //         }
-//         else{
-//             return(dropvalue);
-//         }
-//     }
-//     swal("Choose a game, or make your own",{
-//         content: dropdown,
-//         buttons: {
-//             confirm: {
-//               value: document.getElementById('myDrop').value,
+//         let op1 = document.createElement("option")
+//         op1.value = "new";
+//         let newContent = document.createTextNode("Make a new game");
+//         op1.appendChild(newContent)
+//         dropdown.appendChild(op1)
+
+//         dropdown.value = ""
+//         // function out(dropvalue, defaultText){
+//         //     if (dropvalue=="OP1"){
+//         //         return(defaultText);
+//         //     }
+//         //     else{
+//         //         return(dropvalue);
+//         //     }
+//         // }
+//         swal("Choose a game, or make your own",{
+//             content: dropdown,
+//             //allowOutsideClick: false,
+//             buttons: {
+//                 Confirm: "Confirm"
 //             },
-//           },
-//     }).then((name)=>{console.log(name)});
+//             closeOnClickOutside: false,
+//         }).then(()=>{console.log(dropdown.value)});
+//     }).catch(function (error) {
+//         console.log(error);
+//     })
 // });
 
 
@@ -44,18 +50,26 @@ function publish(title,message){
 }
 
 var url = '/channels';
-//request a list of channels on button click
-function enumerateChannels() {
-    ably.request('get', '/channels', { limit: 100, by: 'id' }, null, null, function(err,res){
-        console.log(res.items);
-        res.items.forEach(chan => {
-            ably.request('get', '/channels/'+chan, { limit: 100, by: 'id' }, null, null, function(err,res2){
-                console.log(chan + " has " +res2.items[0].status.occupancy.metrics.connections + " connections");
-            });
-        });
-    }); 
-}
-enumerateChannels()
+//request a list of channels
+// var enumerateChannels = new Promise(
+//     function (resolve, reject){
+//         var chanlist = [];
+//         try {
+//             ably.request('get', '/channels', { limit: 100, by: 'id' }, null, null, function(err,res){
+//                 res.items.forEach(chan => {
+//                     ably.request('get', '/channels/'+chan, { limit: 100, by: 'id' }, null, null, function(err,res2){
+//                         console.log(chan,res2.items[0].status.occupancy.metrics.connections)
+//                         chanlist[chanlist.length] = {chanName: chan,
+//                                                     connections: res2.items[0].status.occupancy.metrics.connections};
+//                     }); 
+//                 });
+//             });
+//             resolve(chanlist)
+//         } catch (error) {
+//             reject(error)
+//         } 
+//     }
+// );
 
 window.addEventListener('DOMContentLoaded', (event) => {mainPrompt()});
 function mainPrompt(){

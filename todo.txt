@@ -31,3 +31,5 @@ Game
     -- Powerups
     -- Choose speed on lobby
     -- Royalty free music
+    -- 2 computers set up, connected to the internet by September 25th
+    -- break help up into "controls" "How to Win" "RPO Dynamics
