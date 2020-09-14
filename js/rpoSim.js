@@ -1,36 +1,45 @@
 Vue.component('state-setup', {
-    props: ['initstate','sat'],
+    props: ['insatellite'],
     methods: {
-        changed: function(event) {
-            let newState = [...this.initstate];
+        init_changed: function(event) {
+            let newState = [...this.insatellite.initial_state];
             newState[Number(event.target.id)] = Number(event.target.value);
-            main_app.players[this.sat].initial_state = newState;
+            main_app.players[this.insatellite.name].initial_state = newState;
+        },
+        property_changed: function(event) {
+            if (event.target.id === 'required_cats') {
+                main_app.players[this.insatellite.name][event.target.id][$(event.target).parent().find('input').index(event.target)] = Number(event.target.value);
+                
+            }
+            else {
+                main_app.players[this.insatellite.name][event.target.id] = Number(event.target.value);
+            }
         }
     },
     template: '<div> \
                 <div class="setup-input-div">  \
-                    A<sub>e</sub> <input min="0" type="number" id="0" :value="initstate[0]" @input="changed"> km\
+                    A<sub>e</sub> <input min="0" type="number" id="0" :value="insatellite.initial_state[0]" @input="init_changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
-                    X<sub>d</sub> <input type="number" id="1" :value="initstate[1]" @input="changed"> km\
+                    X<sub>d</sub> <input type="number" id="1" :value="insatellite.initial_state[1]" @input="init_changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
-                    Y<sub>d</sub> <input type="number" id="2" :value="initstate[2]" @input="changed"> km\
+                    Y<sub>d</sub> <input type="number" id="2" :value="insatellite.initial_state[2]" @input="init_changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
-                    B <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"><sup>o</sup>\
+                    B <input id="3" type="number" step="1" :value="insatellite.initial_state[3]" @input="init_changed"><sup>o</sup>\
                 </div> \
                 <div class="setup-input-div">  \
-                    &#916V<sub>tot</sub> <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> m/s\
+                    &#916V<sub>tot</sub> <input id="scenario_fuel" type="number" step="1" :value="insatellite.scenario_fuel" @input="property_changed"> m/s\
                 </div> \
                 <div class="setup-input-div">  \
-                    &#916V<sub>turn</sub> <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> m/s\
+                    &#916V<sub>turn</sub> <input id="turn_fuel" type="number" step="1" :value="insatellite.turn_fuel" @input="property_changed"> m/s\
                 </div> \
                 <div class="setup-input-div">  \
-                    <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> < CATS(deg) < <input id="3" type="number" step="1" :value="initstate[3]" @input="changed">\
+                    Range<sub>req</sub> < <input id="max_range" type="number" step="1" :value="insatellite.max_range" @input="property_changed">\
                 </div> \
                 <div class="setup-input-div">  \
-                    <input id="3" type="number" step="1" :value="initstate[3]" @input="changed"> < Range(km) < <input id="3" type="number" step="1" :value="initstate[3]" @input="changed">\
+                    <input id="required_cats" type="number" step="1" :value="insatellite.required_cats[0]" @input="property_changed"> < CATS<sub>req</sub> < <input id="required_cats" type="number" step="1" :value="insatellite.required_cats[1]" @input="property_changed">\
                 </div> \
               </div>'
 })
@@ -70,10 +79,10 @@ Vue.component('player-data', {
     },
     template: '<div style="width: 25%" :style="{color: inplayer.color}"> \
                 <div  class="inner-data-container" @mouseover="mousedover" @mouseleave="mousedleft"> \
-                    {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }}\
+                    {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }} <input type="radio" name="player" :value="inplayer.name">\
                 </div> \
                 <burn-data :inburns="inplayer" :inburntime="burntime"></burn-data> \
-                <state-setup :initstate="inplayer.initial_state" :sat="inplayer.name"></state-setup> \
+                <state-setup :insatellite="inplayer"></state-setup> \
                </div>',
     methods: {
         mousedover: function(event) {
@@ -166,6 +175,8 @@ var main_app = new Vue({
                 }
             },
             server: false,
+            serverName: '',
+            player: '',
             selected_burn_point: null,
             game_started: false,
             game_time: 0,
@@ -182,6 +193,7 @@ var main_app = new Vue({
             width: null,
             height: null,
             drag_data: null,
+            shift_key: false,
             stars: math.random([100,3], -0.5, 0.5),
             update_time: true
         }
@@ -209,7 +221,6 @@ var main_app = new Vue({
             ctx.clearRect(0, 0, cnvs.width, cnvs.height);
             drawStars(cnvs, ctx);
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
-
             drawArrow(ctx, getScreenPixel(cnvs, 0, 0, this.display_data.axis_limit, this.display_data.center), 90, this.scenario_data.init_sun_angl + 2*Math.PI / 86164 * this.scenario_data.game_time * 3600);
 
             for (sat in this.players) {
@@ -217,6 +228,9 @@ var main_app = new Vue({
                     this.players[sat].burn_points = calculateBurnPoints('blue', this.players[sat].burns, this.players[sat].initial_state);
                     drawSatInfo(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.players[sat]);
                 }
+            }
+            if (this.scenario_data.game_started) {
+                drawAnimations(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             }
             for (sat in this.players) {
                 if (this.players[sat].exist) {
@@ -248,7 +262,7 @@ var main_app = new Vue({
         slider_click: function(event) {
             this.display_data.update_time = event;
         },
-        turn_button_click: function(event) {
+        turn_button_click: function() {
             if (!this.scenario_data.game_started) {
                 this.scenario_data.turn = 0;
                 this.scenario_data.game_started = true;
@@ -258,6 +272,8 @@ var main_app = new Vue({
                 $('#game-data-container').fadeIn(500);
                 $('#time-slider').fadeIn(500);
                 $('.setup-input-div').fadeOut(500);
+                this.scenario_data.player = $("input[name='player']:checked").val();
+                this.scenario_data.player = $("input[name='player']").hide();
             }
             else {
                 this.scenario_data.turn++;
@@ -267,6 +283,16 @@ var main_app = new Vue({
             this.scenario_data.burns_per_player = Number(event.target.value);
             for (player in this.players) {
                 this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
+            }
+        },
+        server_button_pushed: function() {
+            if (this.scenario_data.server) {
+                this.scenario_data.server = false;
+                return;
+            }
+            this.scenario_data.serverName = window.prompt('Enter name of game:');
+            if (this.scenario_data.serverName > 0) {
+                this.scenario_data.server = true;
             }
         }
     },
@@ -285,6 +311,9 @@ window.addEventListener('resize', () => {
 });
 
 function calcData(origin, target) {
+    if (main_app.scenario_data.sat_data.target === null) {
+        return;
+    }
     let rel_vector = math.subtract(main_app.players[origin].current_state.slice(0,2),main_app.players[target].current_state.slice(0,2));
     main_app.scenario_data.sat_data.data.range = math.norm(rel_vector);
     let sunVector = [[Math.cos(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)], [-Math.sin(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)]];
@@ -340,6 +369,40 @@ function getScreenPoint(x, y, limit, center, object = false) {
         }
     }
     return [center[0] - (x - width / 2) / (width / 2) * limit, center[1] - (y - height / 2) / (height / 2) * limit * yxRatio];
+}
+
+function drawAnimations(cnvs, ctx, center, limit) {
+    // Draw Line showing data origin and target
+    let line_origin = main_app.players[main_app.scenario_data.sat_data.origin].current_state || [0,0], line_end;
+    if (main_app.scenario_data.sat_data.target === null) {
+        line_end = main_app.scenario_data.mousemove_location;
+    }
+    else {
+        line_end = main_app.players[main_app.scenario_data.sat_data.target].current_state || [0,0];
+        line_end = getScreenPixel(cnvs, line_end[0], line_end[1], limit, center);
+    }
+    line_origin = getScreenPixel(cnvs, line_origin[0], line_origin[1], limit, center);
+    ctx.strokeStyle = 'rgba(200,200,200,0.7)';
+    ctx.lineWidth = 6;
+    ctx.setLineDash([15, 15]);
+    ctx.beginPath();
+    ctx.moveTo(line_origin[0],line_origin[1]);
+    ctx.lineTo(line_end[0],line_end[1]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (main_app.display_data.shift_key) {
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        for (player in main_app.players) {
+            let location;
+            ctx.beginPath();
+            if (main_app.players[player].exist) {
+                location = getScreenPixel(cnvs, main_app.players[player].current_state[0], main_app.players[player].current_state[1], limit, center);
+                ctx.arc(location[0],location[1],25,0,2*Math.PI);
+                ctx.fill();
+            }
+        }
+    }
 }
 
 function drawAxes(cnvs, ctx, center, limit) {
@@ -606,6 +669,28 @@ function drawArrow(ctx, pixelLocation, length = 15, angle = 0, color = 'rgba(255
 
 function setMouseCallbacks() {
     $('#main-canvas').mousedown(event => {
+        if (main_app.display_data.shift_key) {
+            let location;
+            let click_location = [event.offsetX, event.offsetY];
+            let cnvs = document.getElementById("main-canvas");
+            // let ctx = cnvs.getContext('2d');
+            for (player in main_app.players) {
+                if (main_app.players[player].exist){
+                    location = main_app.players[player].current_state;
+                    location = getScreenPixel(cnvs, location[0], location[1], main_app.display_data.axis_limit, main_app.display_data.center);
+                    if (math.norm(math.subtract(click_location,location)) < 25) {
+                        if (main_app.scenario_data.sat_data.target === null) {
+                            main_app.scenario_data.sat_data.target = player;
+                        }
+                        else {
+                            main_app.scenario_data.sat_data.origin = player;
+                            main_app.scenario_data.sat_data.target = null;
+                        }
+                    }
+                }
+            }
+            return;
+        }
         main_app.scenario_data.mousedown_location = [event.offsetX, event.offsetY];
         let location_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
         if (checkClose(location_point[0], location_point[1])) {
@@ -669,11 +754,22 @@ function setMouseCallbacks() {
             main_app.display_data.axis_limit -= event.deltaY * 2;
         }
     })
+    window.addEventListener('keydown',(event)=>{
+        if (event.key === 'Shift') {
+            main_app.display_data.shift_key = true;
+        }
+    })
+    window.addEventListener('keyup',(event)=>{
+        if (event.key === 'Shift') {
+            main_app.display_data.shift_key = false;
+        }
+    })
 }
 
 setMouseCallbacks()
 resizeCanvas();
 window.requestAnimationFrame(animation);
+$("input[name='player']")[0].checked = true;
 for (player in main_app.players) {
     main_app.players[player].burns = math.zeros(main_app.scenario_data.burns_per_player, 2)._data;
 }

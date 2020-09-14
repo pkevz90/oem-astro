@@ -151,4 +151,9 @@ body, html {
     justify-content: left;
     color: white;
   }
+
+  .setup-zone div {
+    margin: 1%;
+    padding: 1%;
+  }
   
