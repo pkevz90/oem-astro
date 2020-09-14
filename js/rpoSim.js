@@ -73,7 +73,7 @@ Vue.component('player-data', {
     data: function () {
         return {};
     },
-    template: '<div style="width: 25%" :style="{color: inplayer.color}"> \
+    template: '<div class="data-container" style="width: 25%, opacity: 0.5" :style="{color: inplayer.color}"> \
                 <div  class="inner-data-container" @mouseover="mousedover" @mouseleave="mousedleft"> \
                     {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }} <input type="radio" name="player" :value="inplayer.name">\
                 </div> \

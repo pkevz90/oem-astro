@@ -382,7 +382,7 @@ var setupData = new Vue({
                         B:  0, 
                         dVavail: (9).toFixed(1),
                         reqCats: (120).toFixed(0),
-                        maxDv: (1.5).toFixed(2),
+                        maxDv: (1).toFixed(2),
                         rangeReq: [(0).toFixed(0), (50).toFixed(0)],
                         targets: ['red']
                     };
@@ -393,7 +393,7 @@ var setupData = new Vue({
                         B:  0, 
                         dVavail: (9).toFixed(1),
                         reqCats: (90).toFixed(0),
-                        maxDv: (1.75).toFixed(2),
+                        maxDv: (1.3).toFixed(2),
                         rangeReq: [(0).toFixed(0), (35).toFixed(0)],
                         targets: ['green']
                     };
@@ -403,7 +403,7 @@ var setupData = new Vue({
                         yd: 0,
                         B:  0,
                         dVavail: (9).toFixed(1),
-                        maxDv: (0.2).toFixed(2),
+                        maxDv: (0.15).toFixed(2),
                         reqCats: (90).toFixed(0),
                         rangeReq: [(0).toFixed(0), (5).toFixed(0)],
                         exist: true
