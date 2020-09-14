@@ -105,7 +105,9 @@ body, html {
     border: 1px solid yellow;
     padding: 0.5%;
   }
-
+  #turn-button:hover {
+    background-color: rgba(255,255,255,0.4);
+  }
   th {
     width: 30%;
   }
@@ -157,3 +159,16 @@ body, html {
     padding: 1%;
   }
   
+  .add-sat-button {
+    width: 4%;
+    border: 2px solid white;
+    border-radius: 50%;
+    text-align: center;
+    cursor: pointer;
+    margin-left: 8%;
+    font-size: 2.8vw;
+  }
+
+  .add-sat-button:hover {
+    background-color: rgba(255,255,255,0.4);
+  }

@@ -19,14 +19,10 @@ Vue.component('state-setup', {
     template: '<div> \
                 <div class="setup-input-div">  \
                     A<sub>e</sub> <input min="0" type="number" id="0" :value="insatellite.initial_state[0]" @input="init_changed"> km\
-                </div> \
-                <div class="setup-input-div">  \
                     X<sub>d</sub> <input type="number" id="1" :value="insatellite.initial_state[1]" @input="init_changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
                     Y<sub>d</sub> <input type="number" id="2" :value="insatellite.initial_state[2]" @input="init_changed"> km\
-                </div> \
-                <div class="setup-input-div">  \
                     B <input id="3" type="number" step="1" :value="insatellite.initial_state[3]" @input="init_changed"><sup>o</sup>\
                 </div> \
                 <div class="setup-input-div">  \
@@ -273,7 +269,9 @@ var main_app = new Vue({
                 $('#time-slider').fadeIn(500);
                 $('.setup-input-div').fadeOut(500);
                 this.scenario_data.player = $("input[name='player']:checked").val();
-                this.scenario_data.player = $("input[name='player']").hide();
+                $("input[name='player']").hide();
+                console.log(this.scenario_data.player);
+                $('#turn-button').css('color',this.players[this.scenario_data.player].color);
             }
             else {
                 this.scenario_data.turn++;
@@ -293,6 +291,14 @@ var main_app = new Vue({
             this.scenario_data.serverName = window.prompt('Enter name of game:');
             if (this.scenario_data.serverName > 0) {
                 this.scenario_data.server = true;
+            }
+        },
+        add_player: function() {
+            if (!this.players.green.exist) {
+                this.players.green.exist = true;
+            }
+            else {
+                this.players.gray.exist = true;
             }
         }
     },
@@ -393,6 +399,7 @@ function drawAnimations(cnvs, ctx, center, limit) {
 
     if (main_app.display_data.shift_key) {
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 3;
         for (player in main_app.players) {
             let location;
             ctx.beginPath();
@@ -400,6 +407,7 @@ function drawAnimations(cnvs, ctx, center, limit) {
                 location = getScreenPixel(cnvs, main_app.players[player].current_state[0], main_app.players[player].current_state[1], limit, center);
                 ctx.arc(location[0],location[1],25,0,2*Math.PI);
                 ctx.fill();
+                ctx.stroke();
             }
         }
     }
@@ -704,7 +712,7 @@ function setMouseCallbacks() {
             main_app.scenario_data.tactic_data = ['burn',math.min(main_app.players[main_app.scenario_data.selected_burn_point.satellite].scenario_fuel - total_burn, main_app.players[main_app.scenario_data.selected_burn_point.satellite].turn_fuel)]
             setTimeout(()=>{
                 let newPoint = getScreenPoint(main_app.scenario_data.mousemove_location[0], main_app.scenario_data.mousemove_location[1], main_app.display_data.axis_limit, main_app.display_data.center);
-                if (math.norm(math.subtract(location_point, newPoint)) < main_app.display_data.axis_limit / 50) {
+                if (math.norm(math.subtract(location_point, newPoint)) < main_app.display_data.axis_limit / 50 && main_app.scenario_data.mousedown_location !== null) {
                     main_app.scenario_data.tactic_data = ['target', main_app.scenario_data.scenario_length / main_app.scenario_data.burns_per_player, main_app.players[main_app.scenario_data.selected_burn_point.satellite].burn_points[main_app.scenario_data.selected_burn_point.point].slice(2,4), main_app.scenario_data.tactic_data[1]];
                     main_app.scenario_data.target_display = 0;
                 }
@@ -736,6 +744,7 @@ function setMouseCallbacks() {
         }
     })
     $('#main-canvas').mouseup(() => {
+        main_app.scenario_data.mousedown_location = null;
         main_app.scenario_data.tactic_data = ['none'];
         if (main_app.display_data.drag_data !== null) {
             main_app.display_data.drag_data = null;
@@ -762,6 +771,10 @@ function setMouseCallbacks() {
     window.addEventListener('keyup',(event)=>{
         if (event.key === 'Shift') {
             main_app.display_data.shift_key = false;
+            if (main_app.scenario_data.sat_data.target === null) {
+                main_app.scenario_data.sat_data.origin = 'blue';
+                main_app.scenario_data.sat_data.target = 'red';
+            }
         }
     })
 }
