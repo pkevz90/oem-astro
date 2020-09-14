@@ -300,6 +300,52 @@ var main_app = new Vue({
             else {
                 this.players.gray.exist = true;
             }
+        },
+        change_scenario: function() {
+            switch(event.target.value) {
+                case 'defend': 
+                    Object.assign(this.players.blue, {
+                        initial_state: [0,0,25,0],
+                    });
+                    Object.assign(this.players.red, {
+                        initial_state: [0,-40,-90,0],
+                    });
+                    Object.assign(this.players.green, {
+                        exist: true,
+                        initial_state: [0,0,0,0],
+                    });
+                    break;
+                case 'mayhem': 
+                    Object.assign(this.players.blue, {
+                        initial_state: [0,0,30,0],
+                    });
+                    Object.assign(this.players.red, {
+                        initial_state: [0,15,0,0],
+                    });
+                    Object.assign(this.players.green, {
+                        exist: true,
+                        initial_state: [0,0,-30,0],
+                    });
+                    Object.assign(this.players.gray, {
+                        exist: true,
+                        initial_state: [0,-15,0,0],
+                    });
+                    break;
+                default: 
+                    Object.assign(this.players.blue, {
+                        initial_state: [0,0,30,0],
+                    });
+                    Object.assign(this.players.red, {
+                        initial_state: [0,0,-30,0],
+                    });
+                    Object.assign(this.players.green, {
+                        exist: false,
+                    });
+                    Object.assign(this.players.gray, {
+                        exist: false,
+                    });
+                    break;
+            }
         }
     },
     watch: {
@@ -683,7 +729,7 @@ function setMouseCallbacks() {
             let cnvs = document.getElementById("main-canvas");
             // let ctx = cnvs.getContext('2d');
             for (player in main_app.players) {
-                if (main_app.players[player].exist){
+                if (main_app.players[player].exist) {
                     location = main_app.players[player].current_state;
                     location = getScreenPixel(cnvs, location[0], location[1], main_app.display_data.axis_limit, main_app.display_data.center);
                     if (math.norm(math.subtract(click_location,location)) < 25) {
