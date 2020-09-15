@@ -13,9 +13,11 @@ body, html {
 #data-container {
     position: fixed;
     display: flex;
-    justify-content: left;
+    justify-content: space-around;
+    flex-wrap: wrap;
     top: 2%;
-    width: 100%;
+    right: 0%;
+    width: 25%;
     height: 7%;
     color: white;
     z-index: 2;
@@ -23,6 +25,9 @@ body, html {
     font-family: Arial, Helvetica, sans-serif;
 }
 
+#data-container div {
+  min-width: 250px;
+}
 .inner-data-container {
     z-index: 3;
     width: 100%;
@@ -159,14 +164,14 @@ body, html {
     padding: 1%;
   }
   
-  .add-sat-button {
-    width: 4%;
+  #add-sat-button {
+    width: 2%;
     border: 2px solid white;
     border-radius: 50%;
     text-align: center;
     cursor: pointer;
-    margin-left: 8%;
     font-size: 2.8vw;
+    margin-top: 5%
   }
 
   .add-sat-button:hover {

@@ -20,7 +20,7 @@
     <div id="main-app">
         <div id="data-container">
             <player-data :burntime="turn_length" :inplayer="players[player]" v-for="player in active_players"></player-data>
-            <div class="add-sat-button" v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player">+</div>
+            <div id="add-sat-button" v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player">+</div>
         </div>
         <div id="game-data-container" style="display: none;">
             <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km </div>

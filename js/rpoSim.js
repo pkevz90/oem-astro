@@ -73,7 +73,7 @@ Vue.component('player-data', {
     data: function () {
         return {};
     },
-    template: '<div class="data-container" style="width: 25%, opacity: 0.5" :style="{color: inplayer.color}"> \
+    template: '<div class="data-container" style="width: 25%" :style="{color: inplayer.color}"> \
                 <div  class="inner-data-container" @mouseover="mousedover" @mouseleave="mousedleft"> \
                     {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }} <input type="radio" name="player" :value="inplayer.name">\
                 </div> \
@@ -82,6 +82,9 @@ Vue.component('player-data', {
                </div>',
     methods: {
         mousedover: function(event) {
+            if (!main_app.scenario_data.game_started) {
+                return;
+            }
             $(event.target).next().slideDown(150);
         },
         mousedleft: function(event) {
@@ -272,6 +275,13 @@ var main_app = new Vue({
                 $("input[name='player']").hide();
                 console.log(this.scenario_data.player);
                 $('#turn-button').css('color',this.players[this.scenario_data.player].color);
+                $('canvas').animate({
+                    width: '100%'
+                },1000,() => {
+                    $('#data-container').animate({
+                        width: '100%'
+                    },1000)
+                })
             }
             else {
                 this.scenario_data.turn++;
@@ -373,8 +383,8 @@ function calcData(origin, target) {
 }   
 
 function resizeCanvas() {
-    $('#main-canvas')[0].width = window.innerWidth;
-    $('#main-canvas')[0].height = window.innerHeight;
+    $('#main-canvas')[0].width = window.innerWidth / (4/3);
+    $('#main-canvas')[0].height = window.innerHeight / (4/3);
 }
 
 function drawStars(cnvs, ctx) {
@@ -825,7 +835,7 @@ function setMouseCallbacks() {
     })
 }
 
-setMouseCallbacks()
+setMouseCallbacks();
 resizeCanvas();
 window.requestAnimationFrame(animation);
 $("input[name='player']")[0].checked = true;
