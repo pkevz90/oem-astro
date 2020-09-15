@@ -270,7 +270,7 @@ var main_app = new Vue({
                 $('.setup-zone').fadeOut(500);
                 $('#game-data-container').fadeIn(500);
                 $('#time-slider').fadeIn(500);
-                $('.setup-input-div').fadeOut(500);
+                $('.setup-input-div').slideUp(500);
                 this.scenario_data.player = $("input[name='player']:checked").val();
                 $("input[name='player']").hide();
                 console.log(this.scenario_data.player);
@@ -278,6 +278,7 @@ var main_app = new Vue({
                 $('canvas').animate({
                     width: '100%'
                 },1000,() => {
+                    resizeCanvas();
                     $('#data-container').animate({
                         width: '100%'
                     },1000)
@@ -383,8 +384,14 @@ function calcData(origin, target) {
 }   
 
 function resizeCanvas() {
-    $('#main-canvas')[0].width = window.innerWidth / (4/3);
-    $('#main-canvas')[0].height = window.innerHeight / (4/3);
+    if (main_app.scenario_data.game_started) {
+        $('#main-canvas')[0].width = window.innerWidth;
+        $('#main-canvas')[0].height = window.innerHeight;
+    }
+    else {
+        $('#main-canvas')[0].width = window.innerWidth / (4/3);
+        $('#main-canvas')[0].height = window.innerHeight / (4/3);
+    }
 }
 
 function drawStars(cnvs, ctx) {
@@ -604,6 +611,9 @@ function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
         pVR = PhiVR(input_object.tBurns * 3600 / nodes),
         pVV = PhiVV(input_object.tBurns * 3600 / nodes);
     for (let jj = 0; jj < input_object.satellite.burn_points.length; jj++) {
+        if (jj === main_app.scenario_data.turn) {
+            ctx.globalAlpha = 0.25; // turns future trajectory transparent
+        }
         points = [];
         pixelPos = [];
         points.push(input_object.satellite.burn_points[jj]);
@@ -616,6 +626,7 @@ function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
         }
         drawCurve(ctx, pixelPos, 1);
     }
+    ctx.globalAlpha = 1;
 
 }
 
