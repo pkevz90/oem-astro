@@ -224,7 +224,15 @@ var main_app = new Vue({
             ctx.clearRect(0, 0, cnvs.width, cnvs.height);
             drawStars(cnvs, ctx);
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
-            drawArrow(ctx, getScreenPixel(cnvs, 0, 0, this.display_data.axis_limit, this.display_data.center), 90, this.scenario_data.init_sun_angl + 2*Math.PI / 86164 * this.scenario_data.game_time * 3600);
+            // Draw Sun
+            let sunPos;
+            if (this.scenario_data.sat_data.target === null) {
+                sunPos = [0,0];
+            }
+            else {
+                sunPos = this.players[this.scenario_data.sat_data.target].current_state || [0,0];
+            }
+            drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 90, this.scenario_data.init_sun_angl + 2*Math.PI / 86164 * this.scenario_data.game_time * 3600);
 
             for (sat in this.players) {
                 if (this.players[sat].exist) {
@@ -870,6 +878,7 @@ for (player in main_app.players) {
 
 function animation(time) {
     // console.time()
+    console.log(time)
     main_app.updateScreen();
     if (main_app.display_data.update_time) {
         let expected_time;
