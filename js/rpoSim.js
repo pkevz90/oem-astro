@@ -287,13 +287,28 @@ var main_app = new Vue({
                 $("input[name='player']").hide();
                 console.log(this.scenario_data.player);
                 $('#turn-button').css('color',this.players[this.scenario_data.player].color);
+                // $('canvas').animate({
+                //     width: window.innerWidth,
+                //     height: window.innerHeight
+                // },1000,() => {
+                //     resizeCanvas();
+                //     $('#data-container').animate({
+                //         width: '100%'
+                //     },1000)
+                // })
                 $('canvas').animate({
-                    width: '100%'
+                    width: window.innerWidth,
+                    height: window.innerHeight
                 },1000,() => {
                     resizeCanvas();
                     $('#data-container').animate({
                         width: '100%'
-                    },1000)
+                    },{
+                        duration: 1000,
+                        step: () => {
+                            console.log('hey');
+                        }
+                    })
                 })
             }
             else {
@@ -407,8 +422,8 @@ function resizeCanvas() {
         $('#main-canvas')[0].height = window.innerHeight;
     }
     else {
-        $('#main-canvas')[0].width = window.innerWidth / (4/3);
-        $('#main-canvas')[0].height = window.innerHeight / (4/3);
+        $('#main-canvas')[0].width = window.innerWidth / 2;
+        $('#main-canvas')[0].height = window.innerHeight / 2;
     }
 }
 
@@ -878,7 +893,6 @@ for (player in main_app.players) {
 
 function animation(time) {
     // console.time()
-    console.log(time)
     main_app.updateScreen();
     if (main_app.display_data.update_time) {
         let expected_time;
