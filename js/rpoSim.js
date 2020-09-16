@@ -105,11 +105,12 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
                 required_cats: [0, 90],
                 max_range: 30,
-                target: null,
+                target: 'red',
                 engine: null
             },
             red: {
@@ -120,11 +121,12 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
                 required_cats: [0, 90],
                 max_range: 30,
-                target: null,
+                target: 'green',
                 engine: null
             },
             green: {
@@ -135,6 +137,7 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
                 required_cats: [0, 90],
@@ -150,6 +153,7 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
                 required_cats: [0, 90],
@@ -234,7 +238,7 @@ var main_app = new Vue({
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time,sat); 
-                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), 45, 0.225, this.players[sat].color);
+                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.15, this.players[sat].color);
                 }
             }
             // Draw burn if point is focused upon
@@ -381,6 +385,12 @@ function calcData(origin, target) {
     main_app.scenario_data.sat_data.data.range = math.norm(rel_vector);
     let sunVector = [[Math.cos(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)], [-Math.sin(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)]];
     main_app.scenario_data.sat_data.data.cats = Math.acos(math.dot(rel_vector, sunVector) / math.norm(rel_vector)) * 180 / Math.PI;
+    for (player in main_app.players) {
+        if (main_app.players[player].exist && main_app.players[player].target !== null && main_app.players[main_app.players[player].target].current_state !== null) {
+            rel_vector = math.subtract(main_app.players[main_app.players[player].target].current_state.slice(0,2),main_app.players[player].current_state.slice(0,2));
+            main_app.players[player].angle = Math.atan2(-rel_vector[1],rel_vector[0]) * 180 / Math.PI;
+        }
+    }
 }   
 
 function resizeCanvas() {
@@ -680,8 +690,8 @@ function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAng
             ctx.fill();
             ctx.stroke();
             ctx.fillStyle = 'rgb(50,50,150)';
-            ctx.strokeStyle = 'rgb(255,255,255)';
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 0.7;
             ctx.beginPath();
             ctx.moveTo(transformedSat[8][0], transformedSat[8][1])
         } else if (index === 8) {
@@ -756,6 +766,9 @@ function setMouseCallbacks() {
                     if (math.norm(math.subtract(click_location,location)) < 25) {
                         if (main_app.scenario_data.sat_data.target === null) {
                             main_app.scenario_data.sat_data.target = player;
+                            $('#game-data-container').css({
+                                "background-image": 'linear-gradient(135deg,'+main_app.players[main_app.scenario_data.sat_data.origin].color.slice(0,-2) + '0.45),rgba(0,0,0,0),'+main_app.players[main_app.scenario_data.sat_data.target].color.slice(0,-2) + '0.45))'
+                            });
                         }
                         else {
                             main_app.scenario_data.sat_data.origin = player;
