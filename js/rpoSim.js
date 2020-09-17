@@ -19,10 +19,14 @@ Vue.component('state-setup', {
     template: '<div> \
                 <div class="setup-input-div">  \
                     A<sub>e</sub> <input min="0" type="number" id="0" :value="insatellite.initial_state[0]" @input="init_changed"> km\
+                </div> \
+                <div class="setup-input-div">  \
                     X<sub>d</sub> <input type="number" id="1" :value="insatellite.initial_state[1]" @input="init_changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
                     Y<sub>d</sub> <input type="number" id="2" :value="insatellite.initial_state[2]" @input="init_changed"> km\
+                </div> \
+                <div class="setup-input-div">  \
                     B <input id="3" type="number" step="1" :value="insatellite.initial_state[3]" @input="init_changed"><sup>o</sup>\
                 </div> \
                 <div class="setup-input-div">  \
@@ -198,7 +202,8 @@ var main_app = new Vue({
             drag_data: null,
             shift_key: false,
             stars: math.random([100,3], -0.5, 0.5),
-            update_time: true
+            update_time: true,
+            transition: false
         }
     },
     computed: {
@@ -285,31 +290,32 @@ var main_app = new Vue({
                 $('.setup-input-div').slideUp(500);
                 this.scenario_data.player = $("input[name='player']:checked").val();
                 $("input[name='player']").hide();
-                console.log(this.scenario_data.player);
                 $('#turn-button').css('color',this.players[this.scenario_data.player].color);
-                // $('canvas').animate({
-                //     width: window.innerWidth,
-                //     height: window.innerHeight
-                // },1000,() => {
-                //     resizeCanvas();
-                //     $('#data-container').animate({
-                //         width: '100%'
-                //     },1000)
-                // })
-                $('canvas').animate({
-                    width: window.innerWidth,
-                    height: window.innerHeight
-                },1000,() => {
-                    resizeCanvas();
-                    $('#data-container').animate({
-                        width: '100%'
-                    },{
-                        duration: 1000,
-                        step: () => {
-                            console.log('hey');
-                        }
-                    })
+                $('#data-container').animate({
+                    opacity: 0
+                },500,()=> {
+                    $('#data-container').css('width','50%');
                 })
+                let $cvns = $('canvas')[0];
+                let del_height = window.innerHeight - $cvns.height;
+                let del_width = window.innerWidth - $cvns.width;
+                let int_ii = 0;
+                // Probably the dumbest way to do it ever
+                function make_right_size() {
+                    int_ii++;
+                    $cvns.height += del_height / 30;
+                    $cvns.width += del_width / 30;
+                    if (int_ii < 30) {
+                        setTimeout(make_right_size,16);
+                    }
+                    else {
+                        $('#data-container').animate({
+                            opacity: 1,
+                            'width': '100%'
+                        },500);
+                    }
+                }
+                make_right_size();
             }
             else {
                 this.scenario_data.turn++;
@@ -423,7 +429,7 @@ function resizeCanvas() {
     }
     else {
         $('#main-canvas')[0].width = window.innerWidth / 2;
-        $('#main-canvas')[0].height = window.innerHeight / 2;
+        $('#main-canvas')[0].height = window.innerHeight /(10/8);
     }
 }
 
