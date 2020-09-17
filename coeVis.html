@@ -183,6 +183,18 @@
         .pointer {
             cursor: pointer;
         }
+        .burn_button {
+            color: white;
+            position: fixed;
+            height: auto;
+            width: 15%;
+            bottom: 0%;
+            left: 2%;
+            padding: 2%;
+        }
+        #burn_inputs div input {
+            width: 25%;
+        }
     </style>
 </head>
 <body>
@@ -287,6 +299,32 @@
     <div class="timeStepDiv">
         <span>1000</span> times real time<br>
         Use < and > to change 
+    </div>
+    <div class="burn_button pointer">
+        <div id="burn_inputs" style="display: none;">
+            <div>
+                Radial <input type="Number" oninput="burnChange()" value="0" step="0.01">
+            </div>
+            <div>
+                In-Track <input type="Number" oninput="burnChange()" value="0" step="0.01">
+            </div>
+            <div>
+                Cross-Track <input type="Number" oninput="burnChange()" value="0" step="0.01">
+            </div>
+            <div>
+                <em>a</em>: <span>8000</span> km
+            </div>
+            <div>
+                <em>e</em>: <span>8000</span>
+            </div>
+            <div>
+                <em>i</em>: <span>8000</span> deg
+            </div>
+            <div>
+                <em>RAAN</em>: <span>8000</span> deg
+            </div>
+        </div>
+        Maneuver
     </div>
     <!-- <div class="taDiv">
         True Anomaly: <span>60</span> sec

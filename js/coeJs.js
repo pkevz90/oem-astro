@@ -16,6 +16,20 @@ var orbitParams = [{
     mA: 0
 }];
 
+var burnOrbitParams = {
+    a: 10000,
+    e: 0,
+    i: 45,
+    raan: 0,
+    arg: 0,
+    mA: 0
+};
+
+var burnParams = {
+    in_track: 0,
+    radial: 0,
+    cross_track: 3
+};
 
 var constParams = [];
 for(i = 0; i < 24; i++){
@@ -31,6 +45,8 @@ for(i = 0; i < 24; i++){
 
 var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     orbit = [],
+    burnOrbit = null,
+    burnSatPoint = null,
     constTaTailPts = [];
     constOrbit = [],
     constTailPts = [];
@@ -138,6 +154,37 @@ function drawOrbit(orbitParams) {
     let r, r0;
     orbitParams.forEach((orbitP,index) => {
         let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
+        if (index === 0) {
+            let coeOriginal = {...orbitP};
+            coeOriginal.tA = tA;
+            let posvelState = Coe2PosVelNew(coeOriginal);
+            let radial = math.dotDivide([posvelState.x, posvelState.y, posvelState.z],math.norm([posvelState.x, posvelState.y, posvelState.z]));
+            let cross_track = math.cross([posvelState.x, posvelState.y, posvelState.z], [posvelState.vx, posvelState.vy, posvelState.vz]);
+            cross_track = math.dotDivide(cross_track,math.norm(cross_track));
+            let in_track = math.cross(cross_track, radial);
+            in_track = math.dotMultiply(in_track, burnParams.in_track);
+            cross_track = math.dotMultiply(cross_track, burnParams.cross_track);
+            posvelState.vx += in_track[0];
+            posvelState.vy += in_track[1];
+            posvelState.vz += in_track[2];
+            posvelState.vx += cross_track[0];
+            posvelState.vy += cross_track[1];
+            posvelState.vz += cross_track[2];
+            let newCoe = PosVel2CoeNew(posvelState);
+            newCoe.mA = True2Eccentric(newCoe.e,newCoe.tA);
+            burnOrbitParams = {
+                a: newCoe.a,
+                e: newCoe.e,
+                i: newCoe.i * 180 / Math.PI,
+                raan: newCoe.raan * 180 / Math.PI,
+                arg: newCoe.arg * 180 / Math.PI,
+                mA: newCoe.mA * 180 / Math.PI  
+            };
+            $('#burn_inputs span').eq(0).text(burnOrbitParams.a.toFixed(0));
+            $('#burn_inputs span').eq(1).text(burnOrbitParams.e.toFixed(2));
+            $('#burn_inputs span').eq(2).text(burnOrbitParams.i.toFixed(0));
+            $('#burn_inputs span').eq(3).text(burnOrbitParams.raan.toFixed(0));
+        }
         if (!$('#optionsList input')[4].checked){
             $('.controls span')[5+index*6].textContent = ((((2*math.PI) + tA) % (2*math.PI))*180/math.PI).toFixed(0)
         }
@@ -245,6 +292,43 @@ function drawOrbit(orbitParams) {
             }
         }
     })
+    let tA = Eccentric2True(burnOrbitParams.e, solveKeplersEquation(burnOrbitParams.mA * Math.PI / 180, burnOrbitParams.e))
+    let period = 2 * Math.PI * Math.sqrt(Math.pow(burnOrbitParams.a, 3) / 398600.4418);
+    // console.log(ECI)
+    let coe = [burnOrbitParams.a, burnOrbitParams.e, burnOrbitParams.i * Math.PI / 180, ECI[0].rotation.y + (burnOrbitParams.raan * Math.PI / 180), burnOrbitParams.arg * Math.PI / 180, tA]
+
+    var points = [];
+    let tailLength = 3;
+    for (var ii = 0; ii <= nTailPts; ii++) {
+        r = Coe2PosVel(coe);
+        r = r[0];
+        if (ecef) {
+            r = Eci2Ecef(- ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
+        }
+        if (ii === 0) {
+            r0 = r;
+        }
+        // console.log(r0);
+
+        points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
+
+        coe = twoBodyProp(coe, -tailLength * period / (nTailPts-1));
+    }
+    //console.log(points)
+    if (burnOrbit === null) {
+        var material = new THREE.LineDashedMaterial({
+            color: 'rgb(200,200,200)',
+            linewidth: 2,
+        });
+        var geometry = new THREE.BufferGeometry().setFromPoints(points);
+        burnOrbit = new THREE.Line(geometry, material);
+
+        scene.add(burnOrbit);
+    } else {
+        // Edit orbitVar
+        burnOrbit.geometry.setFromPoints(points);
+        //gndPts[index] = satPoint[index];
+    }
 }
 function xyzToVec(vec){
     return [vec.x,vec.y,vec.z];
@@ -841,3 +925,93 @@ $('#orbitList p').on('click', (a) => {
     $('.controls span')[3+kk*6].textContent = $('.slidercontainer input')[3+kk*6].value;
     $('.controls span')[4+kk*6].textContent = $('.slidercontainer input')[4+kk*6].value;
 })
+
+function Coe2PosVelNew(coe) {
+    let p = coe.a*(1-coe.e*coe.e);
+    let cTa = Math.cos(coe.tA);
+    let sTa = Math.sin(coe.tA);
+    let r = [[p*cTa/(1+coe.e*cTa)],
+        [p*sTa/(1+coe.e*cTa)],
+        [0]];
+    let constA = Math.sqrt(398600.4418/p);
+    let v = [[-constA*sTa],
+            [(coe.e+cTa)*constA],
+            [0]];
+    let cRa = Math.cos(coe.raan * Math.PI / 180); let sRa = Math.sin(coe.raan * Math.PI / 180); 
+    let cAr = Math.cos(coe.arg * Math.PI / 180); let sAr = Math.sin(coe.arg * Math.PI / 180);
+    let cIn = Math.cos(coe.i * Math.PI / 180); let sin = Math.sin(coe.i * Math.PI / 180);
+    R = [[cRa*cAr-sRa*sAr*cIn, -cRa*sAr-sRa*cAr*cIn, sRa*sin],
+         [sRa*cAr+cRa*sAr*cIn, -sRa*sAr+cRa*cAr*cIn, -cRa*sin],
+         [sAr*sin, cAr*sin, cIn]];
+    let state = [math.multiply(R,r),math.multiply(R,v)];
+    return {x: state[0][0][0], y: state[0][1][0], z: state[0][2][0], vx: state[1][0][0], vy: state[1][1][0], vz: state[1][2][0]};
+}
+
+function PosVel2CoeNew(posvel) {
+    let mu = 398600.4418;
+    let r = [posvel.x,posvel.y,posvel.z];
+    let v = [posvel.vx,posvel.vy,posvel.vz];
+    let rn = math.norm(r);
+    let vn = math.norm(v);
+    let h = math.cross(r,v);
+    let hn = math.norm(h);
+    let n = math.cross([0,0,1],h);
+    let nn = math.norm(n);
+    if (nn < 0.00001) {
+        n = [1,0,0];
+        nn = 1;
+    }
+    var epsilon = vn*vn/2-mu/rn;
+    let a = -mu/2/epsilon;
+    let e = math.subtract(math.dotDivide(math.cross(v,h),[mu,mu,mu]),math.dotDivide(r,[rn,rn,rn]));
+    let en = math.norm(e);
+    if (en < 0.00000001) {
+        e = [1,0,0];
+        en = 0;
+    }
+    let inc = Math.acos(math.dot(h,[0,0,1])/hn);
+    let ra = Math.acos(math.dot(n,[1,0,0])/nn);
+    if (n[1] < 0) {
+        ra = 2*Math.PI-ra;
+    }
+    
+    let ar;
+    if (en === 0) {
+        ar = 0;
+    }
+    else {
+        ar = Math.acos(math.dot(n,e)/en/nn);
+    }
+    if (e[1] < 0) {
+        ar = 2*Math.PI-ar;
+    }
+    let ta;
+    if (en === 0) {
+        ta = Math.acos(math.dot(r,e)/rn);
+    }
+    else {
+        ta = Math.acos(math.dot(r,e)/rn/en);
+    }
+    if (r[1] < 0) {
+        ta = 2*Math.PI-ta;
+    }
+    if (Number.isNaN(ta)) {
+        if (math.dot(r,e) < 0){
+            ta = Math.PI;
+        }
+        else{
+            ta = 0;
+        }
+            
+    }
+    // console.log([a,en,inc,ra,ar,ta])
+    return {a: a, e:en, i: inc, raan: ra, arg: ar, tA: ta};
+}
+
+function burnChange() {
+    burnParams = {
+        radial: Number($('#burn_inputs input').eq(0).val()),
+        in_track: Number($('#burn_inputs input').eq(1).val()),
+        cross_track: Number($('#burn_inputs input').eq(2).val())
+    }
+}
