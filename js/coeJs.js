@@ -158,14 +158,15 @@ function drawOrbit(orbitParams) {
             let coeOriginal = {...orbitP};
             coeOriginal.tA = tA;
             let posvelState = Coe2PosVelNew(coeOriginal);
-            console.log(coeOriginal,posvelState,PosVel2CoeNew(posvelState));
+            //console.log(coeOriginal,posvelState,PosVel2CoeNew(posvelState));
             let radial = math.dotDivide([posvelState.x, posvelState.y, posvelState.z],math.norm([posvelState.x, posvelState.y, posvelState.z]));
             let cross_track = math.cross([posvelState.x, posvelState.y, posvelState.z], [posvelState.vx, posvelState.vy, posvelState.vz]);
             cross_track = math.dotDivide(cross_track,math.norm(cross_track));
             let in_track = math.cross(cross_track, radial);
-            in_track = math.dotMultiply(in_track, burnParams.in_track / 1000);
-            cross_track = math.dotMultiply(cross_track, burnParams.cross_track / 1000);
-            radial = math.dotMultiply(radial, burnParams.radial / 1000);
+            in_track = math.dotMultiply(in_track, burnParams.in_track );
+            //console.log(in_track)
+            cross_track = math.dotMultiply(cross_track, burnParams.cross_track);
+            radial = math.dotMultiply(radial, burnParams.radial);
             posvelState.vx += in_track[0];
             posvelState.vy += in_track[1];
             posvelState.vz += in_track[2];
@@ -175,8 +176,9 @@ function drawOrbit(orbitParams) {
             posvelState.vx += radial[0];
             posvelState.vy += radial[1];
             posvelState.vz += radial[2];
-            console.log(posvelState);
+            //console.log(posvelState);
             let newCoe = PosVel2CoeNew(posvelState);
+            //console.log(newCoe.tA)
             newCoe.mA = True2Eccentric(newCoe.e,newCoe.tA);
             newCoe.mA = newCoe.mA - newCoe.e * Math.sin(newCoe.mA);
             burnOrbitParams = {
@@ -187,7 +189,7 @@ function drawOrbit(orbitParams) {
                 arg: newCoe.arg * 180 / Math.PI,
                 mA: newCoe.mA * 180 / Math.PI  
             };
-            console.log(posvelState, burnOrbitParams);
+            //console.log(posvelState, burnOrbitParams);
             if (Math.abs(burnOrbitParams.raan - 360) < 1e-4) {
                 burnOrbitParams.raan = 0;
             }
@@ -306,6 +308,7 @@ function drawOrbit(orbitParams) {
             }
         }
     })
+    //console.log(burnOrbitParams.mA, orbitParams[0].mA)
     let tA = Eccentric2True(burnOrbitParams.e, solveKeplersEquation(burnOrbitParams.mA * Math.PI / 180, burnOrbitParams.e))
     let period = 2 * Math.PI * Math.sqrt(Math.pow(burnOrbitParams.a, 3) / 398600.4418);
     // console.log(ECI)
@@ -317,18 +320,16 @@ function drawOrbit(orbitParams) {
         r = Coe2PosVel(coe);
         r = r[0];
         if (ecef) {
-            r = Eci2Ecef(- ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
+            r = Eci2Ecef( ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
         }
         if (ii === 0) {
             r0 = r;
         }
-        // console.log(r0);
 
         points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
 
         coe = twoBodyProp(coe, tailLength * period / (nTailPts-1));
     }
-    //console.log(points)
     if (burnOrbit === null) {
         var material = new THREE.LineDashedMaterial({
             color: 'rgb(200,200,200)',
@@ -968,8 +969,9 @@ function PosVel2CoeNew(posvel) {
     else {
         ta = Math.acos(math.dot(r,e)/rn/en);
     }
-    console.log(ta, math.dot(r,v))
-    if (math.dot(r,v) < -1e-6) {
+    if (math.abs(math.dot(r,v)) < 1e-6 && math.dot(v,e) > 1e-6) {
+        ta = 2*Math.PI-ta;
+    } else if (math.dot(r,v) < -1e-6){
         ta = 2*Math.PI-ta;
     }
     if (Number.isNaN(ta)) {

@@ -105,17 +105,17 @@ function PosVel2Coe(posvel) {
         ar = 0;
     }
     else {
-        ar = Math.aMath.cos(math.dot(n,e)/en/nn);
+        ar = Math.acos(math.dot(n,e)/en/nn);
     }
     if (e[1] < 0) {
         ar = 2*Math.PI-ar;
     }
     let ta;
     if (en === 0) {
-        ta = Math.aMath.cos(math.dot(r,e)/rn);
+        ta = Math.acos(math.dot(r,e)/rn);
     }
     else {
-        ta = Math.aMath.cos(math.dot(r,e)/rn/en);
+        ta = Math.acos(math.dot(r,e)/rn/en);
     }
     if (r[1] < 0) {
         ta = 2*Math.PI-ta;

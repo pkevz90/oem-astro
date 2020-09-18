@@ -1,0 +1,210 @@
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome and Opera */
+}
+body, html {
+    background-color: black;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+.controls {
+    /* position: absolute; */
+    float: left;
+    width: 100%;
+    /* height: 40%; */
+    background-color: rgba(50,50,50,0.5);
+    /* display: none; */
+    color: white;
+}
+.sideBar {
+    position: fixed;
+    background-color: rgba(0,0,0,0);
+    width: 20%;
+    height: 100%;
+    padding-top: 1%;
+}
+.slider {
+    width: 100%;
+}
+.controlTitle {
+    width: 100%;
+    height: 5%;
+    float: left;
+    color: white;
+    text-align: center;
+    background-color: rgba(50,50,50,0.5);
+    font-weight: bold;
+    z-index: 2;
+    font-size: 2vw;
+}
+.constInfo {
+    width: 100%;
+    float: left;
+    color: white;
+    text-align: center;
+    background-color: rgba(50,50,50,0.5);
+    z-index: 2;
+    font-size: 1.5vw;
+    padding-top: 1vw;
+    text-align: center;
+}
+.constInfo div{
+    text-align: left;
+    margin: 0;
+    padding: 0;
+    outline: 0;
+    border: 0;
+    margin-left: 1.5vw;
+    display: block;
+}
+#constName {
+    font-weight: bold;
+}
+.slidercontainer {
+    padding: 1.5% 10%;
+    font-size: 1.5vw;
+}
+.slidercontainer p {
+    margin: 1%;
+}
+.referenceDiv {
+    position: fixed;
+    bottom: 0%;
+    color: white;
+    width: 30%;
+    left: 35%;
+    text-align: center;
+    font-size: 1.5vw;
+    opacity: 0.8;
+}
+.timeStepDiv {
+    position: fixed;
+    bottom: 0%;
+    color: white;
+    /* width: 20%; */
+    right: 0%;
+    text-align: center;
+    padding-right: 1%;
+    font-size: 1.5vw;
+    opacity: 0.8;
+}
+.addButton {
+    float: right;
+    border: 1px solid white;
+    color: white;
+    padding: 1% 2%;
+    border-radius: 10%;
+}
+.closeButton {
+    float: right;
+    border: 1px solid white;
+    color: white;
+    padding: 1% 2%;
+    border-radius: 50%;
+    font-size: 1.5vw;
+}
+#constClose {
+    float: right;
+    border: 1px solid white;
+    color: white;
+    padding: 1% 2%;
+    border-radius: 50%;
+    font-size: 1.5vw;
+    cursor: pointer;
+}
+.addButton:hover {
+    background-color: rgba(50,50,50,0.75);
+}
+.loadingScreen {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    z-index: 4;
+    padding: 40% 40%;
+}
+.loadingScreen div {
+    color: black;
+}
+.drop-down {
+    position: absolute;
+    background-color: darkgrey;
+    color: black;
+    top: 10%;
+    width: 85%;
+    display: none;
+}
+.orbitsPane {
+    position: fixed;
+    background-color: black;
+    right: 25%;
+    height: 5%;
+    z-index: 3;
+    font-size: 2vw;
+    width: 20%;
+    opacity: 0.5;
+    text-align: center;
+}
+.constPane {
+    position: fixed;
+    background-color: black;
+    right: 45%;
+    height: 5%;
+    z-index: 3;
+    font-size: 2vw;
+    width: 20%;
+    opacity: 0.5;
+    text-align: center;
+}
+.orbitsPane p {
+    color: white;
+    margin: 0;
+    vertical-align: middle;
+}
+.constPane p {
+    color: white;
+    margin: 0;
+    vertical-align: middle;
+}
+.optionsPane {
+    position: fixed;
+    background-color: black;
+    right: 5%;
+    height: 5%;
+    z-index: 3;
+    font-size: 2vw;
+    width: 20%;
+    opacity: 0.5;
+    text-align: center;
+}
+.optionsPane p {
+    color: white;
+    margin: 0;
+    vertical-align: middle;
+}
+.pointer {
+    cursor: pointer;
+}
+.burn_button {
+    color: white;
+    position: fixed;
+    height: auto;
+    width: 40%;
+    bottom: 0%;
+    left: 2%;
+    padding: 2%;
+    font-size: 2.5em;
+}
+#burn_inputs div input {
+    width: 4em;
+    color: white;
+    background-color: rgba(50,50,50,0);
+    font-size: 1em;
+    text-align: center;
+}
