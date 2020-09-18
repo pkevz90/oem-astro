@@ -28,7 +28,7 @@ var burnOrbitParams = {
 var burnParams = {
     in_track: 0,
     radial: 0,
-    cross_track: 3
+    cross_track: 0
 };
 
 var constParams = [];
@@ -158,20 +158,27 @@ function drawOrbit(orbitParams) {
             let coeOriginal = {...orbitP};
             coeOriginal.tA = tA;
             let posvelState = Coe2PosVelNew(coeOriginal);
+            console.log(coeOriginal,posvelState,PosVel2CoeNew(posvelState));
             let radial = math.dotDivide([posvelState.x, posvelState.y, posvelState.z],math.norm([posvelState.x, posvelState.y, posvelState.z]));
             let cross_track = math.cross([posvelState.x, posvelState.y, posvelState.z], [posvelState.vx, posvelState.vy, posvelState.vz]);
             cross_track = math.dotDivide(cross_track,math.norm(cross_track));
             let in_track = math.cross(cross_track, radial);
-            in_track = math.dotMultiply(in_track, burnParams.in_track);
-            cross_track = math.dotMultiply(cross_track, burnParams.cross_track);
+            in_track = math.dotMultiply(in_track, burnParams.in_track / 1000);
+            cross_track = math.dotMultiply(cross_track, burnParams.cross_track / 1000);
+            radial = math.dotMultiply(radial, burnParams.radial / 1000);
             posvelState.vx += in_track[0];
             posvelState.vy += in_track[1];
             posvelState.vz += in_track[2];
             posvelState.vx += cross_track[0];
             posvelState.vy += cross_track[1];
             posvelState.vz += cross_track[2];
+            posvelState.vx += radial[0];
+            posvelState.vy += radial[1];
+            posvelState.vz += radial[2];
+            console.log(posvelState);
             let newCoe = PosVel2CoeNew(posvelState);
             newCoe.mA = True2Eccentric(newCoe.e,newCoe.tA);
+            newCoe.mA = newCoe.mA - newCoe.e * Math.sin(newCoe.mA);
             burnOrbitParams = {
                 a: newCoe.a,
                 e: newCoe.e,
@@ -180,6 +187,13 @@ function drawOrbit(orbitParams) {
                 arg: newCoe.arg * 180 / Math.PI,
                 mA: newCoe.mA * 180 / Math.PI  
             };
+            console.log(posvelState, burnOrbitParams);
+            if (Math.abs(burnOrbitParams.raan - 360) < 1e-4) {
+                burnOrbitParams.raan = 0;
+            }
+            if (Number.isNaN(burnOrbitParams.arg)) {
+                burnOrbitParams.arg = 0;
+            }
             $('#burn_inputs span').eq(0).text(burnOrbitParams.a.toFixed(0));
             $('#burn_inputs span').eq(1).text(burnOrbitParams.e.toFixed(2));
             $('#burn_inputs span').eq(2).text(burnOrbitParams.i.toFixed(0));
@@ -298,7 +312,7 @@ function drawOrbit(orbitParams) {
     let coe = [burnOrbitParams.a, burnOrbitParams.e, burnOrbitParams.i * Math.PI / 180, ECI[0].rotation.y + (burnOrbitParams.raan * Math.PI / 180), burnOrbitParams.arg * Math.PI / 180, tA]
 
     var points = [];
-    let tailLength = 3;
+    let tailLength = Number($('#optionsList input')[0].value) / 100;
     for (var ii = 0; ii <= nTailPts; ii++) {
         r = Coe2PosVel(coe);
         r = r[0];
@@ -312,7 +326,7 @@ function drawOrbit(orbitParams) {
 
         points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
 
-        coe = twoBodyProp(coe, -tailLength * period / (nTailPts-1));
+        coe = twoBodyProp(coe, tailLength * period / (nTailPts-1));
     }
     //console.log(points)
     if (burnOrbit === null) {
@@ -615,48 +629,10 @@ document.addEventListener('keypress', function (key) {
         ecef = !ecef;
         if (ecef) {
             $('.referenceDiv span').text('Earth-Fixed');
-            /*let oldErf = Earth.rotation.y % (2 * Math.PI);
-            let oldEcef = ECEF[0].rotation.y % (2 * Math.PI);
-            oldEcef = oldEcef > Math.PI ? oldEcef - 2 * Math.PI : oldEcef;
-            let oldEci = ECI[0].rotation.y % (2 * Math.PI);
-            let desEci = -sidTime * Math.PI / 180  % (2 * Math.PI);
-            oldEci = (desEci - oldEci) < -Math.PI ? oldEci - 2 * Math.PI : oldEci;
-            let ii = 0, frames = 30;
-            let inter = setInterval(() => {
-                ii++;
-                Earth.rotation.y = (Math.PI-oldErf) * ii / frames + oldErf;
-                clouds.rotation.y = (Math.PI-oldErf) * ii / frames + oldErf;
-                ECEF.forEach((item) => {
-                    item.rotation.y = (0 - oldEcef) * ii / frames + oldEcef;
-                })
-                desEci = (-sidTime * Math.PI / 180) % (2 * Math.PI);
-                ECI.forEach((item) => {
-                    item.rotation.y = (desEci - oldEci) * ii / frames + oldEci;
-                })
-                if (ii === frames) {
-                    clearInterval(inter)
-                }
-            },25)*/
         } else {
             $('.referenceDiv span').text('Inertial');
-            /*Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
-            clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI
-            Sunlight.position.x = -100 * sunVec[0][0];
-            Sunlight.position.y = 100 * sunVec[2][0];
-            Sunlight.position.z = 100 * sunVec[1][0];
-            ECI.forEach((item) => {
-                item.rotation.y = 0;
-            })
-            ECEF.forEach((item) => {
-                item.rotation.y = sidTime * Math.PI / 180;
-            })*/
-            // Earth.rotation.y = sidTime * Math.PI / 180 + Math.PI;
-            // clouds.rotation.y = sidTime * Math.PI / 180 + Math.PI;
         }
-    }
-    if (k === '.' || k === '>') {
-        //constTaTailPts = [];
-        //constTailPts = [];
+    } else if (k === '.' || k === '>') {
         if (timeMult == 1) {
             timeMult = 0;
         }
@@ -665,10 +641,7 @@ document.addEventListener('keypress', function (key) {
             timeMult = 1;
         }
         $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
-    }
-    if (k === ',' || k === '<') {
-        //constTaTailPts = [];
-        //constTailPts = [];
+    } else if (k === ',' || k === '<') {
         if (timeMult == 1) {
             timeMult = 0;
         }
@@ -735,6 +708,9 @@ document.addEventListener('keypress', function (key) {
                 localHoriz.forEach(lineobj => {lineobj.visible = false;})
             }
         }
+    } else if (k === ' ') {
+        console.log(burnOrbitParams);
+        orbitParams[0] = {...burnOrbitParams};
     }
 
 
@@ -992,7 +968,8 @@ function PosVel2CoeNew(posvel) {
     else {
         ta = Math.acos(math.dot(r,e)/rn/en);
     }
-    if (r[1] < 0) {
+    console.log(ta, math.dot(r,v))
+    if (math.dot(r,v) < -1e-6) {
         ta = 2*Math.PI-ta;
     }
     if (Number.isNaN(ta)) {

@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classical Orbital Elements</title>
     <style>
+        .noselect {
+            -webkit-touch-callout: none; /* iOS Safari */
+            -webkit-user-select: none; /* Safari */
+            -khtml-user-select: none; /* Konqueror HTML */
+                -moz-user-select: none; /* Firefox */
+                -ms-user-select: none; /* Internet Explorer/Edge */
+                    user-select: none; /* Non-prefixed version, currently
+                                            supported by Chrome and Opera */
+        }
+        body, html {
+            background-color: black;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
         .controls {
             /* position: absolute; */
             float: left;
@@ -193,11 +208,11 @@
             padding: 2%;
         }
         #burn_inputs div input {
-            width: 25%;
+            width: 4em;
         }
     </style>
 </head>
-<body>
+<body class="noselect">
     <div class="loadingScreen">
         <div>Loading...</div>
     </div>
@@ -300,31 +315,31 @@
         <span>1000</span> times real time<br>
         Use < and > to change 
     </div>
-    <div class="burn_button pointer">
+    <div class="burn_button">
         <div id="burn_inputs" style="display: none;">
             <div>
-                Radial <input type="Number" oninput="burnChange()" value="0" step="0.01">
+                Radial <input type="Number" oninput="burnChange()" value="0" step="1"> m/s
             </div>
             <div>
-                In-Track <input type="Number" oninput="burnChange()" value="0" step="0.01">
+                In-Track <input type="Number" oninput="burnChange()" value="0" step="1"> m/s
             </div>
             <div>
-                Cross-Track <input type="Number" oninput="burnChange()" value="0" step="0.01">
+                Cross-Track <input type="Number" oninput="burnChange()" value="0" step="1"> m/s
             </div>
             <div>
                 <em>a</em>: <span>8000</span> km
             </div>
             <div>
-                <em>e</em>: <span>8000</span>
+                <em>e</em>: <span>0.00</span>
             </div>
             <div>
-                <em>i</em>: <span>8000</span> deg
+                <em>i</em>: <span>45</span> deg
             </div>
             <div>
-                <em>RAAN</em>: <span>8000</span> deg
+                <em>&#937</em>: <span>0</span> deg
             </div>
         </div>
-        Maneuver
+        <span id="maneuver_button" class="pointer" style="font-size: 2vw; opacity: 0.5;">Maneuver</span>
     </div>
     <!-- <div class="taDiv">
         True Anomaly: <span>60</span> sec
@@ -338,6 +353,9 @@
     <script>
         //$('.constList').hide()
         //$('.constPane').hide()
+        $('#maneuver_button').click(()=>{
+            $('#burn_inputs').fadeToggle(250);
+        });
         $('.orbitsPane').on('mouseenter',()=>{
             $('#orbitList').show(); 
             $('#optionsList').hide();
