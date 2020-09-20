@@ -107,7 +107,7 @@ function PosVel2Coe(posvel) {
     else {
         ar = Math.acos(math.dot(n,e)/en/nn);
     }
-    if (e[1] < 0) {
+    if (e[2] < 0) {
         ar = 2*Math.PI-ar;
     }
     let ta;

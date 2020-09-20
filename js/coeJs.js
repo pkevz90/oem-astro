@@ -167,15 +167,9 @@ function drawOrbit(orbitParams) {
             //console.log(in_track)
             cross_track = math.dotMultiply(cross_track, burnParams.cross_track);
             radial = math.dotMultiply(radial, burnParams.radial);
-            posvelState.vx += in_track[0];
-            posvelState.vy += in_track[1];
-            posvelState.vz += in_track[2];
-            posvelState.vx += cross_track[0];
-            posvelState.vy += cross_track[1];
-            posvelState.vz += cross_track[2];
-            posvelState.vx += radial[0];
-            posvelState.vy += radial[1];
-            posvelState.vz += radial[2];
+            posvelState.vx += in_track[0] + cross_track[0] + radial[0];
+            posvelState.vy += in_track[1] + cross_track[1] + radial[1];
+            posvelState.vz += in_track[2] + cross_track[2] + radial[2];
             //console.log(posvelState);
             let newCoe = PosVel2CoeNew(posvelState);
             //console.log(newCoe.tA)
@@ -196,10 +190,10 @@ function drawOrbit(orbitParams) {
             if (Number.isNaN(burnOrbitParams.arg)) {
                 burnOrbitParams.arg = 0;
             }
-            $('#burn_inputs span').eq(0).text(burnOrbitParams.a.toFixed(0));
-            $('#burn_inputs span').eq(1).text(burnOrbitParams.e.toFixed(2));
-            $('#burn_inputs span').eq(2).text(burnOrbitParams.i.toFixed(0));
-            $('#burn_inputs span').eq(3).text(burnOrbitParams.raan.toFixed(0));
+            $('#burn_inputs span').eq(0).text(((Math.abs(burnOrbitParams.a-orbitP.a) < 1e-4) ? 0 : burnOrbitParams.a-orbitP.a).toFixed(0));
+            $('#burn_inputs span').eq(1).text(((Math.abs(burnOrbitParams.e-orbitP.e) < 1e-4) ? 0.00 : burnOrbitParams.e-orbitP.e).toFixed(2));
+            $('#burn_inputs span').eq(2).text(((Math.abs(burnOrbitParams.i-orbitP.i) < 1e-4) ? 0 : burnOrbitParams.i-orbitP.i).toFixed(0));
+            $('#burn_inputs span').eq(3).text(((Math.abs(burnOrbitParams.raan-orbitP.raan) < 1e-4) ? 0 : burnOrbitParams.raan-orbitP.raan).toFixed(0));
         }
         if (!$('#optionsList input')[4].checked){
             $('.controls span')[5+index*6].textContent = ((((2*math.PI) + tA) % (2*math.PI))*180/math.PI).toFixed(0)
@@ -308,28 +302,35 @@ function drawOrbit(orbitParams) {
             }
         }
     })
-    //console.log(burnOrbitParams.mA, orbitParams[0].mA)
-    let tA = Eccentric2True(burnOrbitParams.e, solveKeplersEquation(burnOrbitParams.mA * Math.PI / 180, burnOrbitParams.e))
-    let period = 2 * Math.PI * Math.sqrt(Math.pow(burnOrbitParams.a, 3) / 398600.4418);
-    // console.log(ECI)
-    let coe = [burnOrbitParams.a, burnOrbitParams.e, burnOrbitParams.i * Math.PI / 180, ECI[0].rotation.y + (burnOrbitParams.raan * Math.PI / 180), burnOrbitParams.arg * Math.PI / 180, tA]
-
+    
+    // Burn Orbit
     var points = [];
-    let tailLength = Number($('#optionsList input')[0].value) / 100;
-    for (var ii = 0; ii <= nTailPts; ii++) {
-        r = Coe2PosVel(coe);
-        r = r[0];
-        if (ecef) {
-            r = Eci2Ecef( ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
-        }
-        if (ii === 0) {
-            r0 = r;
-        }
-
-        points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
-
-        coe = twoBodyProp(coe, tailLength * period / (nTailPts-1));
+    if (math.norm([burnParams.radial, burnParams.in_track, burnParams.cross_track]) < 1e-6) {
+        points.push(new THREE.Vector3(0, 0, 0));
     }
+    else {
+        let tA = Eccentric2True(burnOrbitParams.e, solveKeplersEquation(burnOrbitParams.mA * Math.PI / 180, burnOrbitParams.e))
+        let period = 2 * Math.PI * Math.sqrt(Math.pow(burnOrbitParams.a, 3) / 398600.4418);
+        // console.log(ECI)
+        let coe = [burnOrbitParams.a, burnOrbitParams.e, burnOrbitParams.i * Math.PI / 180, ECI[0].rotation.y + (burnOrbitParams.raan * Math.PI / 180), burnOrbitParams.arg * Math.PI / 180, tA]
+    
+        let tailLength = Number($('#optionsList input')[0].value) / 100;
+        for (var ii = 0; ii <= nTailPts; ii++) {
+            r = Coe2PosVel(coe);
+            r = r[0];
+            if (ecef) {
+                r = Eci2Ecef( ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
+            }
+            if (ii === 0) {
+                r0 = r;
+            }
+    
+            points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
+    
+            coe = twoBodyProp(coe, tailLength * period / (nTailPts-1));
+        }
+    }
+    
     if (burnOrbit === null) {
         var material = new THREE.LineDashedMaterial({
             color: 'rgb(200,200,200)',
@@ -624,7 +625,7 @@ $('.slidercontainer input').on('input', sliderInput);
 
 document.addEventListener('keypress', function (key) {
     let k = key.key;
-    if (k.toLowerCase() === 'e') {
+    if (k.toLowerCase() === 'c') {
         constTaTailPts = [];
         constTailPts = [];
         ecef = !ecef;
@@ -710,8 +711,24 @@ document.addEventListener('keypress', function (key) {
             }
         }
     } else if (k === ' ') {
-        console.log(burnOrbitParams);
         orbitParams[0] = {...burnOrbitParams};
+        burnParams = {
+            radial: 0,
+            in_track: 0,
+            cross_track: 0
+        }
+        $('#burn_inputs input').val(0);
+        
+        $('.slidercontainer input').eq(0).val(orbitParams[0].a);
+        $('.slidercontainer input').eq(1).val(orbitParams[0].e);
+        $('.slidercontainer input').eq(2).val(orbitParams[0].i);
+        $('.slidercontainer input').eq(3).val(orbitParams[0].raan);
+        $('.slidercontainer input').eq(4).val(orbitParams[0].arg);
+        $('.controls span').eq(0).text($('.slidercontainer input').eq(0).val());
+        $('.controls span').eq(1).text($('.slidercontainer input').eq(1).val());
+        $('.controls span').eq(2).text($('.slidercontainer input').eq(2).val());
+        $('.controls span').eq(3).text($('.slidercontainer input').eq(3).val());
+        $('.controls span').eq(4).text($('.slidercontainer input').eq(4).val());
     }
 
 
@@ -934,15 +951,15 @@ function PosVel2CoeNew(posvel) {
     let hn = math.norm(h);
     let n = math.cross([0,0,1],h);
     let nn = math.norm(n);
-    if (nn < 0.00001) {
+    if (nn < 1e-6) {
         n = [1,0,0];
         nn = 1;
     }
     var epsilon = vn*vn/2-mu/rn;
     let a = -mu/2/epsilon;
-    let e = math.subtract(math.dotDivide(math.cross(v,h),[mu,mu,mu]),math.dotDivide(r,[rn,rn,rn]));
+    let e = math.subtract(math.dotDivide(math.cross(v,h),mu),math.dotDivide(r,rn));
     let en = math.norm(e);
-    if (en < 0.00000001) {
+    if (en < 1e-6) {
         e = [1,0,0];
         en = 0;
     }
@@ -952,29 +969,46 @@ function PosVel2CoeNew(posvel) {
         ra = 2*Math.PI-ra;
     }
     
-    let ar;
+    let ar, arDot;
     if (en === 0) {
+        arDot = math.dot(n,e) / nn;
+    }
+    else {
+        arDot = math.dot(n,e) / en / nn;
+    }
+    if (arDot > 1) {
         ar = 0;
     }
-    else {
-        ar = Math.acos(math.dot(n,e)/en/nn);
+    else if (arDot < -1) {
+        ar = Math.PI;
     }
-    if (e[1] < 0) {
+    else {
+        ar = Math.acos(arDot);
+    }
+    if (e[2] < 0) {
         ar = 2*Math.PI-ar;
     }
-    let ta;
+    let ta, taDot;
     if (en === 0) {
-        ta = Math.acos(math.dot(r,e)/rn);
+        taDot = math.dot(r,e) / rn;
     }
     else {
-        ta = Math.acos(math.dot(r,e)/rn/en);
+        taDot = math.dot(r,e) / rn / en;
     }
-    if (math.abs(math.dot(r,v)) < 1e-6 && math.dot(v,e) > 1e-6) {
-        ta = 2*Math.PI-ta;
-    } else if (math.dot(r,v) < -1e-6){
-        ta = 2*Math.PI-ta;
+    if (taDot > 1) {
+        ta = 0;
     }
+    else if (taDot < -1) {
+        ta = Math.PI;
+    }
+    else {
+        ta = Math.acos(taDot);
+    }
+    if (math.dot(v,e) > 1e-6) {
+        ta = 2*Math.PI-ta;
+    } 
     if (Number.isNaN(ta)) {
+        console.log('hey');
         if (math.dot(r,e) < 0){
             ta = Math.PI;
         }
