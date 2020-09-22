@@ -16,6 +16,8 @@ var orbitParams = [{
     mA: 0
 }];
 
+var orbitPoints = [];
+
 var burnOrbitParams = {
     a: 10000,
     e: 0,
@@ -52,6 +54,8 @@ var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     constTailPts = [];
     constSatPoint = [],
     nTailPts = 400,
+    dt = 600,
+    tTail = 3600,
     r = 2;
 var gndPts = [],
     constGndPts = [],
@@ -88,13 +92,9 @@ var render = function () {
         timeStep = timeMult/math.mean(lastTenSpeeds);
     }
     stopwatch = new Date().getTime();
-
-
     renderer.render(scene, camera);
     controls.update();
     requestAnimationFrame(render);
-    // line.attributes.position.
-    // orbitParams.raan += 0.1;
     orbitParams.forEach(orbit => {
         orbit.mA += timeStep * 180 / Math.PI * Math.sqrt(398600.4418 / Math.pow(orbit.a, 3));
     })
@@ -151,9 +151,10 @@ function setupScene() {
 }
 
 function drawOrbit(orbitParams) {
-    let r, r0;
+    let r;
     orbitParams.forEach((orbitP,index) => {
         let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
+        let shownOrbit; // Remove some array elements to not having
         if (index === 0) {
             let coeOriginal = {...orbitP};
             coeOriginal.tA = tA;
@@ -190,53 +191,49 @@ function drawOrbit(orbitParams) {
             if (Number.isNaN(burnOrbitParams.arg)) {
                 burnOrbitParams.arg = 0;
             }
-            $('#burn_inputs span').eq(0).text(((Math.abs(burnOrbitParams.a-orbitP.a) < 1e-4) ? 0 : burnOrbitParams.a-orbitP.a).toFixed(0));
-            $('#burn_inputs span').eq(1).text(((Math.abs(burnOrbitParams.e-orbitP.e) < 1e-4) ? 0.00 : burnOrbitParams.e-orbitP.e).toFixed(2));
-            $('#burn_inputs span').eq(2).text(((Math.abs(burnOrbitParams.i-orbitP.i) < 1e-4) ? 0 : burnOrbitParams.i-orbitP.i).toFixed(0));
-            $('#burn_inputs span').eq(3).text(((Math.abs(burnOrbitParams.raan-orbitP.raan) < 1e-4) ? 0 : burnOrbitParams.raan-orbitP.raan).toFixed(0));
+            $('#burn_inputs span').eq(0).text(burnOrbitParams.a.toFixed(0));
+            $('#burn_inputs span').eq(1).text(burnOrbitParams.e.toFixed(2));
+            $('#burn_inputs span').eq(2).text(burnOrbitParams.i.toFixed(0));
+            $('#burn_inputs span').eq(3).text(burnOrbitParams.raan.toFixed(0));
         }
         if (!$('#optionsList input')[4].checked){
             $('.controls span')[5+index*6].textContent = ((((2*math.PI) + tA) % (2*math.PI))*180/math.PI).toFixed(0)
         }
-        let period = 2 * Math.PI * Math.sqrt(Math.pow(orbitP.a, 3) / 398600.4418);
-        // console.log(ECI)
         let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]
-
-        var points = [];
-        let tailLength = Number($('#optionsList input')[0].value) / 100;
-        for (var ii = 0; ii <= nTailPts; ii++) {
-            r = Coe2PosVel(coe);
-            r = r[0];
-            if (ecef) {
-                r = Eci2Ecef(- ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
-            }
-            if (ii === 0) {
-                r0 = r;
-            }
-            // console.log(r0);
-
-            points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
-
-            coe = twoBodyProp(coe, -tailLength * period / (nTailPts-1));
+        if (orbitPoints[index] === undefined) {
+            orbitPoints[index] = [];
         }
-        //console.log(points)
+        r = Coe2PosVel(coe);
+        r = r[0];
+        orbitPoints[index].push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
+        while (orbitPoints[index].length > (tTail / timeStep)) {
+            orbitPoints[index].shift();
+        }
+        let length = orbitPoints[index].length;
+        if (length > 200) {
+            let d = Math.floor(length / 100);
+            shownOrbit = orbitPoints[index].filter((element, index) => {
+                return index % d === 0;
+            })
+        }
+        else {
+            shownOrbit = orbitPoints[index];
+        }
         if (orbit[index] === undefined) {
             var material = new THREE.LineBasicMaterial({
                 color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
                 linewidth: 2
             });
-            var geometry = new THREE.BufferGeometry().setFromPoints(points);
+            var geometry = new THREE.BufferGeometry().setFromPoints(shownOrbit);
             orbit[index] = new THREE.Line(geometry, material);
             var geometry = new THREE.SphereGeometry(0.05, 6, 6);
             var material = new THREE.MeshBasicMaterial({
                 color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value
             });
             satPoint[index] = new THREE.Mesh(geometry, material);
-            // coe = [orbitParams.a, orbitParams.e, orbitParams.i*Math.PI/180, orbitParams.raan*Math.PI/180, orbitParams.arg*Math.PI/180, tA]
-            // r = Coe2PosVel(coe);
-            satPoint[index].position.x = -r0[0][0] / 6371;
-            satPoint[index].position.y = r0[2][0] / 6371;
-            satPoint[index].position.z = r0[1][0] / 6371;
+            satPoint[index].position.x = -r[0][0] / 6371;
+            satPoint[index].position.y = r[2][0] / 6371;
+            satPoint[index].position.z = r[1][0] / 6371;
 
             scene.add(satPoint[index]);
             scene.add(orbit[index]);
@@ -271,10 +268,10 @@ function drawOrbit(orbitParams) {
             }
         } else {
             // Edit orbitVar
-            orbit[index].geometry.setFromPoints(points);
-            satPoint[index].position.x = -r0[0][0] / 6371;
-            satPoint[index].position.y = r0[2][0] / 6371;
-            satPoint[index].position.z = r0[1][0] / 6371;
+            orbit[index].geometry.setFromPoints(orbitPoints[index]);
+            satPoint[index].position.x = -r[0][0] / 6371;
+            satPoint[index].position.y = r[2][0] / 6371;
+            satPoint[index].position.z = r[1][0] / 6371;
             //gndPts[index] = satPoint[index];
             if (lhActive){
                 gndpt = getGroundPoint(satPoint[index].position.x,satPoint[index].position.y,satPoint[index].position.z);
@@ -310,24 +307,18 @@ function drawOrbit(orbitParams) {
     }
     else {
         let tA = Eccentric2True(burnOrbitParams.e, solveKeplersEquation(burnOrbitParams.mA * Math.PI / 180, burnOrbitParams.e))
-        let period = 2 * Math.PI * Math.sqrt(Math.pow(burnOrbitParams.a, 3) / 398600.4418);
         // console.log(ECI)
         let coe = [burnOrbitParams.a, burnOrbitParams.e, burnOrbitParams.i * Math.PI / 180, ECI[0].rotation.y + (burnOrbitParams.raan * Math.PI / 180), burnOrbitParams.arg * Math.PI / 180, tA]
-    
-        let tailLength = Number($('#optionsList input')[0].value) / 100;
-        for (var ii = 0; ii <= nTailPts; ii++) {
+        let tStep = tTail / 150;
+        for (var ii = 0; ii <= 150; ii++) {
             r = Coe2PosVel(coe);
             r = r[0];
             if (ecef) {
-                r = Eci2Ecef( ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
+                r = Eci2Ecef(ii * tStep / 86164 * 360, r)
             }
-            if (ii === 0) {
-                r0 = r;
-            }
-    
             points.push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
-    
-            coe = twoBodyProp(coe, tailLength * period / (nTailPts-1));
+
+            coe = twoBodyProp(coe, tStep);
         }
     }
     
@@ -559,7 +550,8 @@ function getGroundPoint(x,y,z){
 }
 
 $('#optionsList input').on('input', () => {
-    $('#optionsList span')[0].textContent = $('#optionsList input')[0].value;
+    $('#optionsList span').eq(0).text($('#optionsList input').eq(0).val());
+    tTail = Number($('#optionsList input').eq(0).val()) * 3600;
     ECI.forEach((item) => {
         item.visible = $('#optionsList input')[1].checked
     })
@@ -614,6 +606,7 @@ function sliderInput(a) {
         arg: Number($('.slidercontainer input')[4+ii*6].value),
         mA: orbitParams[ii].mA
     };
+    orbitPoints[ii] = [];
     $('.controls span')[0+ii*6].textContent = $('.slidercontainer input')[0+ii*6].value;
     $('.controls span')[1+ii*6].textContent = $('.slidercontainer input')[1+ii*6].value;
     $('.controls span')[2+ii*6].textContent = $('.slidercontainer input')[2+ii*6].value;
@@ -634,6 +627,10 @@ document.addEventListener('keypress', function (key) {
         } else {
             $('.referenceDiv span').text('Inertial');
         }
+        orbitPoints.forEach((element,index) => {
+            orbitPoints[index] = [];
+        })
+        console.log(orbitPoints);
     } else if (k === '.' || k === '>') {
         if (timeMult == 1) {
             timeMult = 0;
@@ -712,6 +709,7 @@ document.addEventListener('keypress', function (key) {
         }
     } else if (k === ' ') {
         orbitParams[0] = {...burnOrbitParams};
+        // orbitPoints[0] = [];
         burnParams = {
             radial: 0,
             in_track: 0,
@@ -734,7 +732,7 @@ document.addEventListener('keypress', function (key) {
 
 });
 
-window.addEventListener('load', (event) => {
+window.addEventListener('load', () => {
     $('.loadingScreen').fadeOut(500);
 });
 
@@ -841,6 +839,7 @@ $('#orbitList p').on('click', (a) => {
             kk = index;
         }
     });
+    orbitPoints[kk] = [];
     //console.log(kk)
     switch (orbit) {
         case 'ISS':
@@ -988,6 +987,9 @@ function PosVel2CoeNew(posvel) {
     if (e[2] < 0) {
         ar = 2*Math.PI-ar;
     }
+    else if (inc < 1e-6 && e[1] < 0) {
+        ar = 2*Math.PI-ar;
+    }
     let ta, taDot;
     if (en === 0) {
         taDot = math.dot(r,e) / rn;
@@ -1007,16 +1009,6 @@ function PosVel2CoeNew(posvel) {
     if (math.dot(v,e) > 1e-6) {
         ta = 2*Math.PI-ta;
     } 
-    if (Number.isNaN(ta)) {
-        console.log('hey');
-        if (math.dot(r,e) < 0){
-            ta = Math.PI;
-        }
-        else{
-            ta = 0;
-        }
-            
-    }
     // console.log([a,en,inc,ra,ar,ta])
     return {a: a, e:en, i: inc, raan: ra, arg: ar, tA: ta};
 }
