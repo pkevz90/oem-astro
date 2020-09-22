@@ -631,22 +631,23 @@ document.addEventListener('keypress', function (key) {
         })
         console.log(orbitPoints);
     } else if (k === '.' || k === '>') {
-        if (timeMult == 1) {
-            timeMult = 0;
-        }
+        // if (timeMult == 1) {
+        //     timeMult = 0;
+        // }
         timeMult += 100;
-        if (timeMult == 0) {
-            timeMult = 1;
-        }
+        // if (timeMult == 0) {
+        //     timeMult = 1;
+        // }
         $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
     } else if (k === ',' || k === '<') {
-        if (timeMult == 1) {
-            timeMult = 0;
+        if (timeMult == 0) {
+            // timeMult = 0;
+            return;
         }
         timeMult -= 100;
-        if (timeMult == 0) {
-            timeMult = 1;
-        }
+        // if (timeMult == 0) {
+        //     timeMult = 1;
+        // }
         $('.timeStepDiv span')[0].textContent = timeMult.toFixed(0);
     } else if (k.toLowerCase() === 's') {
         stars.visible = !stars.visible;
