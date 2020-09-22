@@ -306,8 +306,7 @@ function drawOrbit(orbitParams) {
         points.push(new THREE.Vector3(0, 0, 0));
     }
     else {
-        let tA = Eccentric2True(burnOrbitParams.e, solveKeplersEquation(burnOrbitParams.mA * Math.PI / 180, burnOrbitParams.e))
-        // console.log(ECI)
+        let tA = Eccentric2True(burnOrbitParams.e, solveKeplersEquation(burnOrbitParams.mA * Math.PI / 180, burnOrbitParams.e));
         let coe = [burnOrbitParams.a, burnOrbitParams.e, burnOrbitParams.i * Math.PI / 180, ECI[0].rotation.y + (burnOrbitParams.raan * Math.PI / 180), burnOrbitParams.arg * Math.PI / 180, tA]
         let tStep = tTail / 150;
         for (var ii = 0; ii <= 150; ii++) {
