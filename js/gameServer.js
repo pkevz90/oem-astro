@@ -71,6 +71,7 @@ var url = '/channels';
 //     }
 // );
 
+var helpFromMenu = false;
 window.addEventListener('DOMContentLoaded', (event) => {mainPrompt()});
 function mainPrompt(){
     swal("What game-mode/color would you like?", {
@@ -135,7 +136,8 @@ function mainPrompt(){
                 });
                 channel.publish('data',{from:'red',startTime:null,rmoe:{rd: 0, id0: 0, B0: -1.5707963267948966, a: 0.25}, t0: 0,winner:"",winTime:0});
             }else if(value == 'help'){
-                swal(getHelpText()).then(()=>{mainPrompt()})
+                helpFromMenu = true;
+                showHelp();
             } else {
                 player = value;
                 gameStart = false;
