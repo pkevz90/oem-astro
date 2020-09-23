@@ -202,23 +202,40 @@ function drawOrbit(orbitParams) {
         let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]
         if (orbitPoints[index] === undefined) {
             orbitPoints[index] = [];
-        }
-        r = Coe2PosVel(coe);
-        r = r[0];
-        orbitPoints[index].push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
-        while (orbitPoints[index].length > (tTail / timeStep)) {
-            orbitPoints[index].shift();
-        }
-        let length = orbitPoints[index].length;
-        if (length > 200) {
-            let d = Math.floor(length / 100);
-            shownOrbit = orbitPoints[index].filter((element, index) => {
-                return index % d === 0;
-            })
+            let tStep = tTail / 150;
+            for (var ii = 0; ii <= 150; ii++) {
+                r = Coe2PosVel(coe);
+                r = r[0];
+                if (ecef) {
+                    r = Eci2Ecef(-ii * tStep / 86164 * 360, r);
+                }
+                orbitPoints[index].push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
+                coe = twoBodyProp(coe, -tStep);
+            }
+            orbitPoints[index] = orbitPoints[index].reverse();
+            shownOrbit = orbitPoints[index];
+            r = Coe2PosVel([orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]);
+            r = r[0];
         }
         else {
-            shownOrbit = orbitPoints[index];
+            r = Coe2PosVel(coe);
+            r = r[0];
+            orbitPoints[index].push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
+            while (orbitPoints[index].length > (tTail / timeStep)) {
+                orbitPoints[index].shift();
+            }
+            let length = orbitPoints[index].length;
+            if (length > 200) {
+                let d = Math.floor(length / 100);
+                shownOrbit = orbitPoints[index].filter((element, index) => {
+                    return index % d === 0;
+                })
+            }
+            else {
+                shownOrbit = orbitPoints[index];
+            }
         }
+       
         if (orbit[index] === undefined) {
             var material = new THREE.LineBasicMaterial({
                 color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
@@ -605,7 +622,7 @@ function sliderInput(a) {
         arg: Number($('.slidercontainer input')[4+ii*6].value),
         mA: orbitParams[ii].mA
     };
-    orbitPoints[ii] = [];
+    orbitPoints[ii] = undefined;
     $('.controls span')[0+ii*6].textContent = $('.slidercontainer input')[0+ii*6].value;
     $('.controls span')[1+ii*6].textContent = $('.slidercontainer input')[1+ii*6].value;
     $('.controls span')[2+ii*6].textContent = $('.slidercontainer input')[2+ii*6].value;
