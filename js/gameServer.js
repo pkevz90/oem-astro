@@ -73,7 +73,7 @@ var url = '/channels';
 var helpFromMenu = false;
 window.addEventListener('DOMContentLoaded', (event) => {mainPrompt()});
 function mainPrompt(){
-    swal("What game-mode/color would you like?", {
+    swal("What game-mode/color would you like?\n\nTo play online, have one person pick Network-Red and one person pick Network-Blue. The game will start automatically when you are both connected.", {
         buttons: {
             blue: "1 Player - Blue",
             red: "1 Player - Red",

@@ -36,6 +36,12 @@
         top: 2%;
     }
 
+    #refreshbutton{
+        position: absolute;
+        left: 70%;
+        top: 2%;
+    }
+
     .but {
         display: table-cell;
         
@@ -62,12 +68,14 @@
     #helpwin {
         background-color: white;
         border-radius: 10%;
-        transform: translate(-50%, -50%);
+        
 
         /*LITERAL MAGIC*/
         position: absolute;
         top: 50%;
         left: 50%;
+        transform: translate(-50%, -50%);
+
         animation: myShowSweetAlert .3s;
 
         width: 50vh;
@@ -114,6 +122,7 @@
 
 <body>
  <div id='helpbutton' class='but' onclick='showHelp()'>Help</div>
+ <div id='refreshbutton' class='but' onclick='location.reload()'>Refresh</div>
  <div id='helpwin'>
      <div class='closebut'>x</div>
      <img src='' />
@@ -128,16 +137,18 @@
     var helpscreen = 0;
     var helpmsgs = ["Welcome to RPO Arena. Your challenge, should you choose to accept it, is to use your satellite to collect a critical amount of data on your opponent before they collect enough data on you. In these tutuorial images, you will be the blue satellite, although the colors are interchangable.<br /><br />This game takes place in the RIC frame in geostationary orbit. The earth is towards the bottom of the screen. Check out the other links on the <a href='https://pkevz90.github.io/pkevz.github.io/'>OW Web Applications</a> for more information.",
     "In order to collect data, you need to be close to your target. If you are within the yellow circle, collecting data becomes possible. Within the green circle, the data collection is faster.",
-    "The other requirement for collecting data is having a good sun angle. If the sun vector, which looks like a yellow line from your target, is pointing towards you, the sun in to your back, and research will be faster. If the sun angle is away from you, you will be blinded and will not be updated if your oponent changes course.",
+    "The other requirement for collecting data is having a good sun angle. If the sun vector, which looks like a yellow line from your target, is pointing towards you, the sun is to your back, and research will be faster. If the sun angle is away from you, you will be blinded and will not be updated if your oponent changes course.",
     "In this image, you are collecting data at the maximum speed. If you made a burn, your oponent would be blinded and would only see a prediction of where you would have been if you hadn't burned.",
     "1. Your research completion percentage. When this circle fills up, you win.<br /><br />2. Burn Cooldown. While there is no overall fuel limit, the inner circle must be full before you can burn again.<br /><br />3. The game controls. <br /><br />4. How close your opponent is to completing their research on you.",
-    "If you leave the solid red lines, you will instantly lose. When drifting towards the edge of the orbital slot, you can fix your drift by <b>burning in the same direction as your drift</b>. While this may be counter-intuitive, you are actually changing your orbital period, which ultimately controls drift."]
+    "If you leave the solid red lines, you will instantly lose. When drifting towards the edge of the orbital slot, you can fix your drift by <b>burning in the same direction as your drift</b>. While this may be counter-intuitive, you are actually changing your orbital period, which ultimately controls drift.",
+    "It may help to keep in mind that everytime you complete a cycle of your path, you, your oponent, and the origin of the RIC frame all orbit the earth one time. Also, the best way to get an intuition for how objects move in the RIC frame is to just into a 1-player game and play against an oponent in an unchanging orbit.<br /><br /> Have fun!"]
     var helpimgs = ["intro.png",
                     "distances.png",
                     "sunangles.png",
                     "goodall.png",
                     "screenitems.png",
-                    "bounds.png"]
+                    "bounds.png",
+                    "3d.png"]
     function previoushelp() {
         helpscreen = helpscreen-1;
         helpscreen = Math.max(0,helpscreen);
@@ -153,6 +164,7 @@
         $('#helpwin img')[0].src = "Media/gameimg/help/" + helpimgs[helpscreen];
     }
     $('#helpwin').hide();
+    $('#refreshbutton').hide();
     function showHelp(){
         helpscreen=0;
         updateHelpPage();

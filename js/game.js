@@ -349,7 +349,7 @@ if (gameStart && !gameDone && (!local || !$('#helpwin').is(":visible"))){
     let p2real = {x:i2x(realir.i,zoom),y:r2y(realir.r,zoom)}
     let cats = math.acos(math.dot([svec_at_p2.x-p2real.x,svec_at_p2.y-p2real.y],[p1.x-p2real.x,p1.y-p2real.y])/(math.norm([svec_at_p2.x-p2real.x,svec_at_p2.y-p2real.y])*math.norm([p1.x-p2real.x,p1.y-p2real.y])));
     //Cats goes from 0 to pi (pi is bad)
-    let minMsgWait = 1;
+    let minMsgWait = .5;
     if (d<=smallPx){
         if (cats<=wezCATS){
             p1Perc += gdistgsunPPS/fps;
@@ -360,10 +360,7 @@ if (gameStart && !gameDone && (!local || !$('#helpwin').is(":visible"))){
         } else if (cats>=Math.PI-pezCATS){
             p2Perc += gdistysunPPS/fps;
         }else{
-            minMsgWait=3;
-            if (math.round(p2Perc,1) != math.round(p2PercNet,1) && !local){
-                p2Perc += math.sign(p2PercNet-p2Perc)*.03
-            }
+            minMsgWait=1;
         }
     }else if(d<=largePx){
         if (cats<=wezCATS){
@@ -375,18 +372,15 @@ if (gameStart && !gameDone && (!local || !$('#helpwin').is(":visible"))){
         } else if (cats>=Math.PI-pezCATS){
             p2Perc += ydistysunPPS/fps;
         }else{
-            minMsgWait=5;
-            if (math.round(p2Perc,1) != math.round(p2PercNet,1) && !local){
-                p2Perc += math.sign(p2PercNet-p2Perc)*.03
-            }
+            minMsgWait=1;
         }
     }else{
         minMsgWait=3;
-        if (math.round(p2Perc,1) != math.round(p2PercNet,1) && !local){
-            p2Perc += math.sign(p2PercNet-p2Perc)*.03
-        }
+        
     }
-
+    if (math.round(p2Perc,1) != math.round(p2PercNet,1) && !local){
+        p2Perc = (p2PercNet*.2+p2Perc)/1.2
+    }
     if (!local && t-lastMsgT > minMsgWait){
         publishMsg(player,p1,winner,winTime)
         lastMsgT = t;
@@ -403,10 +397,12 @@ if (gameStart && !gameDone && (!local || !$('#helpwin').is(":visible"))){
         winText.setText("You Win!")
         winText.setX(w/2-winText.width/2);
         winText.setY(h/10);
+        $('#refreshbutton').show();
     } else if(winner == "p2"){
         winText.setText("You Lose!")
         winText.setX(w/2-winText.width/2);
         winText.setY(h/10);
+        $('#refreshbutton').show();
     }
 
     //Arrow Keys
@@ -429,7 +425,7 @@ if (gameStart && !gameDone && (!local || !$('#helpwin').is(":visible"))){
     if (cursors.space.isDown && (t-p1.t0)/prepTime >= 1 && (p1.target.idot + p1.target.rdot != 0)){
         p = RMOE2PosVel(p1.rmoe,p1.t0,t);
         p1.rmoe = posVel2RMOE(p.r,p.i,p.rdot+p1.target.rdot,p.idot+p1.target.idot); 
-        
+
         flame1Timer = t+math.min(.5,prepTime/2);
         flame1.setAngle(-90+math.atan2(p1.target.rdot,p1.target.idot)*180/math.PI);
         p1.target.idot=0;
@@ -440,7 +436,7 @@ if (gameStart && !gameDone && (!local || !$('#helpwin').is(":visible"))){
             lastMsgT = t;
         }
     }
-    
+
     targetPtRange.clear();
 
     targetPt.clear();
