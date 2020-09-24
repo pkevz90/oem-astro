@@ -71,7 +71,7 @@ $('canvas').mousemove(event => {
     drawSunVectors(app.currentTime * 3600);
     setAxisZoomPos();
 })
-$('canvas').mouseup(() => {
+$(Window).mouseup(() => {
     down = false;
     setTimeout(() => {
         if (down) {
@@ -113,6 +113,9 @@ $('.nav-element-right:first').on('click', () => {
 $('.selectable:first').on('click', () => {
     let turn = Number($turn.text());
     if (turn > app.redTurn && setupData.server) {
+        return;
+    }
+    else if (app.tactic !== '') {
         return;
     }
     turn++;

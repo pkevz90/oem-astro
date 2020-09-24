@@ -179,6 +179,24 @@ function createGraph() {
 					let positionY = app.chartData === undefined ? 0 : app.chartData.relative.data[1].y;
 					drawArrow(ctx, pixelX, pixelY, app.axisLimits / 3, [positionX, positionY], sunInit + n * app.currentTime * 3600);
 					
+					//drawSunBackground
+					ctx.save();
+					let height = (globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2;
+					let width = height * 2;
+					let sunX = width / 2 * (1 + Math.sin(sunInit + n * app.currentTime * 3600));
+					let sunY = height / 2 * (1 - Math.cos(sunInit + n * app.currentTime * 3600));
+					let sunX2 = width / 2 * (1 - Math.sin(sunInit + n * app.currentTime * 3600));
+					let sunY2 = height / 2 * (1 + Math.cos(sunInit + n * app.currentTime * 3600));
+					let sunColor = ctx.createLinearGradient(sunX,sunY,sunX2,sunY2);
+					sunColor.addColorStop(0,'rgba(255,255,0,0.08)');
+					sunColor.addColorStop(0.2,'rgba(255,255,0,0)');
+					sunColor.addColorStop(1,'rgba(255,255,0,0)');
+					ctx.fillStyle = sunColor;
+					ctx.beginPath();
+					ctx.rect(50,10,globalChartRef.chartArea.right-globalChartRef.chartArea.left+50,(globalChartRef.chartArea.right-globalChartRef.chartArea.left) / 2-25);
+					ctx.fill();
+					ctx.restore();
+
 					// Draw Burn if applicable
 					if (app.tactic !== '' && app.chosenWaypoint !== undefined) {
 						positionX = app.players[app.chosenWaypoint[1]].dataLoc.waypoints.data[app.chosenWaypoint[0]].x;
