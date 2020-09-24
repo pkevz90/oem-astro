@@ -41,7 +41,6 @@
 // });
 
 
-
 var ably = new Ably.Realtime('ZkFqGA.IVi64w:aaGrO9xvFbuGIplv');
 var channel = ably.channels.get('game2');
 
@@ -85,7 +84,7 @@ function mainPrompt(){
         closeOnClickOutside: false,
     }).then(
         (value)=>{
-            if (value=='bluenet'){
+            if (value=='bluenet' && navigator.onLine){
                 player='blue';
                 channel.subscribe('data', function(message) {
                     if (message.data.from =='red'){
@@ -110,7 +109,7 @@ function mainPrompt(){
                     }
                 });
                 channel.publish('data',{from:'blue',startTime:null,rmoe:{rd: 0, id0: 0, B0: 1.5707963267948966, a: 0.25}, t0: 0,winner:"",winTime:0});
-            }else if(value == 'rednet'){
+            }else if(value == 'rednet' && navigator.onLine){
                 player='red';
                 channel.subscribe('data', function(message) {
                     if (message.data.from =='blue'){
@@ -135,6 +134,9 @@ function mainPrompt(){
                     }
                 });
                 channel.publish('data',{from:'red',startTime:null,rmoe:{rd: 0, id0: 0, B0: -1.5707963267948966, a: 0.25}, t0: 0,winner:"",winTime:0});
+            }else if((value=='bluenet' || value=='rednet') && !navigator.onLine){
+                alert("Unable to connect to the server. Use 1 Player only. Refresh to retry.")
+                mainPrompt()
             }else if(value == 'help'){
                 helpFromMenu = true;
                 showHelp();
