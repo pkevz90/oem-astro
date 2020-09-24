@@ -127,8 +127,8 @@
      <div class='closebut'>x</div>
      <img src='' />
      <p></p>
-     <div class='but' onclick='nexthelp()' style="position: absolute;right:5%;bottom: 5%;width: 10%;">Next</div>
-     <div class='but' onclick='previoushelp()' style="position: absolute;left:5%;bottom: 5%;width: 10%;">Previous</div>
+     <div id="nextbut" class='but' onclick='nexthelp()' style="position: absolute;right:5%;bottom: 5%;width: 10%;">Next</div>
+     <div id="prevbut" class='but' onclick='previoushelp()' style="position: absolute;left:5%;bottom: 5%;width: 10%;">Previous</div>
     <div class='but' onclick='$("#helpwin").hide();if (helpFromMenu){helpFromMenu=false;mainPrompt()}' style="position: absolute;left:50%;bottom: 5%;width: 10%;transform: translate(-50%, 0%);">Close</div>
  </div>
 </body>
@@ -139,6 +139,7 @@
     "In order to collect data, you need to be close to your target. If you are within the yellow circle, collecting data becomes possible. Within the green circle, the data collection is faster.",
     "The other requirement for collecting data is having a good sun angle. If the sun vector, which looks like a yellow line from your target, is pointing towards you, the sun is to your back, and research will be faster. If the sun angle is away from you, you will be blinded and will not be updated if your oponent changes course.",
     "In this image, you are collecting data at the maximum speed. If you made a burn, your oponent would be blinded and would only see a prediction of where you would have been if you hadn't burned.",
+    "In this image, you are blinded by the sun while looking at your oponent. If they burn their engines, you won't be able to see it, and will only see their silouette moving along their old path.",
     "1. Your research completion percentage. When this circle fills up, you win.<br /><br />2. Burn Cooldown. While there is no overall fuel limit, the inner circle must be full before you can burn again.<br /><br />3. The game controls. <br /><br />4. How close your opponent is to completing their research on you.",
     "If you leave the solid red lines, you will instantly lose. When drifting towards the edge of the orbital slot, you can fix your drift by <b>burning in the same direction as your drift</b>. While this may be counter-intuitive, you are actually changing your orbital period, which ultimately controls drift.",
     "It may help to keep in mind that everytime you complete a cycle of your path, you, your oponent, and the origin of the RIC frame all orbit the earth one time. Also, the best way to get an intuition for how objects move in the RIC frame is to just into a 1-player game and play against an oponent in an unchanging orbit.<br /><br /> Have fun!"]
@@ -146,6 +147,7 @@
                     "distances.png",
                     "sunangles.png",
                     "goodall.png",
+                    "allbad.png",
                     "screenitems.png",
                     "bounds.png",
                     "3d.png"]
@@ -162,6 +164,16 @@
     function updateHelpPage(){
         $('#helpwin p').html(helpmsgs[helpscreen])
         $('#helpwin img')[0].src = "Media/gameimg/help/" + helpimgs[helpscreen];
+        if (helpscreen == helpmsgs.length-1){
+            $("#nextbut").hide()
+        }else{
+            $("#nextbut").show()
+        }
+        if (helpscreen == 0){
+            $("#prevbut").hide()
+        }else{
+            $("#prevbut").show()
+        }
     }
     $('#helpwin').hide();
     $('#refreshbutton').hide();
