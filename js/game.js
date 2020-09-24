@@ -41,7 +41,7 @@ var gdistgsunPPS = 20;
 var smallRange = .2;
 var largeRange = .3;
 var maxBurnDV = .0065;
-var prepTime = 1; //In game seconds between burns
+var prepTime = 2; //In game seconds between burns
 
 //Gameplay Non-Tunable Variables
 var omega = 2*Math.PI/period;
@@ -94,11 +94,11 @@ function resize(){
     game.scale.resize(w,h);
 
     keyspic.x = .8*w;
-    keyspic.y = .85*h;
+    keyspic.y = .875*h;
     spacebarpic.x = .8*w;
-    spacebarpic.y = .85*h+keyspic.height*keyspic.scale;
+    spacebarpic.y = .875*h+keyspic.height*keyspic.scale;
     keystext.x = .8*w+keyspic.width*keyspic.scale*.5+20;
-    keystext.y = .85*h - keystext.height/2
+    keystext.y = .875*h - keystext.height/2
     spacetext.x = .8*w+spacebarpic.width*spacebarpic.scale*.5+20;
     spacetext.y = spacebarpic.y - spacetext.height/2
 
@@ -161,11 +161,11 @@ function create ()
     }
     //Graphics in order of lyers bottom to top
     warnRegion = this.add.graphics();
-    keyspic = this.add.image(.8*w,.85*h,'keys')
+    keyspic = this.add.image(.8*w,.875*h,'keys')
     keyspic.setScale(.3)
-    spacebarpic = this.add.image(.8*w,.85*h+keyspic.height*keyspic.scale,'spacebar')
+    spacebarpic = this.add.image(.8*w,.875*h+keyspic.height*keyspic.scale,'spacebar')
     spacebarpic.setScale(.3)
-    keystext = this.add.text(.8*w+keyspic.width*keyspic.scale*.5+20,.85*h,"Choose ∆V\nDirection")
+    keystext = this.add.text(.8*w+keyspic.width*keyspic.scale*.5+20,.875*h,"Choose ∆V\nDirection")
     keystext.y = keystext.y - keystext.height/2
     spacetext = this.add.text(.8*w+spacebarpic.width*spacebarpic.scale*.5+20,spacebarpic.y,"Execute Burn")
     spacetext.y = spacetext.y - spacetext.height/2
@@ -283,7 +283,7 @@ function i2x(i,zoom=1){return(w/2-(i * (1/zoom) * w))};
 function r2y(r,zoom=1){return(h/2-(r * (1/zoom) * w))};//scaling using w keeps it scaled correctly
 function update ()
 {
-if (gameStart && !gameDone){
+if (gameStart && !gameDone && (!local || !$('#helpwin').is(":visible"))){
     //Game Timer
     t=(((new Date().getTime()) - initTime)/1000);
     if (winner == ""){
@@ -480,13 +480,13 @@ if (gameStart && !gameDone){
 
     timeIndic.clear();
     timeIndic.fillStyle(0x444444,.8)
-    timeIndic.fillCircle(w/6,.8*h,wdraw/10);
+    timeIndic.fillCircle(w/6,.875*h,wdraw/10);
     timeIndic.beginPath();
     
     timeIndic.lineStyle(.025*wdraw,p1Col,1);
-    timeIndic.moveTo(w/6,.8*h-.1*wdraw);
+    timeIndic.moveTo(w/6,.875*h-.1*wdraw);
     
-    timeIndic.arc(w/6,.8*h,wdraw/10,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min((t-p1.t0)/prepTime,1),false)
+    timeIndic.arc(w/6,.875*h,wdraw/10,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min((t-p1.t0)/prepTime,1),false)
     
     timeIndic.stroke();
     if ((t-p1.t0)/prepTime >= 1){
@@ -495,33 +495,33 @@ if (gameStart && !gameDone){
         timeIndicText.setText("Preparing\n to Burn")
     }
     timeIndicText.setX(w/6-timeIndicText.width/2)
-    timeIndicText.setY(.8*h-timeIndicText.height/2)
+    timeIndicText.setY(.875*h-timeIndicText.height/2)
 
     percIndic.clear();
     percIndic.beginPath();
     percIndic.lineStyle(.025*wdraw,p2LightCol,.2);
-    percIndic.arc(w/6,.8*h,.125*wdraw,-Math.PI/2,3*Math.PI/2);
+    percIndic.arc(w/6,.875*h,.125*wdraw,-Math.PI/2,3*Math.PI/2);
     percIndic.closePath();
     percIndic.stroke();
     percIndic.beginPath();
     percIndic.lineStyle(.025*wdraw ,p2Col,math.max(math.min(p1Perc/100,1),.5));
-    percIndic.arc(w/6,.8*h,.125*wdraw,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(p1Perc/100,1),false)
+    percIndic.arc(w/6,.875*h,.125*wdraw,-Math.PI/2,-Math.PI/2 + Math.PI*2*math.min(p1Perc/100,1),false)
     percIndic.stroke();
     percText.setText("You are \n".concat(math.min(math.round(p1Perc,0),100).toString().concat('% Done Researching')))
     percText.setX(w/6-percText.width/2)
-    percText.setY(.8*h-.175*wdraw)
+    percText.setY(.875*h-.175*wdraw)
 
 
     p2PercIndic.clear();
     p2PercIndic.fillStyle(p1LightCol,.5)
     let indicw=.28*wdraw;
     p2Perc=math.min(p2Perc,100);
-    p2PercIndic.fillRect(w/6-.5*indicw+(p2Perc/100)*indicw,.925*h,indicw-(p2Perc/100)*indicw,.02*h);
+    p2PercIndic.fillRect(w/2-.5*indicw+(p2Perc/100)*indicw,.925*h,indicw-(p2Perc/100)*indicw,.02*h);
     p2PercIndic.fill();
     p2PercIndic.fillStyle(p2LightCol,.5)
-    p2PercIndic.fillRect(w/6-.5*indicw,.925*h,indicw-((100-p2Perc)/100)*indicw,.02*h);
+    p2PercIndic.fillRect(w/2-.5*indicw,.925*h,indicw-((100-p2Perc)/100)*indicw,.02*h);
     p2PercText.setText("Opponent is ".concat(math.min(math.round(p2Perc,0),100).toString().concat('% Done Researching')))
-    p2PercText.setX(w/6-.5*p2PercText.width)
+    p2PercText.setX(w/2-.5*p2PercText.width)
     p2PercText.setY(.95*h)
 
 
@@ -634,12 +634,12 @@ if (gameStart && !gameDone){
     
     //CATS Zones
     distReqCirc.clear();
-    distReqCirc.fillStyle(0xCCCCCC,math.min(math.max((d-largePx)/largePx,0),.15));
-    distReqCirc.fillCircle(p2.x,p2.y,largePx);
+    // distReqCirc.fillStyle(0xCCCCCC,math.min(math.max((d-largePx)/largePx,0),.15));
+    // distReqCirc.fillCircle(p2.x,p2.y,largePx);
     distReqCirc.beginPath();
-    distReqCirc.lineStyle(2/zoom,0xFFFF00,.6-math.min(math.max((d-largePx)/largePx,0),.55));
+    distReqCirc.lineStyle(2/zoom,0xFFFF00,.8-math.min(math.max((d-largePx)/largePx,0),.8));
     distReqCirc.strokeCircle(p2.x,p2.y,largePx);
-    distReqCirc.lineStyle(2/zoom,0x00FF00,.6-math.min(math.max((d-largePx)/largePx,0),.55));
+    distReqCirc.lineStyle(2/zoom,0x00FF00,.8-math.min(math.max((d-largePx)/largePx,0),.8));
     distReqCirc.strokeCircle(p2.x,p2.y,smallPx);
     distReqCirc.stroke();
     //distReqCirc.fill();

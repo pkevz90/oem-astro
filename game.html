@@ -31,13 +31,18 @@
         -ms-overflow-style: none;
     }
     #helpbutton{
+        position: absolute;
+        left: 85%;
+        top: 2%;
+    }
+
+    .but {
         display: table-cell;
-        position:absolute;
+        
         width: fit-content;
         height:fit-content;
         padding: .5em 2em;
-        left: 85%;
-        top: 2%;
+        
         
         border-radius: 5%;
         text-align: center;
@@ -50,29 +55,107 @@
         border-color: gray;
     }
 
-    #helpbutton:hover {
-        background-color: white;
+    .but:hover {
         border-width: 2px 1px 1px 2px;
+    }
+
+    #helpwin {
+        background-color: white;
+        border-radius: 10%;
+        transform: translate(-50%, -50%);
+
+        /*LITERAL MAGIC*/
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        animation: myShowSweetAlert .3s;
+
+        width: 50vh;
+        max-width: 95vw;
+        height: 70vh;
+        
+    }
+
+    #helpwin img{
+        position: absolute;
+        top: 5%;
+        left: 50%;
+        margin-right: -50%;
+        transform: translate(-50%, 0%);
+        height: 50%;
+        width: 90%;
+        border-radius: 10px;
+    }
+
+    #helpwin p{
+        position: absolute;
+        top: 60%;
+        left: 50%;
+        margin-right: -50%;
+        transform: translate(-50%, 0%);
+        font-size: larger;
+        width: 90%;
+        border-radius: 10px;
+    }
+
+    #helpwin .but {
+        -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Safari */
+        -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+        user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome, Edge, Opera and Firefox */
+
     }
 
 </style>
 </head>
 
 <body>
- <div id='helpbutton' onclick='showHelp()'>Help</div>
+ <div id='helpbutton' class='but' onclick='showHelp()'>Help</div>
+ <div id='helpwin'>
+     <div class='closebut'>x</div>
+     <img src='' />
+     <p></p>
+     <div class='but' onclick='nexthelp()' style="position: absolute;right:5%;bottom: 5%;width: 10%;">Next</div>
+     <div class='but' onclick='previoushelp()' style="position: absolute;left:5%;bottom: 5%;width: 10%;">Previous</div>
+    <div class='but' onclick='$("#helpwin").hide();if (helpFromMenu){helpFromMenu=false;mainPrompt()}' style="position: absolute;left:50%;bottom: 5%;width: 10%;transform: translate(-50%, 0%);">Close</div>
+ </div>
 </body>
 <script>
-    function getHelpText(){
-        return(["\xa0\xa0\xa0\xa0Welcome to RPO Arena. Your challenge, should you choose to accept it, is to use the geostationary satellite at your disposal to collect visual data on an opposing satellite.\n\n",
-                "How to win:\n\n",
-                "\xa0\xa0\xa0\xa0In order to take good photographs, you need to be close enough to the opposing satellite, and to have the sun behind you while you look at your target. If you are outside of the minimum range for data collection, a gray circle will appear representing that range. While inside, a smaller green circle will indicate the threshold to further increase research speed. To assist you with getting the sun to your back, a sun vector (the yellow rotating line) starts from your target and points towards the sun. If the sun vector is in the yellow region, it is to your back enough to take photographs. In the green region, the research can be performed even faster. In the gray region, the sun is in your sensors view directly, blinding you to changes in the motion of your target.\n\n",
-                "RPO Basics:\n\n",
-                "\xa0\xa0\xa0\xa0 All of the operations will be taken in reference to the RIC frame, which stands for Radial, In-Track, and Cross-Track. The origin of the frame, designated by the white dot, orbits the earth in a perfectly circular geostationary orbit. You and your target both also orbit the earth roughly once per day, but changes to your orbit around earth look like motion in the RIC frame.\n\n",
-                "\xa0\xa0\xa0\xa0 For example, objects closer to Earth (towards the bottom of the screen) will orbit faster (leftwards drift). This can be seen during the elliptical motion. However, you may quickly notice that burning in-track will cause drift in the opposite direction. The period of your orbit around earth is the only factor impacting long term drift relative to the RIC frame origin. Burning in the positive in-track direction increases the semi-major axis of the orbit, increasing the period, and causing you to fall behind in the negative in-track direction.  Burning radially will change the relative position and size of the ellipse you are traveling in.\n\n",
-                "\xa0\xa0\xa0\xa0Good Luck, and maneuver tactically!"].join(""))
+    
+    var helpscreen = 0;
+    var helpmsgs = ["Welcome to RPO Arena. Your challenge, should you choose to accept it, is to use your satellite to collect a critical amount of data on your opponent before they collect enough data on you. In these tutuorial images, you will be the blue satellite, although the colors are interchangable.<br /><br />This game takes place in the RIC frame in geostationary orbit. The earth is towards the bottom of the screen. Check out the other links on the <a href='https://pkevz90.github.io/pkevz.github.io/'>OW Web Applications</a> for more information.",
+    "In order to collect data, you need to be close to your target. If you are within the yellow circle, collecting data becomes possible. Within the green circle, the data collection is faster.",
+    "The other requirement for collecting data is having a good sun angle. If the sun vector, which looks like a yellow line from your target, is pointing towards you, the sun in to your back, and research will be faster. If the sun angle is away from you, you will be blinded and will not be updated if your oponent changes course.",
+    "In this image, you are collecting data at the maximum speed. If you made a burn, your oponent would be blinded and would only see a prediction of where you would have been if you hadn't burned.",
+    "1. Your research completion percentage. When this circle fills up, you win.<br /><br />2. Burn Cooldown. While there is no overall fuel limit, the inner circle must be full before you can burn again.<br /><br />3. The game controls. <br /><br />4. How close your opponent is to completing their research on you.",
+    "If you leave the solid red lines, you will instantly lose. When drifting towards the edge of the orbital slot, you can fix your drift by <b>burning in the same direction as your drift</b>. While this may be counter-intuitive, you are actually changing your orbital period, which ultimately controls drift."]
+    var helpimgs = ["intro.png",
+                    "distances.png",
+                    "sunangles.png",
+                    "goodall.png",
+                    "screenitems.png",
+                    "bounds.png"]
+    function previoushelp() {
+        helpscreen = helpscreen-1;
+        helpscreen = Math.max(0,helpscreen);
+        updateHelpPage()
     }
+    function nexthelp() {
+        helpscreen = helpscreen+1;
+        helpscreen = Math.min(helpmsgs.length-1,helpscreen);
+        updateHelpPage()
+    }
+    function updateHelpPage(){
+        $('#helpwin p').html(helpmsgs[helpscreen])
+        $('#helpwin img')[0].src = "Media/gameimg/help/" + helpimgs[helpscreen];
+    }
+    $('#helpwin').hide();
     function showHelp(){
-        swal(getHelpText())
+        updateHelpPage();
+        $('#helpwin').show();
     }
 </script>
 </html>
