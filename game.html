@@ -81,7 +81,8 @@
         width: 50vh;
         max-width: 95vw;
         height: 70vh;
-        
+        min-width: 800px;
+        min-height: 600px;
     }
 
     #helpwin img{
@@ -106,6 +107,16 @@
         border-radius: 10px;
     }
 
+    #helpwin span{
+        display: block;
+        position: absolute;
+        width: 100%;
+        bottom: 10%;
+        font-size: larger;
+        border-radius: 10px;
+        text-align: center;
+    }
+
     #helpwin .but {
         -webkit-touch-callout: none; /* iOS Safari */
         -webkit-user-select: none; /* Safari */
@@ -124,9 +135,9 @@
  <div id='helpbutton' class='but' onclick='showHelp()'>Help</div>
  <div id='refreshbutton' class='but' onclick='location.reload()'>Refresh</div>
  <div id='helpwin'>
-     <div class='closebut'>x</div>
      <img src='' />
      <p></p>
+     <span>Page 1/2</span>
      <div id="nextbut" class='but' onclick='nexthelp()' style="position: absolute;right:5%;bottom: 5%;width: 10%;">Next</div>
      <div id="prevbut" class='but' onclick='previoushelp()' style="position: absolute;left:5%;bottom: 5%;width: 10%;">Previous</div>
     <div class='but' onclick='$("#helpwin").hide();if (helpFromMenu){helpFromMenu=false;mainPrompt()}' style="position: absolute;left:50%;bottom: 5%;width: 10%;transform: translate(-50%, 0%);">Close</div>
@@ -137,14 +148,16 @@
     var helpscreen = 0;
     var helpmsgs = ["Welcome to RPO Arena. Your challenge, should you choose to accept it, is to use your satellite to collect a critical amount of data on your opponent before they collect enough data on you. In these tutuorial images, you will be the blue satellite, although the colors are interchangable.<br /><br />This game takes place in the RIC frame in geostationary orbit. The earth is towards the bottom of the screen. Check out the other links on the <a href='https://pkevz90.github.io/pkevz.github.io/'>OW Web Applications</a> for more information.",
     "In order to collect data, you need to be close to your target. If you are within the yellow circle, collecting data becomes possible. Within the green circle, the data collection is faster.",
-    "The other requirement for collecting data is having a good sun angle. If the sun vector, which looks like a yellow line from your target, is pointing towards you, the sun is to your back, and research will be faster. If the sun angle is away from you, you will be blinded and will not be updated if your oponent changes course.",
-    "In this image, you are collecting data at the maximum speed. If you made a burn, your oponent would be blinded and would only see a prediction of where you would have been if you hadn't burned.",
-    "In this image, you are blinded by the sun while looking at your oponent. If they burn their engines, you won't be able to see it, and will only see their silouette moving along their old path.",
+    "The yellow line coming from your opponent is the sun vector. It points from your opponent to the sun. If the yellow line points to you, the sun is to your back.",
+    "The other requirement for collecting data, therefore, is having a good sun angle. If the sun vector is pointing towards you, the sun is to your back, and research will be faster. If the sun angle is away from you, you will be blinded and will not be able to track your opponent",
+    "In this image, you are collecting data at the maximum speed. If you made a burn, your opponent would be blinded and would only see a prediction of where you would have been if you hadn't burned.",
+    "In this image, you are blinded by the sun while looking at your opponent. If they burn their engines, you won't be able to see it, and will only see their silouette moving along their old path.",
     "1. Your research completion percentage. When this circle fills up, you win.<br /><br />2. Burn Cooldown. While there is no overall fuel limit, the inner circle must be full before you can burn again.<br /><br />3. The game controls. <br /><br />4. How close your opponent is to completing their research on you.",
     "If you leave the solid red lines, you will instantly lose. When drifting towards the edge of the orbital slot, you can fix your drift by <b>burning in the same direction as your drift</b>. While this may be counter-intuitive, you are actually changing your orbital period, which ultimately controls drift.",
-    "It may help to keep in mind that everytime you complete a cycle of your path, you, your oponent, and the origin of the RIC frame all orbit the earth one time. Also, the best way to get an intuition for how objects move in the RIC frame is to just into a 1-player game and play against an oponent in an unchanging orbit.<br /><br /> Have fun!"]
+    "It may help to keep in mind that everytime you complete a cycle of your path, you, your opponent, and the origin of the RIC frame all orbit the earth one time. Also, the best way to get an intuition for how objects move in the RIC frame is to just into a 1-player game and play against an opponent in an unchanging orbit.<br /><br /> Have fun!"]
     var helpimgs = ["intro.png",
                     "distances.png",
+                    "cats.png",
                     "sunangles.png",
                     "goodall.png",
                     "allbad.png",
@@ -163,6 +176,7 @@
     }
     function updateHelpPage(){
         $('#helpwin p').html(helpmsgs[helpscreen])
+        $('#helpwin span').html("Page "+(helpscreen+1).toString()+"/"+helpmsgs.length.toString())
         $('#helpwin img')[0].src = "Media/gameimg/help/" + helpimgs[helpscreen];
         if (helpscreen == helpmsgs.length-1){
             $("#nextbut").hide()
