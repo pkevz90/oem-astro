@@ -44,7 +44,7 @@ var Earth, clouds, sidTimeRad, stopRotate, Sunlight, stars, sunVec, satPoint = [
     constOrbit = [],
     constTailPts = [];
     constSatPoint = [],
-    nTailPts = 400,
+    nTailPts = 150,
     dt = 600,
     tTail = 3600, //Equivalent time for the 
     r = 2;
@@ -121,13 +121,13 @@ var render = function () {
         drawConst(constParams)
     }
 }
-
+//set up graphics objects
 setupScene();
 drawEarth();
 drawStars();
 drawLightSources();
 drawAxes();
-
+//runs on a loop:
 render();
 
 function setupScene() {
@@ -201,44 +201,57 @@ function drawOrbit(orbitParams) { //will only get called if user orbits are show
 
         //Update true anomaly in the sidebar
         $('.controls span')[5+index*6].textContent = ((((2*math.PI) + tA) % (2*math.PI))*180/math.PI).toFixed(0)
-        //STOPPED HERE FOR THE DAY
+
         let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]
-        if (orbitPoints[index] === undefined) {
-            orbitPoints[index] = [];
-            let tStep = tTail / 150;
-            for (var ii = 0; ii <= 150; ii++) {
-                r = Coe2PosVel(coe);
-                r = r[0];
-                if (ecef) {
-                    r = Eci2Ecef(-ii * tStep / 86164 * 360, r);
-                }
-                orbitPoints[index].push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
-                coe = twoBodyProp(coe, -tStep);
-            }
-            orbitPoints[index] = orbitPoints[index].reverse();
-            shownOrbit = orbitPoints[index];
-            r = Coe2PosVel([orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]);
-            r = r[0];
+        // if (orbitPoints[index] === undefined) {
+        //     orbitPoints[index] = [];
+        //     let tStep = tTail / 150;
+        //     for (var ii = 0; ii <= 150; ii++) {
+        //         r = Coe2PosVel(coe);
+        //         r = r[0];
+        //         if (ecef) {
+        //             r = Eci2Ecef(-ii * tStep / 86164 * 360, r);
+        //         }
+        //         orbitPoints[index].push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
+        //         coe = twoBodyProp(coe, -tStep);
+        //     }
+        //     orbitPoints[index] = orbitPoints[index].reverse();
+        //     shownOrbit = orbitPoints[index];
+        //     r = Coe2PosVel([orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]);
+        //     r = r[0];
+        // }
+        // else {
+        //     r = Coe2PosVel(coe);
+        //     r = r[0];
+        //     orbitPoints[index].push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
+        //     while (orbitPoints[index].length > (tTail / timeStep)) {
+        //         orbitPoints[index].shift();
+        //     }
+        //     let length = orbitPoints[index].length;
+        //     if (length > 200) {
+        //         let d = Math.floor(length / 100);
+        //         shownOrbit = orbitPoints[index].filter((element, index) => {
+        //             return index % d === 0;
+        //         })
+        //     }
+        //     else {
+        //         shownOrbit = orbitPoints[index];
+        //     }
+        // }
+        orbitPoints[index] = [];
+        if (tTail/nTailPts > 100) {
+            nTailPts = tTail/100
         }
-        else {
+        for (var ii = 0; ii < nTailPts; ii++) {
             r = Coe2PosVel(coe);
             r = r[0];
+            if (ecef) {
+                r = Eci2Ecef(- ii * tailLength * period / (nTailPts-1) * 360 / 86164, r)
+            }
             orbitPoints[index].push(new THREE.Vector3(-r[0][0] / 6371, r[2][0] / 6371, r[1][0] / 6371));
-            while (orbitPoints[index].length > (tTail / timeStep)) {
-                orbitPoints[index].shift();
-            }
-            let length = orbitPoints[index].length;
-            if (length > 200) {
-                let d = Math.floor(length / 100);
-                shownOrbit = orbitPoints[index].filter((element, index) => {
-                    return index % d === 0;
-                })
-            }
-            else {
-                shownOrbit = orbitPoints[index];
-            }
+            coe = twoBodyProp(coe, tTail/nTailPts);
         }
-       
+        shownOrbit = orbitPoints[index];
         if (orbit[index] === undefined) {
             var material = new THREE.LineBasicMaterial({
                 color: $('.controlTitle').find('input')[$('.controlTitle').find('input').length -1].value,
