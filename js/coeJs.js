@@ -1,11 +1,4 @@
-var time = {
-    year: 2020,
-    month: 6,
-    day: 1,
-    hour: 0,
-    minute: 0,
-    second: 0
-}
+var time = {year: 2020, month: 6, day: 1, hour: 0, minute: 0, second: 0}
 
 var orbitParams = [{
     a: 8000,
@@ -15,7 +8,6 @@ var orbitParams = [{
     arg: 0,
     mA: 0
 }];
-
 var orbitPoints = [];
 
 var burnOrbitParams = {
@@ -26,13 +18,11 @@ var burnOrbitParams = {
     arg: 0,
     mA: 0
 };
-
 var burnParams = {
     in_track: 0,
     radial: 0,
     cross_track: 0
 };
-
 var constParams = [];
 for(i = 0; i < 24; i++){
     constParams.push({
@@ -45,7 +35,8 @@ for(i = 0; i < 24; i++){
     })
 }
 
-var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
+var mu = 398600.4418;
+var Earth, clouds, sidTimeRad, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     orbit = [],
     burnOrbit = null,
     burnSatPoint = null,
@@ -55,7 +46,7 @@ var Earth, clouds, sidTime, stopRotate, Sunlight, stars, sunVec, satPoint = [],
     constSatPoint = [],
     nTailPts = 400,
     dt = 600,
-    tTail = 3600,
+    tTail = 3600, //Equivalent time for the 
     r = 2;
 var gndPts = [],
     constGndPts = [],
@@ -74,14 +65,8 @@ var lastTenSpeeds = [];
 var constActive = false,
     lhActive = true;
 
-setupScene();
-drawEarth();
-drawStars();
-drawLightSources();
-drawAxes();
-drawOrbit(orbitParams);
-
 var render = function () {
+    //Sets Timestep based on timeMult from user and previous 10 execution times
     let updatedTime = new Date().getTime();
     let persec = 1000/(updatedTime-stopwatch);
     if (lastTenSpeeds.length < 10){
@@ -92,9 +77,13 @@ var render = function () {
         timeStep = timeMult/math.mean(lastTenSpeeds);
     }
     stopwatch = new Date().getTime();
+
+    //THREEJS scene commands
     renderer.render(scene, camera);
     controls.update();
     requestAnimationFrame(render);
+
+    //Progresses each orbit and each orbit within constellations if active
     orbitParams.forEach(orbit => {
         orbit.mA += timeStep * 180 / Math.PI * Math.sqrt(398600.4418 / Math.pow(orbit.a, 3));
     })
@@ -104,23 +93,27 @@ var render = function () {
         })
     }
     
-    
-    sidTime += timeStep / 86164 * 360;
+    //Advances siderial angle in radians for use in rotation calculations
+    sidTimeRad += timeStep / 86164 * 2 * Math.PI;
+
+    //ECI axes are always used as the reference frame for rotation. If using the ECEF frame, 
+    //the reference frame is moving
     if (ecef){
         ECI.forEach((item) => {
             item.rotation.y -= timeStep / 86164 * 2 * Math.PI;
         })
     }
-    Earth.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180;
-    clouds.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180;
+    Earth.rotation.y = ECI[0].rotation.y + sidTimeRad; //Rotates relative to ECI
+    clouds.rotation.y = ECI[0].rotation.y + sidTimeRad; //Rotates relative to ECI
+    stars.rotation.y  = ECI[0].rotation.y; //Does not move relative to ECI
     ECEF.forEach((item) => {
-        item.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180 + Math.PI;
+        item.rotation.y = ECI[0].rotation.y + sidTimeRad + Math.PI; //Rotates relative to ECI
     })
-    let curSun = Eci2Ecef(-(ECI[0].rotation.y * 180/Math.PI), sunVec);
+    let curSun = Eci2Ecef(-(ECI[0].rotation.y * 180/Math.PI), sunVec); //Does not move relative to ECI
     Sunlight.position.x = -100 * curSun[0][0];
     Sunlight.position.y = 100 * curSun[2][0];
     Sunlight.position.z = 100 * curSun[1][0];
-    stars.rotation.y  = ECI[0].rotation.y;
+    
     if (!$('#optionsList input')[4].checked){
         drawOrbit(orbitParams)
     }
@@ -128,6 +121,12 @@ var render = function () {
         drawConst(constParams)
     }
 }
+
+setupScene();
+drawEarth();
+drawStars();
+drawLightSources();
+drawAxes();
 
 render();
 
@@ -146,35 +145,37 @@ function setupScene() {
 
         camera.updateProjectionMatrix();
     })
-
     controls = new THREE.OrbitControls(camera, renderer.domElement);
 }
 
-function drawOrbit(orbitParams) {
+function drawOrbit(orbitParams) { //will only get called if user orbits are shown
     let r;
     orbitParams.forEach((orbitP,index) => {
         let tA = Eccentric2True(orbitP.e, solveKeplersEquation(orbitP.mA * Math.PI / 180, orbitP.e))
         let shownOrbit; // Remove some array elements to not having
-        if (index === 0) {
+        if (index === 0) {//Only Run the burn calculations on the first user-defined satellite
             let coeOriginal = {...orbitP};
             coeOriginal.tA = tA;
             let posvelState = Coe2PosVelNew(coeOriginal);
-            //console.log(coeOriginal,posvelState,PosVel2CoeNew(posvelState));
-            let radial = math.dotDivide([posvelState.x, posvelState.y, posvelState.z],math.norm([posvelState.x, posvelState.y, posvelState.z]));
+            
+            let radial = math.dotDivide([posvelState.x, posvelState.y, posvelState.z],math.norm([posvelState.x, posvelState.y, posvelState.z]));//Normalized Radial Direction
             let cross_track = math.cross([posvelState.x, posvelState.y, posvelState.z], [posvelState.vx, posvelState.vy, posvelState.vz]);
-            cross_track = math.dotDivide(cross_track,math.norm(cross_track));
-            let in_track = math.cross(cross_track, radial);
+            cross_track = math.dotDivide(cross_track,math.norm(cross_track));//Normalized Cross-Track Direction
+            let in_track = math.cross(cross_track, radial);//Normalized In-Track Direction
+
+            //Scale unit vectors in RIC frame to defined deltaVs from user input
             in_track = math.dotMultiply(in_track, burnParams.in_track );
-            //console.log(in_track)
             cross_track = math.dotMultiply(cross_track, burnParams.cross_track);
             radial = math.dotMultiply(radial, burnParams.radial);
+
+            //Change posvelState to represent the satellite after the burn
             posvelState.vx += in_track[0] + cross_track[0] + radial[0];
             posvelState.vy += in_track[1] + cross_track[1] + radial[1];
             posvelState.vz += in_track[2] + cross_track[2] + radial[2];
-            //console.log(posvelState);
+
+            //Update burnOrbitParams to reflect posvelState
             let newCoe = PosVel2CoeNew(posvelState);
-            //console.log(newCoe.tA)
-            newCoe.mA = True2Eccentric(newCoe.e,newCoe.tA);
+            newCoe.mA = True2Eccentric(newCoe.e,newCoe.tA);//Temp line for calc to mean anomaly
             newCoe.mA = newCoe.mA - newCoe.e * Math.sin(newCoe.mA);
             burnOrbitParams = {
                 a: newCoe.a,
@@ -184,21 +185,23 @@ function drawOrbit(orbitParams) {
                 arg: newCoe.arg * 180 / Math.PI,
                 mA: newCoe.mA * 180 / Math.PI  
             };
-            //console.log(posvelState, burnOrbitParams);
             if (Math.abs(burnOrbitParams.raan - 360) < 1e-4) {
                 burnOrbitParams.raan = 0;
             }
             if (Number.isNaN(burnOrbitParams.arg)) {
                 burnOrbitParams.arg = 0;
             }
+
+            //Update Preview of COEs after burn
             $('#burn_inputs span').eq(0).text(burnOrbitParams.a.toFixed(0));
             $('#burn_inputs span').eq(1).text(burnOrbitParams.e.toFixed(2));
             $('#burn_inputs span').eq(2).text(burnOrbitParams.i.toFixed(0));
             $('#burn_inputs span').eq(3).text(burnOrbitParams.raan.toFixed(0));
         }
-        if (!$('#optionsList input')[4].checked){
-            $('.controls span')[5+index*6].textContent = ((((2*math.PI) + tA) % (2*math.PI))*180/math.PI).toFixed(0)
-        }
+
+        //Update true anomaly in the sidebar
+        $('.controls span')[5+index*6].textContent = ((((2*math.PI) + tA) % (2*math.PI))*180/math.PI).toFixed(0)
+        //STOPPED HERE FOR THE DAY
         let coe = [orbitP.a, orbitP.e, orbitP.i * Math.PI / 180, ECI[0].rotation.y + (orbitP.raan * Math.PI / 180), orbitP.arg * Math.PI / 180, tA]
         if (orbitPoints[index] === undefined) {
             orbitPoints[index] = [];
@@ -497,9 +500,9 @@ function drawEarth() {
     );
     scene.add(clouds);
     Earth.position.z = 0;
-    sidTime = thetaGMST(jdUTI0);
-    Earth.rotation.y += Math.PI + sidTime * Math.PI / 180;
-    clouds.rotation.y += Math.PI + sidTime * Math.PI / 180;
+    sidTimeRad = thetaGMST(jdUTI0) * Math.PI / 180;
+    Earth.rotation.y += Math.PI + sidTimeRad;
+    clouds.rotation.y += Math.PI + sidTimeRad;
 }
 
 function drawAxes() {
@@ -611,6 +614,7 @@ $('#constClose').on('click',(a)=>{
     constLocalHoriz.forEach(lineobj => {lineobj.visible = false;});
     constActive = false;
 })
+
 function sliderInput(a) {
     let p = $(a.target).parent().parent();
     let ii = $('.controls').index(p);
@@ -624,6 +628,7 @@ function sliderInput(a) {
     };
     orbitPoints[ii] = undefined;
     $('.controls span')[0+ii*6].textContent = $('.slidercontainer input')[0+ii*6].value;
+    $('.controls period')[ii].textContent = (2*Math.PI*math.sqrt(math.pow(orbitParams[ii].a,3)/mu)/3600).toFixed(3);
     $('.controls span')[1+ii*6].textContent = $('.slidercontainer input')[1+ii*6].value;
     $('.controls span')[2+ii*6].textContent = $('.slidercontainer input')[2+ii*6].value;
     $('.controls span')[3+ii*6].textContent = $('.slidercontainer input')[3+ii*6].value;
@@ -725,6 +730,8 @@ document.addEventListener('keypress', function (key) {
             }
         }
     } else if (k === ' ') {
+        //User clicked spacebar to submit burn
+
         orbitParams[0] = {...burnOrbitParams};
         // orbitPoints[0] = [];
         burnParams = {
@@ -740,6 +747,7 @@ document.addEventListener('keypress', function (key) {
         $('.slidercontainer input').eq(3).val(orbitParams[0].raan);
         $('.slidercontainer input').eq(4).val(orbitParams[0].arg);
         $('.controls span').eq(0).text($('.slidercontainer input').eq(0).val());
+        $('.controls period')[0].textContent = (2*Math.PI*math.sqrt(math.pow(orbitParams[0].a,3)/mu)/3600).toFixed(3);
         $('.controls span').eq(1).text($('.slidercontainer input').eq(1).val());
         $('.controls span').eq(2).text($('.slidercontainer input').eq(2).val());
         $('.controls span').eq(3).text($('.slidercontainer input').eq(3).val());
@@ -930,6 +938,7 @@ $('#orbitList p').on('click', (a) => {
     $('.slidercontainer input')[3+kk*6].value = orbitParams[kk].raan;
     $('.slidercontainer input')[4+kk*6].value = orbitParams[kk].arg;
     $('.controls span')[0+kk*6].textContent = $('.slidercontainer input')[0+kk*6].value;
+    $('.controls period')[kk].textContent = (2*Math.PI*math.sqrt(math.pow(orbitParams[kk].a,3)/mu)/3600).toFixed(3);
     $('.controls span')[1+kk*6].textContent = $('.slidercontainer input')[1+kk*6].value;
     $('.controls span')[2+kk*6].textContent = $('.slidercontainer input')[2+kk*6].value;
     $('.controls span')[3+kk*6].textContent = $('.slidercontainer input')[3+kk*6].value;
