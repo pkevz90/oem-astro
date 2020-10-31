@@ -561,11 +561,11 @@ function drawAxes(cnvs, ctx, center, limit) {
     ctx.lineTo(width, axis_center[1]);
     ctx.stroke();
     // Draw Markers
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.textAlign = "center";
     ctx.font = "15px Arial";
-    ctx.lineWidth = 3;
+    ctx.lineWidth =  0.5;
     let point = axis_center[0] + 0, ii = 0;
     if (axis_center[1] < 0) {
         otherPoint = 0;
@@ -578,8 +578,10 @@ function drawAxes(cnvs, ctx, center, limit) {
     while (point > 0) {
         // point -= 7.359 / limit / 2 * width;
         point -= 10 / limit / 2 * width;
-        ctx.moveTo(point, otherPoint - height / 70);
-        ctx.lineTo(point, otherPoint + height / 70);
+        // ctx.moveTo(point, otherPoint - height / 70);
+        // ctx.lineTo(point, otherPoint + height / 70);
+        ctx.moveTo(point, -height);
+        ctx.lineTo(point, height);
         ii++;
         ctx.fillText(ii*10,point, otherPoint + height / 30);
     }
@@ -588,8 +590,10 @@ function drawAxes(cnvs, ctx, center, limit) {
     while (point < width) {
         // point += 7.359 / limit / 2 * width;
         point += 10 / limit / 2 * width;
-        ctx.moveTo(point, otherPoint - height / 70);
-        ctx.lineTo(point, otherPoint + height / 70);
+        // ctx.moveTo(point, otherPoint - height / 70);
+        // ctx.lineTo(point, otherPoint + height / 70);
+        ctx.moveTo(point, -height);
+        ctx.lineTo(point, height);
         ii++;
         ctx.fillText(-ii*10,point, otherPoint + height / 30);
         // ctx.fillText(-ii*0.01,point, otherPoint + height / 30);
@@ -605,16 +609,20 @@ function drawAxes(cnvs, ctx, center, limit) {
     }
     while (point < height) {
         point += 10 / limit / 2 / yxRatio * height;
-        ctx.moveTo(otherPoint - height / 70, point);
-        ctx.lineTo(otherPoint + height / 70, point);
+        // ctx.moveTo(otherPoint - height / 70, point);
+        // ctx.lineTo(otherPoint + height / 70, point);
+        ctx.moveTo(-width / 70, point);
+        ctx.lineTo(width, point);
         ii++
         ctx.fillText(-ii*10,otherPoint - height / 30, point+5);
     }
     point = axis_center[1] + 0; ii = 0;
     while (point > 0) {
         point -= 10 / limit / 2 / yxRatio * height;
-        ctx.moveTo(otherPoint - height / 70, point);
-        ctx.lineTo(otherPoint + height / 70, point);
+        // ctx.moveTo(otherPoint - height / 70, point);
+        // ctx.lineTo(otherPoint + height / 70, point);
+        ctx.moveTo(-width / 70, point);
+        ctx.lineTo(width, point);
         ii++
         ctx.fillText(ii*10,otherPoint - height / 30, point+5);
     }
@@ -878,9 +886,13 @@ function setMouseCallbacks() {
                     break;
             }
         }
+        let easement = 0.5;
         if (main_app.display_data.drag_data !== null) {
-            main_app.display_data.center[0] = (event.offsetX - main_app.display_data.drag_data[0][0]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][0];
-            main_app.display_data.center[1] = (event.offsetY - main_app.display_data.drag_data[0][1]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][1];
+            let targetCenterX = (event.offsetX - main_app.display_data.drag_data[0][0]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][0]; 
+            let targetCenterY = (event.offsetY - main_app.display_data.drag_data[0][1]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][1]; 
+            main_app.display_data.center[0] = (targetCenterX-main_app.display_data.center[0])*easement+main_app.display_data.center[0];
+            main_app.display_data.center[1] = (targetCenterY-main_app.display_data.center[1])*easement+main_app.display_data.center[1];
+            console.log(main_app.display_data.center)
         }
     })
     $('#main-canvas').mouseup(() => {
