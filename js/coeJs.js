@@ -113,8 +113,8 @@ var render = function () {
     }
     Earth.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180;
     clouds.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180;
-    Earth.rotation.x = 45 * Math.PI/180;
-    clouds.rotation.x = 45 * Math.PI/180;
+    // Earth.rotation.x = 45 * Math.PI/180;
+    // clouds.rotation.x = 45 * Math.PI/180;
     ECEF.forEach((item) => {
         item.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180 + Math.PI;
     })
