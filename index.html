@@ -187,17 +187,17 @@
     <script>
         function sendGet() {
         var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-            // Typical action to be performed when the document is ready:
-            alert(xhttp.responseText);
-            }
-            else {
-            alert(this)
-            }
-        };
-        xhttp.open("GET", 'https://ow-repo-api.herokuapp.com/tle/25544', true);
+        // xhttp.onreadystatechange = function() {
+        //     if (this.readyState == 4 && this.status == 200) {
+        //     // Typical action to be performed when the document is ready:
+        //     }
+        //     else {
+        //     alert(this)
+        //     }
+        // };
+        xhttp.open("GET", 'https://ow-repo-api.herokuapp.com/tle/25544', false);
         xhttp.send();
+        alert(xhttp.responseText);
         }
     </script>
 </html>
