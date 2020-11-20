@@ -249,6 +249,8 @@ $('.start-button').on('click', () => {
                         continue;
                     }
                     app.redTurn = inData[player].turn < app.redTurn ? inData[player].turn : app.redTurn;
+                    inData['green'].turn = app.players.green ? inData['green'].turn : app.redTurn;
+                    inData['gray'].turn = app.players.gray ? inData['gray'].turn : app.redTurn;
                     let turn = Math.min(inData['red'].turn,inData['blue'].turn,inData['green'].turn,inData['gray'].turn);
                     let oldNorm, newNorm, change = undefined, oldBurn = [...app.players[player].burns];
                     for (let ii = 0; ii < (turn - 1); ii++) {
