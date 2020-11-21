@@ -103,9 +103,10 @@ var render = function () {
             item.rotation.y -= timeStep / 86164 * 2 * Math.PI;
         })
     }
-    Earth.rotation.y = ECI[0].rotation.y + sidTimeRad; //Rotates relative to ECI
-    clouds.rotation.y = ECI[0].rotation.y + sidTimeRad; //Rotates relative to ECI
-    stars.rotation.y  = ECI[0].rotation.y; //Does not move relative to ECI
+    Earth.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180;
+    clouds.rotation.y = ECI[0].rotation.y + sidTime * Math.PI/180;
+    // Earth.rotation.x = 45 * Math.PI/180;
+    // clouds.rotation.x = 45 * Math.PI/180;
     ECEF.forEach((item) => {
         item.rotation.y = ECI[0].rotation.y + sidTimeRad + Math.PI; //Rotates relative to ECI
     })

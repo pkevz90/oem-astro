@@ -106,6 +106,11 @@ var main_app = new Vue({
                 name: 'blue',
                 color: 'rgba(100,150,255,1)',
                 initial_state: [20,20, 0, 0],
+                burn_change: {
+                    old_burn: null,
+                    new_burn: null,
+                    change: 1
+                },
                 current_state: null,
                 burns: [],
                 burn_points: [],
@@ -122,6 +127,11 @@ var main_app = new Vue({
                 name: 'red',
                 color: 'rgba(255,150,100,1)',
                 initial_state: [30, 0, 0, 0],
+                burn_change: {
+                    old_burn: null,
+                    new_burn: null,
+                    change: 1
+                },
                 current_state: null,
                 burns: [],
                 burn_points: [],
@@ -138,6 +148,11 @@ var main_app = new Vue({
                 name: 'green',
                 color: 'rgba(120,255,120,1)',
                 initial_state: [30, 30, 0, 0],
+                burn_change: {
+                    old_burn: null,
+                    new_burn: null,
+                    change: 1
+                },
                 current_state: null,
                 burns: [],
                 burn_points: [],
@@ -154,6 +169,11 @@ var main_app = new Vue({
                 name: 'gray',
                 color: 'rgba(150,150,150,1)',
                 initial_state: [30, -30, 0, 0],
+                burn_change: {
+                    old_burn: null,
+                    new_burn: null,
+                    change: 1
+                },
                 current_state: null,
                 burns: [],
                 burn_points: [],
@@ -237,11 +257,22 @@ var main_app = new Vue({
             else {
                 sunPos = this.players[this.scenario_data.sat_data.target].current_state || [0,0];
             }
-            drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 90, this.scenario_data.init_sun_angl + 2*Math.PI / 86164 * this.scenario_data.game_time * 3600);
-
+            drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 90, this.scenario_data.init_sun_angl + 2*Math.PI / 86164 * this.scenario_data.game_time * 3600, 'rgba(255,255,0,1)',9);
+            let calcBurns;
             for (sat in this.players) {
                 if (this.players[sat].exist) {
-                    this.players[sat].burn_points = calculateBurnPoints('blue', this.players[sat].burns, this.players[sat].initial_state);
+                    if (this.players[sat].burn_change.change < 1) {
+                        this.players[sat].burn_change.change += 0.025;
+                        calcBurns = math.add(this.players[sat].burn_change.old,math.multiply(this.players[sat].burn_change.change,math.subtract(this.players[sat].burn_change.new,this.players[sat].burn_change.old)));
+                        if (this.players[sat].burn_change.change > 0.999999) {
+                            this.players[sat].burns = [...this.players[sat].burn_change.new];
+                            this.players[sat].burn_change.change = 1;
+                        }
+                    }
+                    else {
+                        calcBurns = this.players[sat].burns;
+                    }
+                    this.players[sat].burn_points = calculateBurnPoints('blue', calcBurns, this.players[sat].initial_state);
                     drawSatInfo(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.players[sat]);
                 }
             }
@@ -251,7 +282,7 @@ var main_app = new Vue({
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time,sat); 
-                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.15, this.players[sat].color);
+                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.25, this.players[sat].color);
                 }
             }
             // Draw burn if point is focused upon
@@ -530,11 +561,11 @@ function drawAxes(cnvs, ctx, center, limit) {
     ctx.lineTo(width, axis_center[1]);
     ctx.stroke();
     // Draw Markers
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.textAlign = "center";
     ctx.font = "15px Arial";
-    ctx.lineWidth = 3;
+    ctx.lineWidth =  0.5;
     let point = axis_center[0] + 0, ii = 0;
     if (axis_center[1] < 0) {
         otherPoint = 0;
@@ -547,8 +578,10 @@ function drawAxes(cnvs, ctx, center, limit) {
     while (point > 0) {
         // point -= 7.359 / limit / 2 * width;
         point -= 10 / limit / 2 * width;
-        ctx.moveTo(point, otherPoint - height / 70);
-        ctx.lineTo(point, otherPoint + height / 70);
+        // ctx.moveTo(point, otherPoint - height / 70);
+        // ctx.lineTo(point, otherPoint + height / 70);
+        ctx.moveTo(point, -height);
+        ctx.lineTo(point, height);
         ii++;
         ctx.fillText(ii*10,point, otherPoint + height / 30);
     }
@@ -557,8 +590,10 @@ function drawAxes(cnvs, ctx, center, limit) {
     while (point < width) {
         // point += 7.359 / limit / 2 * width;
         point += 10 / limit / 2 * width;
-        ctx.moveTo(point, otherPoint - height / 70);
-        ctx.lineTo(point, otherPoint + height / 70);
+        // ctx.moveTo(point, otherPoint - height / 70);
+        // ctx.lineTo(point, otherPoint + height / 70);
+        ctx.moveTo(point, -height);
+        ctx.lineTo(point, height);
         ii++;
         ctx.fillText(-ii*10,point, otherPoint + height / 30);
         // ctx.fillText(-ii*0.01,point, otherPoint + height / 30);
@@ -574,16 +609,20 @@ function drawAxes(cnvs, ctx, center, limit) {
     }
     while (point < height) {
         point += 10 / limit / 2 / yxRatio * height;
-        ctx.moveTo(otherPoint - height / 70, point);
-        ctx.lineTo(otherPoint + height / 70, point);
+        // ctx.moveTo(otherPoint - height / 70, point);
+        // ctx.lineTo(otherPoint + height / 70, point);
+        ctx.moveTo(-width / 70, point);
+        ctx.lineTo(width, point);
         ii++
         ctx.fillText(-ii*10,otherPoint - height / 30, point+5);
     }
     point = axis_center[1] + 0; ii = 0;
     while (point > 0) {
         point -= 10 / limit / 2 / yxRatio * height;
-        ctx.moveTo(otherPoint - height / 70, point);
-        ctx.lineTo(otherPoint + height / 70, point);
+        // ctx.moveTo(otherPoint - height / 70, point);
+        // ctx.lineTo(otherPoint + height / 70, point);
+        ctx.moveTo(-width / 70, point);
+        ctx.lineTo(width, point);
         ii++
         ctx.fillText(ii*10,otherPoint - height / 30, point+5);
     }
@@ -718,7 +757,7 @@ function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAng
         if (index === 4) {
             ctx.fill();
             ctx.stroke();
-            ctx.fillStyle = 'rgb(50,50,150)';
+            ctx.fillStyle = color;
             ctx.strokeStyle = color;
             ctx.lineWidth = 0.7;
             ctx.beginPath();
@@ -847,9 +886,13 @@ function setMouseCallbacks() {
                     break;
             }
         }
+        let easement = 0.5;
         if (main_app.display_data.drag_data !== null) {
-            main_app.display_data.center[0] = (event.offsetX - main_app.display_data.drag_data[0][0]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][0];
-            main_app.display_data.center[1] = (event.offsetY - main_app.display_data.drag_data[0][1]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][1];
+            let targetCenterX = (event.offsetX - main_app.display_data.drag_data[0][0]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][0]; 
+            let targetCenterY = (event.offsetY - main_app.display_data.drag_data[0][1]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][1]; 
+            main_app.display_data.center[0] = (targetCenterX-main_app.display_data.center[0])*easement+main_app.display_data.center[0];
+            main_app.display_data.center[1] = (targetCenterY-main_app.display_data.center[1])*easement+main_app.display_data.center[1];
+            console.log(main_app.display_data.center)
         }
     })
     $('#main-canvas').mouseup(() => {
