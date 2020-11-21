@@ -1,0 +1,239 @@
+<style>
+    body {
+        background-color: rgb(100,100,100);
+        overflow: hidden;
+    }
+</style>
+<body>
+    <canvas></canvas>
+</body>
+<script>
+    let cnvs = document.getElementsByTagName('canvas')[0];
+    let ctx = cnvs.getContext('2d');
+    cnvs.width = window.innerWidth;
+    cnvs.height = window.innerHeight;
+    let sma = 42164;
+    let satellites = [];
+    let dVline = undefined;
+    let grabSat = false;
+    axisTransition = false;
+    let axisState = 'polar';
+    let axisProperties = {
+        incLimit: 12,
+        incStep: 3,
+        heightRatio: 0.88
+    };
+    function drawAxis() {
+        if (axisState === 'polar') {
+            ctx.strokeStyle = 'rgb(300,300,300)';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgb(300,300,300)';
+            ctx.font = '20px sans-serif';
+            for (let ii = axisProperties.incStep; ii <= axisProperties.incLimit; ii += axisProperties.incStep) {
+                ctx.beginPath();
+                ctx.arc(cnvs.width / 2, cnvs.height / 2, ii / axisProperties.incLimit * axisProperties.heightRatio * cnvs.height / 2, 0, 2 * Math.PI);
+                ctx.fillText(ii, cnvs.width / 2 - (ii / axisProperties.incLimit * axisProperties.heightRatio * cnvs.height / 2 - 0.05 * axisProperties.heightRatio * cnvs.height / 2) * Math.cos(Math.PI / 8), cnvs.height / 2 - (ii / axisProperties.incLimit * axisProperties.heightRatio * cnvs.height / 2 - 0.05 * axisProperties.heightRatio * cnvs.height / 2) * Math.sin(Math.PI / 8));
+                ctx.stroke();
+            }
+            ctx.lineWidth = 1;
+            for (let ii = 0; ii < 360; ii += 45) {
+                ctx.beginPath();
+                ctx.moveTo(cnvs.width / 2, cnvs.height / 2);
+                ctx.lineTo(cnvs.width / 2 - axisProperties.heightRatio * cnvs.height / 2 * Math.sin(ii * Math.PI / 180), cnvs.height / 2 - axisProperties.heightRatio * cnvs.height / 2 * Math.cos(ii * Math.PI / 180));
+                ctx.stroke();
+                ctx.fillText(ii, cnvs.width / 2 - 1.05 * axisProperties.heightRatio * cnvs.height / 2 * Math.sin(ii * Math.PI / 180), cnvs.height / 2 - 1.05 * axisProperties.heightRatio * cnvs.height / 2 * Math.cos(ii * Math.PI / 180));
+            }
+        }   
+        else {
+            ctx.strokeStyle = 'rgb(300,300,300)';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgb(300,300,300)';
+            ctx.font = '20px sans-serif';
+            ctx.beginPath();
+            ctx.arc(cnvs.width / 2, cnvs.height / 2, axisProperties.heightRatio * cnvs.height / 2, 0, 2 * Math.PI);
+            ctx.stroke();
+            for (let ii = 0; ii < 360; ii += 45) {
+                ctx.fillText(ii, cnvs.width / 2 - 1.05 * axisProperties.heightRatio * cnvs.height / 2 * Math.sin(ii * Math.PI / 180), cnvs.height / 2 - 1.05 * axisProperties.heightRatio * cnvs.height / 2 * Math.cos(ii * Math.PI / 180));
+            }
+            ctx.beginPath();
+            ctx.arc(cnvs.width / 2, cnvs.height / 2, axisProperties.heightRatio * cnvs.height / 2 * 6371 / 42164, 0, 2*Math.PI);
+            ctx.fillStyle = 'rgb(45,150,75)';
+            ctx.fill();
+
+        }
+    }
+    animate();
+    cnvs.addEventListener('mousedown', event => {
+        let location = {
+            x: event.offsetX,
+            y: event.offsetY
+        };
+        if (!event.shiftKey && !event.ctrlKey) {
+            dVline = {
+                start: location,
+                end: location
+            };
+            return;
+        }
+        grabSat = checkCurrentSat(location);
+        console.log(grabSat);
+        if (grabSat !== false) {
+            return;
+        }
+        let name = window.prompt('Satellite Name');
+        if (!name) {
+            return;
+        }
+        satellites.push({
+            name: name
+        });
+        if (axisState === 'polar') {
+            let long = Number(window.prompt('Satellite Longitude (deg)'));
+            satellites[satellites.length - 1].long = long ? long : 0;
+            satellites[satellites.length - 1].raan = pixelToRaanLong(location);
+            satellites[satellites.length - 1].inc = pixelToInc(location);
+        }
+        else {
+            let inc = Number(window.prompt('Satellite Inclination (deg)'));
+            satellites[satellites.length - 1].inc = inc ? inc : 0;
+            let raan = Number(window.prompt('Satellite RAAN (deg)'));
+            satellites[satellites.length - 1].raan = raan ? raan : 0;
+            satellites[satellites.length - 1].long = pixelToRaanLong(location);
+        }
+        if (event.ctrlKey) {
+            satellites[satellites.length - 1].color = 'rgb(200,150,100)';
+        }
+        else {
+            satellites[satellites.length - 1].color = 'rgb(100,150,200)';
+        }
+    });
+    cnvs.addEventListener('mousemove', event => {
+        let location = {
+            x: event.offsetX,
+            y: event.offsetY
+        };
+        if (dVline) {
+            dVline.end = location;
+        }
+        else if (grabSat !== false) {
+            satellites[grabSat].raan = pixelToRaanLong(location);
+            satellites[grabSat].inc = pixelToInc(location);
+        }
+    });
+    cnvs.addEventListener('mouseup', () => {
+        dVline = undefined;
+        grabSat = false;
+    });
+    function drawSat(center = {x: cnvs.width / 2, y: cnvs.height / 2}, name, size = 0.75, color = 'rgb(100,150,200)') {
+        let busWidth = cnvs.height * 0.03 * size;
+        let panelWidth = cnvs.height * 0.06 * size;
+        let panelHeight = cnvs.height * 0.015 * size;
+        ctx.strokeStyle = 'black';
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(center.x - busWidth / 2, center.y - busWidth / 2);
+        ctx.lineTo(center.x + busWidth / 2, center.y - busWidth / 2);
+        ctx.lineTo(center.x + busWidth / 2, center.y + busWidth / 2);
+        ctx.lineTo(center.x - busWidth / 2, center.y + busWidth / 2);
+        ctx.lineTo(center.x - busWidth / 2, center.y - busWidth / 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(center.x - busWidth / 2, center.y - panelHeight / 2);
+        ctx.lineTo(center.x - busWidth / 2 - panelWidth, center.y - panelHeight / 2);
+        ctx.lineTo(center.x - busWidth / 2 - panelWidth, center.y + panelHeight / 2);
+        ctx.lineTo(center.x - busWidth / 2, center.y + panelHeight / 2);
+        ctx.lineTo(center.x - busWidth / 2, center.y - panelHeight / 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(center.x + busWidth / 2, center.y - panelHeight / 2);
+        ctx.lineTo(center.x + busWidth / 2 + panelWidth, center.y - panelHeight / 2);
+        ctx.lineTo(center.x + busWidth / 2 + panelWidth, center.y + panelHeight / 2);
+        ctx.lineTo(center.x + busWidth / 2, center.y + panelHeight / 2);
+        ctx.lineTo(center.x + busWidth / 2, center.y - panelHeight / 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.font = '12px sans-serif';
+        ctx.lineWidth = 0.5;
+        let raan = pixelToRaanLong(center);
+        raan = raan < 0 ? raan + 360 : raan;
+        let inc = pixelToInc(center);
+        ctx.fillText('RAAN: ' + raan.toFixed(1), center.x, center.y + busWidth / 2 + 10);
+        ctx.fillText('Inc: ' + inc.toFixed(1), center.x, center.y + busWidth / 2 + 22);
+        ctx.font = '15px sans-serif';
+        ctx.fillText(name, center.x, center.y + busWidth / 2 - 15);
+    }
+    function calculateDvBudget(dVline) {
+        let raan = {
+            init: pixelToRaanLong(dVline.start),
+            final: pixelToRaanLong(dVline.end)
+        };
+        let inc = {
+            init: pixelToInc(dVline.start),
+            final: pixelToInc(dVline.end)
+        }
+        return deltaVPlaneChange(angleBetween(inc, raan));
+    }
+    function deltaVPlaneChange(angle = 0, velocity = Math.sqrt(398600.4418 / sma)) {
+        return Math.sqrt(velocity * velocity + velocity * velocity - 2 * velocity * velocity * Math.cos(angle * Math.PI / 180));
+    }
+    function angleBetween(inc, raan) {
+        inc.init *= Math.PI / 180;
+        inc.final *= Math.PI / 180;
+        raan.init *= Math.PI / 180;
+        raan.final *= Math.PI / 180;
+        return Math.acos(Math.cos(inc.init) * Math.cos(inc.final) + Math.sin(inc.init) * Math.sin(inc.final) * Math.cos(raan.final - raan.init)) * 180 / Math.PI;
+    }
+    function animate() {
+        ctx.clearRect(0,0,cnvs.width,cnvs.height);
+        drawAxis();
+        if (dVline) {
+            ctx.strokeStyle - 'rgb(100,50,50)';
+            ctx.font = '30px sans-serif';
+            ctx.fillStyle = 'white';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(dVline.start.x, dVline.start.y);
+            ctx.lineTo(dVline.end.x, dVline.end.y);
+            ctx.stroke();
+            let dV = calculateDvBudget(dVline);
+            ctx.fillText((dV * 1000).toFixed(0) + ' m/s', 80, 40);
+        }
+        satellites.forEach(satellite => drawSat(raanLongIncToPixel(axisState === 'polar' ? satellite.raan : satellite.long, axisState === 'polar' ? satellite.inc : axisProperties.incLimit), satellite.name, 0.375, satellite.color));
+        window.requestAnimationFrame(animate);
+    }
+    function checkCurrentSat(location) {
+        let limit = cnvs.height * 0.03, indexOut = false, satLoc;
+        satellites.forEach((satellite, index) => {
+            satLoc = raanLongIncToPixel(satellite.raan, satellite.inc);
+            if (Math.sqrt(Math.pow(satLoc.x - location.x, 2) + Math.pow(satLoc.y - location.y, 2)) < limit) {
+                indexOut = index;
+            }
+        });
+        return indexOut;
+    }
+    function pixelToRaanLong(location) {
+        return Math.atan2(-location.x + cnvs.width / 2, cnvs.height / 2 - location.y) * 180 / Math.PI;
+    }
+    function pixelToInc(location) {
+        let inc = Math.sqrt(Math.pow(location.x - cnvs.width / 2, 2) + Math.pow(location.y - cnvs.height / 2, 2)) * axisProperties.incLimit / axisProperties.heightRatio / cnvs.height / 0.5
+        return inc;
+    }
+    function raanLongIncToPixel(raanLong, inc = axisProperties.incLimit) {
+        return {
+            x: cnvs.width / 2 - inc * axisProperties.heightRatio * cnvs.height / 2 / axisProperties.incLimit * Math.sin(raanLong * Math.PI / 180),
+            y: cnvs.height / 2 - inc * axisProperties.heightRatio * cnvs.height / 2 / axisProperties.incLimit * Math.cos(raanLong * Math.PI / 180)
+        };
+    }
+    document.addEventListener('keypress', event => {
+        if (event.key === ' ') {
+            axisState = axisState === 'polar' ? 'cartesian' : 'polar';
+            axisTransition =  true;
+            let oldSatlList = [...satellites];
+            let interval = setInterval()
+        }
+    })
+</script>
