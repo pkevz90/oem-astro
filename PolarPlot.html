@@ -32,7 +32,7 @@
     axisTransition = false;
     let axisState = 'polar';
     let axisProperties = {
-        incLimit: 0.1,
+        incLimit: 10,
         incStep: 3,
         heightRatio: 0.88
     };
@@ -255,7 +255,7 @@
             ctx.lineTo(dVline.end.x, dVline.end.y);
             ctx.stroke();
             let dV = calculateDvBudget(dVline);
-            ctx.fillText((dV * 1000).toFixed(0) + ' m/s', 80, 40);
+            ctx.fillText((dV * 1000).toFixed(2) + ' m/s', 80, 80);
         }
         window.requestAnimationFrame(animate);
     }
@@ -357,4 +357,7 @@
         }
         return theta / 240;
     }
+    window.addEventListener('wheel', event => {
+        axisProperties.incLimit *= event.deltaY > 0 ? 1.1 : 0.9090909;
+    })
 </script>
