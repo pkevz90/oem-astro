@@ -1,10 +1,23 @@
 <style>
     body {
-        background-color: rgb(100,100,100);
+        background-color: rgb(60,60,60);
         overflow: hidden;
+    }
+    #file-input {
+        position: fixed;
+        width: auto;
+        z-index: 2;
+        top: 5%;
+        left: 0%;
+    }
+    input {
+        color: white;
     }
 </style>
 <body>
+    <div id="file-input">
+        <input type="file" accept=".txt" id="fileToLoad">
+    </div>
     <canvas></canvas>
 </body>
 <script>
@@ -19,47 +32,74 @@
     axisTransition = false;
     let axisState = 'polar';
     let axisProperties = {
-        incLimit: 12,
+        incLimit: 0.1,
         incStep: 3,
         heightRatio: 0.88
     };
-    function drawAxis() {
-        if (axisState === 'polar') {
-            ctx.strokeStyle = 'rgb(300,300,300)';
-            ctx.lineWidth = 3;
+    function getJulianDate() {
+        var now = new Date();
+        var start = new Date(now.getFullYear(), 0, 0);
+        var diff = (now - start + now.getTimezoneOffset()*60000) / 86400000;
+        let timeCur = {
+            year: now.getFullYear(),
+            month: 0,
+            day: diff,
+            hour: 0,
+            minute: 0,
+            second: 0
+        };
+        return {
+            jd: diff,
+            gmst: thetaGMST(julianDateCalcStruct(timeCur))
+        };
+    }
+    let currentDate = getJulianDate();
+    function drawAxis(polar, cartesian) {
+        if (polar === undefined) {
+            polar = axisState === 'polar' ? 1 : 0;
+        }
+        if (polar > 0) {
+            ctx.strokeStyle = 'rgba(300,300,300,'+polar+')';
+            ctx.lineWidth = 0.5;
             ctx.textAlign = 'center';
-            ctx.fillStyle = 'rgb(300,300,300)';
+            ctx.fillStyle = 'rgba(300,300,300,'+polar+')';
             ctx.font = '20px sans-serif';
             for (let ii = axisProperties.incStep; ii <= axisProperties.incLimit; ii += axisProperties.incStep) {
+                if (ii === axisProperties.incLimit) {
+                    ctx.lineWidth = 3;
+                }
                 ctx.beginPath();
                 ctx.arc(cnvs.width / 2, cnvs.height / 2, ii / axisProperties.incLimit * axisProperties.heightRatio * cnvs.height / 2, 0, 2 * Math.PI);
-                ctx.fillText(ii, cnvs.width / 2 - (ii / axisProperties.incLimit * axisProperties.heightRatio * cnvs.height / 2 - 0.05 * axisProperties.heightRatio * cnvs.height / 2) * Math.cos(Math.PI / 8), cnvs.height / 2 - (ii / axisProperties.incLimit * axisProperties.heightRatio * cnvs.height / 2 - 0.05 * axisProperties.heightRatio * cnvs.height / 2) * Math.sin(Math.PI / 8));
+                ctx.fillText(ii, cnvs.width / 2 - (ii / axisProperties.incLimit * axisProperties.heightRatio * cnvs.height / 2 - 0.05 * axisProperties.heightRatio * cnvs.height / 2) * Math.cos(Math.PI / 12), cnvs.height / 2 - (ii / axisProperties.incLimit * axisProperties.heightRatio * cnvs.height / 2 - 0.05 * axisProperties.heightRatio * cnvs.height / 2) * Math.sin(Math.PI / 12));
                 ctx.stroke();
             }
-            ctx.lineWidth = 1;
-            for (let ii = 0; ii < 360; ii += 45) {
+            ctx.lineWidth = 0.5;
+            for (let ii = 0; ii < 360; ii += 30) {
                 ctx.beginPath();
                 ctx.moveTo(cnvs.width / 2, cnvs.height / 2);
                 ctx.lineTo(cnvs.width / 2 - axisProperties.heightRatio * cnvs.height / 2 * Math.sin(ii * Math.PI / 180), cnvs.height / 2 - axisProperties.heightRatio * cnvs.height / 2 * Math.cos(ii * Math.PI / 180));
                 ctx.stroke();
                 ctx.fillText(ii, cnvs.width / 2 - 1.05 * axisProperties.heightRatio * cnvs.height / 2 * Math.sin(ii * Math.PI / 180), cnvs.height / 2 - 1.05 * axisProperties.heightRatio * cnvs.height / 2 * Math.cos(ii * Math.PI / 180));
             }
-        }   
-        else {
-            ctx.strokeStyle = 'rgb(300,300,300)';
+        } 
+        if (cartesian === undefined) {
+            cartesian = axisState === 'polar' ? 0 : 1;
+        }
+        if (cartesian > 0){
+            ctx.strokeStyle = 'rgba(300,300,300,'+cartesian+')';
             ctx.lineWidth = 3;
             ctx.textAlign = 'center';
-            ctx.fillStyle = 'rgb(300,300,300)';
+            ctx.fillStyle = 'rgba(300,300,300,'+cartesian+')';
             ctx.font = '20px sans-serif';
             ctx.beginPath();
             ctx.arc(cnvs.width / 2, cnvs.height / 2, axisProperties.heightRatio * cnvs.height / 2, 0, 2 * Math.PI);
             ctx.stroke();
-            for (let ii = 0; ii < 360; ii += 45) {
+            for (let ii = 0; ii < 360; ii += 15) {
                 ctx.fillText(ii, cnvs.width / 2 - 1.05 * axisProperties.heightRatio * cnvs.height / 2 * Math.sin(ii * Math.PI / 180), cnvs.height / 2 - 1.05 * axisProperties.heightRatio * cnvs.height / 2 * Math.cos(ii * Math.PI / 180));
             }
             ctx.beginPath();
             ctx.arc(cnvs.width / 2, cnvs.height / 2, axisProperties.heightRatio * cnvs.height / 2 * 6371 / 42164, 0, 2*Math.PI);
-            ctx.fillStyle = 'rgb(45,150,75)';
+            ctx.fillStyle = 'rgba(91, 115, 91,'+cartesian+')';
             ctx.fill();
 
         }
@@ -78,7 +118,6 @@
             return;
         }
         grabSat = checkCurrentSat(location);
-        console.log(grabSat);
         if (grabSat !== false) {
             return;
         }
@@ -102,12 +141,7 @@
             satellites[satellites.length - 1].raan = raan ? raan : 0;
             satellites[satellites.length - 1].long = pixelToRaanLong(location);
         }
-        if (event.ctrlKey) {
-            satellites[satellites.length - 1].color = 'rgb(200,150,100)';
-        }
-        else {
-            satellites[satellites.length - 1].color = 'rgb(100,150,200)';
-        }
+        satellites[satellites.length - 1].color = event.ctrlKey ? 'rgb(200,150,100)' : 'rgb(100,150,200)';
     });
     cnvs.addEventListener('mousemove', event => {
         let location = {
@@ -126,12 +160,16 @@
         dVline = undefined;
         grabSat = false;
     });
-    function drawSat(center = {x: cnvs.width / 2, y: cnvs.height / 2}, name, size = 0.75, color = 'rgb(100,150,200)') {
+    function drawSat(satellite, size = 0.75, center) {
         let busWidth = cnvs.height * 0.03 * size;
         let panelWidth = cnvs.height * 0.06 * size;
         let panelHeight = cnvs.height * 0.015 * size;
+        if (!center) {
+            center = raanLongIncToPixel(axisState === 'polar' ? satellite.raan : satellite.long, axisState === 'polar' ? satellite.inc : axisProperties.incLimit);
+        }
+        ctx.lineWidth = 1;
         ctx.strokeStyle = 'black';
-        ctx.fillStyle = color;
+        ctx.fillStyle = satellite.color;
         ctx.beginPath();
         ctx.moveTo(center.x - busWidth / 2, center.y - busWidth / 2);
         ctx.lineTo(center.x + busWidth / 2, center.y - busWidth / 2);
@@ -157,14 +195,12 @@
         ctx.fill();
         ctx.stroke();
         ctx.font = '12px sans-serif';
-        ctx.lineWidth = 0.5;
-        let raan = pixelToRaanLong(center);
-        raan = raan < 0 ? raan + 360 : raan;
-        let inc = pixelToInc(center);
-        ctx.fillText('RAAN: ' + raan.toFixed(1), center.x, center.y + busWidth / 2 + 10);
-        ctx.fillText('Inc: ' + inc.toFixed(1), center.x, center.y + busWidth / 2 + 22);
+        ctx.lineWidth = 1;
+        ctx.fillText('RAAN: ' + satellite.raan.toFixed(1), center.x, center.y + busWidth / 2 + 10);
+        ctx.fillText('Inc: ' + satellite.inc.toFixed(1), center.x, center.y + busWidth / 2 + 22);
+        ctx.fillText('Long: ' + satellite.long.toFixed(1), center.x, center.y + busWidth / 2 + 34);
         ctx.font = '15px sans-serif';
-        ctx.fillText(name, center.x, center.y + busWidth / 2 - 15);
+        ctx.fillText(satellite.name, center.x, center.y + busWidth / 2 - 15);
     }
     function calculateDvBudget(dVline) {
         let raan = {
@@ -189,9 +225,28 @@
     }
     function animate() {
         ctx.clearRect(0,0,cnvs.width,cnvs.height);
-        drawAxis();
+        if (axisTransition) {
+            let satLoc, ii;
+            for (let ii = 0; ii < axisTransition.oldLoc.length; ii++) {
+                satLoc = {
+                    x: axisTransition.oldLoc[ii].x + (axisTransition.newLoc[ii].x - axisTransition.oldLoc[ii].x) * axisTransition.animateState,
+                    y: axisTransition.oldLoc[ii].y + (axisTransition.newLoc[ii].y - axisTransition.oldLoc[ii].y) * axisTransition.animateState
+                }
+                drawSat(satellites[ii], 0.375, satLoc);
+            }
+            axisTransition.animateState += 0.025;
+            drawAxis(axisState === 'polar' ? 1 - axisTransition.animateState : axisTransition.animateState, axisState === 'polar' ? axisTransition.animateState : 1 - axisTransition.animateState);
+            if (axisTransition.animateState >= 1) {
+                axisTransition = false;
+                axisState = axisState === 'polar' ? 'cartesian' : 'polar';
+            }  
+        }
+        else {
+            drawAxis();
+            satellites.forEach(satellite => drawSat(satellite, 0.375));
+        }
         if (dVline) {
-            ctx.strokeStyle - 'rgb(100,50,50)';
+            ctx.strokeStyle = 'rgb(200,75,50)';
             ctx.font = '30px sans-serif';
             ctx.fillStyle = 'white';
             ctx.lineWidth = 5;
@@ -202,7 +257,6 @@
             let dV = calculateDvBudget(dVline);
             ctx.fillText((dV * 1000).toFixed(0) + ' m/s', 80, 40);
         }
-        satellites.forEach(satellite => drawSat(raanLongIncToPixel(axisState === 'polar' ? satellite.raan : satellite.long, axisState === 'polar' ? satellite.inc : axisProperties.incLimit), satellite.name, 0.375, satellite.color));
         window.requestAnimationFrame(animate);
     }
     function checkCurrentSat(location) {
@@ -230,10 +284,77 @@
     }
     document.addEventListener('keypress', event => {
         if (event.key === ' ') {
-            axisState = axisState === 'polar' ? 'cartesian' : 'polar';
-            axisTransition =  true;
-            let oldSatlList = [...satellites];
-            let interval = setInterval()
+            if (axisTransition) {
+                return;
+            }
+            axisTransition = {
+                oldLoc: satellites.map((satellite) => {
+                    return raanLongIncToPixel(axisState === 'polar' ? satellite.raan : satellite.long, axisState === 'polar' ? satellite.inc : axisProperties.incLimit);
+                }),
+                newLoc: satellites.map((satellite) => {
+                    return raanLongIncToPixel(axisState === 'polar' ? satellite.long : satellite.raan, axisState === 'polar' ? axisProperties.incLimit : satellite.inc);
+                }),
+                animateState: 0
+            };
+            
         }
     })
+    document.getElementById('fileToLoad').addEventListener('change', event => {
+        loadFileAsText(event.path[0].files[0])
+    })
+    function loadFileAsText(fileToLoad){
+
+        var fileReader = new FileReader();
+        fileReader.onload = function(fileLoadedEvent){
+            var textFromFileLoaded = fileLoadedEvent.target.result;
+            handleNewTle(textFromFileLoaded.split(/\r?\n/));
+        };
+
+        fileReader.readAsText(fileToLoad, "UTF-8");
+    }
+    function handleNewTle(file) {
+        let tle;
+        for (let ii = 0; ii < file.length; ii++) {
+            if (file[ii].substr(0,4) === 'Name') {
+                tle = [file[ii+2].split(/ +/), file[ii+3].split(/ +/)];
+                tle = {
+                    raan: Number(tle[1][3]),
+                    inc: Number(tle[1][2]),
+                    arg: Number(tle[1][5]),
+                    time: Number(tle[0][3].substr(2, tle[0][3].length)),
+                    mA: Number(tle[1][6]),
+                    mm: Number(tle[1][7])
+                };
+                tle.mA += 360/tle.mm/86400 * ((currentDate.jd - tle.time) * 86400);
+                tle.long = (tle.raan + tle.arg + tle.mA - currentDate.gmst) % 360;
+                satellites.push({
+                    name: file[ii].substr(6,file[ii].length),
+                    raan: tle.raan,
+                    inc: tle.inc,
+                    long: tle.long,
+                    color:  file[ii+1].substr(0,1).toLowerCase() === 'r' ? 'rgb(200,150,100)' : 'rgb(100,150,200)'
+                })
+
+            }
+        }
+    }
+    function julianDateCalcStruct(time) {
+        // Good
+        // return 367*time.year-Math.floor(7*(time.year+Math.floor((time.month+9)/12))/4)+Math.floor(275*time.month/9)+time.day+
+        //     1721013.5+((time.second/60+time.minute)/60+time.hour)/24 + 30; //?
+        time.year -= 2000;
+        return 2451544.5 + 365 * (time.year - 2000) + Math.floor(0.25 * (time.year - 2000)) - Math.floor(0.01 * (time.year - 2000)) + Math.floor(0.0025 * (time.year - 2000)) + -1 + time.day;
+    }
+    function thetaGMST(JDUTI) {
+        // Good
+        TUTI = (JDUTI-2451545)/36525;
+        theta = 67310.54841+(876600*3600+8640184.812866)*TUTI+0.093104*TUTI*TUTI-6.2e-6*Math.pow(TUTI,3);
+        if (theta > 0) {
+            theta = theta % 86400;
+        }
+        else {
+            theta = theta % (-86400);
+        }
+        return theta / 240;
+    }
 </script>
