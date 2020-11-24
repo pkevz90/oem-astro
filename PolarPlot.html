@@ -26,6 +26,7 @@
     cnvs.width = window.innerWidth;
     cnvs.height = window.innerHeight;
     let sma = 42164;
+    let travelTime = 7*86164;
     let satellites = [];
     let dVline = undefined;
     let grabSat = false;
@@ -34,7 +35,11 @@
     let axisProperties = {
         incLimit: 10,
         incStep: 3,
-        heightRatio: 0.88
+        heightRatio: 0.88,
+        center: {
+            x: cnvs.width / 2,
+            y: cnvs.height / 2
+        }
     };
     function getJulianDate() {
         var now = new Date();
@@ -151,9 +156,12 @@
         if (dVline) {
             dVline.end = location;
         }
-        else if (grabSat !== false) {
+        else if (grabSat !== false && axisState === 'polar') {
             satellites[grabSat].raan = pixelToRaanLong(location);
             satellites[grabSat].inc = pixelToInc(location);
+        }
+        else if (grabSat !== false && axisState !== 'polar') {
+
         }
     });
     cnvs.addEventListener('mouseup', () => {
@@ -250,12 +258,27 @@
             ctx.font = '30px sans-serif';
             ctx.fillStyle = 'white';
             ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(dVline.start.x, dVline.start.y);
-            ctx.lineTo(dVline.end.x, dVline.end.y);
-            ctx.stroke();
-            let dV = calculateDvBudget(dVline);
-            ctx.fillText((dV * 1000).toFixed(2) + ' m/s', 80, 80);
+            if (axisState === 'polar') {
+                ctx.beginPath();
+                ctx.moveTo(dVline.start.x, dVline.start.y);
+                ctx.lineTo(dVline.end.x, dVline.end.y);
+                ctx.stroke();
+            }
+            else {
+                let longStart = Math.atan2(-dVline.start.x + axisProperties.center.x, -dVline.start.y + axisProperties.center.y);
+                let longEnd = Math.atan2(-dVline.end.x + axisProperties.center.x, -dVline.end.y + axisProperties.center.y);
+                console.log(longStart * 180 / Math.PI, longEnd * 180 / Math.PI);
+                let points = [], radius = axisProperties.heightRatio * cnvs.height / 2;
+                for (let ii = 0; ii < 20; ii++) {
+                    points.push({
+                        x: axisProperties.center.x - radius * Math.sin(longStart + (longEnd - longStart) * ii / 20),
+                        y: axisProperties.center.y - radius * Math.cos(longStart + (longEnd - longStart) * ii / 20)
+                    });
+                    drawCurve(ctx, points, 1);
+                }
+
+            }
+            ctx.fillText((calculateDvBudget(dVline) * 1000).toFixed(2) + ' m/s', 80, 80);
         }
         window.requestAnimationFrame(animate);
     }
@@ -315,6 +338,7 @@
     function handleNewTle(file) {
         let tle;
         for (let ii = 0; ii < file.length; ii++) {
+            
             if (file[ii].substr(0,4) === 'Name') {
                 tle = [file[ii+2].split(/ +/), file[ii+3].split(/ +/)];
                 tle = {
@@ -360,4 +384,32 @@
     window.addEventListener('wheel', event => {
         axisProperties.incLimit *= event.deltaY > 0 ? 1.1 : 0.9090909;
     })
+    function drawCurve(ctx, points, tension, type = 'stroke') {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+
+    var t = (tension != null) ? tension : 1;
+    // console.log(t,points)
+    for (var i = 0; i < points.length - 1; i++) {
+        var p0 = (i > 0) ? points[i - 1] : points[0];
+        var p1 = points[i];
+        var p2 = points[i + 1];
+        var p3 = (i != points.length - 2) ? points[i + 2] : p2;
+
+        var cp1x = p1.x + (p2.x - p0.x) / 6 * t;
+        var cp1y = p1.y + (p2.y - p0.y) / 6 * t;
+
+        var cp2x = p2.x - (p3.x - p1.x) / 6 * t;
+        var cp2y = p2.y - (p3.y - p1.y) / 6 * t;
+        
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+        // console.log(cp1x, cp1y, cp2x, cp2y)
+    }
+    if (type === 'stroke') {
+        ctx.stroke();
+    }
+    else {
+        ctx.fill();
+    }
+}
 </script>
