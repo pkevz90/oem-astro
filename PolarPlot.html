@@ -267,8 +267,11 @@
             else {
                 let longStart = Math.atan2(-dVline.start.x + axisProperties.center.x, -dVline.start.y + axisProperties.center.y);
                 let longEnd = Math.atan2(-dVline.end.x + axisProperties.center.x, -dVline.end.y + axisProperties.center.y);
-                console.log(longStart * 180 / Math.PI, longEnd * 180 / Math.PI);
-                let points = [], radius = axisProperties.heightRatio * cnvs.height / 2;
+                let deltaLong = (longEnd - longStart) / travelTime;
+                let nNewOrbit = 2*Math.PI / 86164 + deltaLong;
+                let aNewOrbit = Math.pow(398600.4418 / Math.pow(nNewOrbit,2), 1/3);
+                let points = [], radius = axisProperties.heightRatio * (aNewOrbit / 42164) * cnvs.height / 2;
+                console.log(aNewOrbit, radius);
                 for (let ii = 0; ii < 20; ii++) {
                     points.push({
                         x: axisProperties.center.x - radius * Math.sin(longStart + (longEnd - longStart) * ii / 20),
