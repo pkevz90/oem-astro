@@ -1,186 +1,134 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <!-- <link rel="stylesheet" href="SupportLibraries/bootstrapcss/bootstrap.min.css"> -->
-        <style>
-            .navbar {
-                list-style-type: none;
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
-                background-color: #1f3a52;
-            }
-            body {
-                min-height: 300px;
-                background: #06090c;
-                filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#111b24', endColorstr='#0c4161',GradientType=0 );
-                height: 100%;
-                font-family: "open_sansregular";
-                    color: rgb(201, 203, 206);
-                overflow-x: hidden;
-                /* Panel opening and closing animation time - 200mx */
-                transition: transform .2s;
-                -webkit-transition: -webkit-transform .2s;
-            }
-            .flexDiv {
-                display: flex;
-                flex-flow: row wrap;
-                justify-content: space-around;
-                height: 100%;
-            }
-            .flexDiv div {
-                text-decoration: none;
-                width: 30%;
-                min-width: 200px;
-                height: 280px;
-                margin-top: 2.5%;
-                background-color: rgb(66, 67, 68);
-                border-radius: 2%;
-                color: white;
-                text-align: center;
-                position: relative;
-            }
-            .flexDiv div p {
-                padding: 1% 2%;
-                font-size: 1.5em;
-            }
-            .flexDiv div h1 {
-                border-bottom: 1px solid white;
-                padding-bottom: 1%;
-            }
-           .link-center {
-                font-size: 2vw;
-                position: absolute;
-                cursor: pointer;
-                bottom: 5%;
-                width: 50%;
-                left: 25%;
-            }
-            .link-left {
-                font-size: 1.5vw;
-                position: absolute;
-                cursor: pointer;
-                bottom: 5%;
-                width: 30%;
-                left: 10%;
-            }
-            
-            .link-right {
-                font-size: 1.5vw;
-                position: absolute;
-                cursor: pointer;
-                bottom: 5%;
-                width: 30%;
-                right: 10%;
-            }
-            .credits {
-                position: relative;
-                right: 1em;
-                border: 1px solid white;
-                padding: 2px;
-                background-color: white;
-                color: black;
-                cursor: pointer;
-                border-radius: 5px;
-            }
-            #creditsWindow {
-                background-color: rgb(66, 67, 68);
-                position: absolute;
-                left: 20%;
-                right: 20%;
-                top: 20%;
-                color: white;
-                border-radius: 5%;
-                padding:5%;
-                border: 1px solid white
-            }
-
-            #creditsWindow h1 {
-                margin-bottom: 5%;
-            }
-
-            #creditsWindow h4 {
-                margin-left: 3%;
-            }
-
-            #creditsWindow p {
-                margin-left: 6%;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="navbar">
-             <h1 class="display-4" style="width:fit-content;float: left;">Repository for OW Web Applications</h1>
-             <h1 class="credits" style="float:right" onclick="getElementById('creditsWindow').style.display = 'block'">Credits</div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OEM-Astro</title>
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous"> -->
+    <link rel="stylesheet" href="./SupportLibraries/bootstrap.min2.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+</head>
+<body class="bg-light" style="overflow-x: hidden;">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand " href="#">OEM Astro Applications</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="https://www.n2yo.com/">N2YO.com</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://celestrak.com/">Celestrak</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://www.space-track.org/auth/login">Space-Track</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://spaceflightnow.com/">Spaceflight Now</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://digitalu.af.mil/" data-toggle="tooltip" title="Free resource for Active Duty Air/Space force looking for build digital skills">Digital University</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://www.freecodecamp.org/">Free Code Camp</a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Topic Links
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Clohessy%E2%80%93Wiltshire_equations">Clohessy–Wiltshire (HCW) Equations</a>
+                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Orbital_elements">Classical Orbital Elements</a>
+                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Vis-viva_equation">Vis-viva (Velocity) Equation</a>
+                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Earth-centered_inertial">Earth-Centered Inertial</a>
+                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/ECEF">Earth-Centered Earth-Fixed</a>
+                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Kalman_filter">Kalman Filter</a>
+              </div>
+            </li>
+          </ul>
         </div>
-          
-        <div class="flexDiv">
-            <div>
-                <h1>1v1 Sim</h1>
-                <p>Pit two equivalent RSO's against each other.</p>
-                <a href="./Capstone1v1.html"><button class="link-center">Open</button></a>
-            </div>
-            <div>
-                <h1>GEO Plane and Longitude Analysis</h1>
-                <p></p>
-                <a href="./PolarPlot.html"><button class="link-center">Open</button></a>
-            </div>
-            <div>
-                <h1>Classical Orbital Elements</h1>
-                <p>Visualize how COE's define an orbit in multiple reference frames.</p>
-                <a href="./coeVis.html"><button class="link-center">Open</button></a>
-            </div>
-            <div>
-                <h1>Relative Motion Elements</h1>
-                <p>Demonstrate how relative orbital elements (ROE's) can be used to describe arbitary states within the RIC frame.</p>
-                <a href="./rmoeVis2d.html"><button class="link-left">Open 2D</button></a>
-                <a href="./rmoeVis.html"><button class="link-right">Open 3D</button></a>
-            </div>
-            <div>
-                <h1>Waypoint Planner</h1>
-                <p>Plan out RPO trajectories with an arbitrary number of waypoints.</p>
-                <a href="./WaypointPlannerOwWiki.html"><button class="link-center">Open</button></a>
-            </div>
-            <div>
-                <h1>Reachability</h1>
-                <p></p>
-                <a href="./reachSim.html"><button class="link-center">Open</button></a>
-            </div>
-            <div>
-                <h1>Finite Burn (beta)</h1>
-                <p>Calculate constant direction finite burns within the HCW framework.</p>
-                <a href="./rpoFinite.html"><button class="link-center">Open</button></a>
-            </div>
-            <div>
-                <h1>Fourier Transforms</h1>
-                <p>Explains the fundementals of Fourier Transforms using a hand-drawn wave.</p>
-                <a href="./fourier.html"><button class="link-center">Open</button></a>
-            </div>
-            <div>
-                <h1>RPO Arena</h1>
-                <p>Go head to head in a high speed RPO challenge</p>
-                <a href="./game.html"><button class="link-center">Open</button></a>
+    </nav>
+    <div class="row" style="padding: 0% 2.5%" >
+        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+                <div class="card-body">
+                <h5 class="card-title">RPO Simulator</h5>
+                <p class="card-text">Pit up to 4 players against each other</p>
+                <a href="./capstone1v1.html" class="btn btn-secondary">Open</a>
+                </div>
             </div>
         </div>
-        <div id="creditsWindow" style="display: none;">
-            <span style="float: right; border: 1px solid white; border-radius: 50%;width:1em;text-align: center;cursor: pointer;" onclick="getElementById('creditsWindow').style.display = 'none'">X</span><br />
-            <h2>Credits</h2>
-            <h4>1v1 Sim</h4>
-            <p>Captain Perry VanZandt</p>
-            <h4>Classical Orbital Elements</h4>
-            <p>2d Lt Joshua Daniels and Captain Perry VanZandt</p>
-            <h4>Relative Motion Elements</h4>
-            <p>Captain Perry VanZandt and 2d Lt Joshua Daniels</p>
-            <h4>Waypoint Planner</h4>
-            <p>Captain Perry VanZandt</p>
-            <h4>Reachability</h4>
-            <p>Captain Perry VanZandt</p>
-            <h4>Finite Burn</h4>
-            <p>Captain Perry VanZandt</p>
-            <h4>Fourier</h4>
-            <p>2d Lt Joshua Daniels</p>
-            <h4>RPO Arena</h4>
-            <p>2d Lt Joshua Daniels</p>
+        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+                <div class="card-body">
+                <h5 class="card-title">GEO Plane and Longitude Analysis <span class="badge badge-secondary">Beta</span></h5>
+                <p class="card-text">Visualize &#916V to traverse differing planes & longitudes</p>
+                <a href="./PolarPlot.html" class="btn btn-secondary">Open</a>
+                </div>
+            </div>
         </div>
-    </body>
+        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+                <div class="card-body">
+                <h5 class="card-title">Classical Orbital Elements</h5>
+                <p class="card-text">Visualize orbits and maneuvers in the ECI and ECEF frames</p>
+                <a href="./coeVis.html" class="btn btn-secondary">Open</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+                <div class="card-body">
+                <h5 class="card-title">Relative Motion Elements</h5>
+                <p class="card-text">Visualize relative motion utilizing RMOE's</p>
+                <a href="./rmoeVis2d.html" class="btn btn-secondary">Open 2D</a>
+                <a href="./rmoeVis.html" class="btn btn-secondary">Open 3D</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+                <div class="card-body">
+                <h5 class="card-title">Reachability</h5>
+                <p class="card-text">Perform kinematic analysis on RIC states</p>
+                <a href="./reachSim.html" class="btn btn-secondary">Open</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+                <div class="card-body">
+                <h5 class="card-title">Finite Burn Calculator <span class="badge badge-secondary">Beta</span></h5>
+                <p class="card-text">Convert burn plans from impulsive to finite</p>
+                <a href="./rpoFinite.html" class="btn btn-secondary">Open</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+                <div class="card-body">
+                <h5 class="card-title">Fourier Transforms</h5>
+                <p class="card-text">Explains the fundementals of Fourier Tranforms</p>
+                <a href="./fourier.html" class="btn btn-secondary">Open</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+                <div class="card-body">
+                <h5 class="card-title">Waypoint Planner</h5>
+                <p class="card-text">Plan out RPO trajectories with an arbitrary number of waypoints.</p>
+                <a href="./WaypointPlannerOwWiki.html" class="btn btn-secondary">Open</a>
+                </div>
+            </div>
+        </div>
+    </div>
+  
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>
+</body>
 </html>
