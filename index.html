@@ -121,9 +121,9 @@
                 <a href="./Capstone1v1.html"><button class="link-center">Open</button></a>
             </div>
             <div>
-                <h1>1v1 Sim v2.0</h1>
-                <p>(Preview)</p>
-                <a href="./rpoSim.html"><button class="link-center">Open</button></a>
+                <h1>GEO Plane and Longitude Analysis</h1>
+                <p></p>
+                <a href="./PolarPlot.html"><button class="link-center">Open</button></a>
             </div>
             <div>
                 <h1>Classical Orbital Elements</h1>
@@ -143,7 +143,7 @@
             </div>
             <div>
                 <h1>Reachability</h1>
-                <p>Demonstrate how relative orbital elements (ROE's) can be used to describe arbitary states within the RIC frame.</p>
+                <p></p>
                 <a href="./reachSim.html"><button class="link-center">Open</button></a>
             </div>
             <div>
@@ -182,28 +182,5 @@
             <h4>RPO Arena</h4>
             <p>2d Lt Joshua Daniels</p>
         </div>
-        <button onclick="sendGet()">Click me</button>
     </body>
-    <script>
-        function sendGet() {
-            var xhttp = new XMLHttpRequest();
-            // xhttp.onreadystatechange = function() {
-            //     if (this.readyState == 4 && this.status == 200) {
-            //     // Typical action to be performed when the document is ready:
-            //     }
-            //     else {
-            //     alert(this)
-            //     }
-            // };
-            alert('hey2')
-            try {
-                xhttp.open("GET", 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app/tle/26690', false);
-                xhttp.send();
-                alert(xhttp.responseText);
-            }
-            catch (err) {
-                alert(err);
-            }
-        }
-    </script>
 </html>
