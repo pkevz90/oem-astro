@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<link rel="stylesheet" href="../SupportLibraries/bootstrap.min.css">
+    <script src="../SupportLibraries/Chart.bundle.min.js"></script>
+	<script src="../SupportLibraries/math.min.js"></script>
+	<script src="../SupportLibraries/astroFunctions.js"></script>
+	<script src="./js/WPmainModule.js"></script>
+	<script src="./js/WayPlaNTechniques.js"></script>
+	<script src="./js/WayTrajectories.js"></script>
+	<script src="./js/WayPlanHandleEvents.js"></script>
+	<style>
+        #burnTable {
+            position: relative;
+            color: rgb(201, 203, 206);
+            width: 100%;
+        }
+		td {
+			text-align: center;
+			vertical-align: middle;
+        }
+        .selectedTableRow {
+            background-color: rgb(25,25,25);
+            font-weight: bold;
+            color: white;
+        }
+        #maneuverBar {
+            overflow-y: auto;
+            padding: 0% 0% 0% 2.5%;
+            margin-top: 2.5%;
+            font-size: 2vh;
+            max-height: 500px;
+            /* resize: horizontal; */
+        }
+        #maneuverBar::-webkit-scrollbar {
+            display: none;
+        }
+        .navbar {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1f3a52;
+        }
+        li {
+            float: left;
+        }
+        li p {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 2vw;
+        }
+        #setup:hover:not(.active) {
+            cursor: pointer;
+        }
+        body {
+            min-height: 300px;
+            background: #06090c;
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#111b24', endColorstr='#0c4161',GradientType=0 );
+            height: 100%;
+            font-family: "open_sansregular";
+            color: rgb(201, 203, 206);
+            overflow-x: hidden;
+            /* Panel opening and closing animation time - 200mx */
+            transition: transform .2s;
+            -webkit-transition: -webkit-transform .2s;
+        }
+        .content{
+            position: absolute;
+            padding: 0 5%;
+            display: none;
+            background-color: #06090c;
+            z-index: 2;
+        }
+        #setupDiv div{
+            margin-top: 5%;
+            margin-bottom: 5%;
+            font-size: 1.5vw;
+        }
+        #instructions h1,h4 {
+            width: 100%;
+        }
+        #hotkeyList li {
+            width: 100%;
+        }
+        .noteBar {
+            background-color: gray;
+            position: fixed;
+            bottom: 5%;
+            left: 25%;
+            margin: auto;
+            opacity: 0.5;
+            width: 50%;
+            display: none;
+        }
+        .noteBar p {
+            color: rgb(250,250,250);
+            text-align: center;
+            font-size: 3vw;
+        }
+	</style>
+    <title>Waypoint Planner</title>
+  </head>
+  <body>
+      
+    <ul class="navbar">
+        <li><p id="navTitle">Waypoint Planning Application</p></li>
+        <li style="float: right" id="setup"><p>Setup & Instructions &#9776;</p></li>
+    </ul>
+	<div class="content">
+        <div class="row">
+            <div class="col-md-4" id="setupDiv">
+                <h1>Setup</h1>
+                <div style="display: block;"> 
+                    <span>Sim Start Time</span>
+                    <input type="datetime-local" id="start-time"
+                    name="meeting-time" value="2020-04-01T00:00"
+                    min="2010-01-01T00:00" max="2030-12-29T23:59" style="background-color: #292b2c; color: white">
+                </div>
+                <div style="display: block;">
+                    <span>RSO Longitude</span>
+                    <input type="text" id="longitude" placeholder="Default to 0 degrees" style="margin-left: 1%;">
+                </div>
+                <div style="display: block;">
+                    <span>Show Sun Vector</span>
+                    <input type="checkbox" id="sunCheck" checked style="transform: scale(2); margin-left: 3%;">
+                </div>
+                <div style="display: block;">
+                    <span>Show Moon Vector</span>
+                    <input type="checkbox" id="moonCheck" style="transform: scale(2); margin-left: 3%;">
+                </div>
+                <div style="display: block;">
+                    <span>Show Burns</span>
+                    <input type="checkbox" id="burnCheck" checked style="transform: scale(2); margin-left: 3%;">
+                </div>
+            </div>
+            <div class="col-md-8" id="instructions">
+                <h1>Instructions</h1>
+                <h4><u>Placing Waypoints</u></h4>
+                <p>
+                    To insert a new waypoint, click anywhere on the graph with the left-mouse button. Default time between waypoints is 2 hours. Pressing the [d] key will delete the selected waypoint.
+                </p>
+                <h4><u>Change Coast Time</u></h4>
+                <p>
+                    To change the coast time between waypoints, select the waypoint destination in question, and scroll the mouse wheel.
+                </p>
+                <h4><u>Move Point</u></h4>
+                <p>
+                    To alter the location of a waypoint, click an already selected point. The point will stick to your mouse movements. Simply click again to place the point in its new position.
+                </p>
+                <h4><u>Using Techniques</u></h4>
+                <p>
+                    The following hotkeys can be utilized for techniques:
+                </p>
+                <ul id="hotkeyList">
+                    <li><b>[N]</b> - Natural motion circumnavigation from the last waypoint placed, centered on a chosen position.</li>
+                    <li><b>[M]</b> - Forced motion circumnavigation circle from the last waypoint placed. Use is given options for center of technique as well as the number of waypoints utilized (by scroll wheel)</li>
+                    <li><b>[F]</b> - Fly-By from last waypoint</li>
+                    <li><b>[K]</b> - Dynamic Station Keeping from last waypoint</li>
+                    <li><b>[B]</b> - Manual burn, allows user to manually choose direction and magnitude of burn. Scroll wheel used to alter coast time after maneuver.</li>
+                </ul>
+                <h4><u>Playing Scenario</u></h4>
+                <p>
+                    By pressing [P], scenario will play out with Sun and Moon vectors.
+                </p>
+                <h4><u>Adding Zones</u></h4>
+                <p>
+                    By pressing [Z], user will be able to place zones of interest around the orgin of the RIC frame. Assumes conic shape with a center and angular width.
+                </p>
+            </div>
+        </div>
+		
+		
+	</div>
+    <div id="main" class="row">
+        <div id="maneuverBar" class="col-xl-3">
+            <table class="table" id="burnTable">
+                <thead>
+                    <tr>
+                        <td>Epoch +</td>
+                        <td colspan="2">Target Position</th>
+                        <td colspan="2">Estimated Burn</th>
+                    </tr>
+                    <tr>
+                        <td></th>
+                        <td>R [km]</td>
+                        <td>I [km]</td>
+                        <td>R [m/s]</td>
+                        <td>I [m/s]</td>
+                    </tr>	
+                </thead>
+                <tbody id="burnTableBody">
+                    <tr class="selectedTableRow">
+                        <td><span>0.00</span> hrs</td>
+                        <td><span>0.00</span></td>
+                        <td><span>0.00</span></td>
+                        <td><span>0.000</span></td>
+                        <td><span>0.000</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-xl-9">
+            <div style="width:95%; height:auto; margin: 2% auto" id="main">
+                <canvas id="ChartCnvs" width="28" height="16"></canvas>
+            </div>
+        </div>
+    </div>  
+    <div class="noteBar">
+        <p>Test</p>
+    </div>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $('#setup').on('click',() => {
+            $('.content').slideToggle(250);
+        });
+    </script>
+	
+  </body>
+</html>
