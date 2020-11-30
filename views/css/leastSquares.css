@@ -1,0 +1,26 @@
+
+#main-canvas {
+    z-index: 1;
+}
+
+#plus-button:hover, #minus-button:hover {
+    background-color: rgba(0,0,0,0.25);
+}
+.controls {
+    position: fixed;
+    top: 5%;
+    left: 2%;
+    color: black;
+    font-size: 4vh;
+}
+#equation {
+    position: fixed;
+    bottom: 2%;
+    right: 2%;
+    color: black;
+    font-size: 4vh;
+}
+
+img {
+    max-height: 5vh;
+}
