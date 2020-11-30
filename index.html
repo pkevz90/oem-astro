@@ -23,12 +23,15 @@
       .top {
         position: relative;
         z-index: 1;
+      }.top2 {
+        position: relative;
+        z-index: 2;
       }
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 </head>
 <body class="bg-light" style="overflow-x: hidden;">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="top2 navbar navbar-expand-lg navbar-dark bg-dark">
         <a class="navbar-brand " href="#">OEM Astro Applications</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
@@ -98,7 +101,7 @@
         <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
             <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
                 <div class="card-body">
-                <h5 class="card-title">Classical Orbital Elements</h5>
+                <h5 class="card-title">Classical Orbital Elements <span class="badge badge-secondary">Mobile</span></h5>
                 <p class="card-text">Visualize orbits and maneuvers in the ECI and ECEF frames</p>
                 <a href="./coeVis.html" class="btn btn-secondary">Open</a>
                 </div>
@@ -107,7 +110,7 @@
         <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
             <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
                 <div class="card-body">
-                <h5 class="card-title">Relative Motion Elements</h5>
+                <h5 class="card-title">Relative Motion Elements <span class="badge badge-secondary">Mobile</span></h5>
                 <p class="card-text">Visualize relative motion utilizing RMOE's</p>
                 <a href="./rmoeVis2d.html" class="btn btn-secondary">Open 2D</a>
                 <a href="./rmoeVis.html" class="btn btn-secondary">Open 3D</a>

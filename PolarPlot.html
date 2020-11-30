@@ -10,13 +10,22 @@
         top: 5%;
         right: 0%;
     }
+    #file-input div {
+        color: white;
+    }
     input {
         color: white;
+    }
+    img {
+        max-height: 30px;
     }
 </style>
 <body>
     <div id="file-input">
+        <div>Import TLE File</div>
         <input type="file" accept=".txt" id="fileToLoad">
+        <div style="margin-top: 3%;"><u>Controls</u></div>
+        <div>Add Blue Sat: <img src="./Media/shiftkey.jpg"></div>
     </div>
     <canvas></canvas>
 </body>
