@@ -12,6 +12,7 @@ let axisSize = {
 	x: 100,
 	y: 100 * cnvs.height / cnvs.width
 }
+let error = [0,0];
 let equationDom = document.getElementById('equation');
 
 cnvs.addEventListener('click', event => {	
@@ -44,6 +45,12 @@ function animate() {
   drawLine(line);
   showEquation(line)
   try {
+    calcRms(points,line);
+  }
+  catch (err) {
+
+  }
+  try {
 	  let linePoint;
 	  points.forEach(point => {
 		linePoint = convert({x: point.x, y: point.y}, false);
@@ -65,10 +72,7 @@ function drawLine(line) {
   drawPoints = [];
   try {
 	for (let ii = -50; ii <= 50; ii += 0.1) {
-		y = 0;
-		for (let kk = line.length - 1; kk >= 0; kk--) {
-		  y += Math.pow(ii, kk) * line[line.length - 1 - kk];
-		}
+    y = calcLine(ii, line);
 		drawPoints.push(convert({x: ii, y: y}, false));
 	  }
 	  drawCurve(ctx, drawPoints, 0.7)
@@ -78,22 +82,31 @@ function drawLine(line) {
   }
 }
 
+function calcLine(x, line) {
+  let y = 0;
+  for (let kk = line.length - 1; kk >= 0; kk--) {
+    y += Math.pow(x, kk) * line[line.length - 1 - kk];
+  }
+  return y;
+}
+
 function showEquation(line) {
-	let htmlOut = '', order;
-	for (ii = 0; ii < line.length; ii++) {
-		order = lineOrder - ii;
-		htmlOut += newLine[ii].toFixed(5);
-		if (order === 1) {
-			htmlOut += 'x'
-		}
-		else if (order > 1) {
-			htmlOut += 'x<sup>' + order + '</sup>';
-		}
-		if (ii !== lineOrder) {
-			htmlOut += ' + '
-		}
-	}
+  
 	try {
+    let htmlOut = '', order;
+    for (ii = 0; ii < line.length; ii++) {
+      order = lineOrder - ii;
+      htmlOut += newLine[ii].toFixed(5) + '(&plusmn' + error[ii].toFixed(4) + ')';
+      if (order === 1) {
+        htmlOut += 'x'
+      }
+      else if (order > 1) {
+        htmlOut += 'x<sup>' + order + '</sup>';
+      }
+      if (ii !== lineOrder) {
+        htmlOut += ' + '
+      }
+    }
 		equationDom.innerHTML = htmlOut;
 	}
 	catch (err) {
@@ -124,6 +137,10 @@ function calculateLine(order = 1) {
   if (points.length < order + 1) {
     return;
   }
+  newLine = math.squeeze(calcCovariance(points, order));
+}
+
+function calcCovariance(points, order, multiplyByY = true) {
   let x = [],
     y = [];
   points.forEach(point => {
@@ -140,8 +157,13 @@ function calculateLine(order = 1) {
       a = math.concat(a, math.dotPow(x, ii));
     }
   }
-  a = math.multiply(math.multiply(math.inv(math.multiply(math.transpose(a), a)), math.transpose(a)), y);
-  newLine = math.squeeze(a);
+  if (multiplyByY) {
+    a = math.multiply(math.multiply(math.inv(math.multiply(math.transpose(a), a)), math.transpose(a)), y);
+  }
+  else {
+    a = math.inv(math.multiply(math.transpose(a), a));
+  }
+  return a;
 }
 
 function drawCurve(ctx, points, tension, type = 'stroke') {
@@ -202,4 +224,16 @@ function convert(oldPoint,pixelsToPoints = true) {
 	}
 
 	return newPoint;
+}
+
+function calcRms(points, line) {
+  let rms = 0, expectedY;
+  points.forEach(point => {
+    expectedY = calcLine(point.x, line);
+    rms += Math.pow(expectedY - point.y, 2);
+  })
+  rms = Math.sqrt(rms / points.length);
+  let a = calcCovariance(points, lineOrder, false);
+  error = math.sqrt(math.diag(math.dotMultiply(a,rms)));
+  return rms;
 }
