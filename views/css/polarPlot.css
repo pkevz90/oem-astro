@@ -1,0 +1,21 @@
+body {
+    overflow: hidden;
+}
+#file-input {
+    position: fixed;
+    width: auto;
+    z-index: 2;
+    top: 5%;
+    right: 0%;
+    font-size: 1vw;
+}
+#file-input div {
+    color: rgb(75, 75, 75);
+}
+input {
+    color:  rgb(75, 75, 75);
+}
+img {
+    margin-top: 2%;
+    max-height: 3vw;
+}
