@@ -43,13 +43,20 @@ body, html {
     z-index: 2;
     bottom: 1%;
     left: 1%;
+    color: white;
+    font-size: 3vw;
+}
+#number-container input {
+    background-color: black;
+    color: white;
+    font-size: 3vw;
+    width: 1.5em;
 }
 
 .slider-container div input {
     width: 100%;
     background-color: black;
     color: white;
-    
 }
 
 .slider-container {
@@ -57,4 +64,15 @@ body, html {
 }
 .slider-container div {
     width: 100%;
+}
+
+.controls {
+    position: fixed;
+    top: 25%;
+    left: 2%;
+    color: white;
+    font-size: 4vh;
+}
+img {
+    max-height: 5vh;
 }
