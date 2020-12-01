@@ -14,9 +14,25 @@ let axisSize = {
 }
 let error = [0,0];
 let equationDom = document.getElementById('equation');
+let selectedPoint = undefined;
 
-cnvs.addEventListener('click', event => {	
+cnvs.addEventListener('mousedown', event => {	
 	try {
+    if (event.shiftKey || event.ctrlKey) {
+      let pointSelect = convert({x: event.x, y: event.y});
+      for (let ii = 0; ii < points.length; ii++) {
+        if (math.norm([pointSelect.x - points[ii].x, pointSelect.y - points[ii].y]) < 2) {
+          if (event.shiftKey) {
+            selectedPoint = ii;
+          }
+          else {
+            points.splice(ii,1);
+          }
+          return;
+        }
+      }
+      return;
+    }
 		let newPoint = convert({x: event.x, y: event.y});
 	  points.push(newPoint);
 	  lineAnimate = 0;
@@ -24,6 +40,13 @@ cnvs.addEventListener('click', event => {
 	catch(err) {
 
 	}
+});
+cnvs.addEventListener('mousemove', event => {
+  if (selectedPoint === undefined) return;
+  points[selectedPoint] = convert({x: event.x, y: event.y});
+});
+cnvs.addEventListener('mouseup', event => {
+  selectedPoint = undefined;
 });
 
 window.addEventListener('keypress', changeOrder);
