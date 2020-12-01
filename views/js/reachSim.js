@@ -7,7 +7,17 @@ var main_app = new Vue({
             current_state: [[0], [0], [0], [0]]
         },
         scenario_data: {
-            delta_v: 0.5,
+            engine: {
+                controlCenter: null,
+                radial: {
+                    p: 1,
+                    n: 1
+                },
+                in_track: {
+                    p: 1,
+                    n: 1
+                }
+            },
             roes: {
                 ae: 0,
                 xd: 0,
@@ -20,7 +30,7 @@ var main_app = new Vue({
             time: {
                 start: 2,
                 step: 2,
-                end: 24,
+                end: 12,
                 current: 0
             }
         },
@@ -39,6 +49,7 @@ var main_app = new Vue({
             let ctx = cnvs.getContext('2d');
             this.display_data.height = cnvs.height;
             this.display_data.width = cnvs.width;
+            main_app.scenario_data.engine.controlCenter = [cnvs.width - cnvs.width * 0.06, cnvs.height - cnvs.width * 0.06];
             ctx.clearRect(0, 0, cnvs.width, cnvs.height);
             drawStars(cnvs, ctx);
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
@@ -440,9 +451,21 @@ function drawTargetLimit(cnvs, ctx, first_state,dV, t) {
     ctx.beginPath();
     // ctx.strokeStyle = 'rgba(255,255,255,0.4)';
     ctx.strokeStyle = 'hsl(' + (360 / (main_app.scenario_data.time.end / main_app.scenario_data.time.step)) * t /main_app.scenario_data.time.step  + ', 100%, 50%)';
-    for (ii = 0; ii <= 20; ii++) {
+    for (ii = 0; ii <= 40; ii++) {
         ang = 2 * Math.PI * ii / 20;
         dVcomponents = [[dV * Math.cos(ang)], [dV * Math.sin(ang)]];
+        if (dVcomponents[0][0] > 0) {
+            dVcomponents[0][0] = dVcomponents[0][0] > (main_app.scenario_data.roes.delta_v * main_app.scenario_data.engine.radial.n) ? main_app.scenario_data.roes.delta_v * main_app.scenario_data.engine.radial.n : dVcomponents[0][0];
+        }
+        else {
+            dVcomponents[0][0] = dVcomponents[0][0] < -(main_app.scenario_data.roes.delta_v * main_app.scenario_data.engine.radial.p) ? -main_app.scenario_data.roes.delta_v * main_app.scenario_data.engine.radial.p : dVcomponents[0][0];
+        }
+        if (dVcomponents[1][0] > 0) {
+            dVcomponents[1][0] = dVcomponents[1][0] > (main_app.scenario_data.roes.delta_v * main_app.scenario_data.engine.in_track.n) ? main_app.scenario_data.roes.delta_v * main_app.scenario_data.engine.in_track.n : dVcomponents[1][0];
+        }
+        else {
+            dVcomponents[1][0] = dVcomponents[1][0] < -(main_app.scenario_data.roes.delta_v * main_app.scenario_data.engine.in_track.p) ? -main_app.scenario_data.roes.delta_v * main_app.scenario_data.engine.in_track.p : dVcomponents[1][0];
+        }
         r2 = math.add(math.multiply(pRR, r), math.multiply(pRV, math.add(v,dVcomponents)));    
         pixelPos.push(getScreenPixel(cnvs, r2[0][0], r2[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true)); 
     }
@@ -458,13 +481,64 @@ function hrsToTime(hrs) {
 function drawDirectionSet(cnvs, ctx) {
     let size = cnvs.width * 0.1;
     ctx.strokeStyle = 'white';
-    let center = [cnvs.width - cnvs.width * 0.06, cnvs.height - cnvs.width * 0.06];
+    let center = main_app.scenario_data.engine.controlCenter;
     ctx.beginPath();
     ctx.arc(center[0], center[1], size / 2, 0, 2 * Math.PI);
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5';
     ctx.beginPath();
-    ctx.arc(center[0], center[1], size / 4, 0, 2 * Math.PI);
+    let gradient = ctx.createRadialGradient(center[0], center[1],0, center[0], center[1],size / 2);
+    gradient.addColorStop(0, 'orange');
+    gradient.addColorStop(.5, 'yellow');
+    gradient.addColorStop(1, 'white');
+    ctx.fillStyle = gradient;
+    ctx.moveTo(center[0] + size /2 * main_app.scenario_data.engine.in_track.n, center[1])
+    ctx.lineTo(center[0], center[1] - size / 2 * main_app.scenario_data.engine.radial.p)
+    ctx.lineTo(center[0] - size /2 * main_app.scenario_data.engine.in_track.p, center[1])
+    ctx.lineTo(center[0], center[1] + size / 2 * main_app.scenario_data.engine.radial.n)
+    ctx.fill();
     ctx.stroke();
-
 }
+
+window.addEventListener('keydown',event => {
+    if (event.key.toLowerCase() === 'w') {
+        if (!event.shiftKey) {
+            main_app.scenario_data.engine.radial.p += 0.025;
+            main_app.scenario_data.engine.radial.p = main_app.scenario_data.engine.radial.p > 1 ? 1 : main_app.scenario_data.engine.radial.p;
+        }
+        else {
+            main_app.scenario_data.engine.radial.p -= 0.025;
+            main_app.scenario_data.engine.radial.p = main_app.scenario_data.engine.radial.p > 1 ? 1 : main_app.scenario_data.engine.radial.p;
+            main_app.scenario_data.engine.radial.p = main_app.scenario_data.engine.radial.p < 0 ? 0 : main_app.scenario_data.engine.radial.p;
+        }
+    }
+    else if (event.key.toLowerCase() === 's') {
+        if (!event.shiftKey) {
+            main_app.scenario_data.engine.radial.n += 0.025;
+            main_app.scenario_data.engine.radial.n = main_app.scenario_data.engine.radial.n > 1 ? 1 : main_app.scenario_data.engine.radial.n;
+        }
+        else {
+            main_app.scenario_data.engine.radial.n -= 0.025;
+            main_app.scenario_data.engine.radial.n = main_app.scenario_data.engine.radial.n < 0 ? 0 : main_app.scenario_data.engine.radial.n;
+        }
+    }
+    else if (event.key.toLowerCase() === 'd') {
+        if (!event.shiftKey) {
+            main_app.scenario_data.engine.in_track.n += 0.025;
+            main_app.scenario_data.engine.in_track.n = main_app.scenario_data.engine.in_track.n > 1 ? 1 : main_app.scenario_data.engine.in_track.n;
+        }
+        else {
+            main_app.scenario_data.engine.in_track.n -= 0.025;
+            main_app.scenario_data.engine.in_track.n = main_app.scenario_data.engine.in_track.n < 0 ? 0 : main_app.scenario_data.engine.in_track.n;
+        }
+    }
+    else if (event.key.toLowerCase() === 'a') {
+        if (!event.shiftKey) {
+            main_app.scenario_data.engine.in_track.p += 0.025;
+            main_app.scenario_data.engine.in_track.p = main_app.scenario_data.engine.in_track.p > 1 ? 1 : main_app.scenario_data.engine.in_track.p;
+        }
+        else {
+            main_app.scenario_data.engine.in_track.p -= 0.025;
+            main_app.scenario_data.engine.in_track.p = main_app.scenario_data.engine.in_track.p < 0 ? 0 : main_app.scenario_data.engine.in_track.p;
+        }
+    }
+})
