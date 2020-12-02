@@ -451,7 +451,7 @@ function drawTargetLimit(cnvs, ctx, first_state,dV, t) {
     ctx.beginPath();
     // ctx.strokeStyle = 'rgba(255,255,255,0.4)';
     ctx.strokeStyle = 'hsl(' + (360 / (main_app.scenario_data.time.end / main_app.scenario_data.time.step)) * t /main_app.scenario_data.time.step  + ', 100%, 50%)';
-    for (ii = 0; ii <= 20; ii++) {
+    for (ii = 0; ii <= 40; ii++) {
         ang = 2 * Math.PI * ii / 20;
         dVcomponents = [[dV * Math.cos(ang)], [dV * Math.sin(ang)]];
         if (dVcomponents[0][0] > 0) {
