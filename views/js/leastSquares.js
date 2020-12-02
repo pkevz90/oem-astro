@@ -27,6 +27,7 @@ cnvs.addEventListener('mousedown', event => {
           }
           else {
             points.splice(ii,1);
+            lineAnimate = 0;
           }
           return;
         }
@@ -53,38 +54,56 @@ window.addEventListener('keypress', changeOrder);
 
 function animate() {
   ctx.clearRect(0, 0, cnvs.width, cnvs.height);
-  ctx.fillStyle = '#000';
-  calculateLine(lineOrder);
-  if (lineAnimate < 0.9999999) {
-    lineAnimate += 0.1;
-  } else {
-    lineAnimate = 1;
-    oldLine = [
-      ...newLine
-    ];
-  }
-  let line = math.add(oldLine, math.dotMultiply(lineAnimate, math.subtract(newLine, oldLine)));
   drawAxis();
-  drawLine(line);
-  showEquation(line)
-  try {
-    calcRms(points,line);
-  }
-  catch (err) {
-
-  }
   try {
 	  let linePoint;
+    ctx.fillStyle = '#000';
 	  points.forEach(point => {
-		linePoint = convert({x: point.x, y: point.y}, false);
-		ctx.beginPath();
-		ctx.arc(linePoint.x, linePoint.y, 5, 0, 2 * Math.PI);
-		ctx.fill();
+      linePoint = convert({x: point.x, y: point.y}, false);
+      ctx.beginPath();
+      ctx.arc(linePoint.x, linePoint.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
 	  });
   }
   catch (err) {
-
   }
+  if (lineOrder === 'circle') {
+    calcCircle(points);
+    if (lineAnimate < 0.9999999) {
+      lineAnimate += 0.1;
+    } else {
+      lineAnimate = 1;
+      oldLine = [
+        ...newLine
+      ];
+    }
+    let circle = math.add(oldLine, math.dotMultiply(lineAnimate, math.subtract(newLine, oldLine)));
+    drawCircle(circle);
+    showEquation(circle)
+  }
+  else {
+    ctx.fillStyle = '#000';
+    calculateLine(lineOrder);
+    if (lineAnimate < 0.9999999) {
+      lineAnimate += 0.1;
+    } else {
+      lineAnimate = 1;
+      oldLine = [
+        ...newLine
+      ];
+    }
+    let line = math.add(oldLine, math.dotMultiply(lineAnimate, math.subtract(newLine, oldLine)));
+    drawLine(line);
+    showEquation(line)
+    try {
+      calcRms(points,line);
+    }
+    catch (err) {
+
+    }
+  }
+  
+  
   
   window.requestAnimationFrame(animate);
 }
@@ -116,6 +135,13 @@ function calcLine(x, line) {
 function showEquation(line) {
   
 	try {
+    if (lineOrder === 'circle') {
+      equationDom.innerHTML = '(x - ' + line[1].toFixed(4) + ')<sup>2</sup> + (y - ' + line[2].toFixed(4) + ')<sup>2</sup> = ' + line[0].toFixed(4) + '<sup>2</sup>';
+      return;
+    }
+    else if (lineOrder === 'ellipse') {
+      return;
+    }
     let htmlOut = '', order;
     for (ii = 0; ii < line.length; ii++) {
       order = lineOrder - ii;
@@ -147,12 +173,24 @@ function changeOrder(item) {
     lineAnimate = 0;
   }
   else if (item.key === ',') {
-	if (lineOrder === 1) {
-		return;
-	}
-  	lineOrder--;
+    if (lineOrder === 1) {
+      return;
+    }
+    lineOrder--;
     oldLine.shift();
     lineAnimate = 0;
+  }
+  else if (item.key === 'c') {
+    if (lineOrder === 'circle') {
+      lineOrder = 1;
+      oldLine = [0, 0];
+      lineAnimate = 0;
+    }
+    else {
+      lineOrder = 'circle';
+      oldLine = [0, 0, 0];
+      lineAnimate = 0;
+    }
   }
 }
 
@@ -187,6 +225,73 @@ function calcCovariance(points, order, multiplyByY = true) {
     a = math.inv(math.multiply(math.transpose(a), a));
   }
   return a;
+}
+
+function calcCircle(points = [{x: 2, y: 0}, {x: -2, y: -3}, {x: -3, y: 2}, {x: -2, y: 4}]) {
+  if (points.length < 3) {
+    newLine = [10,0,0]
+  }
+  let xP = points.map(element => {
+    return element.x;
+  })
+  let yP = points.map(element => {
+    return element.y;
+  })
+  let dfdr = (r) => {
+    let array = [];
+    for (let ii = 0; ii < points.length; ii++) {
+      array.push(-2*r);
+    }
+    return math.transpose([array])
+  }
+  let f = (r,xc,yc,x,y) => {
+    let array = [];
+    x.forEach((element,ii) => {
+      array.push(Math.pow(element-xc, 2) + Math.pow(y[ii]-yc, 2) - r*r);
+    })
+    return math.transpose([array]);
+  };
+  let dfdxc = (xc,x) => {
+    let array = [];
+    x.forEach((element,ii) => {
+      array.push([-2*(element - xc)]);
+    })
+    return array;
+  }
+  let dfdyc = (yc,y) => {
+    let array = [];
+    y.forEach((element,ii) => {
+      array.push([-2*(element - yc)]);
+    })
+    return array;
+  }
+  let rGuess = [[2],[0],[0]];
+  let rms = 10, rmsOld = 0, count = 0, A, y;
+  while (count < 10) {
+    A = math.concat(dfdr(rGuess[0][0]), dfdxc(rGuess[1][0], xP), dfdyc(rGuess[2][0], yP));
+    y = f(rGuess[0][0], rGuess[1][0], rGuess[2][0], xP, yP);
+    A = math.multiply(math.inv(math.multiply(math.transpose(A),A)), math.transpose(A));
+    rGuess = math.subtract(rGuess, math.multiply(A,y));
+    count++;
+  }
+  newLine = math.squeeze(rGuess);
+}
+
+function drawCircle(circle) {
+  ctx.strokeStyle = '#000';
+  let drawPoints = [];
+  for (ii = 0; ii <= 360; ii++) {
+    drawPoints.push({x: circle[0]*Math.cos(ii * Math.PI / 180) + circle[1], y: circle[0]*Math.sin(ii * Math.PI / 180) + circle[2]});
+  }
+  drawPoints = drawPoints.map(point => {
+    return convert(point, false);
+  });
+  drawCurve(ctx, drawPoints, 0.7);
+  let centerPixel = convert({x: circle[1], y: circle[2]}, false);
+  ctx.beginPath();
+  ctx.fillStyle = 'orange';
+  ctx.arc(centerPixel.x, centerPixel.y, 5, 0, 2*Math.PI);
+  ctx.fill();
 }
 
 function drawCurve(ctx, points, tension, type = 'stroke') {
