@@ -14,7 +14,7 @@
     <script src="./js/cap1v1/Cap1v1main.js"></script>
     <script src="./js/cap1v1/Cap1v1Trajectories.js"></script>
     <script src="./js/cap1v1/Cap1v1HandleEvents.js"></script>
-    <title>RPO 1v1</title>
+    <title>RPO Sim</title>
     <link rel="stylesheet" type="text/css" href="css/cap1v1.css">
     
 </head>
@@ -22,23 +22,22 @@
 <body class="noselect">
     <ul class="navbar">
         <li class="nav-element">
-            <p>1v1 Simulator</p>
+            <p>RPO Simulator</p>
         </li>
-        <li class="nav-element" style="margin-left: 3%; display: none">
-            <p>Time: <span>00:00</span></p>
-        </li>
-        <li class="nav-element" style="padding: 1.1%; width: 50%; display: none">
-            <input type="range" class="slider" min="0" max="15" value="0" step="0.016667" style="width: 100%;">
-        </li>
-        <li class="nav-element"  style="display: none;">
-            <p class="selectable">Turn <span>1</span></p>
-        </li>
-        <li class="nav-element-right">
-            <p class="selectable">Instructions</p>
-        </li>
-        <!-- <li class="nav-element-right">
-            <p class="selectable">Options</p>
-        </li> -->
+        <div id="game-data-top" style="display: none;">
+            <li class="nav-element" style="margin-left: 3%;">
+                <p>Time: <span>00:00</span></p>
+            </li>
+            <li class="nav-element" style="padding: 1.1%; width: 50%;">
+                <input type="range" class="slider" min="0" max="15" value="0" step="0.016667" style="width: 100%;">
+            </li>
+            <li class="nav-element" >
+                <p class="selectable">Turn <span>1</span></p>
+            </li>
+            <li class="nav-element-right">
+                <p class="selectable">Instructions</p>
+            </li>
+        </div>
     </ul>
     <div class="instruction-screen">
         <h4><u>Goal</u></h4>
