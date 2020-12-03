@@ -6,9 +6,8 @@ document.getElementById('ChartCnvs').addEventListener('touchstart',event=>{
     let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.touches[0].clientY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
     console.log(X,Y);
 })
-
+// Mousewheel -- change targeted time if targeting, otherwise control zoom
 $('canvas').on('mousewheel',event => {
-    // console.log(app.tactic);
     if (app.tactic === 'target') {
         changeTargetTime(event.deltaY)
         return;
@@ -22,6 +21,12 @@ $('canvas').on('mousewheel',event => {
         setAxisZoomPos();
     }
 })
+/*
+    One mousedown:
+        - If not over a burn point, player can click and drag to move viewpoint center
+        - If over burn point, immediate drag starts manually planning burn
+        - If held over burn point, target planning sequence begins
+*/
 $('canvas').mousedown(event => {
     let X = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
     let Y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top);
@@ -50,6 +55,12 @@ $('canvas').mousedown(event => {
                    [...app.axisCenter]];
     $('canvas').css('cursor','grabbing')
 })
+/*
+    One mousemove:
+        - If not over a burn point, player can click and drag to move viewpoint center
+        - If over burn point, immediate drag starts manually planning burn
+        - If held over burn point, target planning sequence begins
+*/
 $('canvas').mousemove(event => {
     app.mouseCoor.x = app.axisCenter[0] + app.axisLimits - 2*(event.offsetX-globalChartRef.chartArea.left)*app.axisLimits / (globalChartRef.chartArea.right-globalChartRef.chartArea.left);
     app.mouseCoor.y = app.axisCenter[1] + 0.5*app.axisLimits - (event.offsetY-globalChartRef.chartArea.top)*app.axisLimits / (globalChartRef.chartArea.bottom-globalChartRef.chartArea.top); 
@@ -110,6 +121,7 @@ $(Window).mouseup(() => {
 $('.nav-element-right:first').on('click', () => {
     $('.instruction-screen').slideToggle(250);
 })
+// Turn Button -- also sends data to server
 $('.selectable:first').on('click', () => {
     let turn = Number($turn.text());
     if (turn > app.redTurn && setupData.server) {
@@ -119,7 +131,6 @@ $('.selectable:first').on('click', () => {
         return;
     }
     turn++;
-    // setSelectedWaypoint(turn - 1, setupData.team);
     $('.selectable:first span').text(turn)
     for (player in app.players) {
         app.players[player].calculateTrajecory();
@@ -150,7 +161,7 @@ $('.selectable:first').on('click', () => {
     }, 15);
 
 })
-// Other control title buttons are handled by callback within Vue object
+//Check burn tables
 $('.controlTitle :first').on('click', (a) => {
     if ($(a.target).is('span')) {
         a.target = $(a.target).parent();
@@ -162,22 +173,64 @@ $('.controlTitle :first').on('click', (a) => {
     $('.side-data').slideUp(250);
     $(a.target).next().slideDown(250);
 })
+//Start game -- also starts intervel to query server every 500ms
 $('.start-button').on('click', () => {
+    //Fade out setup screen
     $('.setup-screen').fadeOut(500);
-    $('.selectable:first').parent().fadeIn(500);
-    $('.selectable:first').parent().prev().fadeIn(500);
-    $('.selectable:first').parent().prev().prev().fadeIn(500);
-    // $('.nav-element:first p').css('color',sideData.scenario_data.players[setupData.team].name)
+    //Fade in data on nav bar
+    $('#game-data-top').fadeIn(500);
+    configureSatellitesAndGame();
+    if (setupData.server) {
+        setupServer();
+    }
+    startGame();
+})
+//Time slider
+$('.nav-element input').on('input', (a) => {
+    $(a.target).parent().prev().find('p').find('span').text(hrsToTime(a.target.value));
+    app.currentTime = Number(a.target.value);
+    setBottomInfo();
+    calcData(app.currentTime);
+})
+$('.nav-element input').on('change', () => {
+    let turn = Number($turn.text());
+    let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
+    let limit = Math.abs(Math.floor(timeDelta / (app.scenLength / app.numBurns) * 12));
+    // console.log((turn - 1) * (app.scenLength / app.numBurns), app.currentTime, timeDelta, limit);
+    let ii = 0;
+    let inter = setInterval(() => {
+        app.currentTime += timeDelta / (limit + 1);
+        app.currentTime = app.currentTime < 0 ? 0 : app.currentTime;
+        $('.nav-element input').val(app.currentTime);
+        $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
+        calcData(app.currentTime);
+        if (ii === limit) {
+            clearInterval(inter);
+        }
+        ii++;
+    }, 15);
+})
+function hrsToTime(hrs) {
+    hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
+    return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
+}
+$('.server-button p').click(()=>{
+    $('.server-button').animate({
+        height: '20%'
+    },300)
+})
+
+function configureSatellitesAndGame() {
     app.initSunVector = [
         [Math.cos(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
         [Math.sin(Number(setupData.scenario_start.initSun) * Math.PI / 180)],
     ];
     
     app.scenLength = Number(setupData.scenario_start.sl);
+    $('.slider')[0].max = app.scenLength;
     app.numBurns = Number(setupData.scenario_start.bp);
     sideData.scenario_data.numBurns = app.numBurns;
     sideData.scenario_data.scenLength = app.scenLength;
-    $('.slider')[0].max = app.scenLength;
     let blueInit = stateFromRoe({
         ae: Number(setupData.blue.ae),
         xd: Number(setupData.blue.xd),
@@ -227,102 +280,63 @@ $('.start-button').on('click', () => {
             current: globalChartRef.config.data.datasets[13]
         })
     }
-    if (setupData.server) {
-        firebase.database().ref('/players/' + setupData.team + '/').set({
-            burn: math.zeros(Number(setupData.scenario_start.bp), 2)._data,
-            turn: 1,
-            init: app.players[setupData.team].initState
-        });
-    }
+    // Setup sensor for chosen player
     app.reqCats = Number(setupData.scenario_start.reqCats) * Math.PI / 180;
     app.rangeReq = [Number(setupData.scenario_start.rangeReq[0]), Number(setupData.scenario_start.rangeReq[1])];
-    if (setupData.server) {
-        setInterval(() => {
-            firebase.database().ref('players/').once('value').then(function (snapshot) {
-                let inData = snapshot.val();
-                if (app.burnTransition) {
-                    return;
-                }
-                app.redTurn = 1000; // arbitrarily high number, will always be reduced
-                for (player in inData) {
-                    if (player == setupData.team || app.players[player] === undefined) {
-                        continue;
-                    }
-                    app.redTurn = inData[player].turn < app.redTurn ? inData[player].turn : app.redTurn;
-                    inData['green'].turn = app.players.green ? inData['green'].turn : app.redTurn;
-                    inData['gray'].turn = app.players.gray ? inData['gray'].turn : app.redTurn;
-                    let turn = Math.min(inData['red'].turn,inData['blue'].turn,inData['green'].turn,inData['gray'].turn);
-                    let oldNorm, newNorm, change = undefined, oldBurn = [...app.players[player].burns];
-                    for (let ii = 0; ii < (turn - 1); ii++) {
-                        oldNorm = math.norm(app.players[player].burns[ii]);
-                        newNorm = math.norm(inData[player].burn[ii]);
-                        change = (Math.abs(oldNorm-newNorm) > 1e-4) ? ii : change;
-                    }
-                    if (change !== undefined) {
-                        let frames = 15, frame = 0;
-                        app.burnTransition = true;
-                        let changePlayer = player;
-                        let intB = setInterval(() => {
-                            app.players[changePlayer].burns.splice(change,1,math.add(math.dotMultiply(math.subtract(inData[changePlayer].burn[change],oldBurn[change]),frame/frames),oldBurn[change]));
-                            frame++;
-                            app.players[changePlayer].calculateTrajecory();
-                            calcData(app.currentTime);
-                            if (frame > frames) {
-                                clearInterval(intB)
-                                app.burnTransition = false;
-                            }
-                        },33)
-                    }
-                }
-                
-                if (Number($turn.text()) > app.redTurn) {
-                    $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
-                }
-                else {
-                    $('.nav-element-right').prev().find('p').css("color","white")
-                }
-            })//.catch(() => {
-            //     console.log('error');
-            // });
-        }, 500);
-    }
-    
-    startGame();
-
-})
-$('.nav-element input').on('input', (a) => {
-    $(a.target).parent().prev().find('p').find('span').text(hrsToTime(a.target.value));
-    app.currentTime = Number(a.target.value);
-    setBottomInfo();
-    calcData(app.currentTime);
-})
-
-$('.nav-element input').on('change', () => {
-    let turn = Number($turn.text());
-    let timeDelta = (turn - 1) * (app.scenLength / app.numBurns) - app.currentTime;
-    let limit = Math.abs(Math.floor(timeDelta / (app.scenLength / app.numBurns) * 12));
-    // console.log((turn - 1) * (app.scenLength / app.numBurns), app.currentTime, timeDelta, limit);
-    let ii = 0;
-    let inter = setInterval(() => {
-        app.currentTime += timeDelta / (limit + 1);
-        app.currentTime = app.currentTime < 0 ? 0 : app.currentTime;
-        $('.nav-element input').val(app.currentTime);
-        $('.nav-element input').parent().prev().find('p').find('span').text(hrsToTime(app.currentTime));
-        calcData(app.currentTime);
-        if (ii === limit) {
-            clearInterval(inter);
-        }
-        ii++;
-    }, 15);
-})
-
-function hrsToTime(hrs) {
-    hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
-    return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
 }
 
-$('.server-button p').click(()=>{
-    $('.server-button').animate({
-        height: '20%'
-    },300)
-})
+function setupServer() {
+    firebase.database().ref('/players/' + setupData.team + '/').set({
+        burn: math.zeros(Number(setupData.scenario_start.bp), 2)._data,
+        turn: 1,
+        init: app.players[setupData.team].initState
+    });
+    setInterval(() => {
+        firebase.database().ref('players/').once('value').then(function (snapshot) {
+            let inData = snapshot.val();
+            if (app.burnTransition) {
+                return;
+            }
+            app.redTurn = 1000; // arbitrarily high number, will always be reduced
+            for (player in inData) {
+                if (player == setupData.team || app.players[player] === undefined) {
+                    continue;
+                }
+                app.redTurn = inData[player].turn < app.redTurn ? inData[player].turn : app.redTurn;
+                inData['green'].turn = app.players.green ? inData['green'].turn : app.redTurn;
+                inData['gray'].turn = app.players.gray ? inData['gray'].turn : app.redTurn;
+                let turn = Math.min(inData['red'].turn,inData['blue'].turn,inData['green'].turn,inData['gray'].turn);
+                let oldNorm, newNorm, change = undefined, oldBurn = [...app.players[player].burns];
+                for (let ii = 0; ii < (turn - 1); ii++) {
+                    oldNorm = math.norm(app.players[player].burns[ii]);
+                    newNorm = math.norm(inData[player].burn[ii]);
+                    change = (Math.abs(oldNorm-newNorm) > 1e-4) ? ii : change;
+                }
+                if (change !== undefined) {
+                    let frames = 15, frame = 0;
+                    app.burnTransition = true;
+                    let changePlayer = player;
+                    let intB = setInterval(() => {
+                        app.players[changePlayer].burns.splice(change,1,math.add(math.dotMultiply(math.subtract(inData[changePlayer].burn[change],oldBurn[change]),frame/frames),oldBurn[change]));
+                        frame++;
+                        app.players[changePlayer].calculateTrajecory();
+                        calcData(app.currentTime);
+                        if (frame > frames) {
+                            clearInterval(intB)
+                            app.burnTransition = false;
+                        }
+                    },33)
+                }
+            }
+            
+            if (Number($turn.text()) > app.redTurn) {
+                $('.nav-element-right').prev().find('p').css("color","rgb(255,100,100)")
+            }
+            else {
+                $('.nav-element-right').prev().find('p').css("color","white")
+            }
+        })//.catch(() => {
+        //     console.log('error');
+        // });
+    }, 500);
+}
