@@ -348,9 +348,6 @@ function handleNewTle(file) {
 }
 function julianDateCalcStruct(time) {
     // Good
-    // return 367*time.year-Math.floor(7*(time.year+Math.floor((time.month+9)/12))/4)+Math.floor(275*time.month/9)+time.day+
-    //     1721013.5+((time.second/60+time.minute)/60+time.hour)/24 + 30; //?
-    time.year -= 2000;
     return 2451544.5 + 365 * (time.year - 2000) + Math.floor(0.25 * (time.year - 2000)) - Math.floor(0.01 * (time.year - 2000)) + Math.floor(0.0025 * (time.year - 2000)) + -1 + time.day;
 }
 function thetaGMST(JDUTI) {
