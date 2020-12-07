@@ -4,16 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>COE</title>
+    <link rel="stylesheet" href="./css/coeVis.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&display=swap" rel="stylesheet">
     <script src="../SupportLibraries/math.min.js"></script>
+    <script src="../SupportLibraries/jquery.min.js"></script>
     <script src="../SupportLibraries/vue.js"></script>
     <script src="../SupportLibraries/three.js-master/build/three.js"></script>
     <script src="../SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
     <script src="../SupportLibraries/astroFunctions.js"></script>
 </head>
 <body>
-    <canvas></canvas>
     <div id="main-app">
-
+        <div id="data" class="noselect" style="width: 20%">
+            <div v-for="(sat,ii) in satellites">
+                <div class="pointer white-border sat-name" @click="changeSat(ii)"  contentEditable="true">{{ sat.name }}</div>
+                <div class="white-border" style="padding: 5%" v-if="sat.shown">
+                    <div>SMA - {{ sat.sma }} km</div>
+                    <div><input class="slider" type="range" min="6500" max="50000" v-model.Number="sat.sma" @input="changeData(ii)" step="0.1"></div>
+                    <div><em>e</em> - {{ sat.ecc }}</div>
+                    <div><input class="slider" type="range" min="0" max="0.9999" v-model.Number="sat.ecc" @input="changeData(ii)" step="0.01"></div>
+                    <div><em>i</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.inc" @input="changeData(ii)" step="0.01"></div>
+                    <div>{{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.raan" @input="changeData(ii)" step="0.01"></div>
+                    <div>{{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.01"></div>
+                    <div>{{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
+                    <div>ECI<input class="checkbox" type="checkbox" checked> ECEF<input class="checkbox" type="checkbox"></div>
+                </div>
+            </div>
+            <div class="add-sat-button pointer" @click="addSatellite">Add Satellite</div>
+        </div>
     </div>
     <script src="./js/coeJs.js"></script>
 </body>

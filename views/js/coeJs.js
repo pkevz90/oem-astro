@@ -2,39 +2,35 @@ const app = new Vue({
     el: '#main-app',
     data: {
         time: Date.now(),
-        timeStep: 30,
+        timeStep: 120,
         drawStep: 1,
-        tail: 36000,
+        tail: 10000,
         jdTimeStart: 0,
         pause: false,
+        Earth: undefined,
+        clouds: undefined,
+        stars: undefined,
+        sunlight: undefined,
+        threeJsVar: {},
+        raanOffest: 0,
+        earthRot: 2 * Math.PI / 86164,
+        eci: true,
         satellites: [
             {
-                sma: 30000,
-                ecc: 0.75,
-                inc: 63.4 * Math.PI / 180,
-                raan: 0 * Math.PI / 180,
-                argP: 270 * Math.PI / 180,
+                name: 'ISS',
+                sma: 6797,
+                ecc: 0,
+                inc: 51.644 * Math.PI / 180,
+                raan: 213.1162 * Math.PI / 180,
+                argP: 106.9418 * Math.PI / 180,
                 mA: 0,
                 hist: [],
-                line: undefined
-            },{
-                sma: 30000,
-                ecc: 0.75,
-                inc: 63.4 * Math.PI / 180,
-                raan: 120 * Math.PI / 180,
-                argP: 270 * Math.PI / 180,
-                mA: 120 * Math.PI / 180,
-                hist: [],
-                line: undefined
-            },{
-                sma: 30000,
-                ecc: 0.75,
-                inc: 63.4 * Math.PI / 180,
-                raan: 240 * Math.PI / 180,
-                argP: 270 * Math.PI / 180,
-                mA: 240 * Math.PI / 180,
-                hist: [],
-                line: undefined
+                histECEF: [],
+                eci: true,
+                ecef: true,
+                line: undefined,
+                lineECEF: undefined,
+                shown: true
             }
         ]
     },
@@ -51,64 +47,95 @@ const app = new Vue({
     },
     methods: {
         render: function() {
-            renderer.render(scene, camera);
-            controls.update();
+            
+            this.threeJsVar.renderer.render(this.threeJsVar.scene, this.threeJsVar.camera);
+            this.threeJsVar.controls.update();
+
+            requestAnimationFrame(this.render);
             this.satellites.forEach(sat => {
                 this.drawSatellite(sat);
             });
-
-
-            requestAnimationFrame(this.render);
+            if (this.eci) {
+                this.Earth.rotation.y +=  this.earthRot * this.timeStep;
+                this.clouds.rotation.y += this.earthRot * this.timeStep;
+            }
+            else {
+                this.raanOffest -= this.earthRot * this.timeStep;
+            }
         },
         drawSatellite: function(sat) {
-            console.time('calc')
-            if (sat.hist.length === 0) {
-                sat.hist = this.calcSatellite(sat)
-            }  
-            else {
-                let n = Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma)
-                sat.mA += this.timeStep * n;
-                for (let ii = 0; ii < this.drawStep; ii++) {
-                    sat.hist.pop();
+                if (sat.hist.length === 0) {
+                    sat.hist = this.calcSatellite(sat)
+                }  
+                else {
+                    let n = Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma)
+                    sat.mA += this.timeStep * n;
+                    for (let ii = 0; ii < this.drawStep; ii++) {
+                        sat.hist.pop();
+                    }
+                    let coeCalc = {
+                        a: sat.sma,
+                        e: sat.ecc,
+                        raan: sat.raan + this.raanOffest,
+                        arg: sat.argP,
+                        i: sat.inc,
+                        mA: sat.mA,
+                        tA: 0
+                    }
+                    let mAcalc, state;
+                    for (let ii = this.drawStep-this.timeStep; ii <= 0; ii += this.timeStep / this.drawStep) {
+                        mAcalc = coeCalc.mA + ii * n;
+                        coeCalc.tA = Eccentric2True(coeCalc.e, solveKeplersEquation(mAcalc, coeCalc.e));
+                        state = Coe2PosVelObject(coeCalc);
+                        sat.hist.unshift(new THREE.Vector3(-state.x / 6371, state.z / 6371, state.y / 6371));
+                    }
                 }
-                let coeCalc = {
-                    a: sat.sma,
-                    e: sat.ecc,
-                    raan: sat.raan,
-                    arg: sat.argP,
-                    i: sat.inc,
-                    mA: sat.mA,
-                    tA: 0
+                if (sat.ecef) {
+                    if (sat.histECEF.length === 0) {
+                        let r;
+                        for (let ii = 0; ii < sat.hist.length; ii++) {
+                            r = [[-sat.hist[ii].x],[sat.hist[ii].z],[sat.hist[ii].y]];
+                            r = math.multiply(axis3rotation(ii * this.timeStep / this.drawStep * this.earthRot), r);
+                            sat.histECEF.push(new THREE.Vector3(-r[0], r[2], r[1]));
+                         }
+                     }  
+                    else {
+                        
+                        for (let ii = 0; ii < this.drawStep; ii++) {
+                            sat.histECEF.pop();
+                        }
+                        let rot = axis3rotation(this.earthRot * this.timeStep), r;
+                        sat.histECEF.map(element => {
+                            r = [[-element.x],[element.z+0],[element.y+0]];
+                            r = math.multiply(rot, r);
+                            element.x = -r[0];
+                            element.y = r[2];
+                            element.z = r[1];
+                            return element;
+                        })
+                        // r = [[-sat.hist[1].x],[sat.hist[1].z],[sat.hist[1].y]];
+                        // r = math.multiply(axis3rotation(this.timeStep / this.drawStep * this.earthRot), r);
+                        // sat.histECEF.unshift(new THREE.Vector3(-r[0], r[2], r[1]));
+                        sat.histECEF.unshift(new THREE.Vector3(sat.hist[0].x, sat.hist[0].y, sat.hist[0].z));
+                    }
                 }
-                let mAcalc, state;
-                for (let ii = this.drawStep-this.timeStep; ii <= 0; ii += this.timeStep / this.drawStep) {
-                    mAcalc = coeCalc.mA + ii * n;
-                    coeCalc.tA = Eccentric2True(coeCalc.e, solveKeplersEquation(mAcalc, coeCalc.e));
-                    state = Coe2PosVelObject(coeCalc);
-                    sat.hist.unshift(new THREE.Vector3(-state.x / 6371, state.z / 6371, state.y / 6371));
+                if (sat.line === undefined) {
+                    sat.line = this.buildSatGeometry(sat.ecef ? sat.histECEF : sat.hist);
                 }
-            }
-            console.timeEnd('calc')
-            console.time('geom')
-            if (sat.line === undefined) {
-                sat.line = this.buildSatGeometry(sat);
-            }
-            else {
-                sat.line.point.position.x = sat.hist[0].x;
-                sat.line.point.position.y = sat.hist[0].y;
-                sat.line.point.position.z = sat.hist[0].z;
-                
-                sat.line.traj.geometry.setFromPoints(sat.hist);
-            }
-            console.timeEnd('geom')
-
+                else {
+                    sat.line.point.position.x = sat.hist[0].x;
+                    sat.line.point.position.y = sat.hist[0].y;
+                    sat.line.point.position.z = sat.hist[0].z;
+                    
+                    sat.line.traj.geometry.setFromPoints(sat.ecef ? sat.histECEF : sat.hist);
+                }
         },
-        calcSatellite: function(sat) {
+        calcSatellite: function(sat, axis = 'eci') {
             let n = Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma), hist = [], mAcalc, state;
             let coeCalc = {
                 a: sat.sma,
                 e: sat.ecc,
-                raan: sat.raan,
+                raan: sat.raan + this.raanOffest,
                 arg: sat.argP,
                 i: sat.inc,
                 mA: sat.mA,
@@ -117,17 +144,17 @@ const app = new Vue({
             for (let ii = 0; ii >= -this.tail; ii -= this.timeStep / this.drawStep) {
                 mAcalc = coeCalc.mA + ii * n;
                 coeCalc.tA = Eccentric2True(coeCalc.e, solveKeplersEquation(mAcalc, coeCalc.e));
-                state = Coe2PosVelObject(coeCalc);
+                state = Coe2PosVelObject(coeCalc, axis === 'eci' ? false : ii*this.earthRot);
                 hist.push(new THREE.Vector3(-state.x / 6371, state.z / 6371, state.y / 6371));
             }
             return hist;
         },
-        buildSatGeometry: function(sat) {
+        buildSatGeometry: function(hist) {
             let material = new THREE.LineBasicMaterial({
                 color: 'red',
                 linewidth: 2
             });
-            let geometry = new THREE.BufferGeometry().setFromPoints(sat.hist);
+            let geometry = new THREE.BufferGeometry().setFromPoints(hist);
             let line = {};
             line.traj = new THREE.Line(geometry, material);
             geometry = new THREE.SphereGeometry(0.05, 6, 6);
@@ -135,34 +162,56 @@ const app = new Vue({
                 color: 'red'
             });
             line.point = new THREE.Mesh(geometry,material);
-            line.point.position.x = sat.hist[0].x;
-            line.point.position.y = sat.hist[0].z;
-            line.point.position.z = sat.hist[0].y;
-            scene.add(line.traj);
-            scene.add(line.point);
+            line.point.position.x = hist[0].x;
+            line.point.position.y = hist[0].z;
+            line.point.position.z = hist[0].y;
+            this.threeJsVar.scene.add(line.traj);
+            this.threeJsVar.scene.add(line.point);
             return line;
+        },
+        changeSat: function(sat) {
+            this.satellites.forEach(sat => {
+                sat.shown = false;
+            });
+            this.satellites[sat].shown = true;
+        },
+        changeData: function(sat) {
+            this.satellites[sat].hist = [];
+        },
+        addSatellite: function() {
+            let n = this.satellites.length - 1;
+            this.satellites.push({
+                name: 'New Sat',
+                sma: this.satellites[n].sma,
+                ecc: this.satellites[n].ecc,
+                inc: this.satellites[n].inc,
+                argP: this.satellites[n].argP,
+                raan: this.satellites[n].raan,
+                mA: this.satellites[n].mA,
+                hist: []
+            });
         }
+        
     }
 }) 
 
 
 
 function setupScene() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight);
-    camera.position.set(-10, 15, 10);
-    renderer = new THREE.WebGLRenderer({
+    app.threeJsVar.scene = new THREE.Scene();
+    app.threeJsVar.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight);
+    app.threeJsVar.camera.position.set(-10, 15, 10);
+    app.threeJsVar.renderer = new THREE.WebGLRenderer({
         antialias: true
     });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementsByTagName('body')[0].append(renderer.domElement);
+    app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);
+    $('body').append(app.threeJsVar.renderer.domElement);
     window.addEventListener('resize', () => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.inWidth / window.innerHeight;
-
-        camera.updateProjectionMatrix();
+        app.threeJsVar.camera.aspect = window.innerWidth / window.innerHeight;
+        app.threeJsVar.camera.updateProjectionMatrix();
+        app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);S
     })
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    app.threeJsVar.controls = new THREE.OrbitControls(app.threeJsVar.camera, app.threeJsVar.renderer.domElement);
 }
 
 function drawEarth() {
@@ -172,49 +221,44 @@ function drawEarth() {
     var material = new THREE.MeshLambertMaterial({
         map: texture
     });
-    Earth = new THREE.Mesh(geometry, material);
-    scene.add(Earth);
-    clouds = new THREE.Mesh(
+    app.Earth = new THREE.Mesh(geometry, material);
+    app.threeJsVar.scene.add(app.Earth);
+    app.clouds = new THREE.Mesh(
         new THREE.SphereGeometry(1.003, 64, 64),
         new THREE.MeshPhongMaterial({
             map: cloudsTexture,
             transparent: true
         })
     );
-    scene.add(clouds);
-    Earth.position.z = 0;
-    Earth.rotation.y += Math.PI;
-    clouds.rotation.y += Math.PI;
+    app.threeJsVar.scene.add(app.clouds);
+    app.Earth.position.z = 0;
+    app.Earth.rotation.y += Math.PI;
+    app.clouds.rotation.y += Math.PI;
 }
 
 function drawStars() {
     var starTexture = new THREE.TextureLoader().load('./Media/galaxy_starfield.png');
 
-    stars = new THREE.Mesh(
+    app.stars = new THREE.Mesh(
         new THREE.SphereGeometry(90, 64, 64),
         new THREE.MeshBasicMaterial({
             map: starTexture,
             side: THREE.BackSide
         })
     );
-    scene.add(stars);
+    app.threeJsVar.scene.add(app.stars);
 }
 
 function drawLightSources() {
-    Sunlight = new THREE.PointLight(0xFFFFFF, 1, 500);
+    app.sunlight = new THREE.PointLight(0xFFFFFF, 1, 500);
     sunVec = sunVectorCalc(0);
 
-    Sunlight.position.set(-100 * sunVec[0][0], 100 * sunVec[2][0], 100 * sunVec[1][0]);
-    scene.add(Sunlight);
+    app.sunlight.position.set(-100 * sunVec[0][0], 100 * sunVec[2][0], 100 * sunVec[1][0]);
+    app.threeJsVar.scene.add(app.sunlight);
     var light1 = new THREE.AmbientLight(0xFFFFFF, 0.2); // soft white light
-    scene.add(light1);
+    app.threeJsVar.scene.add(light1);
 }
 
-var render = function () {
-    renderer.render(scene, camera);
-    controls.update();
-    requestAnimationFrame(render);
-}
 
 setupScene();
 drawEarth();
@@ -222,7 +266,7 @@ drawStars();
 drawLightSources();
 app.render();
 
-function Coe2PosVelObject(coe) {
+function Coe2PosVelObject(coe, eci) {
     let p = coe.a*(1-coe.e*coe.e);
     let cTa = Math.cos(coe.tA);
     let sTa = Math.sin(coe.tA);
@@ -239,6 +283,17 @@ function Coe2PosVelObject(coe) {
     R = [[cRa*cAr-sRa*sAr*cIn, -cRa*sAr-sRa*cAr*cIn, sRa*sin],
          [sRa*cAr+cRa*sAr*cIn, -sRa*sAr+cRa*cAr*cIn, -cRa*sin],
          [sAr*sin, cAr*sin, cIn]];
-    let state = [math.multiply(R,r),math.multiply(R,v)];
+    r = math.multiply(R,r);
+    v = math.multiply(R,v);
+    if (eci) {
+        r = math.multiply(axis3rotation(-eci),r);
+    }
+    let state = [r, v];
     return {x: state[0][0][0], y: state[0][1][0], z: state[0][2][0], vx: state[1][0][0], vy: state[1][1][0], vz: state[1][2][0]};
 }
+
+function axis3rotation(angle) {
+    return [[Math.cos(angle), -Math.sin(angle), 0],
+            [Math.sin(angle), Math.cos(angle), 0],
+            [0,0,1]]
+} 
