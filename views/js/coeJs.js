@@ -18,15 +18,14 @@ const app = new Vue({
         data: false,
         satellites: [
             {
-                name: 'ISS',
-                sma: 26557,
-                ecc: 0.7411,
-                inc: 62.4835 * Math.PI / 180,
+                name: 'GEO 1',
+                sma: 42164,
+                ecc: 0,
+                inc: 0 * Math.PI / 180,
                 raan: 213.1162 * Math.PI / 180,
                 argP: 270.9418 * Math.PI / 180,
                 mA: 0,
                 hist: [],
-                histECEF: [],
                 ecef: false,
                 line: undefined,
                 lineECEF: undefined,
@@ -48,7 +47,9 @@ const app = new Vue({
     },
     methods: {
         render: function() {
-            
+            if (this.data) {
+                console.time('render')
+            }
             this.threeJsVar.renderer.render(this.threeJsVar.scene, this.threeJsVar.camera);
             this.threeJsVar.controls.update();
 
@@ -57,20 +58,19 @@ const app = new Vue({
                 this.drawSatellite(sat);
             });
             
-            // this.Earth.rotation.y  +=  this.eci ? this.earthRot * this.timeStep : 0;
-            // this.clouds.rotation.y +=  this.eci ? this.earthRot * this.timeStep : 0;
-            // this.raanOffest -= this.eci ? 0 : this.earthRot * this.timeStep;
-            if (this.eci) {
-                this.Earth.rotation.y +=  this.earthRot * this.timeStep;
-                this.clouds.rotation.y += this.earthRot * this.timeStep;
+            this.Earth.rotation.y  +=  this.eci ? this.earthRot * this.timeStep : 0;
+            this.clouds.rotation.y +=  this.eci ? this.earthRot * this.timeStep : 0;
+            this.raanOffest -= this.eci ? 0 : this.earthRot * this.timeStep;
+            this.stars.rotation.y -= this.eci ? 0 : this.earthRot * this.timeStep;
+            if (this.data) {
+                console.timeEnd('render')
             }
-            else {
-                this.raanOffest -= this.earthRot * this.timeStep;
-            }
+            this.data = false;
         },
         drawSatellite: function(sat) {
-            // console.time('draw')
-            sat.hist = this.calcSatellite(sat, true)
+            
+            sat.mA += Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma) * this.timeStep;
+            sat.hist = this.calcSatellite(sat)
             
             if (sat.line === undefined) {
                 sat.line = this.buildSatGeometry(sat.hist);
@@ -83,11 +83,9 @@ const app = new Vue({
                 const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300 );
                 sat.line.traj.geometry.setFromPoints(points);
             }
-            sat.mA += Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma) * this.timeStep;
-            // console.timeEnd('draw')
         },
         calcSatellite: function(sat) {
-            let n = Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma), hist = [], mAcalc, state;
+            let n = Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma), hist = [], state;
             let coeCalc = {
                 a: sat.sma,
                 e: sat.ecc,
@@ -97,35 +95,14 @@ const app = new Vue({
                 mA: sat.mA,
                 tA: 0
             }
-            let nPoints = Math.floor(this.tail / (2 * Math.PI * Math.sqrt(Math.pow(coeCalc.a, 3) / 398600.4418)) * 40);
+            let nPoints = Math.floor(this.tail / (2 * Math.PI / n) * 40);
+            // Calculate points based off of Eccentric Anomaly (named true anomaly by mistake, do not feel like fixing)
             let t0 = solveKeplersEquation(coeCalc.mA, coeCalc.e);
             let tf = solveKeplersEquation(coeCalc.mA - (nPoints - 1) * (this.tail / (nPoints - 1)) * n, coeCalc.e);
             let tA = math.range(t0, tf, (tf - t0) / (nPoints - 1), true)._data;
-            let time = tA.map((t,ii) => {
-                let remainder = t % (2 * Math.PI);
-                let around = (t - t % (2 * Math.PI)) / 2 / Math.PI;
-                let e = True2Eccentric(coeCalc.e, t);
-                let mA = e - coeCalc.e * Math.sin(e);
-                if ((t % (Math.PI * 2)) > Math.PI) {
-                    mA += Math.PI * 2;
-                }
-                if (this.data) {
-                    console.log(t, remainder, around, mA, coeCalc.mA, (t % (Math.PI * 2)));
-                }
-                if (remainder < -Math.PI) {
-                    mA = (around + 1) * 2 * Math.PI + mA;
-                }
-                else {
-                    mA = around * 2 * Math.PI + mA;
-                }
-                if (this.data) {
-                    console.log(mA);
-                }
-                return -(coeCalc.mA - mA) / n;
-            })
-            this.data = false;
-            for (let ii = 0; ii < tA.length; ii++) {
-                coeCalc.tA = tA[ii];
+            let time = tA.map(t => -(coeCalc.mA - (t - coeCalc.e * Math.sin(t))) / n)
+            for (let ii = 0; ii < tA.length; ii++) { 
+                coeCalc.tA = Eccentric2True(coeCalc.e, tA[ii]);
                 state = Coe2PosVelObject(coeCalc);
                 if (sat.ecef) {
                     let r = [[state.x],[state.y],[state.z]];
@@ -152,6 +129,9 @@ const app = new Vue({
             line.traj = new THREE.Line(geometry, material);
             geometry = new THREE.SphereGeometry(0.05, 10, 10);
             material = new THREE.MeshPhongMaterial({
+                color: 'red'
+            });
+            material = new THREE.MeshBasicMaterial({
                 color: 'red'
             });
             line.point = new THREE.Mesh(geometry,material);

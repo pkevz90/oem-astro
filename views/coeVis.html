@@ -22,15 +22,15 @@
                 <div class="white-border" style="padding: 5%" v-if="sat.shown">
                     <div>SMA - {{ sat.sma }} km</div>
                     <div><input class="slider" type="range" min="6500" max="50000" v-model.Number="sat.sma" @input="changeData(ii)" step="0.1"></div>
-                    <div><em>e</em> - {{ sat.ecc }}</div>
+                    <div><em>ECCENTRICITY</em> - {{ sat.ecc }}</div>
                     <div><input class="slider" type="range" min="0" max="0.9999" v-model.Number="sat.ecc" @input="changeData(ii)" step="0.01"></div>
-                    <div><em>i</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
-                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.inc" @input="changeData(ii)" step="0.01"></div>
-                    <div>{{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
-                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.raan" @input="changeData(ii)" step="0.01"></div>
-                    <div>{{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
-                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.01"></div>
-                    <div>{{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
+                    <div><em>INCLINATION</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.inc" @input="changeData(ii)" step="0.005"></div>
+                    <div><em>RAAN</em> - {{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.raan" @input="changeData(ii)" step="0.005"></div>
+                    <div><em>Argument of Perigee</em> - {{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.005"></div>
+                    <div><em>Mean Anomaly</em> - {{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
                     <div><input type="color" v-model="sat.color" @input="changeColor(ii)"> ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef"></div>
                 </div>
             </div>
