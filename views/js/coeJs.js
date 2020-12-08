@@ -15,6 +15,7 @@ const app = new Vue({
         raanOffest: 0,
         earthRot: 2 * Math.PI / 86164,
         eci: true,
+        data: false,
         satellites: [
             {
                 name: 'ISS',
@@ -55,6 +56,10 @@ const app = new Vue({
             this.satellites.forEach(sat => {
                 this.drawSatellite(sat);
             });
+            
+            // this.Earth.rotation.y  +=  this.eci ? this.earthRot * this.timeStep : 0;
+            // this.clouds.rotation.y +=  this.eci ? this.earthRot * this.timeStep : 0;
+            // this.raanOffest -= this.eci ? 0 : this.earthRot * this.timeStep;
             if (this.eci) {
                 this.Earth.rotation.y +=  this.earthRot * this.timeStep;
                 this.clouds.rotation.y += this.earthRot * this.timeStep;
@@ -93,13 +98,38 @@ const app = new Vue({
                 tA: 0
             }
             let nPoints = Math.floor(this.tail / (2 * Math.PI * Math.sqrt(Math.pow(coeCalc.a, 3) / 398600.4418)) * 40);
-            for (let ii = 0; ii < nPoints; ii++) {
-                mAcalc = coeCalc.mA - ii * (this.tail / (nPoints - 1)) * n;
-                coeCalc.tA = Eccentric2True(coeCalc.e, solveKeplersEquation(mAcalc, coeCalc.e));
+            let t0 = solveKeplersEquation(coeCalc.mA, coeCalc.e);
+            let tf = solveKeplersEquation(coeCalc.mA - (nPoints - 1) * (this.tail / (nPoints - 1)) * n, coeCalc.e);
+            let tA = math.range(t0, tf, (tf - t0) / (nPoints - 1), true)._data;
+            let time = tA.map((t,ii) => {
+                let remainder = t % (2 * Math.PI);
+                let around = (t - t % (2 * Math.PI)) / 2 / Math.PI;
+                let e = True2Eccentric(coeCalc.e, t);
+                let mA = e - coeCalc.e * Math.sin(e);
+                if ((t % (Math.PI * 2)) > Math.PI) {
+                    mA += Math.PI * 2;
+                }
+                if (this.data) {
+                    console.log(t, remainder, around, mA, coeCalc.mA, (t % (Math.PI * 2)));
+                }
+                if (remainder < -Math.PI) {
+                    mA = (around + 1) * 2 * Math.PI + mA;
+                }
+                else {
+                    mA = around * 2 * Math.PI + mA;
+                }
+                if (this.data) {
+                    console.log(mA);
+                }
+                return -(coeCalc.mA - mA) / n;
+            })
+            this.data = false;
+            for (let ii = 0; ii < tA.length; ii++) {
+                coeCalc.tA = tA[ii];
                 state = Coe2PosVelObject(coeCalc);
                 if (sat.ecef) {
                     let r = [[state.x],[state.y],[state.z]];
-                    r = math.multiply(axis3rotation(ii * (this.tail / (nPoints - 1)) * this.earthRot), r);
+                    r = math.multiply(axis3rotation(-time[ii] * this.earthRot), r);
                     state = {
                         x: r[0][0],
                         y: r[1][0],
@@ -281,4 +311,11 @@ window.addEventListener('keypress', event => {
     else if (event.key === ',') {
         app.timeStep /= 1.1;
     }
+    else if (event.key  === 'd') {
+        app.data = true;
+    }
 })
+
+function True2Eccentric(e,ta) {
+    return Math.atan(Math.sqrt((1-e)/(1+e))*Math.tan(ta/2))*2;
+}
