@@ -31,7 +31,7 @@
                     <div>{{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
                     <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.01"></div>
                     <div>{{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
-                    <div>ECI<input class="checkbox" type="checkbox" checked> ECEF<input class="checkbox" type="checkbox"></div>
+                    <div><input type="color" v-model="sat.color" @input="changeColor(ii)"> ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef"></div>
                 </div>
             </div>
             <div class="add-sat-button pointer" @click="addSatellite">Add Satellite</div>
