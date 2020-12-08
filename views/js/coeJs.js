@@ -21,6 +21,8 @@ const app = new Vue({
         earthRot: 2 * Math.PI / 86164,
         eci: true,
         data: false,
+        sunVec: undefined,
+        controls: false,
         satellites: [
             {
                 name: 'GEO 1',
@@ -36,7 +38,8 @@ const app = new Vue({
                 lineECEF: undefined,
                 shown: true,
                 color: '#FF0000',
-                maneuver: false
+                maneuver: false,
+                tail: 1
             }
         ]
     },
@@ -71,6 +74,8 @@ const app = new Vue({
             if (this.data) {
                 console.timeEnd('render')
             }
+            let sun = math.multiply(axis3rotation(this.raanOffest), app.sunVec)
+            app.sunlight.position.set(-100 * sun[0][0], 100 * sun[2][0], 100 *sun[1][0]);
             this.data = false;
         },
         drawSatellite: function(sat) {
@@ -79,15 +84,20 @@ const app = new Vue({
             sat.hist = this.calcSatellite(sat)
             
             if (sat.line === undefined) {
-                sat.line = this.buildSatGeometry(sat.hist);
+                sat.line = this.buildSatGeometry(sat.hist, sat.tail !== 0);
             }
             else {
                 sat.line.point.position.x = sat.hist[0].x;
                 sat.line.point.position.y = sat.hist[0].y;
                 sat.line.point.position.z = sat.hist[0].z;
                 
-                const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300 );
-                sat.line.traj.geometry.setFromPoints(points);
+                if (sat.tail !== 0) {
+                    const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300 );
+                    sat.line.traj.geometry.setFromPoints(points);
+                }
+                else {
+                    sat.line.traj.geometry.setFromPoints(sat.hist);
+                }
             }
         },
         calcSatellite: function(sat) {
@@ -101,10 +111,17 @@ const app = new Vue({
                 mA: sat.mA,
                 tA: 0
             }
-            let nPoints = Math.floor(this.tail / (2 * Math.PI / n) * 40);
+            if (sat.tail === 0) {
+                coeCalc.tA = Eccentric2True(coeCalc.e, solveKeplersEquation(coeCalc.mA, coeCalc.e));
+                state = Coe2PosVelObject(coeCalc);
+                hist.push(new THREE.Vector3(-state.x / 6371, state.z / 6371, state.y / 6371));
+                return hist;
+            }
+            let tailTime = sat.tail * 2 * Math.PI / n;
+            let nPoints = Math.floor(sat.tail * 40);
             // Calculate points based off of Eccentric Anomaly (named true anomaly by mistake, do not feel like fixing)
             let t0 = solveKeplersEquation(coeCalc.mA, coeCalc.e);
-            let tf = solveKeplersEquation(coeCalc.mA - (nPoints - 1) * (this.tail / (nPoints - 1)) * n, coeCalc.e);
+            let tf = solveKeplersEquation(coeCalc.mA - (nPoints - 1) * (tailTime / (nPoints - 1)) * n, coeCalc.e);
             let tA = math.range(t0, tf, (tf - t0) / (nPoints - 1), true)._data;
             let time = tA.map(t => -(coeCalc.mA - (t - coeCalc.e * Math.sin(t))) / n)
             for (let ii = 0; ii < tA.length; ii++) { 
@@ -123,14 +140,19 @@ const app = new Vue({
             }
             return hist;
         },
-        buildSatGeometry: function(hist) {
+        buildSatGeometry: function(hist, tail = true) {
             let material = new THREE.LineBasicMaterial({
                 color: 'red',
                 linewidth: 2
-            });
-            const curve = new THREE.CatmullRomCurve3(hist);
-            const points = curve.getPoints( 200 );
-            let geometry = new THREE.BufferGeometry().setFromPoints(points);
+            }), geometry;
+            if (tail) {
+                const curve = new THREE.CatmullRomCurve3(hist);
+                const points = curve.getPoints( 200 );
+                geometry = new THREE.BufferGeometry().setFromPoints(points);
+            }
+            else {
+                geometry = new THREE.BufferGeometry().setFromPoints(hist);
+            }
             let line = {};
             line.traj = new THREE.Line(geometry, material);
             geometry = new THREE.SphereGeometry(0.05, 10, 10);
@@ -235,9 +257,9 @@ function drawStars() {
 
 function drawLightSources() {
     app.sunlight = new THREE.PointLight(0xFFFFFF, 1, 500);
-    sunVec = sunVectorCalc(0);
+    app.sunVec = sunVectorCalc(0);
 
-    app.sunlight.position.set(-100 * sunVec[0][0], 100 * sunVec[2][0], 100 * sunVec[1][0]);
+    app.sunlight.position.set(-100 * app.sunVec[0][0], 100 * app.sunVec[2][0], 100 * app.sunVec[1][0]);
     app.threeJsVar.scene.add(app.sunlight);
     var light1 = new THREE.AmbientLight(0xFFFFFF, 0.2); // soft white light
     app.threeJsVar.scene.add(light1);

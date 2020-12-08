@@ -82,3 +82,20 @@ body, html {
 .maneuver-button {
     border-radius: 10px;
 }
+
+.controls {
+    color: white;
+    z-index: 2;
+    text-align: center;
+    position: fixed;
+    top: 50%;
+    width: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4vw;
+}
+
+.controls div {
+    margin: 10% 0%
+}

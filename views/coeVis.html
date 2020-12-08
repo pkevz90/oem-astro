@@ -32,9 +32,17 @@
                     <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.005"></div>
                     <div><em>Mean Anomaly</em> - {{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
                     <div>ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef"><input type="color" v-model="sat.color" @input="changeColor(ii)"></div>
+                    <div>Tail {{sat.tail}} <input class="slider" type="range" min="0" max="5" step="0.1" v-model.Number="sat.tail"></div>
                 </div>
             </div>
             <div class="add-sat-button pointer" @click="addSatellite">Add Satellite</div>
+        </div>
+        <div class="controls noselect" v-if="controls">
+            <div>Change Reference Frame - Spacebar</div>
+            <div>Change Speed - < ></div>
+        </div>
+        <div class="pointer" style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;" @mouseover="controls = true" @mouseleave="controls = false">
+            Controls
         </div>
     </div>
     <script src="./js/coeJs.js"></script>
