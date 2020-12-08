@@ -4,7 +4,12 @@ const app = new Vue({
         time: Date.now(),
         timeStep: 10,
         drawStep: 1,
-        tail: 86400,
+        tail: 15000,
+        maneuver: {
+            r: 0,
+            i: 0,
+            c: 0
+        },
         jdTimeStart: 0,
         pause: false,
         Earth: undefined,
@@ -19,7 +24,7 @@ const app = new Vue({
         satellites: [
             {
                 name: 'GEO 1',
-                sma: 42164,
+                sma: 7000,
                 ecc: 0,
                 inc: 0 * Math.PI / 180,
                 raan: 213.1162 * Math.PI / 180,
@@ -30,7 +35,8 @@ const app = new Vue({
                 line: undefined,
                 lineECEF: undefined,
                 shown: true,
-                color: '#FF0000'
+                color: '#FF0000',
+                maneuver: false
             }
         ]
     },

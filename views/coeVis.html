@@ -31,7 +31,7 @@
                     <div><em>Argument of Perigee</em> - {{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
                     <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.005"></div>
                     <div><em>Mean Anomaly</em> - {{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
-                    <div><input type="color" v-model="sat.color" @input="changeColor(ii)"> ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef"></div>
+                    <div>ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef"><input type="color" v-model="sat.color" @input="changeColor(ii)"></div>
                 </div>
             </div>
             <div class="add-sat-button pointer" @click="addSatellite">Add Satellite</div>

@@ -28,6 +28,10 @@ body, html {
     cursor: pointer;
 }
 
+.pointer:hover {
+    background-color: rgb(50,50,50);
+}
+
 .slider {
     -webkit-appearance: none;
     appearance: none;
@@ -52,7 +56,7 @@ body, html {
 }
 
 .white-border {
-    border: 1px solid white;
+    border: 1.5px solid white;
     padding: 2%;
 }
 
@@ -62,7 +66,6 @@ body, html {
 }
 
 .sat-name:hover {
-    background-color: rgb(50,50,50);
 }
 
 .add-sat-button {
@@ -74,4 +77,8 @@ body, html {
 
 .add-sat-button:hover {
     background-color: rgb(50,50,50);
+}
+
+.maneuver-button {
+    border-radius: 10px;
 }
