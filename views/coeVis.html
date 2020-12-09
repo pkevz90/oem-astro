@@ -25,7 +25,7 @@
                     <div><em>ECCENTRICITY</em> - {{ sat.ecc }}</div>
                     <div><input class="slider" type="range" min="0" max="0.9999" v-model.Number="sat.ecc" @input="changeData(ii)" step="0.01"></div>
                     <div><em>INCLINATION</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
-                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.inc" @input="changeData(ii)" step="0.005"></div>
+                    <div><input class="slider" type="range" min="0" max="3.14155" v-model.Number="sat.inc" @input="changeData(ii)" step="0.005"></div>
                     <div><em>RAAN</em> - {{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
                     <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.raan" @input="changeData(ii)" step="0.005"></div>
                     <div><em>Argument of Perigee</em> - {{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
@@ -39,10 +39,47 @@
         </div>
         <div class="controls noselect" v-if="controls">
             <div>Change Reference Frame - Spacebar</div>
-            <div>Change Speed - < ></div>
+            <div>Change Speed - < > </div>
         </div>
-        <div class="pointer" style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;" @mouseover="controls = true" @mouseleave="controls = false">
+        <div class="pointer" style="position: fixed; font-family: 'Bebas Neue', sans-serif; bottom: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;" @mouseover="controls = true" @mouseleave="controls = false">
             Controls
+        </div>
+        <div style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;  width: 20%;  text-align: center;" >
+            <div class="pointer button-format" @click="maneuver.exist = !maneuver.exist">
+                Maneuver
+            </div>
+            <div v-if="maneuver.exist">
+                R <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.r"> m/s
+            </div>
+            <div v-if="maneuver.exist">
+                I <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.i"> m/s
+            </div>
+            <div v-if="maneuver.exist">
+                C <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.c"> m/s
+            </div>
+        </div>
+        <div style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; left: 50%; transform: translate(-50%, 0%); color: blanchedalmond; font-size: 3vw; width: 30%; text-align: center;" @mouseleave="common = false">
+            <div class="pointer button-format" @click="common = !common">
+                Common Orbits
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('geo')">
+                Geo-stationary
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('mol')">
+                Molniya
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('gps')">
+                GPS
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('sso')">
+                SSO
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('iss')">
+                ISS
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('gto')">
+                GTO
+            </div>
         </div>
     </div>
     <script src="./js/coeJs.js"></script>

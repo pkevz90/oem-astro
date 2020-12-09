@@ -4,12 +4,23 @@ const app = new Vue({
         time: Date.now(),
         timeStep: 10,
         drawStep: 1,
-        tail: 15000,
         maneuver: {
+            exist: false,
             r: 0,
             i: 0,
-            c: 0
+            c: 0,
+            line: undefined,
+            hist: [],
+            sma: 7000,
+            ecc: 0,
+            inc: 0 * Math.PI / 180,
+            raan: 213.1162 * Math.PI / 180,
+            argP: 270.9418 * Math.PI / 180,
+            mA: 0,
+            tail: 0.5,
+            color: '#FFFFFF',
         },
+        common: false,
         jdTimeStart: 0,
         pause: false,
         Earth: undefined,
@@ -35,10 +46,8 @@ const app = new Vue({
                 hist: [],
                 ecef: false,
                 line: undefined,
-                lineECEF: undefined,
                 shown: true,
                 color: '#FF0000',
-                maneuver: false,
                 tail: 1
             }
         ]
@@ -65,6 +74,17 @@ const app = new Vue({
             requestAnimationFrame(this.render);
             this.satellites.forEach(sat => {
                 this.drawSatellite(sat);
+                if (sat.shown && this.maneuver.exist) {
+                    let coeCalc = {
+                        a: sat.sma,
+                        e: sat.ecc,
+                        raan: sat.raan + this.raanOffest,
+                        arg: sat.argP,
+                        i: sat.inc,
+                        tA: Eccentric2True(sat.ecc, solveKeplersEquation(sat.mA, sat.ecc))
+                    }
+                    coeCalc = calcManeuver(coeCalc, {...this.maneuver});
+                }
             });
             
             this.Earth.rotation.y  +=  this.eci ? this.earthRot * this.timeStep : 0;
@@ -78,13 +98,13 @@ const app = new Vue({
             app.sunlight.position.set(-100 * sun[0][0], 100 * sun[2][0], 100 *sun[1][0]);
             this.data = false;
         },
-        drawSatellite: function(sat) {
+        drawSatellite: function(sat, forward = false) {
             
             sat.mA += Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma) * this.timeStep;
-            sat.hist = this.calcSatellite(sat)
+            sat.hist = this.calcSatellite(sat, forward)
             
             if (sat.line === undefined) {
-                sat.line = this.buildSatGeometry(sat.hist, sat.tail !== 0);
+                sat.line = this.buildSatGeometry(sat.hist, sat.color, sat.tail !== 0);
             }
             else {
                 sat.line.point.position.x = sat.hist[0].x;
@@ -100,7 +120,7 @@ const app = new Vue({
                 }
             }
         },
-        calcSatellite: function(sat) {
+        calcSatellite: function(sat, forward = false) {
             let n = Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma), hist = [], state;
             let coeCalc = {
                 a: sat.sma,
@@ -121,7 +141,7 @@ const app = new Vue({
             let nPoints = Math.floor(sat.tail * 40);
             // Calculate points based off of Eccentric Anomaly (named true anomaly by mistake, do not feel like fixing)
             let t0 = solveKeplersEquation(coeCalc.mA, coeCalc.e);
-            let tf = solveKeplersEquation(coeCalc.mA - (nPoints - 1) * (tailTime / (nPoints - 1)) * n, coeCalc.e);
+            let tf = solveKeplersEquation(coeCalc.mA - (forward ? 1 : -1 ) * (nPoints - 1) * (tailTime / (nPoints - 1)) * n, coeCalc.e);
             let tA = math.range(t0, tf, (tf - t0) / (nPoints - 1), true)._data;
             let time = tA.map(t => -(coeCalc.mA - (t - coeCalc.e * Math.sin(t))) / n)
             for (let ii = 0; ii < tA.length; ii++) { 
@@ -140,9 +160,9 @@ const app = new Vue({
             }
             return hist;
         },
-        buildSatGeometry: function(hist, tail = true) {
+        buildSatGeometry: function(hist, color = '#FF0000', tail = true) {
             let material = new THREE.LineBasicMaterial({
-                color: 'red',
+                color: color,
                 linewidth: 2
             }), geometry;
             if (tail) {
@@ -181,21 +201,55 @@ const app = new Vue({
         },
         addSatellite: function() {
             let n = this.satellites.length - 1;
-            this.satellites.push({
-                name: 'New Sat',
-                sma: this.satellites[n].sma,
-                ecc: this.satellites[n].ecc,
-                inc: this.satellites[n].inc,
-                argP: this.satellites[n].argP,
-                raan: this.satellites[n].raan,
-                mA: this.satellites[n].mA,
-                hist: []
-            });
+            let newSat = {...this.satellites[n]};
+            newSat.name = 'Sat';
+            newSat.line = undefined;
+            this.satellites.push(newSat);
+            this.changeSat(n+1);
         },
         changeColor: function(sat) {
             let c = hexToRgb(this.satellites[sat].color);
             this.satellites[sat].line.traj.material.color.setRGB(c.r/255,c.g/255,c.b/255);
             this.satellites[sat].line.point.material.color.setRGB(c.r/255,c.g/255,c.b/255);
+        },
+        changeCommon: function(orbit) {
+            const sat = this.satellites.findIndex(element => element.shown);
+            switch (orbit) {
+                case 'geo':
+                    this.satellites[sat].sma = 42164;
+                    this.satellites[sat].ecc = 0;
+                    this.satellites[sat].inc = 0;
+                    break;
+                case 'iss':
+                    this.satellites[sat].sma = 6797;
+                    this.satellites[sat].ecc = 0;
+                    this.satellites[sat].inc = 51.6 * Math.PI / 180;
+                    break;
+                case 'mol':
+                    this.satellites[sat].sma = 26561.74383;
+                    this.satellites[sat].ecc = 0.744444;
+                    this.satellites[sat].inc = 64 * Math.PI / 180;
+                    this.satellites[sat].argP = 270 * Math.PI / 180;
+                    break;
+                case 'gps':
+                    this.satellites[sat].sma = 26561.74383;
+                    this.satellites[sat].ecc = 0;
+                    this.satellites[sat].inc = 60 * Math.PI / 180;
+                    break;
+                case 'gto':
+                    this.satellites[sat].sma = 24582;
+                    this.satellites[sat].ecc = 0.715238;
+                    this.satellites[sat].inc = 28.5 * Math.PI / 180;
+                    this.satellites[sat].argP = 0 * Math.PI / 180;
+                    break;
+                case 'sso':
+                    this.satellites[sat].sma = 7000;
+                    this.satellites[sat].ecc = 0;
+                    this.satellites[sat].inc = 98 * Math.PI / 180;
+                    this.satellites[sat].argP = 0 * Math.PI / 180;
+                    break;
+            }
+            this.common = false;
         }
         
     }
@@ -211,7 +265,7 @@ function setupScene() {
         antialias: true
     });
     app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);
-    $('body').append(app.threeJsVar.renderer.domElement);
+    document.getElementsByTagName('body')[0].append(app.threeJsVar.renderer.domElement);
     window.addEventListener('resize', () => {
         app.threeJsVar.camera.aspect = window.innerWidth / window.innerHeight;
         app.threeJsVar.camera.updateProjectionMatrix();
@@ -265,6 +319,60 @@ function drawLightSources() {
     app.threeJsVar.scene.add(light1);
 }
 
+function calcManeuver(coe, maneuver) {
+    const {r, i, c} = maneuver;
+    const posvelState = Coe2PosVelObject(coe);
+    let radial = math.dotDivide([posvelState.x, posvelState.y, posvelState.z],math.norm([posvelState.x, posvelState.y, posvelState.z]));//Normalized Radial Direction
+    let cross_track = math.cross([posvelState.x, posvelState.y, posvelState.z], [posvelState.vx, posvelState.vy, posvelState.vz]);
+    cross_track = math.dotDivide(cross_track,math.norm(cross_track));//Normalized Cross-Track Direction
+    let in_track = math.cross(cross_track, radial);//Normalized In-Track Direction
+    //Scale unit vectors in RIC frame to defined deltaVs from user input
+    in_track = math.dotMultiply(in_track, i / 1000);
+    cross_track = math.dotMultiply(cross_track, c / 1000);
+    radial = math.dotMultiply(radial, r / 1000);
+    posvelState.vx += in_track[0] + cross_track[0] + radial[0];
+    posvelState.vy += in_track[1] + cross_track[1] + radial[1];
+    posvelState.vz += in_track[2] + cross_track[2] + radial[2];
+    //Update burnOrbitParams to reflect posvelState
+    let newCoe = PosVel2CoeNew(posvelState);
+    newCoe.mA = True2Eccentric(newCoe.e,newCoe.tA);//Temp line for calc to mean anomaly
+    newCoe.mA = newCoe.mA - newCoe.e * Math.sin(newCoe.mA);
+    let burnOrbitParams = {
+        a: newCoe.a,
+        e: newCoe.e,
+        i: newCoe.i,
+        raan: newCoe.raan,
+        arg: newCoe.arg,
+        mA: newCoe.mA  
+    };
+    if (Math.abs(burnOrbitParams.raan - 2 * Math.PI) < 1e-4) {
+        burnOrbitParams.raan = 0;
+    }
+    if (Number.isNaN(burnOrbitParams.arg)) {
+        burnOrbitParams.arg = 0;
+    }
+    
+    app.maneuver.sma = burnOrbitParams.a;
+    app.maneuver.ecc = burnOrbitParams.e;
+    app.maneuver.raan = burnOrbitParams.raan;
+    app.maneuver.inc = burnOrbitParams.i;
+    app.maneuver.argP = burnOrbitParams.arg;
+    app.maneuver.mA = burnOrbitParams.mA;
+    app.drawSatellite(app.maneuver, true);
+    app.maneuver.hist = app.calcSatellite(app.maneuver)
+    if (app.maneuver.line === undefined) {
+        app.maneuver.line = this.buildSatGeometry(app.maneuver.hist, app.maneuver.color);
+    }
+    else {
+        app.maneuver.line.point.position.x = app.maneuver.hist[0].x;
+        app.maneuver.line.point.position.y = app.maneuver.hist[0].y;
+        app.maneuver.line.point.position.z = app.maneuver.hist[0].z;
+
+        const points = new THREE.CatmullRomCurve3(app.maneuver.hist, false).getPoints( 300 );
+        app.maneuver.line.traj.geometry.setFromPoints(points);
+
+    }
+}
 
 setupScene();
 drawEarth();
@@ -326,4 +434,77 @@ window.addEventListener('keypress', event => {
 
 function True2Eccentric(e,ta) {
     return Math.atan(Math.sqrt((1-e)/(1+e))*Math.tan(ta/2))*2;
+}
+
+function PosVel2CoeNew(posvel) {
+    let mu = 398600.4418;
+    let r = [posvel.x,posvel.y,posvel.z];
+    let v = [posvel.vx,posvel.vy,posvel.vz];
+    let rn = math.norm(r);
+    let vn = math.norm(v);
+    let h = math.cross(r,v);
+    let hn = math.norm(h);
+    let n = math.cross([0,0,1],h);
+    let nn = math.norm(n);
+    if (nn < 1e-6) {
+        n = [1,0,0];
+        nn = 1;
+    }
+    var epsilon = vn*vn/2-mu/rn;
+    let a = -mu/2/epsilon;
+    let e = math.subtract(math.dotDivide(math.cross(v,h),mu),math.dotDivide(r,rn));
+    let en = math.norm(e);
+    if (en < 1e-6) {
+        e = [1,0,0];
+        en = 0;
+    }
+    let inc = Math.acos(math.dot(h,[0,0,1])/hn);
+    let ra = Math.acos(math.dot(n,[1,0,0])/nn);
+    if (n[1] < 0) {
+        ra = 2*Math.PI-ra;
+    }
+    
+    let ar, arDot;
+    if (en === 0) {
+        arDot = math.dot(n,e) / nn;
+    }
+    else {
+        arDot = math.dot(n,e) / en / nn;
+    }
+    if (arDot > 1) {
+        ar = 0;
+    }
+    else if (arDot < -1) {
+        ar = Math.PI;
+    }
+    else {
+        ar = Math.acos(arDot);
+    }
+    if (e[2] < 0) {
+        ar = 2*Math.PI-ar;
+    }
+    else if (inc < 1e-6 && e[1] < 0) {
+        ar = 2*Math.PI-ar;
+    }
+    let ta, taDot;
+    if (en === 0) {
+        taDot = math.dot(r,e) / rn;
+    }
+    else {
+        taDot = math.dot(r,e) / rn / en;
+    }
+    if (taDot > 1) {
+        ta = 0;
+    }
+    else if (taDot < -1) {
+        ta = Math.PI;
+    }
+    else {
+        ta = Math.acos(taDot);
+    }
+    if (math.dot(v,e) > 1e-6) {
+        ta = 2*Math.PI-ta;
+    } 
+    // console.log([a,en,inc,ra,ar,ta])
+    return {a: a, e:en, i: inc, raan: ra, arg: ar, tA: ta};
 }

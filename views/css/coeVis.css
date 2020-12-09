@@ -99,3 +99,8 @@ body, html {
 .controls div {
     margin: 10% 0%
 }
+
+.button-format {
+    padding: 1%;
+    border-radius: 10px;
+}
