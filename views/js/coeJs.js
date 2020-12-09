@@ -535,3 +535,6 @@ function PosVel2CoeNew(posvel) {
     // console.log([a,en,inc,ra,ar,ta])
     return {a: a, e:en, i: inc, raan: ra, arg: ar, tA: ta};
 }
+window.addEventListener('load', () => {
+    document.getElementById('loading-screen').remove();
+})
