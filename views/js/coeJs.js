@@ -75,7 +75,7 @@ const app = new Vue({
             this.satellites.forEach(sat => {
                 this.drawSatellite(sat);
                 if (sat.shown && this.maneuver.exist) {
-                    let coeCalc = {
+                    let manCoe = {
                         a: sat.sma,
                         e: sat.ecc,
                         raan: sat.raan + this.raanOffest,
@@ -83,7 +83,7 @@ const app = new Vue({
                         i: sat.inc,
                         tA: Eccentric2True(sat.ecc, solveKeplersEquation(sat.mA, sat.ecc))
                     }
-                    coeCalc = calcManeuver(coeCalc, {...this.maneuver});
+                    calcManeuver(manCoe, {r: this.maneuver.r, i: this.maneuver.i, c: this.maneuver.c});
                 }
             });
             
@@ -141,7 +141,7 @@ const app = new Vue({
             let nPoints = Math.floor(sat.tail * 40);
             // Calculate points based off of Eccentric Anomaly (named true anomaly by mistake, do not feel like fixing)
             let t0 = solveKeplersEquation(coeCalc.mA, coeCalc.e);
-            let tf = solveKeplersEquation(coeCalc.mA - (forward ? 1 : -1 ) * (nPoints - 1) * (tailTime / (nPoints - 1)) * n, coeCalc.e);
+            let tf = solveKeplersEquation(coeCalc.mA - (forward ? -1 : 1 ) * (nPoints - 1) * (tailTime / (nPoints - 1)) * n, coeCalc.e);
             let tA = math.range(t0, tf, (tf - t0) / (nPoints - 1), true)._data;
             let time = tA.map(t => -(coeCalc.mA - (t - coeCalc.e * Math.sin(t))) / n)
             for (let ii = 0; ii < tA.length; ii++) { 
@@ -321,7 +321,11 @@ function drawLightSources() {
 
 function calcManeuver(coe, maneuver) {
     const {r, i, c} = maneuver;
-    const posvelState = Coe2PosVelObject(coe);
+    
+    const posvelState = Coe2PosVelObject(coe, app.data);
+    if (app.data) {
+        console.log(coe, posvelState);
+    }
     let radial = math.dotDivide([posvelState.x, posvelState.y, posvelState.z],math.norm([posvelState.x, posvelState.y, posvelState.z]));//Normalized Radial Direction
     let cross_track = math.cross([posvelState.x, posvelState.y, posvelState.z], [posvelState.vx, posvelState.vy, posvelState.vz]);
     cross_track = math.dotDivide(cross_track,math.norm(cross_track));//Normalized Cross-Track Direction
@@ -352,16 +356,19 @@ function calcManeuver(coe, maneuver) {
         burnOrbitParams.arg = 0;
     }
     
+    if (app.data) {
+        console.log(burnOrbitParams);
+    }
     app.maneuver.sma = burnOrbitParams.a;
     app.maneuver.ecc = burnOrbitParams.e;
-    app.maneuver.raan = burnOrbitParams.raan;
+    app.maneuver.raan = burnOrbitParams.raan - app.raanOffest;
     app.maneuver.inc = burnOrbitParams.i;
     app.maneuver.argP = burnOrbitParams.arg;
     app.maneuver.mA = burnOrbitParams.mA;
-    app.drawSatellite(app.maneuver, true);
-    app.maneuver.hist = app.calcSatellite(app.maneuver)
+    // app.drawSatellite(app.maneuver, true);
+    app.maneuver.hist = app.calcSatellite(app.maneuver ,true)
     if (app.maneuver.line === undefined) {
-        app.maneuver.line = this.buildSatGeometry(app.maneuver.hist, app.maneuver.color);
+        app.maneuver.line = app.buildSatGeometry(app.maneuver.hist, app.maneuver.color);
     }
     else {
         app.maneuver.line.point.position.x = app.maneuver.hist[0].x;
@@ -380,13 +387,16 @@ drawStars();
 drawLightSources();
 app.render();
 
-function Coe2PosVelObject(coe) {
+function Coe2PosVelObject(coe, log = false) {
     let p = coe.a*(1-coe.e*coe.e);
     let cTa = Math.cos(coe.tA);
     let sTa = Math.sin(coe.tA);
     let r = [[p*cTa/(1+coe.e*cTa)],
         [p*sTa/(1+coe.e*cTa)],
         [0]];
+    if (log) {
+        console.log(r);
+    }
     let constA = Math.sqrt(398600.4418/p);
     let v = [[-constA*sTa],
             [(coe.e+cTa)*constA],
