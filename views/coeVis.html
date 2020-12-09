@@ -3,305 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classical Orbital Elements</title>
-    <link rel="stylesheet" type="text/css" href="css/coeVis.css">
-</head>
-<body class="noselect">
-    <div class="loadingScreen">
-        <div>Loading...</div>
-    </div>
-    <div class="constPane pointer">
-        <p>
-            Constellations
-        </p>
-    </div>
-    <div class="orbitsPane pointer">
-        <p>
-            Common Orbits
-        </p>
-    </div>
-    <div id="constList" style="background-color:  rgba(50,50,50,0.5); text-align: center; display: none; position: fixed; right: 45%; top: 5%; width: 20%; z-index: 3; color: white;">
-        <p class="pointer">GPS (24 Satellites)</p>
-        <p class="pointer">Molniya (3 Satellites)</p>
-        <p class="pointer">Iridium (66 Satellites)</p>
-    </div>
-    <div id="orbitList" style="background-color:  rgba(50,50,50,0.5); text-align: center; display: none; position: fixed; right: 25%; top: 5%; width: 20%; z-index: 3; color: white;">
-        <span>Replace opened orbit with:</span>
-        <p class="pointer">ISS</p>
-        <p class="pointer">GPS</p>
-        <p class="pointer">Molniya</p>
-        <p class="pointer">Iridium</p>
-        <p class="pointer">Sun-Synchronous</p>
-        <p class="pointer">Geo-Stationary</p>
-    </div>
-    <div class="optionsPane pointer">
-        <p>
-            Options
-        </p>
-    </div>
-    <div id="optionsList" style="background-color:  rgba(50,50,50,0.5); text-align: center; display: none; position: fixed; right: 5%; top: 5%; width: 21%; z-index: 3; color: white;">
-        <p>Tail length: <span>1</span>hr(s)</p>
-        <input type="range" class="slider" min="0.25" max="96" value="1" step="0.1">
-        <input type="checkbox" checked>
-        <p style="display: inline-block;color: #44ff44">Show ECI Axes</p>
-        
-        <br>
-        <input type="checkbox" checked>
-        <p style="display: inline-block;color: #4444ff">Show ECEF Axes</p>
-        <br>
-        <input type="checkbox" checked>
-        <p style="display: inline-block;color: #ffffff">Show Ground Visibility (Local Horizon)</p>
-        <br>
-        <input type="checkbox" />
-        <p style="display: inline-block;color: #ffffff">Hide User Orbits (Constellation only)</p>
-        
-        
-    </div>
-    <div class="sideBar">
-        <div class="controlTitle pointer"><span>Satellite 1</span>
-            <input type="color" value="#FFC300">
-            <div class="closeButton" style="display:none">X</div></div>
-        <div class="controls">
-            <div class="slidercontainer">
-                <p><em>a</em>: <span>8000</span> km <br />(T=<period>1.978</period> hrs)</p> 
-                <input type="range" class="slider" min="6700" max="60000" value="8000" step="0.1">
-            </div>
-            <div class="slidercontainer">
-                <p><em>e</em>: <span>0.00</span></p>
-                <input type="range" class="slider" min="0" max="0.9" value="0" step="0.01">
-            </div>
-            <div class="slidercontainer">
-                <p><em>i</em>: <span>45.0</span><sup>o</sup></p>
-                <input type="range" class="slider" min="0" max="180" value="45" step="0.1">
-            </div>
-            <div class="slidercontainer">
-                <p><em>&#937</em>: <span>0.0</span><sup>o</sup></p>
-                <input type="range" class="slider" min="0" max="360" value="0" step="0.1">
-            </div>
-            <div class="slidercontainer">
-                <p><em>&#969</em>: <span>0.0</span><sup>o</sup></p>
-                <input type="range" class="slider" min="0" max="360" value="0" step="0.1">
-            </div>
-            <div class="slidercontainer">
-                <p><em>&#957</em>: <span>0.0</span> deg</p>
-                <input type="range" class="slider" min="0" max="360" value="0" step="0.1" style="visibility: hidden;">
-            </div>
-        </div>
-        <div class="addButton pointer">+</div>
-        <div class="constInfo" style="display:none">
-            <span id="constName">GPS (24 Satellites)</span> <span id='constClose'>X</span><br />
-            <input type="color" value="#00FFFF"/><br /><br />
-            <div><em>a</em>: <span class='value'>26561.7 km</span></div>
-            <div><em>e</em>: <span class='value'>0</span></div>
-            <div><em>i</em>: <span class='value'>55°</span></div>
-            <div><em>&#937</em>: <span class='value'>Varies by Orbit</span></div>
-            <div><em>&#969</em>: <span class='value'>N/A (circular)</span></div>
-            <div><em>&#957</em>: <span class='value'>Varies by Satellite</span></div>
-        </div>
-    </div>
-    <div class="referenceDiv">
-        Earth-Centered <span>Inertial</span>; Press <img src="Media/ckey.png" style="height: 20px;"> to switch <br />
-        Press <img src="Media/skey.png" style="height: 20px;"> to toggle stars
-    </div>
-    <div class="timeStepDiv">
-        <span>1000</span> times real time<br>
-        Use < and > to change 
-    </div>
-    <div class="burn_button">
-        <div id="burn_inputs" style="display: none;">
-            <div>
-                Radial <input type="Number" oninput="burnChange()" value="0" step=".05"> km/s
-            </div>
-            <div>
-                In-Track <input type="Number" oninput="burnChange()" value="0" step=".05"> km/s
-            </div>
-            <div>
-                Cross-Track <input type="Number" oninput="burnChange()" value="0" step="0.05"> km/s
-            </div>
-            <div>
-                <em>a</em>: <span>8000</span> km
-            </div>
-            <div>
-                <em>e</em>: <span>0.00</span>
-            </div>
-            <div>
-                <em>i</em>: <span>45</span> deg
-            </div>
-            <div>
-                <em>&#937</em>: <span>0</span> deg
-            </div>
-        </div>
-        <span id="maneuver_button" class="pointer" style="font-size: 2vw; opacity: 0.5;">Maneuver</span>
-    </div>
-    <!-- <div class="taDiv">
-        True Anomaly: <span>60</span> sec
-    </div> -->
+    <title>COE</title>
+    <link rel="stylesheet" href="./css/coeVis.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <script src="../SupportLibraries/math.min.js"></script>
     <script src="../SupportLibraries/jquery.min.js"></script>
-	<script src="../SupportLibraries/math.min.js"></script>
-    <script src="../SupportLibraries/astroFunctions.js"></script>
+    <script src="../SupportLibraries/vue.js"></script>
     <script src="../SupportLibraries/three.js-master/build/three.js"></script>
     <script src="../SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
-    <script src="./js/coeJs.js"></script>
-    <script>
-        //$('.constList').hide()
-        //$('.constPane').hide()
-        $('#maneuver_button').click(()=>{
-            $('#burn_inputs').fadeToggle(250);
-        });
-        $('.orbitsPane').on('mouseenter',()=>{
-            $('#orbitList').show(); 
-            $('#optionsList').hide();
-            $('#constList').hide(); 
-        })
-        $('#orbitList').on('mouseleave',()=>{
-            $('#orbitList').hide(); 
-        })
-        $('.optionsPane').on('mouseenter',()=>{
-            $('#optionsList').show(); 
-            $('#orbitList').hide();
-            $('#constList').hide();  
-        })
-        $('#optionsList').on('mouseleave',()=>{
-            $('#optionsList').hide(); 
-        })
-        $('.constPane').on('mouseenter',()=>{
-            $('#optionsList').hide(); 
-            $('#orbitList').hide();
-            $('#constList').show();  
-        })
-        $('#constList').on('mouseleave',()=>{
-            $('#constList').hide(); 
-        })
-        var editTarget;
-        function changeColor (a) {
-            let p = $(a.target).parent();
-            let ii = $('.controlTitle').index(p);
-            let c = hexToRgb(a.target.value);
+    <script src="../SupportLibraries/astroFunctions.js"></script>
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loader"></div>
+    </div>
+    <div id="main-app">
+        <div id="data" class="noselect" style="width: 20%">
+            <div v-for="(sat,ii) in satellites">
+                <div class="pointer white-border sat-name" @click="changeSat(ii)"  contentEditable="true">{{ sat.name }}</div>
+                <div class="white-border" style="padding: 5%" v-if="sat.shown">
+                    <div>SMA - {{ sat.sma }} km</div>
+                    <div><input class="slider" type="range" min="6500" max="50000" v-model.Number="sat.sma" @input="changeData(ii)" step="0.1"></div>
+                    <div><em>ECCENTRICITY</em> - {{ sat.ecc }}</div>
+                    <div><input class="slider" type="range" min="0" max="0.9999" v-model.Number="sat.ecc" @input="changeData(ii)" step="0.01"></div>
+                    <div><em>INCLINATION</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="3.14155" v-model.Number="sat.inc" @input="changeData(ii)" step="0.005"></div>
+                    <div><em>RAAN</em> - {{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.raan" @input="changeData(ii)" step="0.005"></div>
+                    <div><em>Argument of Perigee</em> - {{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                    <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.005"></div>
+                    <div><em>Mean Anomaly</em> - {{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
+                    <div>ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef"><input type="color" v-model="sat.color" @input="changeColor(ii)"></div>
+                    <div>Tail {{sat.tail}} <input class="slider" type="range" min="0" max="5" step="0.1" v-model.Number="sat.tail"></div>
+                </div>
+            </div>
+            <div class="add-sat-button pointer" @click="addSatellite">Add Satellite</div>
+        </div>
+        <div class="controls noselect" v-if="controls">
+            <div>Change Reference Frame - Spacebar</div>
+            <div>Change Speed - < > </div>
+        </div>
+        <div class="pointer" style="position: fixed; font-family: 'Bebas Neue', sans-serif; bottom: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;" @mouseover="controls = true" @mouseleave="controls = false">
+            Controls
+        </div>
+        <div style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;  width: 20%;  text-align: center;" >
+            <div class="pointer button-format" @click="maneuver.exist = !maneuver.exist">
+                Maneuver
+            </div>
+            <div v-if="maneuver.exist">
+                R <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.r"> m/s
+            </div>
+            <div v-if="maneuver.exist">
+                I <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.i"> m/s
+            </div>
+            <div v-if="maneuver.exist">
+                C <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.c"> m/s
+            </div>
             
-            orbit[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
-            satPoint[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
-            localHoriz[ii].material.color.setRGB(c.r/255,c.g/255,c.b/255);
-        }
-        function constChangeColor() {
-            let c = hexToRgb($('.constInfo input')[0].value);
-            constOrbit.forEach(tempOrbit => {
-                tempOrbit.material.color.setRGB(c.r/255,c.g/255,c.b/255);
-            })
-            constSatPoint.forEach(tempPoint => {
-                tempPoint.material.color.setRGB(c.r/255,c.g/255,c.b/255);
-            })
-            constLocalHoriz.forEach(tempPoint => {
-                tempPoint.material.color.setRGB(c.r/255,c.g/255,c.b/255);
-            })
-        }
-        function hexToRgb(hex) {
-            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)            } : null;
-        }
-        $('.controlTitle').on('click',(a)=>{
-            orbitParams.forEach((el)=>{
-                el.shown = false;
-            })
-            if ($(a.target).is('span')) {
-                a.target = $(a.target).parent();
-            } 
-            if (!$(a.target).is('input')) {
-                let ind = $('.controlTitle').index(a.target);
-                orbitParams[ind].shown = true;
-                
-                if (!$(a.target).next().is(":hidden")) {
-                    $(a.target).next().slideUp(250);
-                    return;
-                }
-                $('.controls').slideUp(250);
-                $(a.target).next().slideDown(250);
-            }
-        })
-        $('.addButton').on('click',()=>newControlTitle());
-        function newControlTitle(){
-            let len = $('.controlTitle').length;
-            $('.controls').slideUp(250);
-            let cl = $('.controlTitle').last().clone();
-            cl.hide();
-            orbitParams.forEach((el)=>{
-                el.shown = false;
-            })
-            cl.on('click',(a)=>{
-                orbitParams.forEach((el)=>{
-                    el.shown = false;
-                })
-                if ($(a.target).is('span')) {
-                    a.target = $(a.target).parent();
-                }
-                if (!$(a.target).is('input')) {
-                    let ind = $('.controlTitle').index(a.target);
-                    
-                    if (!$(a.target).next().is(":hidden")) {
-                        $(a.target).next().slideUp(250);
-                        return;
-                    }
-                    $('.controls').slideUp(250);
-                    $(a.target).next().slideDown(250);
-                }
-
-            })
-            cl.find('span')[0].innerText = "Satellite " + (len+1);
-            $('.addButton').before(cl);
-            $('.controlTitle').last().slideDown(250);
-            cl = $('.controls').last().clone();
-            $('.addButton').before(cl);
-            orbitParams[len] = {
-                a: orbitParams[len-1].a,
-                e: orbitParams[len-1].e,
-                i: orbitParams[len-1].i,
-                raan: orbitParams[len-1].raan,
-                arg: orbitParams[len-1].arg,
-                mA: orbitParams[len-1].mA
-            }
-            cl.find('.slidercontainer').on('input',sliderInput);
-            $('.closeButton').on('click',(a)=>{closeTab(a)});
-            cl.prev().find('input').on('input',changeColor);
-            $orbitsControls = $('.controls span');
-            if ($('.controlTitle').length > 1){
-                $('.closeButton').show();
-            } else {
-                $('.closeButton').first().hide();
-            }
-        }
-        
-        function closeTab(a){
-            a.target = $(a.target).parent();
-            let ind = $('.controlTitle').index(a.target);
-            if (ind != -1){
-                scene.remove(orbit[ind])
-                scene.remove(satPoint[ind])
-                scene.remove(localHoriz[ind])
-                orbit.splice(ind,1);
-                satPoint.splice(ind,1);
-                orbitParams.splice(ind,1);
-                localHoriz.splice(ind,1)
-
-                for(closeind = ind+1; closeind < $('.controlTitle').length; closeind++){
-                    $('.controlTitle').eq(closeind).find('span')[0].innerText = "Satellite " + (closeind);
-                }
-
-                a.target.next().remove();
-                a.target.remove();
-                if ($('.controlTitle').length > 1){
-                    $('.closeButton').show();
-                } else {
-                    $('.closeButton').first().hide();
-                }
-            }
-        }
-        //$('.resetButton').on('click')
-        $('.closeButton').on('click',(a)=>{closeTab(a)});
-        $('.controlTitle input').on('input',changeColor);
-        $('.constInfo input').on('input',constChangeColor)
-    </script>
-    
+            <div v-if="maneuver.exist">Tail {{maneuver.tail}} <input class="slider" type="range" min="0" max="5" step="0.1" v-model.Number="maneuver.tail"></div>
+        </div>
+        <div style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; left: 50%; transform: translate(-50%, 0%); color: blanchedalmond; font-size: 3vw; width: 30%; text-align: center;" @mouseleave="common = false">
+            <div class="pointer button-format" @click="common = !common">
+                Common Orbits
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('geo')">
+                Geo-stationary
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('mol')">
+                Molniya
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('gps')">
+                GPS
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('sso')">
+                SSO
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('iss')">
+                ISS
+            </div>
+            <div v-if="common" class="pointer" @click="changeCommon('gto')">
+                GTO
+            </div>
+        </div>
+    </div>
+    <script src="./js/coeJs.js"></script>
 </body>
 </html>

@@ -13,199 +13,121 @@ body, html {
     height: 100%;
     overflow: hidden;
 }
-.controls {
-    /* position: absolute; */
-    float: left;
-    width: 100%;
-    /* height: 40%; */
-    background-color: rgba(50,50,50,0.5);
-    /* display: none; */
-    color: white;
-}
-.sideBar {
+
+#data {
     position: fixed;
-    background-color: rgba(0,0,0,0);
-    width: 20%;
-    height: 100%;
-    padding-top: 1%;
-}
-.slider {
-    width: 100%;
-}
-.controlTitle {
-    width: 100%;
-    height: 5%;
-    float: left;
+    left: 1%;
+    top: 5%;
     color: white;
-    text-align: center;
-    background-color: rgba(50,50,50,0.5);
-    font-weight: bold;
-    z-index: 2;
-    font-size: 2vw;
-}
-.constInfo {
-    width: 100%;
-    float: left;
-    color: white;
-    text-align: center;
-    background-color: rgba(50,50,50,0.5);
-    z-index: 2;
-    font-size: 1.5vw;
-    padding-top: 1vw;
-    text-align: center;
-}
-.constInfo div{
-    text-align: left;
-    margin: 0;
-    padding: 0;
-    outline: 0;
-    border: 0;
-    margin-left: 1.5vw;
-    display: block;
-}
-#constName {
-    font-weight: bold;
-}
-.slidercontainer {
-    padding: 1.5% 10%;
-    font-size: 1.5vw;
-}
-.slidercontainer p {
-    margin: 1%;
-}
-.referenceDiv {
-    position: fixed;
-    bottom: 0%;
-    color: white;
-    width: 30%;
-    left: 35%;
-    text-align: center;
-    font-size: 1.5vw;
-    opacity: 0.8;
-}
-.timeStepDiv {
-    position: fixed;
-    bottom: 0%;
-    color: white;
-    /* width: 20%; */
-    left: 0%;
-    text-align: center;
-    padding-right: 1%;
-    font-size: 1.5vw;
-    opacity: 0.8;
-}
-.addButton {
-    float: right;
-    border: 1px solid white;
-    color: white;
-    padding: 1% 2%;
-    border-radius: 10%;
-}
-.closeButton {
-    float: right;
-    border: 1px solid white;
-    color: white;
-    padding: 1% 2%;
-    border-radius: 50%;
-    font-size: 1.5vw;
-}
-#constClose {
-    float: right;
-    border: 1px solid white;
-    color: white;
-    padding: 1% 2%;
-    border-radius: 50%;
-    font-size: 1.5vw;
-    cursor: pointer;
-}
-.addButton:hover {
-    background-color: rgba(50,50,50,0.75);
-}
-.loadingScreen {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    background-color: white;
-    z-index: 4;
-    padding: 40% 40%;
-}
-.loadingScreen div {
-    color: black;
-}
-.drop-down {
-    position: absolute;
-    background-color: darkgrey;
-    color: black;
-    top: 10%;
-    width: 85%;
-    display: none;
-}
-.orbitsPane {
-    position: fixed;
-    background-color: black;
-    right: 25%;
-    height: 5%;
     z-index: 3;
-    font-size: 2vw;
-    width: 20%;
-    opacity: 0.5;
-    text-align: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5vw;
 }
-.constPane {
-    position: fixed;
-    background-color: black;
-    right: 45%;
-    height: 5%;
-    z-index: 3;
-    font-size: 2vw;
-    width: 20%;
-    opacity: 0.5;
-    text-align: center;
-}
-.orbitsPane p {
-    color: white;
-    margin: 0;
-    vertical-align: middle;
-}
-.constPane p {
-    color: white;
-    margin: 0;
-    vertical-align: middle;
-}
-.optionsPane {
-    position: fixed;
-    background-color: black;
-    right: 5%;
-    height: 5%;
-    z-index: 3;
-    font-size: 2vw;
-    width: 20%;
-    opacity: 0.5;
-    text-align: center;
-}
-.optionsPane p {
-    color: white;
-    margin: 0;
-    vertical-align: middle;
-}
+
 .pointer {
     cursor: pointer;
 }
-.burn_button {
-    color: white;
-    position: fixed;
-    height: auto;
-    width: 30%;
-    bottom: 0%;
-    right: 2%;
+
+.pointer:hover {
+    background-color: rgb(50,50,50);
+}
+
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    background: rgba(50,50,50,0.5);
+    outline: none;
+    opacity: 0.5;
+}
+
+
+.slider:hover {
+    opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Override default look */
+    appearance: none;
+    width: 25px; /* Set a specific slider handle width */
+    height: 25px; /* Slider handle height */
+    background: rgb(100,100,100); /* Green background */
+    cursor: pointer; /* Cursor on hover */
+}
+
+.white-border {
+    border: 1.5px solid white;
     padding: 2%;
-    font-size: 2.5em;
+}
+
+.sat-name {
+    font-size: 2vw;
     text-align: center;
 }
-#burn_inputs div input {
-    width: 4em;
-    color: white;
-    background-color: rgba(50,50,50,0);
-    font-size: 1em;
+
+.sat-name:hover {
+}
+
+.add-sat-button {
+    border: 2px solid white;
     text-align: center;
+    border-radius: 10px;
+    margin-top: 4%;
+}
+
+.add-sat-button:hover {
+    background-color: rgb(50,50,50);
+}
+
+.maneuver-button {
+    border-radius: 10px;
+}
+
+.controls {
+    color: white;
+    z-index: 2;
+    text-align: center;
+    position: fixed;
+    top: 50%;
+    width: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4vw;
+}
+
+.controls div {
+    margin: 10% 0%
+}
+
+.button-format {
+    padding: 1%;
+    border-radius: 10px;
+}
+
+#loading-screen {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    background-color: black;
+}
+
+.loader {
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #505a61; /* Blue */
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+}
+  
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
