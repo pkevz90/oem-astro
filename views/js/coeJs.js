@@ -74,7 +74,14 @@ const app = new Vue({
             requestAnimationFrame(this.render);
             this.satellites.forEach(sat => {
                 this.drawSatellite(sat);
-                if (sat.shown && this.maneuver.exist) {
+                if (sat.shown && this.maneuver.exist && math.norm([this.maneuver.r, this.maneuver.i, this.maneuver.c]) > 1e-3 && this.maneuver.tail > 0) {
+                    try {
+                        this.maneuver.line.traj.visible = true;
+                        this.maneuver.line.point.visible = true;
+                    }
+                    catch (err) {
+
+                    }
                     let manCoe = {
                         a: sat.sma,
                         e: sat.ecc,
@@ -83,7 +90,17 @@ const app = new Vue({
                         i: sat.inc,
                         tA: Eccentric2True(sat.ecc, solveKeplersEquation(sat.mA, sat.ecc))
                     }
-                    calcManeuver(manCoe, {r: this.maneuver.r, i: this.maneuver.i, c: this.maneuver.c});
+                    calcManeuver(manCoe, {r: this.maneuver.r, i: this.maneuver.i, c: this.maneuver.c}, sat.ecef);
+                }
+                else if ((sat.shown && !this.maneuver.exist) || math.norm([this.maneuver.r, this.maneuver.i, this.maneuver.c]) < 1e-3 || this.maneuver.tail === 0) {
+                    try {
+                        this.maneuver.line.traj.visible = false;
+                        this.maneuver.line.point.visible = false;
+                    }
+                    catch (err) {
+
+                    }
+                    
                 }
             });
             
@@ -120,7 +137,7 @@ const app = new Vue({
                 }
             }
         },
-        calcSatellite: function(sat, forward = false) {
+        calcSatellite: function(sat, forward = false, ecef = false) {
             let n = Math.sqrt(398600.4418 / sat.sma / sat.sma / sat.sma), hist = [], state;
             let coeCalc = {
                 a: sat.sma,
@@ -147,7 +164,7 @@ const app = new Vue({
             for (let ii = 0; ii < tA.length; ii++) { 
                 coeCalc.tA = Eccentric2True(coeCalc.e, tA[ii]);
                 state = Coe2PosVelObject(coeCalc);
-                if (sat.ecef) {
+                if (sat.ecef | ecef) {
                     let r = [[state.x],[state.y],[state.z]];
                     r = math.multiply(axis3rotation(-time[ii] * this.earthRot), r);
                     state = {
@@ -319,7 +336,7 @@ function drawLightSources() {
     app.threeJsVar.scene.add(light1);
 }
 
-function calcManeuver(coe, maneuver) {
+function calcManeuver(coe, maneuver, ecef) {
     const {r, i, c} = maneuver;
     
     const posvelState = Coe2PosVelObject(coe, app.data);
@@ -366,7 +383,7 @@ function calcManeuver(coe, maneuver) {
     app.maneuver.argP = burnOrbitParams.arg;
     app.maneuver.mA = burnOrbitParams.mA;
     // app.drawSatellite(app.maneuver, true);
-    app.maneuver.hist = app.calcSatellite(app.maneuver ,true)
+    app.maneuver.hist = app.calcSatellite(app.maneuver ,true, ecef)
     if (app.maneuver.line === undefined) {
         app.maneuver.line = app.buildSatGeometry(app.maneuver.hist, app.maneuver.color);
     }

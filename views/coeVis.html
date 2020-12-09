@@ -57,6 +57,8 @@
             <div v-if="maneuver.exist">
                 C <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.c"> m/s
             </div>
+            
+            <div v-if="maneuver.exist">Tail {{maneuver.tail}} <input class="slider" type="range" min="0" max="5" step="0.1" v-model.Number="maneuver.tail"></div>
         </div>
         <div style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; left: 50%; transform: translate(-50%, 0%); color: blanchedalmond; font-size: 3vw; width: 30%; text-align: center;" @mouseleave="common = false">
             <div class="pointer button-format" @click="common = !common">
