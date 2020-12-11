@@ -130,7 +130,7 @@ const app = new Vue({
                 sat.line.point.position.z = sat.hist[0].z;
                 
                 if (sat.tail !== 0) {
-                    const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300 );
+                    const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300 / 26000 * sat.sma );
                     sat.line.traj.geometry.setFromPoints(points);
                 }
                 else {
@@ -156,7 +156,7 @@ const app = new Vue({
                 return hist;
             }
             let tailTime = sat.tail * 2 * Math.PI / n;
-            let nPoints = Math.floor(sat.tail * 40);
+            let nPoints = Math.floor(sat.tail * 30);
             // Calculate points based off of Eccentric Anomaly (named true anomaly by mistake, do not feel like fixing)
             let t0 = solveKeplersEquation(coeCalc.mA, coeCalc.e);
             let tf = solveKeplersEquation(coeCalc.mA - (forward ? -1 : 1 ) * (nPoints - 1) * (tailTime / (nPoints - 1)) * n, coeCalc.e);

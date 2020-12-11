@@ -24,15 +24,15 @@
                 <div v-for="(sat,ii) in satellites">
                     <div class="pointer white-border sat-name" @click="changeSat(ii)"  contentEditable="true">{{ sat.name }}</div>
                     <div class="white-border" style="padding: 5%" v-if="sat.shown">
-                        <div>SMA - {{ sat.sma }} km</div>
+                        <div>SMA - {{ sat.sma }} km <span v-if="maneuver.exist">({{ maneuver.sma.toFixed(2) }})</span></div>
                         <div><input class="slider" type="range" min="6500" max="50000" v-model.Number="sat.sma" @input="changeData(ii)" step="0.1"></div>
-                        <div><em>ECCENTRICITY</em> - {{ sat.ecc }}</div>
+                        <div><em>ECCENTRICITY</em> - {{ sat.ecc }} <span v-if="maneuver.exist">({{ maneuver.ecc.toFixed(2) }})</span></div>
                         <div><input class="slider" type="range" min="0" max="0.9999" v-model.Number="sat.ecc" @input="changeData(ii)" step="0.01"></div>
-                        <div><em>INCLINATION</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                        <div><em>INCLINATION</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span v-if="maneuver.exist">({{ (maneuver.inc * 180 / Math.PI).toFixed(2) }})</span></div>
                         <div><input class="slider" type="range" min="0" max="3.14155" v-model.Number="sat.inc" @input="changeData(ii)" step="0.005"></div>
-                        <div><em>RAAN</em> - {{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                        <div><em>RAAN</em> - {{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span v-if="maneuver.exist">({{ (maneuver.raan * 180 / Math.PI).toFixed(2) }})</span></div>
                         <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.raan" @input="changeData(ii)" step="0.005"></div>
-                        <div><em>Argument of Perigee</em> - {{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup></div>
+                        <div><em>Arg of Perigee</em> - {{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span v-if="maneuver.exist">({{ (maneuver.argP * 180 / Math.PI).toFixed(2) }})</span></div>
                         <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.005"></div>
                         <div><em>Mean Anomaly</em> - {{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
                         <div>ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef"><input type="color" v-model="sat.color" @input="changeColor(ii)"></div>
