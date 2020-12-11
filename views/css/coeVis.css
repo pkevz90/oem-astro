@@ -13,6 +13,17 @@ body, html {
     height: 100%;
     overflow: hidden;
 }
+.scroll {
+    overflow: auto;
+    max-height: 800px;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
 
 #data {
     position: fixed;

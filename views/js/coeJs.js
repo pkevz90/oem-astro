@@ -68,10 +68,7 @@ const app = new Vue({
             if (this.data) {
                 console.time('render')
             }
-            this.threeJsVar.renderer.render(this.threeJsVar.scene, this.threeJsVar.camera);
-            this.threeJsVar.controls.update();
-
-            requestAnimationFrame(this.render);
+            
             this.satellites.forEach(sat => {
                 this.drawSatellite(sat);
                 if (sat.shown && this.maneuver.exist && math.norm([this.maneuver.r, this.maneuver.i, this.maneuver.c]) > 1e-3 && this.maneuver.tail > 0) {
@@ -108,12 +105,16 @@ const app = new Vue({
             this.clouds.rotation.y +=  this.eci ? this.earthRot * this.timeStep : 0;
             this.raanOffest -= this.eci ? 0 : this.earthRot * this.timeStep;
             this.stars.rotation.y -= this.eci ? 0 : this.earthRot * this.timeStep;
+            let sun = math.multiply(axis3rotation(this.raanOffest), app.sunVec)
+            app.sunlight.position.set(-100 * sun[0][0], 100 * sun[2][0], 100 *sun[1][0]);
+            this.threeJsVar.renderer.render(this.threeJsVar.scene, this.threeJsVar.camera);
+            this.threeJsVar.controls.update();
+
             if (this.data) {
                 console.timeEnd('render')
             }
-            let sun = math.multiply(axis3rotation(this.raanOffest), app.sunVec)
-            app.sunlight.position.set(-100 * sun[0][0], 100 * sun[2][0], 100 *sun[1][0]);
             this.data = false;
+            requestAnimationFrame(this.render);
         },
         drawSatellite: function(sat, forward = false) {
             
@@ -236,6 +237,8 @@ const app = new Vue({
                     this.satellites[sat].sma = 42164;
                     this.satellites[sat].ecc = 0;
                     this.satellites[sat].inc = 0;
+                    this.satellites[sat].raan = 0;
+                    this.satellites[sat].argP = 0;
                     break;
                 case 'iss':
                     this.satellites[sat].sma = 6797;
@@ -283,10 +286,12 @@ function setupScene() {
     });
     app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementsByTagName('body')[0].append(app.threeJsVar.renderer.domElement);
+    document.getElementsByClassName('scroll')[0].style.maxHeight = window.innerHeight * 0.8 + 'px';
     window.addEventListener('resize', () => {
         app.threeJsVar.camera.aspect = window.innerWidth / window.innerHeight;
         app.threeJsVar.camera.updateProjectionMatrix();
-        app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);S
+        app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementsByClassName('scroll')[0].style.maxHeight = window.innerHeight * 0.8 + 'px';
     })
     app.threeJsVar.controls = new THREE.OrbitControls(app.threeJsVar.camera, app.threeJsVar.renderer.domElement);
 }
