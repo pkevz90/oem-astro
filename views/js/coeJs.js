@@ -18,6 +18,10 @@ const app = new Vue({
             argP: 270.9418 * Math.PI / 180,
             mA: 0,
             tail: 0.5,
+            ecef: {
+                shown: false,
+                animate: 0
+            },
             color: '#FFFFFF',
         },
         common: false,
@@ -44,7 +48,10 @@ const app = new Vue({
                 argP: 270.9418 * Math.PI / 180,
                 mA: 0,
                 hist: [],
-                ecef: false,
+                ecef: {
+                    shown: false,
+                    animate: 0,
+                },
                 line: undefined,
                 shown: true,
                 color: '#FF0000',
@@ -130,7 +137,7 @@ const app = new Vue({
                 sat.line.point.position.z = sat.hist[0].z;
                 
                 if (sat.tail !== 0) {
-                    const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300 / 26000 * sat.sma );
+                    const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300);
                     sat.line.traj.geometry.setFromPoints(points);
                 }
                 else {
@@ -162,18 +169,40 @@ const app = new Vue({
             let tf = solveKeplersEquation(coeCalc.mA - (forward ? -1 : 1 ) * (nPoints - 1) * (tailTime / (nPoints - 1)) * n, coeCalc.e);
             let tA = math.range(t0, tf, (tf - t0) / (nPoints - 1), true)._data;
             let time = tA.map(t => -(coeCalc.mA - (t - coeCalc.e * Math.sin(t))) / n)
+            if (!ecef) {
+                if (sat.ecef.shown && sat.ecef.animate !== 1) {
+                    sat.ecef.animate = sat.ecef.animate > 1 ? 1 : sat.ecef.animate + 0.0333333 / sat.sma * 10000;
+                    sat.ecef.animate = sat.ecef.animate > 1 ? 1 : sat.ecef.animate;
+                }
+                else if (!sat.ecef.shown && sat.ecef.animate !== 0) {
+                    sat.ecef.animate = sat.ecef.animate < 0 ? 0 : sat.ecef.animate - 0.0333333 / sat.sma * 10000;
+                    sat.ecef.animate = sat.ecef.animate < 0 ? 0 : sat.ecef.animate;
+                }
+            }
             for (let ii = 0; ii < tA.length; ii++) { 
                 coeCalc.tA = Eccentric2True(coeCalc.e, tA[ii]);
                 state = Coe2PosVelObject(coeCalc);
-                if (sat.ecef | ecef) {
+                if (ecef.shown) {
                     let r = [[state.x],[state.y],[state.z]];
-                    r = math.multiply(axis3rotation(-time[ii] * this.earthRot), r);
+                    r = math.multiply(axis3rotation(-time[ii] * this.earthRot * ecef.animate), r);
                     state = {
                         x: r[0][0],
                         y: r[1][0],
                         z: r[2][0]
                     }
                 }
+                else {
+                    if (sat.ecef.shown | sat.ecef.animate > 0) {
+                        let r = [[state.x],[state.y],[state.z]];
+                        r = math.multiply(axis3rotation(-time[ii] * this.earthRot * sat.ecef.animate), r);
+                        state = {
+                            x: r[0][0],
+                            y: r[1][0],
+                            z: r[2][0]
+                        }
+                    }
+                }
+                
                 hist.push(new THREE.Vector3(-state.x / 6371, state.z / 6371, state.y / 6371));
             }
             return hist;
@@ -219,7 +248,8 @@ const app = new Vue({
         },
         addSatellite: function() {
             let n = this.satellites.length - 1;
-            let newSat = {...this.satellites[n]};
+            let newSat = JSON.parse(JSON.stringify(this.satellites[n]));
+            // let newSat = {...this.satellites[n]};
             newSat.name = 'Sat';
             newSat.line = undefined;
             this.satellites.push(newSat);
