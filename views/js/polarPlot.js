@@ -325,33 +325,54 @@ function loadFileAsText(fileToLoad){
 
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
-function handleNewTle(file) {
-    let tle;
-    for (let ii = 0; ii < file.length; ii++) {
+// function handleNewTle(file) {
+//     let tle;
+//     for (let ii = 0; ii < file.length; ii++) {
         
-        if (file[ii].substr(0,4) === 'Name') {
-            tle = [file[ii+2].split(/ +/), file[ii+3].split(/ +/)];
-            tle = {
-                raan: Number(tle[1][3]),
-                inc: Number(tle[1][2]),
-                arg: Number(tle[1][5]),
-                time: Number(tle[0][3].substr(2, tle[0][3].length)),
-                mA: Number(tle[1][6]),
-                mm: Number(tle[1][7])
-            };
-            tle.mA += 360/tle.mm/86400 * ((currentDate.jd - tle.time) * 86400);
-            tle.long = (tle.raan + tle.arg + tle.mA - currentDate.gmst) % 360;
-            satellites.push({
-                name: file[ii].substr(6,file[ii].length),
-                raan: tle.raan,
-                inc: tle.inc,
-                long: tle.long,
-                color:  file[ii+1].substr(0,1).toLowerCase() === 'r' ? 'rgb(200,150,100)' : 'rgb(100,150,200)'
-            })
+//         if (file[ii].substr(0,4) === 'Name') {
+//             tle = [file[ii+2].split(/ +/), file[ii+3].split(/ +/)];
+//             tle = {
+//                 raan: Number(tle[1][3]),
+//                 inc: Number(tle[1][2]),
+//                 arg: Number(tle[1][5]),
+//                 time: Number(tle[0][3].substr(2, tle[0][3].length)),
+//                 mA: Number(tle[1][6]),
+//                 mm: Number(tle[1][7])
+//             };
+//             tle.mA += 360/tle.mm/86400 * ((currentDate.jd - tle.time) * 86400);
+//             tle.long = (tle.raan + tle.arg + tle.mA - currentDate.gmst) % 360;
+//             satellites.push({
+//                 name: file[ii].substr(6,file[ii].length),
+//                 raan: tle.raan,
+//                 inc: tle.inc,
+//                 long: tle.long,
+//                 color:  file[ii+1].substr(0,1).toLowerCase() === 'r' ? 'rgb(200,150,100)' : 'rgb(100,150,200)'
+//             })
 
-        }
+//         }
+//     }
+// }
+
+function handleNewTle(file) {
+    for (let ii = 0; ii < file.length; ii++) {
+        console.log(file[ii]);
+        if(/Name:?/i.test(file[ii])) {
+            let name = file[ii].match(/(?<=Name:\s).+/)[0];
+            let raan = Number(file[ii+1].match(/(?<=Raan:\s).+/)[0]);
+            let inc = Number(file[ii+2].match(/(?<=Inc:\s).+/)[0]);
+            let long = Number(file[ii+3].match(/(?<=Long:\s).+/)[0]);
+            let color = file[ii+4].match(/(?<=Color:\s).+/)[0];
+            satellites.push({
+                name: name,
+                raan: raan,
+                long: long,
+                inc: inc,
+                color:  color === 'Red' ? 'rgb(200,150,100)' : 'rgb(100,150,200)'
+            })
+        };
     }
 }
+
 function julianDateCalcStruct(time) {
     // Good
     return 2451544.5 + 365 * (time.year - 2000) + Math.floor(0.25 * (time.year - 2000)) - Math.floor(0.01 * (time.year - 2000)) + Math.floor(0.0025 * (time.year - 2000)) + -1 + time.day;
