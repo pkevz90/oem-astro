@@ -13,6 +13,17 @@ body, html {
     height: 100%;
     overflow: hidden;
 }
+.scroll {
+    overflow: auto;
+    max-height: 800px;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
 
 #data {
     position: fixed;
@@ -128,6 +139,16 @@ body, html {
 }
   
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% { transform: rotate(0deg) translate(-50%, -50%); }
+    100% { transform: rotate(360deg) translate(-50%, -50%); }
+}
+
+axis {
+    position: fixed;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2vw;
+    bottom: 0%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: wheat;
 }

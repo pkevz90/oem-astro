@@ -18,6 +18,10 @@ const app = new Vue({
             argP: 270.9418 * Math.PI / 180,
             mA: 0,
             tail: 0.5,
+            ecef: {
+                shown: false,
+                animate: 0
+            },
             color: '#FFFFFF',
         },
         common: false,
@@ -44,7 +48,10 @@ const app = new Vue({
                 argP: 270.9418 * Math.PI / 180,
                 mA: 0,
                 hist: [],
-                ecef: false,
+                ecef: {
+                    shown: false,
+                    animate: 0,
+                },
                 line: undefined,
                 shown: true,
                 color: '#FF0000',
@@ -68,10 +75,7 @@ const app = new Vue({
             if (this.data) {
                 console.time('render')
             }
-            this.threeJsVar.renderer.render(this.threeJsVar.scene, this.threeJsVar.camera);
-            this.threeJsVar.controls.update();
-
-            requestAnimationFrame(this.render);
+            
             this.satellites.forEach(sat => {
                 this.drawSatellite(sat);
                 if (sat.shown && this.maneuver.exist && math.norm([this.maneuver.r, this.maneuver.i, this.maneuver.c]) > 1e-3 && this.maneuver.tail > 0) {
@@ -108,12 +112,16 @@ const app = new Vue({
             this.clouds.rotation.y +=  this.eci ? this.earthRot * this.timeStep : 0;
             this.raanOffest -= this.eci ? 0 : this.earthRot * this.timeStep;
             this.stars.rotation.y -= this.eci ? 0 : this.earthRot * this.timeStep;
+            let sun = math.multiply(axis3rotation(this.raanOffest), app.sunVec)
+            app.sunlight.position.set(-100 * sun[0][0], 100 * sun[2][0], 100 *sun[1][0]);
+            this.threeJsVar.renderer.render(this.threeJsVar.scene, this.threeJsVar.camera);
+            this.threeJsVar.controls.update();
+
             if (this.data) {
                 console.timeEnd('render')
             }
-            let sun = math.multiply(axis3rotation(this.raanOffest), app.sunVec)
-            app.sunlight.position.set(-100 * sun[0][0], 100 * sun[2][0], 100 *sun[1][0]);
             this.data = false;
+            requestAnimationFrame(this.render);
         },
         drawSatellite: function(sat, forward = false) {
             
@@ -129,7 +137,7 @@ const app = new Vue({
                 sat.line.point.position.z = sat.hist[0].z;
                 
                 if (sat.tail !== 0) {
-                    const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300 );
+                    const points = new THREE.CatmullRomCurve3(sat.hist, false).getPoints( 300);
                     sat.line.traj.geometry.setFromPoints(points);
                 }
                 else {
@@ -155,24 +163,46 @@ const app = new Vue({
                 return hist;
             }
             let tailTime = sat.tail * 2 * Math.PI / n;
-            let nPoints = Math.floor(sat.tail * 40);
+            let nPoints = Math.floor(sat.tail * 30);
             // Calculate points based off of Eccentric Anomaly (named true anomaly by mistake, do not feel like fixing)
             let t0 = solveKeplersEquation(coeCalc.mA, coeCalc.e);
             let tf = solveKeplersEquation(coeCalc.mA - (forward ? -1 : 1 ) * (nPoints - 1) * (tailTime / (nPoints - 1)) * n, coeCalc.e);
             let tA = math.range(t0, tf, (tf - t0) / (nPoints - 1), true)._data;
             let time = tA.map(t => -(coeCalc.mA - (t - coeCalc.e * Math.sin(t))) / n)
+            if (!ecef) {
+                if (sat.ecef.shown && sat.ecef.animate !== 1) {
+                    sat.ecef.animate = sat.ecef.animate > 1 ? 1 : sat.ecef.animate + 0.0333333 / sat.sma * 10000;
+                    sat.ecef.animate = sat.ecef.animate > 1 ? 1 : sat.ecef.animate;
+                }
+                else if (!sat.ecef.shown && sat.ecef.animate !== 0) {
+                    sat.ecef.animate = sat.ecef.animate < 0 ? 0 : sat.ecef.animate - 0.0333333 / sat.sma * 10000;
+                    sat.ecef.animate = sat.ecef.animate < 0 ? 0 : sat.ecef.animate;
+                }
+            }
             for (let ii = 0; ii < tA.length; ii++) { 
                 coeCalc.tA = Eccentric2True(coeCalc.e, tA[ii]);
                 state = Coe2PosVelObject(coeCalc);
-                if (sat.ecef | ecef) {
+                if (ecef.shown) {
                     let r = [[state.x],[state.y],[state.z]];
-                    r = math.multiply(axis3rotation(-time[ii] * this.earthRot), r);
+                    r = math.multiply(axis3rotation(-time[ii] * this.earthRot * ecef.animate), r);
                     state = {
                         x: r[0][0],
                         y: r[1][0],
                         z: r[2][0]
                     }
                 }
+                else {
+                    if (sat.ecef.shown | sat.ecef.animate > 0) {
+                        let r = [[state.x],[state.y],[state.z]];
+                        r = math.multiply(axis3rotation(-time[ii] * this.earthRot * sat.ecef.animate), r);
+                        state = {
+                            x: r[0][0],
+                            y: r[1][0],
+                            z: r[2][0]
+                        }
+                    }
+                }
+                
                 hist.push(new THREE.Vector3(-state.x / 6371, state.z / 6371, state.y / 6371));
             }
             return hist;
@@ -218,7 +248,8 @@ const app = new Vue({
         },
         addSatellite: function() {
             let n = this.satellites.length - 1;
-            let newSat = {...this.satellites[n]};
+            let newSat = JSON.parse(JSON.stringify(this.satellites[n]));
+            // let newSat = {...this.satellites[n]};
             newSat.name = 'Sat';
             newSat.line = undefined;
             this.satellites.push(newSat);
@@ -236,6 +267,8 @@ const app = new Vue({
                     this.satellites[sat].sma = 42164;
                     this.satellites[sat].ecc = 0;
                     this.satellites[sat].inc = 0;
+                    this.satellites[sat].raan = 0;
+                    this.satellites[sat].argP = 0;
                     break;
                 case 'iss':
                     this.satellites[sat].sma = 6797;
@@ -283,10 +316,12 @@ function setupScene() {
     });
     app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementsByTagName('body')[0].append(app.threeJsVar.renderer.domElement);
+    document.getElementsByClassName('scroll')[0].style.maxHeight = window.innerHeight * 0.8 + 'px';
     window.addEventListener('resize', () => {
         app.threeJsVar.camera.aspect = window.innerWidth / window.innerHeight;
         app.threeJsVar.camera.updateProjectionMatrix();
-        app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);S
+        app.threeJsVar.renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementsByClassName('scroll')[0].style.maxHeight = window.innerHeight * 0.8 + 'px';
     })
     app.threeJsVar.controls = new THREE.OrbitControls(app.threeJsVar.camera, app.threeJsVar.renderer.domElement);
 }
