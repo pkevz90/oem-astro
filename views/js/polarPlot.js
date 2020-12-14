@@ -19,6 +19,8 @@ let axisProperties = {
         y: cnvs.height / 2
     }
 };
+let m_s_div = document.getElementById('m_s');
+let man_time_div = document.getElementById('man_time');
 function getJulianDate() {
     var now = new Date();
     var start = new Date(now.getFullYear(), 0, 0);
@@ -238,19 +240,19 @@ function animate() {
         ctx.font = '30px sans-serif';
         ctx.fillStyle = 'rgb(75,75,75)';
         ctx.lineWidth = 5;
+        let aNewOrbit;
         if (axisState === 'polar') {
             ctx.beginPath();
             ctx.moveTo(dVline.start.x, dVline.start.y);
             ctx.lineTo(dVline.end.x, dVline.end.y);
             ctx.stroke();
-            ctx.fillText((calculateDvBudget(dVline) * 1000).toFixed(2) + ' m/s', 80, 80);
         }
         else {
             let longStart = Math.atan2(-dVline.start.x + axisProperties.center.x, -dVline.start.y + axisProperties.center.y);
             let longEnd = Math.atan2(-dVline.end.x + axisProperties.center.x, -dVline.end.y + axisProperties.center.y);
             let deltaLong = (longEnd - longStart) / travelTime;
             let nNewOrbit = 2*Math.PI / 86164 + deltaLong;
-            let aNewOrbit = Math.pow(398600.4418 / Math.pow(nNewOrbit,2), 1/3);
+            aNewOrbit = Math.pow(398600.4418 / Math.pow(nNewOrbit,2), 1/3);
             let points = [], radius = axisProperties.heightRatio * (aNewOrbit / 42164) * cnvs.height / 2;
             for (let ii = 0; ii < 20; ii += 0.5) {
                 points.push({
@@ -259,10 +261,14 @@ function animate() {
                 });
                 drawCurve(ctx, points, 1);
             }
-            dV = 2000*Math.abs((Math.sqrt(398600.4418 / 42164) - Math.sqrt(398600.4418 * (2/42164-2/(42164 + aNewOrbit)))));
-            ctx.fillText(dV.toFixed(2) + ' m/s', 80, 80);
-
         }
+        dV = axisState === 'polar' ? calculateDvBudget(dVline) * 1000 : 2000*Math.abs((Math.sqrt(398600.4418 / 42164) - Math.sqrt(398600.4418 * (2/42164-2/(42164 + aNewOrbit)))));
+        m_s_div.textContent = dV.toFixed(1) + ' m/s';
+        man_time_div.textContent = axisState === 'polar' ? "" : (travelTime / 86164).toFixed(1) + ' days';
+    }
+    else {
+        m_s_div.textContent = '';
+        man_time_div.textContent = '';
     }
     window.requestAnimationFrame(animate);
 }
@@ -363,6 +369,11 @@ function thetaGMST(JDUTI) {
     return theta / 240;
 }
 window.addEventListener('wheel', event => {
+    if (dVline) {
+        travelTime += event.deltaY > 0 ? -8616.4 : 8616.4;
+        travelTime = travelTime < 0 ? 0.1 : travelTime;
+        return;
+    }
     axisProperties.incLimit += event.deltaY > 0 ? 1 : -1;
 })
 function drawCurve(ctx, points, tension, type = 'stroke') {

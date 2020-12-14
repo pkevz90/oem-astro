@@ -7,11 +7,12 @@
     <link rel="stylesheet" href="./css/polarPlot.css">
     <link rel="stylesheet" href="../SupportLibraries/bootstrap.min2.css">
 </head>
-<body class="bg-light"><div style="display:none;">
-    <img id="source"
-         src="./Media/PolarPicture.jpg"
-         width="300" height="227">
-  </div>
+<body class="bg-light noselect">
+    <div style="display:none;">
+        <img id="source"
+            src="./Media/PolarPicture.jpg"
+            width="300" height="227">
+    </div>
     <div id="file-input">
         <div style="margin-bottom: 1%;"><b><u>Import TLE File</u></b></div>
         <input type="file" accept=".txt" id="fileToLoad">
@@ -21,6 +22,10 @@
         <div>Add Red Sat: <img src="./Media/ctrlkey.jpg"><b style="font-size: 3vw; color: black; font-family: Arial Black, Helvetica, sans-serif;"><sub>+</sub></b><img src="./Media/leftclicklight.jpg"></div>
         <div>Calculate &#916V: <img src="./Media/leftclicklight.jpg"><b style="font-size: 3vw; color: black; font-family: Arial Black, Helvetica, sans-serif;"><sub>+ drag</sub></b></div>
         <div>Zoom: <img src="./Media/middlewheellight.jpg"></div>
+    </div>
+    <div class="maneuver">
+        <div id="m_s"></div>
+        <div id="man_time"></div>
     </div>
     <canvas></canvas>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
