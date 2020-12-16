@@ -38,6 +38,7 @@ const app = new Vue({
         data: false,
         sunVec: undefined,
         controls: false,
+        cameraTarget: 'earth',
         satellites: [
             {
                 name: 'GEO 1',
@@ -107,7 +108,11 @@ const app = new Vue({
                     
                 }
             });
-            
+            if (this.cameraTarget !== 'earth') {
+                this.threeJsVar.controls.target.x = this.satellites[this.cameraTarget].hist[0].x;
+                this.threeJsVar.controls.target.y = this.satellites[this.cameraTarget].hist[0].y;
+                this.threeJsVar.controls.target.z = this.satellites[this.cameraTarget].hist[0].z;
+            }
             this.Earth.rotation.y  +=  this.eci ? this.earthRot * this.timeStep : 0;
             this.clouds.rotation.y +=  this.eci ? this.earthRot * this.timeStep : 0;
             this.raanOffest -= this.eci ? 0 : this.earthRot * this.timeStep;
@@ -155,7 +160,7 @@ const app = new Vue({
                 i: sat.inc,
                 mA: sat.mA,
                 tA: 0
-            }
+            };
             if (sat.tail === 0) {
                 coeCalc.tA = Eccentric2True(coeCalc.e, solveKeplersEquation(coeCalc.mA, coeCalc.e));
                 state = Coe2PosVelObject(coeCalc);
@@ -491,6 +496,15 @@ window.addEventListener('keypress', event => {
     }
     else if (event.key  === 'd') {
         app.data = true;
+    }
+    else if (/\d/.test(event.key)) {
+        let k = Number(event.key);
+        if (k === 0) {
+            app.cameraTarget = 'earth';
+            app.threeJsVar.controls.target.set(0,0,0);
+            return;
+        }
+        app.cameraTarget = k - 1;
     }
 })
 
