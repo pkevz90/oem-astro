@@ -5,11 +5,10 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <script src="./SupportLibraries/Chart.bundle.min.js"></script>
-    <script src="./SupportLibraries/math.min.js"></script>
-    <script src="./SupportLibraries/vue.js"></script>
-    <script src="./SupportLibraries/jquery.min.js"></script>
-    <script src="./SupportLibraries/jquery.mousewheel.min.js"></script>
+    <script src="../SupportLibraries/math.min.js"></script>
+    <script src="../SupportLibraries/vue.js"></script>
+    <script src="../SupportLibraries/jquery.min.js"></script>
+    <script src="../SupportLibraries/jquery.mousewheel.min.js"></script>
     <title>RPO Simulator</title>
     <link rel="stylesheet" type="text/css" href="css/rpoSim.css">
     
@@ -20,13 +19,13 @@
     <div id="main-app">
         <div id="data-container">
             <player-data :burntime="turn_length" :inplayer="players[player]" v-for="player in active_players"></player-data>
-            <div id="add-sat-button" v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player">+</div>
+            <div v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player" style="position: relative"><span id="add-sat-button">+</span></div>
         </div>
         <div id="game-data-container" style="display: none;">
-            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km </div>
+            <div><span class="left-float">Range</span> <span class="right-float">{{ scenario_data.sat_data.data.range.toFixed(2) }} km</span></div>
             <!-- <div>POCA: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (00:00)</div> -->
-            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup></div>
-            <div>Time: +{{ scenario_data.game_time_string }} </div>
+            <br><div><span class="left-float">CATS</span> <span class="right-float">{{ scenario_data.sat_data.data.cats.toFixed(2) }} deg</span></div>
+            <br><div><span class="left-float">Time</span> <span class="right-float">+{{ scenario_data.game_time_string }}</span></div>
         </div>
         <div style="width:100%; height:100%;">
             <canvas id="main-canvas" width="100%" height="100%"></canvas>

@@ -15,7 +15,7 @@ body, html {
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
-    top: 2%;
+    top: 3%;
     right: 0%;
     width: 50%;
     height: 7%;
@@ -40,12 +40,15 @@ body, html {
     background-image: linear-gradient(135deg,rgba(100,150,255,0.45),rgba(0,0,0,0),rgba(255,150,100,0.45));
     z-index: 0;
     position: fixed;
-    width: auto;
+    width: 18%;
     height: auto;
-    bottom: 5%;
-    left: 2%;
-    font-size: 1.8vw;
-    font-family: 'Courier New', Courier, monospace;
+    bottom: 2%;
+    left: 1%;
+    font-size: 2vw;
+    font-family: Arial, sans-serif;
+    border-radius: 20px;
+    text-align: center;
+    padding: 1%;
 }
 
 .noselect {
@@ -60,22 +63,27 @@ body, html {
 
 #time-slider {
     position: fixed;
-    bottom: 2%;
+    top: 1%;
     height: auto;
-    width: 80%;
+    width: 100%;
     height: 1%;
-    left: 2%;
     z-index: 2;
 }
 
+.left-float {
+  float: left;
+}
+.right-float {
+  float: right;
+}
 
 .slider {
     -webkit-appearance: none;
-    width: 100%;
-    height: 100%;
-    background: #d3d3d3;
+    width: 99%;
+    height: 70%;
+    background:  rgb(150, 150, 150);
     outline: none;
-    opacity: 0.2;
+    opacity: 0.4;
     -webkit-transition: .2s;
     transition: opacity .2s;
   }
@@ -87,9 +95,10 @@ body, html {
   .slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 2%;
-    height: 20px;
-    background: rgb(112, 111, 111);
+    width: 1.2vw;
+    height: 1.2vw;
+    background: rgb(200, 200, 200);
+    border-radius: 50%;
     cursor: pointer;
   }
   
@@ -102,13 +111,14 @@ body, html {
 
   #turn-button {
     position: fixed;
-    right: 2%;
+    right: 1%;
     bottom: 2%;
-    color: yellow;
+    color: rgb(138, 138, 25);
     font-size:4vh;
     cursor: pointer;
     z-index: 4;
-    border: 1px solid yellow;
+    border: 2px solid rgb(138, 138, 24);
+    border-radius: 10px;
     padding: 0.5%;
   }
   #turn-button:hover {
@@ -166,16 +176,20 @@ body, html {
   }
   
   #add-sat-button {
-    width: 2%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: 4vw;
+    width: 4vw;
     border: 2px solid white;
     border-radius: 50%;
     text-align: center;
     cursor: pointer;
-    font-size: 2.8vw;
-    margin-top: 5%
+    font-size: 3.5vw;
   }
 
-  .add-sat-button:hover {
+  #add-sat-button:hover {
     background-color: rgba(255,255,255,0.4);
   }
 
