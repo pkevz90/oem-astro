@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
     <script src="../SupportLibraries/three.js-master/examples/js/controls/OrbitControls.js"></script>
     <script src="../SupportLibraries/astroFunctions.js"></script>
 </head>
+
 <body>
     <div id="loading-screen">
         <div class="loader"></div>
@@ -22,21 +24,34 @@
         <div id="data" class="noselect" style="width: 20%">
             <div class="scroll">
                 <div v-for="(sat,ii) in satellites">
-                    <div class="pointer white-border sat-name" @click="changeSat(ii)"  contentEditable="true">{{ sat.name }}</div>
+                    <div class="pointer white-border sat-name" @click="changeSat(ii)" contentEditable="true">
+                        {{ sat.name }}</div>
                     <div class="white-border" style="padding: 5%" v-if="sat.shown">
-                        <div>SMA - {{ sat.sma }} km <span v-if="maneuver.exist">({{ maneuver.sma.toFixed(2) }})</span></div>
-                        <div><input class="slider" type="range" min="6500" max="50000" v-model.Number="sat.sma" @input="changeData(ii)" step="0.1"></div>
-                        <div><em>ECCENTRICITY</em> - {{ sat.ecc }} <span v-if="maneuver.exist">({{ maneuver.ecc.toFixed(2) }})</span></div>
-                        <div><input class="slider" type="range" min="0" max="0.9999" v-model.Number="sat.ecc" @input="changeData(ii)" step="0.01"></div>
-                        <div><em>INCLINATION</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span v-if="maneuver.exist">({{ (maneuver.inc * 180 / Math.PI).toFixed(2) }})</span></div>
-                        <div><input class="slider" type="range" min="0" max="3.14155" v-model.Number="sat.inc" @input="changeData(ii)" step="0.005"></div>
-                        <div><em>RAAN</em> - {{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span v-if="maneuver.exist">({{ (maneuver.raan * 180 / Math.PI).toFixed(2) }})</span></div>
-                        <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.raan" @input="changeData(ii)" step="0.005"></div>
-                        <div><em>Arg of Perigee</em> - {{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span v-if="maneuver.exist">({{ (maneuver.argP * 180 / Math.PI).toFixed(2) }})</span></div>
-                        <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP" @input="changeData(ii)" step="0.005"></div>
+                        <div>SMA - {{ sat.sma }} km <span v-if="maneuver.exist">({{ maneuver.sma.toFixed(2) }})</span>
+                        </div>
+                        <div><input class="slider" type="range" min="6500" max="50000" v-model.Number="sat.sma"
+                                @input="changeData(ii)" step="0.1"></div>
+                        <div><em>ECCENTRICITY</em> - {{ sat.ecc }} <span
+                                v-if="maneuver.exist">({{ maneuver.ecc.toFixed(2) }})</span></div>
+                        <div><input class="slider" type="range" min="0" max="0.9999" v-model.Number="sat.ecc"
+                                @input="changeData(ii)" step="0.01"></div>
+                        <div><em>INCLINATION</em> - {{ (sat.inc * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span
+                                v-if="maneuver.exist">({{ (maneuver.inc * 180 / Math.PI).toFixed(2) }})</span></div>
+                        <div><input class="slider" type="range" min="0" max="3.14155" v-model.Number="sat.inc"
+                                @input="changeData(ii)" step="0.005"></div>
+                        <div><em>RAAN</em> - {{ (sat.raan * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span
+                                v-if="maneuver.exist">({{ (maneuver.raan * 180 / Math.PI).toFixed(2) }})</span></div>
+                        <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.raan"
+                                @input="changeData(ii)" step="0.005"></div>
+                        <div><em>Arg of Perigee</em> - {{ (sat.argP * 180 / Math.PI).toFixed(2) }}<sup>o</sup> <span
+                                v-if="maneuver.exist">({{ (maneuver.argP * 180 / Math.PI).toFixed(2) }})</span></div>
+                        <div><input class="slider" type="range" min="0" max="6.2831" v-model.Number="sat.argP"
+                                @input="changeData(ii)" step="0.005"></div>
                         <div><em>Mean Anomaly</em> - {{ (sat.mA * 180 / Math.PI % 360).toFixed(2) }}<sup>o</sup></div>
-                        <div>ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef.shown"><input type="color" v-model="sat.color" @input="changeColor(ii)"></div>
-                        <div>Tail {{sat.tail}} <input class="slider" type="range" min="0" max="5" step="0.1" v-model.Number="sat.tail"></div>
+                        <div>ECEF<input class="checkbox" type="checkbox" v-model="sat.ecef.shown"><input type="color"
+                                v-model="sat.color" @input="changeColor(ii)"></div>
+                        <div>Tail {{sat.tail}} <input class="slider" type="range" min="0" max="5" step="0.1"
+                                v-model.Number="sat.tail"></div>
                     </div>
                 </div>
             </div>
@@ -44,28 +59,37 @@
         </div>
         <div class="controls noselect" v-if="controls">
             <div>Change Reference Frame - Spacebar</div>
-            <div>Change Speed - < > </div>
+            <div>Change Speed - <>
+            </div>
         </div>
-        <div class="pointer" style="position: fixed; font-family: 'Bebas Neue', sans-serif; bottom: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;" @mouseover="controls = true" @mouseleave="controls = false">
+        <div class="pointer"
+            style="position: fixed; font-family: 'Bebas Neue', sans-serif; bottom: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;"
+            @mouseover="controls = true" @mouseleave="controls = false">
             Controls
         </div>
-        <div style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;  width: 20%;  text-align: center;" >
+        <div
+            style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; right: 5%; color: blanchedalmond; font-size: 3vw;  width: 20%;  text-align: center;">
             <div class="pointer button-format" @click="maneuver.exist = !maneuver.exist">
                 Maneuver
             </div>
             <div v-if="maneuver.exist">
-                R <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.r"> m/s
+                R <input type="Number" style="width: 8vw; font-size: 3vw; color: white; background-color: black"
+                    v-model.Number="maneuver.r"> m/s
             </div>
             <div v-if="maneuver.exist">
-                I <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.i"> m/s
+                I <input type="Number" style="width: 8vw; font-size: 3vw; color: white; background-color: black"
+                    v-model.Number="maneuver.i"> m/s
             </div>
             <div v-if="maneuver.exist">
-                C <input type="Number"  style="width: 8vw; font-size: 3vw; color: white; background-color: black" v-model.Number="maneuver.c"> m/s
+                C <input type="Number" style="width: 8vw; font-size: 3vw; color: white; background-color: black"
+                    v-model.Number="maneuver.c"> m/s
             </div>
-            
-            <div v-if="maneuver.exist">Tail {{maneuver.tail}} <input class="slider" type="range" min="0" max="5" step="0.1" v-model.Number="maneuver.tail"></div>
+
+            <div v-if="maneuver.exist">Tail {{maneuver.tail}} <input class="slider" type="range" min="0" max="5"
+                    step="0.1" v-model.Number="maneuver.tail"></div>
         </div>
-        <div style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; left: 50%; transform: translate(-50%, 0%); color: blanchedalmond; font-size: 3vw; width: 30%; text-align: center;" @mouseleave="common = false">
+        <div style="position: fixed; font-family: 'Bebas Neue', sans-serif; top: 2%; left: 50%; transform: translate(-50%, 0%); color: blanchedalmond; font-size: 3vw; width: 30%; text-align: center;"
+            @mouseleave="common = false">
             <div class="pointer button-format" @click="common = !common">
                 Common Orbits
             </div>
@@ -92,4 +116,5 @@
     </div>
     <script src="./js/coeJs.js"></script>
 </body>
+
 </html>
