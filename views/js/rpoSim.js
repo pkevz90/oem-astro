@@ -373,7 +373,7 @@ var main_app = new Vue({
                         players: outPlayers,
                         scenarioConditions: {
                             initSun: this.scenario_data.init_sun_angl,
-                            gameLenth: this.scenario_data.scenario_length,
+                            gameLength: this.scenario_data.scenario_length,
                             nBurns: this.scenario_data.burns_per_player,
                         },
                         name: $('#game-name').val()
