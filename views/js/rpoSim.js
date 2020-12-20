@@ -17,7 +17,7 @@ Vue.component('state-setup', {
     },
     template: '<div> \
                 <div class="setup-input-div">  \
-                    A<sub>e</sub> <input min="0" type="number" id="0" :value="insatellite.initial_state[0]" @input="init_changed"> km\
+                    <span>A<sub>e</sub></span> <input min="0" type="number" id="0" :value="insatellite.initial_state[0]" @input="init_changed"> km\
                 </div> \
                 <div class="setup-input-div">  \
                     X<sub>d</sub> <input type="number" id="1" :value="insatellite.initial_state[1]" @input="init_changed"> km\
@@ -99,6 +99,9 @@ Vue.component('player-data', {
 var main_app = new Vue({
     el: "#main-app",
     data: {
+        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        games: [],
+        chosenGamePlayers: [],
         players: {
             blue: {
                 exist: true,
@@ -201,7 +204,7 @@ var main_app = new Vue({
                 }
             },
             server: false,
-            serverName: '',
+            gameId: '',
             player: '',
             selected_burn_point: null,
             game_started: false,
@@ -299,6 +302,12 @@ var main_app = new Vue({
             }
             calcData(this.scenario_data.sat_data.origin, this.scenario_data.sat_data.target)
         },
+        chosenGameChange: function(event) {
+            let chosenGame = this.games.filter(game => {
+                return game._id === event.target.value;
+            })
+            this.chosenGamePlayers = chosenGame[0].players;
+        },
         slider_change: function (event) {
             this.scenario_data.game_time = event.target.value;
             this.scenario_data.game_time_string = hrsToTime(event.target.value);
@@ -307,51 +316,126 @@ var main_app = new Vue({
             this.display_data.update_time = event;
         },
         turn_button_click: function () {
-            if (!this.scenario_data.game_started) {
-                this.scenario_data.turn = 0;
-                this.scenario_data.game_started = true;
-                $('#turn-button span').hide();
-                $('#turn-button span').first().show();
-                $('.setup-zone').fadeOut(500);
-                $('#game-data-container').fadeIn(500);
-                $('#time-slider').fadeIn(500);
-                $('.setup-input-div').slideUp(500);
-                this.scenario_data.player = $("input[name='player']:checked").val();
-                $("input[name='player']").hide();
-                $('#turn-button').css('color', this.players[this.scenario_data.player].color);
-                $('#data-container').animate({
-                    opacity: 0
-                }, 500, () => {
-                    $('#data-container').css('width', '50%');
-                })
-                let $cvns = $('canvas')[0];
-                let del_height = window.innerHeight - $cvns.height;
-                let del_width = window.innerWidth - $cvns.width;
-                let int_ii = 0;
-                // Probably the dumbest way to do it ever
-                function make_right_size() {
-                    int_ii++;
-                    $cvns.height += del_height / 30;
-                    $cvns.width += del_width / 30;
-                    if (int_ii < 30) {
-                        setTimeout(make_right_size, 16);
-                    } else {
-                        $('#data-container').animate({
-                            opacity: 1,
-                            'width': '100%'
-                        }, 500);
+            this.scenario_data.turn++;
+        },
+        startScreenClick: async function(event = {target: {id: 'start-refresh'}}) {
+            switch (event.target.id) {
+                case 'start-game':
+                    $('.start-game-div').fadeIn(500);
+                    this.startScreenClick();
+                    break;
+                case 'start-server':
+                    // POST Request new game
+                    this.scenario_data.server = true;
+                    let outPlayers = [];
+                    for (var player in this.players) {
+                        if (!this.players[player].exist) {
+                            continue;
+                        }
+                        outPlayers.push({
+                            name: this.players[player].name,
+                            initState: this.players[player].initial_state,
+                            burns: math.zeros(this.scenario_data.burns_per_player, 2)._data,
+                            fuel: this.players[player].scenario_fuel,
+                            turn_fuel: this.players[player].turn_fuel,
+                            cats: this.players[player].required_cats,
+                            range: this.players[player].max_range,
+                            turn: 1
+                        });
                     }
-                }
-                make_right_size();
-            } else {
-                this.scenario_data.turn++;
+                    let outData = {
+                        players: outPlayers,
+                        scenarioConditions: {
+                            initSun: this.scenario_data.init_sun_angl,
+                            gameLenth: this.scenario_data.scenario_length,
+                            nBurns: this.scenario_data.burns_per_player,
+                        },
+                        name: $('#game-name').val()
+                    }
+                    this.scenario_data.player = $("input[name='player']:checked").val();
+                    let responsePost = await fetch(this.fetchURL + '/new', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(outData)
+                    });
+                    responsePost = await responsePost.json();
+                    this.scenario_data.gameId = responsePost._id;
+                    setTimeout(this.startGame, 1000);
+                    break;
+                case 'start-refresh':
+                    // GET request for current games
+                    let response = await fetch(this.fetchURL + '/games');
+                    response = await response.json();
+                    this.games = response;
+                    break;
+                case 'start-join':
+                    let responseJoin = await fetch(this.fetchURL + '/join/' + $('select')[0].value)
+                    responseJoin = await responseJoin.json();
+                    this.scenario_data.gameId = responseJoin._id;
+                    this.scenario_data.player = 'blue';
+                    this.scenario_data.server = true;
+                    this.players.blue.exist = false;
+                    this.players.green.exist = false;
+                    this.players.red.exist = false;
+                    this.players.gray.exist = false;
+                    responseJoin.players.forEach(player => {
+                        this.players[player.name].exist = true;
+                        this.players[player.name].initial_state = player.initState;
+                        this.players[player.name].burns = player.burns;
+                        this.players[player.name].required_cats = player.cats;
+                        this.players[player.name].max_range = player.range;
+                        this.players[player.name].scenario_fuel = player.fuel;
+                        this.players[player.name].turn_fuel = player.turn_fuel;
+                    })
+                    this.scenario_data.scenario_length = responseJoin.scenarioConditions.gameLength;
+                    this.scenario_data.burns_per_player = responseJoin.scenarioConditions.nBurns;
+                    this.scenario_data.init_sun_angl = responseJoin.scenarioConditions.initSun;
+                    setTimeout(this.startGame, 1000);
+                    break;
+                case 'start-offline':
+                    // Start with no requests
+                    this.startGame();
+                    break;
             }
         },
-        change_num_burns: function (event) {
-            this.scenario_data.burns_per_player = Number(event.target.value);
-            for (player in this.players) {
-                this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
+        startGame: function() {
+            $('.start-game-div').fadeOut(500);
+            this.scenario_data.turn = 0;
+            this.scenario_data.game_started = true;
+            $('#turn-button').show();
+            $('.setup-zone').fadeOut(500);
+            $('#game-data-container').fadeIn(500);
+            $('#time-slider').fadeIn(500);
+            $('.setup-input-div').slideUp(500);
+            this.scenario_data.player = $("input[name='player']:checked").val();
+            $("input[name='player']").hide();
+            $('#turn-button').css('color', this.players[this.scenario_data.player].color);
+            $('#data-container').animate({
+                opacity: 0
+            }, 500, () => {
+                $('#data-container').css('width', '50%');
+            })
+            let $cvns = $('canvas')[0];
+            let del_height = window.innerHeight - $cvns.height;
+            let del_width = window.innerWidth - $cvns.width;
+            let int_ii = 0;
+            // Probably the dumbest way to do it ever
+            function make_right_size() {
+                int_ii++;
+                $cvns.height += del_height / 30;
+                $cvns.width += del_width / 30;
+                if (int_ii < 30) {
+                    setTimeout(make_right_size, 16);
+                } else {
+                    $('#data-container').animate({
+                        opacity: 1,
+                        'width': '100%'
+                    }, 500);
+                }
             }
+            make_right_size();
         },
         server_button_pushed: function () {
             if (this.scenario_data.server) {
@@ -370,52 +454,6 @@ var main_app = new Vue({
                 this.players.gray.exist = true;
             }
         },
-        change_scenario: function () {
-            switch (event.target.value) {
-                case 'defend':
-                    Object.assign(this.players.blue, {
-                        initial_state: [0, 0, 25, 0],
-                    });
-                    Object.assign(this.players.red, {
-                        initial_state: [0, -40, -90, 0],
-                    });
-                    Object.assign(this.players.green, {
-                        exist: true,
-                        initial_state: [0, 0, 0, 0],
-                    });
-                    break;
-                case 'mayhem':
-                    Object.assign(this.players.blue, {
-                        initial_state: [0, 0, 30, 0],
-                    });
-                    Object.assign(this.players.red, {
-                        initial_state: [0, 15, 0, 0],
-                    });
-                    Object.assign(this.players.green, {
-                        exist: true,
-                        initial_state: [0, 0, -30, 0],
-                    });
-                    Object.assign(this.players.gray, {
-                        exist: true,
-                        initial_state: [0, -15, 0, 0],
-                    });
-                    break;
-                default:
-                    Object.assign(this.players.blue, {
-                        initial_state: [0, 0, 30, 0],
-                    });
-                    Object.assign(this.players.red, {
-                        initial_state: [0, 0, -30, 0],
-                    });
-                    Object.assign(this.players.green, {
-                        exist: false,
-                    });
-                    Object.assign(this.players.gray, {
-                        exist: false,
-                    });
-                    break;
-            }
-        }
     },
     watch: {
         'scenario_data.display_time': function () {
@@ -687,16 +725,16 @@ function drawBurnPoints(sat) {
 function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
     let points, r, v, pixelPos;
     ctx.strokeStyle = input_object.satellite.color;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     let nodes = 8;
     let pRR = PhiRR(input_object.tBurns * 3600 / nodes),
         pRV = PhiRV(input_object.tBurns * 3600 / nodes),
         pVR = PhiVR(input_object.tBurns * 3600 / nodes),
         pVV = PhiVV(input_object.tBurns * 3600 / nodes);
     for (let jj = 0; jj < input_object.satellite.burn_points.length; jj++) {
-        if (jj === main_app.scenario_data.turn) {
-            ctx.globalAlpha = 0.5; // turns future trajectory transparent
-        }
+        // if (jj === main_app.scenario_data.turn) {
+        //     ctx.globalAlpha = 0.75; // turns future trajectory transparent
+        // }
         points = [];
         pixelPos = [];
         points.push(input_object.satellite.burn_points[jj]);

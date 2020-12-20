@@ -35,32 +35,60 @@
         </div>
         <div class="setup-zone">
             <div>
-                Game Length <input type="number" value="30" v-model.number="scenario_data.scenario_length">
+                Game Length <input type="number" value="30" min="5" v-model.number="scenario_data.scenario_length">
             </div>
             <div>
-                # Burns <input type="number" value="15" @input="change_num_burns">
+                # Burns <input type="number" min="1" v-model.Number="scenario_data.burns_per_player">
             </div>
             <div>
                 Initial Sun <input type="number" step = "0.01" v-model.number="scenario_data.init_sun_angl">
             </div>
-            <div :style="{backgroundColor: (scenario_data.server) ? 'green' : 'red'}" style="border: 4px solid white; cursor: pointer;" @click="server_button_pushed">
-                Server
-            </div>
-            <div>
-                
-            <select style="font-size: 1.5vw;" @change="change_scenario">
-                <option value="custom"    >Scenario</option>
-                <option value="knifefight">Knife Fight</option>
-                <option value="driveby"   >Drive-By</option>
-                <option value="defend"    >Defender</option>
-                <option value="2defend"    >Defenders</option>
-                <option value="mayhem"    >Mayhem</option>
-            </select>
+            <div id="start-game" :style="{backgroundColor: (scenario_data.server) ? 'green' : 'red'}" style="border: 4px solid white; cursor: pointer;" @click="startScreenClick">
+                Start
             </div>
         </div>
-        <div id="turn-button" @click="turn_button_click" >
-            <span style="display: none;">Turn {{ scenario_data.turn }}</span>
-            <span>Start</span>
+        <div id="turn-button" @click="turn_button_click" style="display: none;">
+            <span>Turn {{ scenario_data.turn }}</span>
+        </div>
+        <div class="start-game-div" style="display: none;">
+            <div>
+                <span style="font-size: 3vw;">Start Server</span>
+                <div>
+                    <input type="text" placeholder="Server Name" id="game-name" autocomplete="off">
+                </div>
+                <div>
+                    <input type="password" placeholder="Password">
+                </div>
+                <div>
+                    <button id="start-server" class="start-button" @click="startScreenClick">Start Server</button>
+                </div>
+            </div>
+            <div>
+                <span style="font-size: 3vw;">Join Server</span>
+                <div>
+                    <select id="join-game" @change="chosenGameChange">
+                        <option value="default" disabled selected>Join Game</option>
+                        <option :value="game._id" v-for="game in games">{{ game.name }}</option>
+                    </select>
+                    <select id="team">
+                        <option value="default" disabled selected>Team</option>
+                        <option :value="player" v-for="player in chosenGamePlayers">{{ player }}</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="password" placeholder="Password">
+                </div>
+                <div>
+                    <button id="start-refresh" class="start-button" @click="startScreenClick">Refresh</button>
+                    <button id="start-join" class="start-button" @click="startScreenClick">Join</button>
+                </div>
+            </div>
+            <div>
+                <span style="font-size: 3vw;">Offline</span>
+                <div>
+                    <button id="start-offline" class="start-button" @click="startScreenClick">Start Offline</button>
+                </div>
+            </div>
         </div>
     </div>
     <script src="./js/rpoSim.js"></script>
