@@ -192,7 +192,6 @@ var main_app = new Vue({
             scenario_length: 30,
             burns_per_player: 10,
             init_sun_angl: 0,
-            turn: null,
             sat_data: {
                 origin: 'blue',
                 target: 'red',
@@ -214,7 +213,8 @@ var main_app = new Vue({
             mousedown_location: null,
             mousemove_location: null,
             tactic_data: ['none'],
-            turn: 0
+            turn: 0,
+            opposingTurn: 0
         },
         display_data: {
             center: [0, 0],
@@ -315,8 +315,30 @@ var main_app = new Vue({
         slider_click: function (event) {
             this.display_data.update_time = event;
         },
-        turn_button_click: function () {
+        turn_button_click: async function () {
+            if (this.scenario_data.turn > this.scenario_data.opposingTurn) {
+                return;
+            }
             this.scenario_data.turn++;
+            let burnData = this.players[this.scenario_data.player].burns.map((burn, ii) => {
+                if (ii < this.scenario_data.turn) {
+                    return burn;
+                }
+                else {
+                    return [0,0];
+                }
+            })
+            let outData = {
+                burns: burnData,
+                turn: this.scenario_data.turn
+            };
+            await fetch(this.fetchURL + '/update/' + this.scenario_data.gameId + '/' + this.scenario_data.player, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(outData)
+            });
         },
         startScreenClick: async function(event = {target: {id: 'start-refresh'}}) {
             switch (event.target.id) {
@@ -340,7 +362,7 @@ var main_app = new Vue({
                             turn_fuel: this.players[player].turn_fuel,
                             cats: this.players[player].required_cats,
                             range: this.players[player].max_range,
-                            turn: 1
+                            turn: 0
                         });
                     }
                     let outData = {
@@ -362,6 +384,7 @@ var main_app = new Vue({
                     });
                     responsePost = await responsePost.json();
                     this.scenario_data.gameId = responsePost._id;
+                    this.scenario_data.turn = 0;
                     setTimeout(this.startGame, 1000);
                     break;
                 case 'start-refresh':
@@ -373,9 +396,14 @@ var main_app = new Vue({
                 case 'start-join':
                     let responseJoin = await fetch(this.fetchURL + '/join/' + $('select')[0].value)
                     responseJoin = await responseJoin.json();
+                    let playerJoin = responseJoin.players.filter(player => {
+                        return player.name === $('select')[1].value;
+                    });
                     this.scenario_data.gameId = responseJoin._id;
-                    this.scenario_data.player = 'blue';
+                    this.scenario_data.player = $('select')[1].value;
                     this.scenario_data.server = true;
+                    this.scenario_data.turn = playerJoin[0].turn;
+                    // this.scenario_data.turn = responseJoin.turn;
                     this.players.blue.exist = false;
                     this.players.green.exist = false;
                     this.players.red.exist = false;
@@ -396,20 +424,19 @@ var main_app = new Vue({
                     break;
                 case 'start-offline':
                     // Start with no requests
+                    this.scenario_data.player = $("input[name='player']:checked").val();
                     this.startGame();
                     break;
             }
         },
         startGame: function() {
             $('.start-game-div').fadeOut(500);
-            this.scenario_data.turn = 0;
             this.scenario_data.game_started = true;
             $('#turn-button').show();
             $('.setup-zone').fadeOut(500);
             $('#game-data-container').fadeIn(500);
             $('#time-slider').fadeIn(500);
             $('.setup-input-div').slideUp(500);
-            this.scenario_data.player = $("input[name='player']:checked").val();
             $("input[name='player']").hide();
             $('#turn-button').css('color', this.players[this.scenario_data.player].color);
             $('#data-container').animate({
@@ -436,6 +463,30 @@ var main_app = new Vue({
                 }
             }
             make_right_size();
+            setInterval(async () => {
+                if (this.scenario_data.turn <= this.scenario_data.opposingTurn) {
+                    return;
+                }
+                let responseInt = await fetch(this.fetchURL + '/games/' + this.scenario_data.gameId);
+                responseInt = await responseInt.json();
+                this.scenario_data.opposingTurn = math.min(responseInt.players.map(player => {
+                    return player.turn;
+                }));
+                responseInt.players.forEach(player => {
+                    if (player.name !== this.scenario_data.player) {
+                        this.players[player.name].burn_change.old = [...this.players[player.name].burns];
+                        this.players[player.name].burn_change.new = player.burns.map((burn,ii) => {
+                            if (ii >= this.scenario_data.opposingTurn) {
+                                return [0,0];
+                            } 
+                            else {
+                                return burn;
+                            }
+                        }); 
+                        this.players[player.name].burn_change.change = 0;
+                    }
+                })
+            },5000)
         },
         server_button_pushed: function () {
             if (this.scenario_data.server) {
@@ -934,7 +985,6 @@ function setMouseCallbacks() {
             let targetCenterY = (event.offsetY - main_app.display_data.drag_data[0][1]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][1];
             main_app.display_data.center[0] = (targetCenterX - main_app.display_data.center[0]) * easement + main_app.display_data.center[0];
             main_app.display_data.center[1] = (targetCenterY - main_app.display_data.center[1]) * easement + main_app.display_data.center[1];
-            console.log(main_app.display_data.center)
         }
     })
     $('#main-canvas').mouseup(() => {
