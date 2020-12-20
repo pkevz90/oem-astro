@@ -522,6 +522,9 @@ window.addEventListener('keypress', event => {
     } else if (event.key === 'd') {
         app.data = true;
     } else if (/\d/.test(event.key)) {
+        if (app.maneuver.exist) {
+            return;
+        }
         let k = Number(event.key);
         if (k === 0) {
             app.cameraTarget = 'earth';
