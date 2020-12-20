@@ -100,6 +100,7 @@ var main_app = new Vue({
     el: "#main-app",
     data: {
         fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -316,10 +317,13 @@ var main_app = new Vue({
             this.display_data.update_time = event;
         },
         turn_button_click: async function () {
-            if (this.scenario_data.turn > this.scenario_data.opposingTurn) {
+            if (this.scenario_data.turn > this.scenario_data.opposingTurn && this.scenario_data.server) {
                 return;
             }
             this.scenario_data.turn++;
+            if (!this.scenario_data.server) {
+                return;
+            }
             let burnData = this.players[this.scenario_data.player].burns.map((burn, ii) => {
                 if (ii < this.scenario_data.turn) {
                     return burn;
@@ -385,7 +389,7 @@ var main_app = new Vue({
                     responsePost = await responsePost.json();
                     this.scenario_data.gameId = responsePost._id;
                     this.scenario_data.turn = 0;
-                    setTimeout(this.startGame, 1000);
+                    setTimeout(this.startGame, 500);
                     break;
                 case 'start-refresh':
                     // GET request for current games
@@ -394,7 +398,7 @@ var main_app = new Vue({
                     this.games = response;
                     break;
                 case 'start-join':
-                    let responseJoin = await fetch(this.fetchURL + '/join/' + $('select')[0].value)
+                    let responseJoin = await fetch(this.fetchURL + '/games/' + $('select')[0].value)
                     responseJoin = await responseJoin.json();
                     let playerJoin = responseJoin.players.filter(player => {
                         return player.name === $('select')[1].value;
@@ -420,7 +424,7 @@ var main_app = new Vue({
                     this.scenario_data.scenario_length = responseJoin.scenarioConditions.gameLength;
                     this.scenario_data.burns_per_player = responseJoin.scenarioConditions.nBurns;
                     this.scenario_data.init_sun_angl = responseJoin.scenarioConditions.initSun;
-                    setTimeout(this.startGame, 1000);
+                    setTimeout(this.startGame, 500);
                     break;
                 case 'start-offline':
                     // Start with no requests
@@ -448,6 +452,9 @@ var main_app = new Vue({
             let del_height = window.innerHeight - $cvns.height;
             let del_width = window.innerWidth - $cvns.width;
             let int_ii = 0;
+            for (player in this.players) {
+                this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
+            }
             // Probably the dumbest way to do it ever
             function make_right_size() {
                 int_ii++;
@@ -463,6 +470,9 @@ var main_app = new Vue({
                 }
             }
             make_right_size();
+            if (!this.scenario_data.server) {
+                return;
+            }
             setInterval(async () => {
                 if (this.scenario_data.turn <= this.scenario_data.opposingTurn) {
                     return;
@@ -505,6 +515,11 @@ var main_app = new Vue({
                 this.players.gray.exist = true;
             }
         },
+        changeNumBurns: function() {
+            for (player in this.players) {
+                this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
+            }
+        }
     },
     watch: {
         'scenario_data.display_time': function () {

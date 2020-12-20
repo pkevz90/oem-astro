@@ -247,3 +247,14 @@ body, html {
   .start-button:hover {
     background-color:  rgb(150, 150, 200);
   }
+
+  #start-game {
+    border: 4px solid white; 
+    border-radius: 20px;
+    cursor: pointer;
+  }
+
+  #start-game:hover {
+    background-color: white;
+    color: black;
+  }
