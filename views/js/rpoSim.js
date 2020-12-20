@@ -452,9 +452,9 @@ var main_app = new Vue({
             let del_height = window.innerHeight - $cvns.height;
             let del_width = window.innerWidth - $cvns.width;
             let int_ii = 0;
-            for (player in this.players) {
-                this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
-            }
+            // for (player in this.players) {
+            //     this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
+            // }
             // Probably the dumbest way to do it ever
             function make_right_size() {
                 int_ii++;
@@ -777,14 +777,15 @@ function drawBurnPoints(sat) {
     ctx.fillStyle = 'black';
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = main_app.players[sat].color;
-    main_app.players[sat].burn_points.forEach((point) => {
-        ctx.beginPath()
-        pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
-        // ctx.fillRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
-        // ctx.strokeRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
-        ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2*Math.PI);
-        ctx.stroke();
-
+    main_app.players[sat].burn_points.forEach((point, ii) => {
+        if (ii >= main_app.scenario_data.turn) {
+            ctx.beginPath()
+            pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
+            // ctx.fillRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
+            // ctx.strokeRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
+            ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2*Math.PI);
+            ctx.stroke();
+         }
     })
 }
 
