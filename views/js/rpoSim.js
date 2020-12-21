@@ -78,7 +78,7 @@ Vue.component('player-data', {
     },
     template: '<div class="data-container" style="width: 25%" :style="{color: inplayer.color}"> \
                 <div  class="inner-data-container" @mouseover="mousedover" @mouseleave="mousedleft"> \
-                    {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }} <input type="radio" name="player" :value="inplayer.name">\
+                    {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }} <span v-if="inplayer.burn_total > 0"> ({{ inplayer.burn_total.toFixed(1) }} m/s) </span><input type="radio" name="player" :value="inplayer.name">\
                 </div> \
                 <burn-data :inburns="inplayer" :inburntime="burntime"></burn-data> \
                 <state-setup :insatellite="inplayer"></state-setup> \
@@ -117,6 +117,7 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                burn_total: 0,
                 angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
@@ -138,6 +139,7 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                burn_total: 0,
                 angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
@@ -159,6 +161,7 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                burn_total: 0,
                 angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
@@ -286,6 +289,17 @@ var main_app = new Vue({
                     drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.25, this.players[sat].color);
                 }
             }
+            // Calculate total fuel used
+            for (player in this.players) {
+                if (!this.players[player].exist) {
+                    continue;
+                }
+                let total_burn = 0;
+                for (let ii = 0; ii < main_app.scenario_data.burns_per_player; ii++) {
+                    total_burn += math.norm(main_app.players[player].burns[ii]);
+                }
+                main_app.players[player].burn_total = total_burn;
+            }
             // Draw burn if point is focused upon
             if (this.scenario_data.selected_burn_point !== null) {
                 let location = main_app.players[this.scenario_data.selected_burn_point.satellite].burn_points[this.scenario_data.selected_burn_point.point];
@@ -303,7 +317,7 @@ var main_app = new Vue({
             }
             calcData(this.scenario_data.sat_data.origin, this.scenario_data.sat_data.target)
         },
-        chosenGameChange: function(event) {
+        chosenGameChange: function (event) {
             let chosenGame = this.games.filter(game => {
                 return game._id === event.target.value;
             })
@@ -327,9 +341,8 @@ var main_app = new Vue({
             let burnData = this.players[this.scenario_data.player].burns.map((burn, ii) => {
                 if (ii < this.scenario_data.turn) {
                     return burn;
-                }
-                else {
-                    return [0,0];
+                } else {
+                    return [0, 0];
                 }
             })
             let outData = {
@@ -344,7 +357,11 @@ var main_app = new Vue({
                 body: JSON.stringify(outData)
             });
         },
-        startScreenClick: async function(event = {target: {id: 'start-refresh'}}) {
+        startScreenClick: async function (event = {
+            target: {
+                id: 'start-refresh'
+            }
+        }) {
             switch (event.target.id) {
                 case 'start-game':
                     $('.start-game-div').fadeIn(500);
@@ -433,7 +450,7 @@ var main_app = new Vue({
                     break;
             }
         },
-        startGame: function() {
+        startGame: function () {
             $('.start-game-div').fadeOut(500);
             this.scenario_data.game_started = true;
             $('#turn-button').show();
@@ -485,18 +502,17 @@ var main_app = new Vue({
                 responseInt.players.forEach(player => {
                     if (player.name !== this.scenario_data.player) {
                         this.players[player.name].burn_change.old = [...this.players[player.name].burns];
-                        this.players[player.name].burn_change.new = player.burns.map((burn,ii) => {
+                        this.players[player.name].burn_change.new = player.burns.map((burn, ii) => {
                             if (ii >= this.scenario_data.opposingTurn) {
-                                return [0,0];
-                            } 
-                            else {
+                                return [0, 0];
+                            } else {
                                 return burn;
                             }
-                        }); 
+                        });
                         this.players[player.name].burn_change.change = 0;
                     }
                 })
-            },5000)
+            }, 5000)
         },
         server_button_pushed: function () {
             if (this.scenario_data.server) {
@@ -515,7 +531,7 @@ var main_app = new Vue({
                 this.players.gray.exist = true;
             }
         },
-        changeNumBurns: function() {
+        changeNumBurns: function () {
             for (player in this.players) {
                 this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
             }
@@ -783,9 +799,9 @@ function drawBurnPoints(sat) {
             pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
             // ctx.fillRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
             // ctx.strokeRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
-            ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2*Math.PI);
+            ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
             ctx.stroke();
-         }
+        }
     })
 }
 
@@ -1173,8 +1189,11 @@ function burnCalc(sat, position2) {
     let dist = math.norm(rel);
     dist = dist < 1e-6 ? 1 : dist;
     let magnitude = dist / 60;
-    magnitude = magnitude > main_app.scenario_data.tactic_data[1] ? main_app.scenario_data.tactic_data[1] : magnitude;
+    if (sat.satellite === main_app.scenario_data.player || !main_app.scenario_data.server) {
+        magnitude = magnitude > main_app.scenario_data.tactic_data[1] ? main_app.scenario_data.tactic_data[1] : magnitude;
+    }
     main_app.players[sat.satellite].burns.splice(sat.point, 1, math.dotMultiply(magnitude, math.dotDivide(rel, dist)))
+    main_app.players[sat.satellite].burn_total = math.norm(main_app.players[sat.satellite].burns[ii]);
 }
 
 function targetCalc(sat, r2) {

@@ -1,260 +1,273 @@
-body, html {
-    background-color: rgb(30,30,50);
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+body,
+html {
+  background-color: rgb(30, 30, 50);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 #main-canvas {
-    position: relative;
-    z-index: 1;
+  position: relative;
+  z-index: 1;
 }
 
 #data-container {
-    position: fixed;
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    top: 3%;
-    right: 0%;
-    width: 50%;
-    height: 7%;
-    color: white;
-    z-index: 2;
-    background-color: rgba(50,50,50,0);
-    font-family: Arial, Helvetica, sans-serif;
+  position: fixed;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  top: 3%;
+  right: 0%;
+  width: 50%;
+  height: 7%;
+  color: white;
+  z-index: 2;
+  background-color: rgba(50, 50, 50, 0);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 #data-container div {
   min-width: 300px;
   padding: 1% 0%;
 }
+
 .inner-data-container {
-    z-index: 3;
-    width: 100%;
-    font-size: 3vw;
-    text-align: center;
+  z-index: 3;
+  width: 100%;
+  font-size: 3vw;
+  text-align: center;
 }
 
 #game-data-container {
-    color: white;
-    background-image: linear-gradient(135deg,rgba(100,150,255,0.45),rgba(0,0,0,0),rgba(255,150,100,0.45));
-    z-index: 0;
-    position: fixed;
-    width: 18%;
-    height: auto;
-    bottom: 2%;
-    left: 1%;
-    font-size: 2vw;
-    font-family: Arial, sans-serif;
-    border-radius: 20px;
-    text-align: center;
-    padding: 1%;
+  color: white;
+  background-image: linear-gradient(135deg, rgba(100, 150, 255, 0.45), rgba(0, 0, 0, 0), rgba(255, 150, 100, 0.45));
+  z-index: 0;
+  position: fixed;
+  width: 18%;
+  height: auto;
+  bottom: 2%;
+  left: 1%;
+  font-size: 2vw;
+  font-family: Arial, sans-serif;
+  border-radius: 20px;
+  text-align: center;
+  padding: 1%;
 }
 
 .noselect {
-    -webkit-touch-callout: none; /* iOS Safari */
-      -webkit-user-select: none; /* Safari */
-       -khtml-user-select: none; /* Konqueror HTML */
-         -moz-user-select: none; /* Firefox */
-          -ms-user-select: none; /* Internet Explorer/Edge */
-              user-select: none; /* Non-prefixed version, currently
+  -webkit-touch-callout: none;
+  /* iOS Safari */
+  -webkit-user-select: none;
+  /* Safari */
+  -khtml-user-select: none;
+  /* Konqueror HTML */
+  -moz-user-select: none;
+  /* Firefox */
+  -ms-user-select: none;
+  /* Internet Explorer/Edge */
+  user-select: none;
+  /* Non-prefixed version, currently
                                     supported by Chrome and Opera */
 }
 
 #time-slider {
-    position: fixed;
-    top: 1%;
-    height: auto;
-    width: 100%;
-    height: 1%;
-    z-index: 2;
+  position: fixed;
+  top: 1%;
+  height: auto;
+  width: 100%;
+  height: 1%;
+  z-index: 2;
 }
 
 .left-float {
   float: left;
 }
+
 .right-float {
   float: right;
 }
 
 .slider {
-    -webkit-appearance: none;
-    width: 99%;
-    height: 70%;
-    background:  rgb(150, 150, 150);
-    outline: none;
-    opacity: 0.4;
-    -webkit-transition: .2s;
-    transition: opacity .2s;
-  }
-  
-  
+  -webkit-appearance: none;
+  width: 99%;
+  height: 70%;
+  background: rgb(150, 150, 150);
+  outline: none;
+  opacity: 0.4;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
 
-  .slider:hover {
-    opacity: 1;
-  }
-  
-  .slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 1.2vw;
-    height: 1.2vw;
-    background: rgb(200, 200, 200);
-    border-radius: 50%;
-    cursor: pointer;
-  }
-  
-  .slider::-moz-range-thumb {
-    width: 2%;
-    height: 20px;
-    background: #000;
-    cursor: pointer;
-  }
 
-  #turn-button {
-    position: fixed;
-    right: 1%;
-    bottom: 2%;
-    color: rgb(138, 138, 25);
-    font-size:4vh;
-    cursor: pointer;
-    z-index: 4;
-    border: 2px solid rgb(138, 138, 24);
-    border-radius: 10px;
-    padding: 0.5%;
-  }
-  #turn-button:hover {
-    background-color: rgba(255,255,255,0.4);
-  }
-  th {
-    width: 30%;
-  }
 
-  table, tr {
-    width: 100%;
-    font-family: 'Courier New', Courier, monospace;
-  }
+.slider:hover {
+  opacity: 1;
+}
 
-  tr {
-    text-align: center;
-  }
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.2vw;
+  height: 1.2vw;
+  background: rgb(200, 200, 200);
+  border-radius: 50%;
+  cursor: pointer;
+}
 
-  .setup-input-div {
-    text-align: center;
-    font-size: 1vw;
-  }
+.slider::-moz-range-thumb {
+  width: 2%;
+  height: 20px;
+  background: #000;
+  cursor: pointer;
+}
 
-  .setup-input-div input {
-    background-color: rgba(0,0,0,0);
-    color: white;
-    width: 20%;
-    font-size: 1vw;
-    text-align: center;
-  }
+#turn-button {
+  position: fixed;
+  right: 1%;
+  bottom: 2%;
+  color: rgb(138, 138, 25);
+  font-size: 4vh;
+  cursor: pointer;
+  z-index: 4;
+  border: 2px solid rgb(138, 138, 24);
+  border-radius: 10px;
+  padding: 0.5%;
+}
 
-  .setup-zone input {
-    background-color: rgba(0,0,0,0);
-    color: white;
-    width: 30%;
-    font-size: 2vw;
-    text-align: center;
-  }
+#turn-button:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
 
-  .setup-zone {
-    position: fixed;
-    bottom: 2%;
-    left: 1%;
-    width: 90%;
-    z-index: 5;
-    display: flex;
-    font-size: 2vw;
-    justify-content: left;
-    color: white;
-  }
+th {
+  width: 30%;
+}
 
-  .setup-zone div {
-    margin: 1%;
-    padding: 1%;
-  }
-  
-  #add-sat-button {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    height: 4vw;
-    width: 4vw;
-    border: 2px solid white;
-    border-radius: 50%;
-    text-align: center;
-    cursor: pointer;
-    font-size: 3.5vw;
-    margin-top: 50%;
-  }
+table,
+tr {
+  width: 100%;
+  font-family: 'Courier New', Courier, monospace;
+}
 
-  #add-sat-button:hover {
-    background-color: rgba(255,255,255,0.4);
-  }
+tr {
+  text-align: center;
+}
 
-  .data-container:hover {
-    opacity: 1;
-  }
+.setup-input-div {
+  text-align: center;
+  font-size: 1vw;
+}
 
-  .data-container {
-    padding: 0% 0% 5% 0%;
-  }
+.setup-input-div input {
+  background-color: rgba(0, 0, 0, 0);
+  color: white;
+  width: 20%;
+  font-size: 1vw;
+  text-align: center;
+}
 
-  .start-game-div {
-    position: fixed;
-    z-index: 4;
-    left: 50%;
-    top: 50%;
-    background-color: rgb(100, 100, 150);
-    width: 50%;
-    height: auto;
-    transform: translate(-50%,-50%);
-    padding: 1%;
-    display: flex;
-    justify-content: space-around;
-    border-radius: 30px;
-    text-align: center;
-  }
+.setup-zone input {
+  background-color: rgba(0, 0, 0, 0);
+  color: white;
+  width: 30%;
+  font-size: 2vw;
+  text-align: center;
+}
 
-  .start-game-div div input, .start-game-div div select {
-    font-size: 2vw;
-    width: 15vw;
-    padding: 2%;
-    margin: 2% 0%;
-  }
+.setup-zone {
+  position: fixed;
+  bottom: 2%;
+  left: 1%;
+  width: 90%;
+  z-index: 5;
+  display: flex;
+  font-size: 2vw;
+  justify-content: left;
+  color: white;
+}
 
-  
+.setup-zone div {
+  margin: 1%;
+  padding: 1%;
+}
 
-  .start-button {
-    border: 1px solid white;
-    border-radius: 20px;
-    color: white;
-    background-color:  rgb(100, 100, 150);
-    padding: 16px 32px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 2vw;
-    margin: 4px 2px;
-    cursor: pointer;
-  }
+#add-sat-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 4vw;
+  width: 4vw;
+  border: 2px solid white;
+  border-radius: 50%;
+  text-align: center;
+  cursor: pointer;
+  font-size: 3.5vw;
+  margin-top: 50%;
+}
 
-  .start-button:hover {
-    background-color:  rgb(150, 150, 200);
-  }
+#add-sat-button:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
 
-  #start-game {
-    border: 4px solid white; 
-    border-radius: 20px;
-    cursor: pointer;
-  }
+.data-container:hover {
+  opacity: 1;
+}
 
-  #start-game:hover {
-    background-color: white;
-    color: black;
-  }
+.data-container {
+  padding: 0% 0% 5% 0%;
+}
+
+.start-game-div {
+  position: fixed;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  background-color: rgb(100, 100, 150);
+  width: 50%;
+  height: auto;
+  transform: translate(-50%, -50%);
+  padding: 1%;
+  display: flex;
+  justify-content: space-around;
+  border-radius: 30px;
+  text-align: center;
+}
+
+.start-game-div div input,
+.start-game-div div select {
+  font-size: 2vw;
+  width: 15vw;
+  padding: 2%;
+  margin: 2% 0%;
+}
+
+
+
+.start-button {
+  border: 1px solid white;
+  border-radius: 20px;
+  color: white;
+  background-color: rgb(100, 100, 150);
+  padding: 16px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 2vw;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+.start-button:hover {
+  background-color: rgb(150, 150, 200);
+}
+
+#start-game {
+  border: 4px solid white;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+#start-game:hover {
+  background-color: white;
+  color: black;
+}

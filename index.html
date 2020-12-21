@@ -1,97 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OEM-Astro</title>
-    <link rel="stylesheet" href="./SupportLibraries/bootstrap.min2.css">
-    <style>
-      .card {
-        opacity: 0.7;
-      }
-      .card:hover {
-        opacity: 1;
-      }
-      #background-canvas {
-        position: fixed;
-        top: 5%;
-        left: 0%;
-        width: 100%;
-        height: 100%;
-      }
-      .top {
-        position: relative;
-        z-index: 1;
-      }.top2 {
-        position: relative;
-        z-index: 2;
-      }
-    </style>
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OEM-Astro</title>
+  <link rel="stylesheet" href="./SupportLibraries/bootstrap.min2.css">
+  <style>
+    .card {
+      opacity: 0.7;
+    }
+
+    .card:hover {
+      opacity: 1;
+    }
+
+    #background-canvas {
+      position: fixed;
+      top: 5%;
+      left: 0%;
+      width: 100%;
+      height: 100%;
+    }
+
+    .top {
+      position: relative;
+      z-index: 1;
+    }
+
+    .top2 {
+      position: relative;
+      z-index: 2;
+    }
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 </head>
+
 <body class="bg-light" style="overflow-x: hidden;">
-    <nav class="top2 navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand " href="#">OEM Astro Applications</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-      
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul class="navbar-nav mr-auto">
-            <li class="nav-item">
-              <a class="nav-link" href="https://www.n2yo.com/">N2YO</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="https://celestrak.com/">Celestrak</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="https://www.space-track.org/auth/login">Space-Track</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="https://spaceflightnow.com/">Spaceflight Now</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="https://digitalu.af.mil/" data-toggle="tooltip" title="Free resource for Active Duty Air/Space force looking for build digital skills">Digital University</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="https://www.freecodecamp.org/">Free Code Camp</a>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Topic Links
-              </a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                <h6 class="dropdown-header">Dyanmics</h6>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Clohessy%E2%80%93Wiltshire_equations">Clohessy–Wiltshire (HCW) Equations</a>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Orbital_elements">Classical Orbital Elements</a>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Perturbation_(astronomy)">Orbital Perturbations</a>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Vis-viva_equation">Vis-viva (Velocity) Equation</a>
-                <h6 class="dropdown-header">Reference Frames</h6>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Earth-centered_inertial">Earth-Centered Inertial</a>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/ECEF">Earth-Centered Earth-Fixed</a>
-                <h6 class="dropdown-header">Control & Estimation</h6>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Kalman_filter">Kalman Filters</a>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Least_squares">Data Fitting</a>
-                <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Control_theory">Control Theory</a>
-              </div>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="https://github.com/pkevz90/oem-astro">Github Repo</a>
-            </li>
-          </ul>
+  <nav class="top2 navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand " href="#">OEM Astro Applications</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.n2yo.com/">N2YO</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://celestrak.com/">Celestrak</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.space-track.org/auth/login">Space-Track</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://spaceflightnow.com/">Spaceflight Now</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://digitalu.af.mil/" data-toggle="tooltip"
+            title="Free resource for Active Duty Air/Space force looking for build digital skills">Digital
+            University</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://www.freecodecamp.org/">Free Code Camp</a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">
+            Topic Links
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <h6 class="dropdown-header">Dyanmics</h6>
+            <a class="dropdown-item"
+              href="https://en.wikipedia.org/wiki/Clohessy%E2%80%93Wiltshire_equations">Clohessy–Wiltshire (HCW)
+              Equations</a>
+            <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Orbital_elements">Classical Orbital
+              Elements</a>
+            <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Perturbation_(astronomy)">Orbital
+              Perturbations</a>
+            <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Vis-viva_equation">Vis-viva (Velocity)
+              Equation</a>
+            <h6 class="dropdown-header">Reference Frames</h6>
+            <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Earth-centered_inertial">Earth-Centered
+              Inertial</a>
+            <a class="dropdown-item" href="https://en.wikipedia.org/wiki/ECEF">Earth-Centered Earth-Fixed</a>
+            <h6 class="dropdown-header">Control & Estimation</h6>
+            <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Kalman_filter">Kalman Filters</a>
+            <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Least_squares">Data Fitting</a>
+            <a class="dropdown-item" href="https://en.wikipedia.org/wiki/Control_theory">Control Theory</a>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://github.com/pkevz90/oem-astro">Github Repo</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <div class="row top" style="padding: 0% 2.5%">
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm hover-card"
+        style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+        <div class="card-body">
+          <h5 class="card-title">RPO Simulator</h5>
+          <p class="card-text">Pit up to 4 players against each other</p>
+          <a href="./views/rpoSim.html" class="btn btn-secondary">Open</a>
         </div>
-    </nav>
-    <div class="row top" style="padding: 0% 2.5%" >
-        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm hover-card" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">RPO Simulator</h5>
-                <p class="card-text">Pit up to 4 players against each other</p>
-                <a href="./views/rpoSim.html" class="btn btn-secondary">Open</a>
-                </div>
-            </div>
-        </div>
-        <!-- <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      </div>
+    </div>
+    <!-- <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
             <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
                 <div class="card-body">
                 <h5 class="card-title">GEO Plane and Longitude Analysis <span class="badge badge-secondary">Beta</span></h5>
@@ -100,75 +118,80 @@
                 </div>
             </div>
         </div> -->
-        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">Classical Orbital Elements <span class="badge badge-secondary">Mobile</span></h5>
-                <p class="card-text">Visualize orbits and maneuvers in the ECI and ECEF frames</p>
-                <a href="./views/coeVis.html" class="btn btn-secondary">Open</a>
-                </div>
-            </div>
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+        <div class="card-body">
+          <h5 class="card-title">Classical Orbital Elements <span class="badge badge-secondary">Mobile</span></h5>
+          <p class="card-text">Visualize orbits and maneuvers in the ECI and ECEF frames</p>
+          <a href="./views/coeVis.html" class="btn btn-secondary">Open</a>
         </div>
-        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">Relative Motion Elements <span class="badge badge-secondary">Mobile</span></h5>
-                <p class="card-text">Visualize relative motion utilizing RMOE's</p>
-                <a href="./views/rmoeVis2d.html" class="btn btn-secondary">Open 2D</a>
-                <a href="./views/rmoeVis.html" class="btn btn-secondary">Open 3D</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">Reachability</h5>
-                <p class="card-text">Perform kinematic analysis on RIC states</p>
-                <a href="./views/reachSim.html" class="btn btn-secondary">Open</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">Finite Burn Calculator <span class="badge badge-secondary">Beta</span></h5>
-                <p class="card-text">Convert burn plans from impulsive to finite</p>
-                <a href="./views/rpoFinite.html" class="btn btn-secondary">Open</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">Fourier Transforms</h5>
-                <p class="card-text">Explains the fundementals of Fourier Tranforms</p>
-                <a href="./views/fourier.html" class="btn btn-secondary">Open</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">Waypoint Planner</h5>
-                <p class="card-text">Plan out RPO trajectories with an arbitrary number of waypoints.</p>
-                <a href="./views/WaypointPlannerOwWiki.html" class="btn btn-secondary">Open</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">Least Squares Demonstrator</h5>
-                <p class="card-text">Visualize how noisy data is handled</p>
-                <a href="./views/leastSquares.html" class="btn btn-secondary">Open</a>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
-    <canvas id="background-canvas"></canvas>
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+        <div class="card-body">
+          <h5 class="card-title">Relative Motion Elements <span class="badge badge-secondary">Mobile</span></h5>
+          <p class="card-text">Visualize relative motion utilizing RMOE's</p>
+          <a href="./views/rmoeVis2d.html" class="btn btn-secondary">Open 2D</a>
+          <a href="./views/rmoeVis.html" class="btn btn-secondary">Open 3D</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+        <div class="card-body">
+          <h5 class="card-title">Reachability</h5>
+          <p class="card-text">Perform kinematic analysis on RIC states</p>
+          <a href="./views/reachSim.html" class="btn btn-secondary">Open</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+        <div class="card-body">
+          <h5 class="card-title">Finite Burn Calculator <span class="badge badge-secondary">Beta</span></h5>
+          <p class="card-text">Convert burn plans from impulsive to finite</p>
+          <a href="./views/rpoFinite.html" class="btn btn-secondary">Open</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+        <div class="card-body">
+          <h5 class="card-title">Fourier Transforms</h5>
+          <p class="card-text">Explains the fundementals of Fourier Tranforms</p>
+          <a href="./views/fourier.html" class="btn btn-secondary">Open</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+        <div class="card-body">
+          <h5 class="card-title">Waypoint Planner</h5>
+          <p class="card-text">Plan out RPO trajectories with an arbitrary number of waypoints.</p>
+          <a href="./views/WaypointPlannerOwWiki.html" class="btn btn-secondary">Open</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+        <div class="card-body">
+          <h5 class="card-title">Least Squares Demonstrator</h5>
+          <p class="card-text">Visualize how noisy data is handled</p>
+          <a href="./views/leastSquares.html" class="btn btn-secondary">Open</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <canvas id="background-canvas"></canvas>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>
-    <script src="./views/js/index.js"></script>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+    integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous">
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous">
+  </script>
+  <script src="./views/js/index.js"></script>
 </body>
+
 </html>
