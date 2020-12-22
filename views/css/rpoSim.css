@@ -4,6 +4,7 @@ html {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  font-family: Segoe UI Heavy, Helvetica, sans-serif;
 }
 
 #main-canvas {
@@ -14,21 +15,20 @@ html {
 #data-container {
   position: fixed;
   display: flex;
-  justify-content: space-around;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  top: 3%;
+  top: 0%;
   right: 0%;
-  width: 50%;
+  width: 40%;
   height: 7%;
   color: white;
-  z-index: 2;
+  z-index: 0;
   background-color: rgba(50, 50, 50, 0);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Segoe UI Heavy, Helvetica, sans-serif;
 }
 
 #data-container div {
   min-width: 300px;
-  padding: 1% 0%;
 }
 
 .inner-data-container {
@@ -48,9 +48,7 @@ html {
   bottom: 2%;
   left: 1%;
   font-size: 2vw;
-  font-family: Arial, sans-serif;
   border-radius: 20px;
-  text-align: center;
   padding: 1%;
 }
 
@@ -197,24 +195,20 @@ tr {
   transform: translate(-50%, -50%);
   height: 4vw;
   width: 4vw;
-  border: 2px solid white;
+  border: 3px solid white;
   border-radius: 50%;
   text-align: center;
   cursor: pointer;
-  font-size: 3.5vw;
-  margin-top: 50%;
+  font-size: 2.6vw;
 }
 
 #add-sat-button:hover {
   background-color: rgba(255, 255, 255, 0.4);
+  border-radius: 20%;
 }
 
-.data-container:hover {
-  opacity: 1;
-}
-
-.data-container {
-  padding: 0% 0% 5% 0%;
+.slow {
+  transition: 0.2s;
 }
 
 .start-game-div {
@@ -223,7 +217,7 @@ tr {
   left: 50%;
   top: 50%;
   background-color: rgb(100, 100, 150);
-  width: 50%;
+  width: 70%;
   height: auto;
   transform: translate(-50%, -50%);
   padding: 1%;
@@ -270,4 +264,19 @@ tr {
 #start-game:hover {
   background-color: white;
   color: black;
+  border-radius: 10px;
+}
+
+.player-data {
+  text-align: left;
+  font-size: 1.2vw;
+  padding: 2%;
+}
+
+.player-data input {
+  color: white;
+  background-color: black;
+  width: 4vw;
+  font-size: 1.2vw;
+  text-align: center;
 }

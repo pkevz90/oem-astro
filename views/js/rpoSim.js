@@ -1,106 +1,8 @@
-Vue.component('state-setup', {
-    props: ['insatellite'],
-    methods: {
-        init_changed: function (event) {
-            let newState = [...this.insatellite.initial_state];
-            newState[Number(event.target.id)] = Number(event.target.value);
-            main_app.players[this.insatellite.name].initial_state = newState;
-        },
-        property_changed: function (event) {
-            if (event.target.id === 'required_cats') {
-                main_app.players[this.insatellite.name][event.target.id][$(event.target).parent().find('input').index(event.target)] = Number(event.target.value);
-
-            } else {
-                main_app.players[this.insatellite.name][event.target.id] = Number(event.target.value);
-            }
-        }
-    },
-    template: '<div> \
-                <div class="setup-input-div">  \
-                    <span>A<sub>e</sub></span> <input min="0" type="number" id="0" :value="insatellite.initial_state[0]" @input="init_changed"> km\
-                </div> \
-                <div class="setup-input-div">  \
-                    X<sub>d</sub> <input type="number" id="1" :value="insatellite.initial_state[1]" @input="init_changed"> km\
-                </div> \
-                <div class="setup-input-div">  \
-                    Y<sub>d</sub> <input type="number" id="2" :value="insatellite.initial_state[2]" @input="init_changed"> km\
-                </div> \
-                <div class="setup-input-div">  \
-                    B <input id="3" type="number" step="1" :value="insatellite.initial_state[3]" @input="init_changed"><sup>o</sup>\
-                </div> \
-                <div class="setup-input-div">  \
-                    &#916V<sub>tot</sub> <input id="scenario_fuel" type="number" step="1" :value="insatellite.scenario_fuel" @input="property_changed"> m/s\
-                </div> \
-                <div class="setup-input-div">  \
-                    &#916V<sub>turn</sub> <input id="turn_fuel" type="number" step="1" :value="insatellite.turn_fuel" @input="property_changed"> m/s\
-                </div> \
-                <div class="setup-input-div">  \
-                    Range<sub>req</sub> < <input id="max_range" type="number" step="1" :value="insatellite.max_range" @input="property_changed">\
-                </div> \
-                <div class="setup-input-div">  \
-                    <input id="required_cats" type="number" step="1" :value="insatellite.required_cats[0]" @input="property_changed"> < CATS<sub>req</sub> < <input id="required_cats" type="number" step="1" :value="insatellite.required_cats[1]" @input="property_changed">\
-                </div> \
-              </div>'
-})
-
-Vue.component('burn-data', {
-    props: ['inburns', 'inburntime'],
-    data: function () {
-        return {};
-    },
-    methods: {
-        hrsToTime: function (hrs) {
-            hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
-            return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
-        }
-
-    },
-    template: '<div style="width: 100%; display: none">\
-                <table> \
-                <tr>  \
-                    <th>Time</th> \
-                    <th>Radial</th> \
-                    <th>In-Track</th> \
-                </tr> \
-                <tr v-for="(burn,index) in inburns.burns"> \
-                    <td>{{hrsToTime(index * inburntime)}}</td> \
-                    <td>{{ burn[0].toFixed(3) }} m/s</td> \
-                    <td>{{ burn[1].toFixed(3) }} m/s</td> \
-                </tr> \
-                </table> \
-               </div>'
-})
-
-Vue.component('player-data', {
-    props: ['inplayer', 'burntime'],
-    data: function () {
-        return {};
-    },
-    template: '<div class="data-container" style="width: 25%" :style="{color: inplayer.color}"> \
-                <div  class="inner-data-container" @mouseover="mousedover" @mouseleave="mousedleft"> \
-                    {{ inplayer.name.charAt(0).toUpperCase() + inplayer.name.slice(1) }} <span v-if="inplayer.burn_total > 0"> ({{ inplayer.burn_total.toFixed(1) }} m/s) </span><input type="radio" name="player" :value="inplayer.name">\
-                </div> \
-                <burn-data :inburns="inplayer" :inburntime="burntime"></burn-data> \
-                <state-setup :insatellite="inplayer"></state-setup> \
-               </div>',
-    methods: {
-        mousedover: function (event) {
-            if (!main_app.scenario_data.game_started) {
-                return;
-            }
-            $(event.target).next().slideDown(150);
-        },
-        mousedleft: function (event) {
-            $(event.target).next().slideUp(100);
-        }
-    }
-})
-
 var main_app = new Vue({
     el: "#main-app",
     data: {
-        // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -183,6 +85,7 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                burn_total: 0,
                 angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
@@ -365,7 +268,6 @@ var main_app = new Vue({
             switch (event.target.id) {
                 case 'start-game':
                     $('.start-game-div').fadeIn(500);
-                    this.startScreenClick();
                     break;
                 case 'start-server':
                     // POST Request new game
@@ -482,7 +384,9 @@ var main_app = new Vue({
                 } else {
                     $('#data-container').animate({
                         opacity: 1,
-                        'width': '100%'
+                        width: '20%',
+                        'top': '5%',
+                        'left': '0%',
                     }, 500);
                 }
             }
@@ -513,16 +417,6 @@ var main_app = new Vue({
                     }
                 })
             }, 5000)
-        },
-        server_button_pushed: function () {
-            if (this.scenario_data.server) {
-                this.scenario_data.server = false;
-                return;
-            }
-            this.scenario_data.serverName = window.prompt('Enter name of game:');
-            if (this.scenario_data.serverName > 0) {
-                this.scenario_data.server = true;
-            }
         },
         add_player: function () {
             if (!this.players.green.exist) {
@@ -1062,6 +956,9 @@ $("input[name='player']")[0].checked = true;
 for (player in main_app.players) {
     main_app.players[player].burns = math.zeros(main_app.scenario_data.burns_per_player, 2)._data;
 }
+fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
+    main_app.games = res;
+}).catch(err => alert(err))
 
 
 function animation(time) {

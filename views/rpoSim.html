@@ -18,10 +18,21 @@
 <body class="noselect">
     <div id="main-app">
         <div id="data-container">
-            <player-data :burntime="turn_length" :inplayer="players[player]" v-for="player in active_players">
-            </player-data>
+            <div class="player-data" v-for="player in players" v-if="player.exist" v-bind:style="{color: player.color}">
+                <div><span style="font-size:2em">{{ player.name.toUpperCase() }}</span> <span v-if="scenario_data.game_started">{{ player.burn_total.toFixed(2) }} m/s</span><input type="radio" name="player" :value="player.name"></div>
+                <div v-if="!scenario_data.game_started">
+                    <div>Ae <input type="Number" min="0" v-model.Number="player.initial_state[0]"> km</div>
+                    <div>R <input type="Number" v-model.Number="player.initial_state[1]"> km</div>
+                    <div>I <input type="Number" v-model.Number="player.initial_state[2]"> km</div>
+                    <div>B <input type="Number" v-model.Number="player.initial_state[3]"> km</div>
+                    <div>Fuel <input type="Number" min="0" v-model.Number="player.scenario_fuel"> m/s</div>
+                    <div>Fuel/Turn <input type="Number" min="0" v-model.Number="player.turn_fuel"> m/s</div>
+                    <div><input type="Number" min="0" v-model.Number="player.required_cats[0]"> < CATS < <input type="Number" min="0" v-model.Number="player.required_cats[1]"></div>
+                    <div>Range <input type="Number" min="0" v-model.Number="player.max_range"> km</div>
+                </div>
+            </div>
             <div v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player"
-                style="position: relative"><span id="add-sat-button">+</span></div>
+                style="position: relative; height: 300px;"><span class="slow" id="add-sat-button">+</span></div>
         </div>
         <div id="game-data-container" style="display: none;">
             <div><span class="left-float">Range</span> <span
@@ -52,16 +63,16 @@
             <div>
                 Initial Sun <input type="number" step="0.01" v-model.number="scenario_data.init_sun_angl">
             </div>
-            <div id="start-game" @click="startScreenClick">
+            <div class="slow" id="start-game" @click="startScreenClick">
                 Start
             </div>
         </div>
-        <div id="turn-button" @click="turn_button_click" style="display: none;">
+        <div class="slow" id="turn-button" @click="turn_button_click" style="display: none;">
             <span>Turn {{ scenario_data.turn }}</span>
         </div>
         <div class="start-game-div" style="display: none;">
             <div>
-                <span style="font-size: 3vw;">Start Server</span>
+                <span style="font-size: 3vw; color: white;">Start Server</span>
                 <div>
                     <input type="text" placeholder="Server Name" id="game-name" autocomplete="off">
                 </div>
@@ -69,16 +80,18 @@
                     <input type="password" placeholder="Password">
                 </div>
                 <div>
-                    <button id="start-server" class="start-button" @click="startScreenClick">Start Server</button>
+                    <button id="start-server" class="start-button slow" @click="startScreenClick">Start Server</button>
                 </div>
             </div>
             <div>
-                <span style="font-size: 3vw;">Join Server</span>
+                <span style="font-size: 3vw; color: white;">Join Server</span>
                 <div>
                     <select id="join-game" @change="chosenGameChange">
                         <option value="default" disabled selected>Join Game</option>
                         <option :value="game._id" v-for="game in games">{{ game.name }}</option>
                     </select>
+                </div>
+                <div>
                     <select id="team">
                         <option :value="player" v-for="player in chosenGamePlayers">{{ player.toUpperCase() }}</option>
                     </select>
@@ -87,14 +100,14 @@
                     <input type="password" placeholder="Password">
                 </div>
                 <div>
-                    <button id="start-refresh" class="start-button" @click="startScreenClick">Refresh</button>
-                    <button id="start-join" class="start-button" @click="startScreenClick">Join</button>
+                    <button id="start-refresh" class="start-button slow" @click="startScreenClick">Refresh</button>
+                    <button id="start-join" class="start-button slow" @click="startScreenClick">Join</button>
                 </div>
             </div>
             <div>
-                <span style="font-size: 3vw;">Offline</span>
+                <span style="font-size: 3vw; color: white;">Offline</span>
                 <div>
-                    <button id="start-offline" class="start-button" @click="startScreenClick">Start Offline</button>
+                    <button id="start-offline" class="start-button slow" @click="startScreenClick">Start Offline</button>
                 </div>
             </div>
         </div>
