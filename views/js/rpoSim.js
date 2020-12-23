@@ -159,6 +159,27 @@ var main_app = new Vue({
             drawStars(cnvs, ctx);
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             // Draw Sun
+            let calcBurns;
+            for (sat in this.players) {
+                if (this.players[sat].exist) {
+                    if (this.players[sat].burn_change.change < 1) {
+                        this.players[sat].burn_change.change += 0.025;
+                        calcBurns = math.add(this.players[sat].burn_change.old, math.multiply(this.players[sat].burn_change.change, math.subtract(this.players[sat].burn_change.new, this.players[sat].burn_change.old)));
+                        if (this.players[sat].burn_change.change > 0.999999) {
+                            this.players[sat].burns = [...this.players[sat].burn_change.new];
+                            this.players[sat].burn_change.change = 1;
+                        }
+                    } else {
+                        calcBurns = this.players[sat].burns;
+                    }
+                    this.players[sat].burn_points = calculateBurnPoints('blue', calcBurns, this.players[sat].initial_state);
+                    }
+            }
+            for (sat in this.players) {
+                if (this.players[sat].exist) {
+                    this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time, sat);
+                }
+            }
             let sunPos;
             if (this.scenario_data.sat_data.target === null) {
                 sunPos = [0, 0];
@@ -166,7 +187,7 @@ var main_app = new Vue({
                 sunPos = this.players[this.scenario_data.sat_data.target].current_state || [0, 0];
             }
             drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 135, this.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * this.scenario_data.game_time * 3600, 'rgba(150,150,50,1)', 9);
-            let calcBurns;
+
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     if (this.players[sat].burn_change.change < 1) {
@@ -214,7 +235,11 @@ var main_app = new Vue({
             }
             for (sat in this.players) {
                 if (this.players[sat].exist) {
-                    this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time, sat);
+                    drawSatInfo(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.players[sat]);
+                    }
+            }
+            for (sat in this.players) {
+                if (this.players[sat].exist) {
                     drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.25, this.players[sat].color);
                 }
             }
