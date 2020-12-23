@@ -165,7 +165,7 @@ var main_app = new Vue({
             } else {
                 sunPos = this.players[this.scenario_data.sat_data.target].current_state || [0, 0];
             }
-            drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 90, this.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * this.scenario_data.game_time * 3600, 'rgba(255,255,0,0.5)', 9);
+            drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 135, this.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * this.scenario_data.game_time * 3600, 'rgba(150,150,50,1)', 9);
             let calcBurns;
             for (sat in this.players) {
                 if (this.players[sat].exist) {
@@ -186,12 +186,6 @@ var main_app = new Vue({
             if (this.scenario_data.game_started) {
                 drawAnimations(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             }
-            for (sat in this.players) {
-                if (this.players[sat].exist) {
-                    this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time, sat);
-                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.25, this.players[sat].color);
-                }
-            }
             // Calculate total fuel used
             for (player in this.players) {
                 if (!this.players[player].exist) {
@@ -209,7 +203,7 @@ var main_app = new Vue({
                 let burn = main_app.players[this.scenario_data.selected_burn_point.satellite].burns[this.scenario_data.selected_burn_point.point];
                 let burnN = math.norm(burn);
                 if (burnN > 1e-6) {
-                    drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 30 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[this.scenario_data.selected_burn_point.satellite].color, 4);
+                    drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 90 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[this.scenario_data.selected_burn_point.satellite].color, 4);
                 }
             }
             if (main_app.scenario_data.tactic_data[0] === 'target') {
@@ -217,6 +211,12 @@ var main_app = new Vue({
                     main_app.scenario_data.target_display += 0.08333333;
                 }
                 drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, main_app.scenario_data.tactic_data[3] / 1000, main_app.scenario_data.tactic_data[1] * this.scenario_data.target_display)
+            }
+            for (sat in this.players) {
+                if (this.players[sat].exist) {
+                    this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time, sat);
+                    drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.25, this.players[sat].color);
+                }
             }
             calcData(this.scenario_data.sat_data.origin, this.scenario_data.sat_data.target)
         },
@@ -804,45 +804,43 @@ function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAng
     ctx.restore();
 }
 
-function drawArrow(ctx, pixelLocation, length = 15, angle = 0, color = 'rgba(255,255,0,0.5)', width = 6) {
-    pixelX = pixelLocation[0];
-    pixelY = pixelLocation[1];
+
+function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255,255,0,1)', width = 6) {
+    let pixelX = pixelLocation[0];
+    let pixelY = pixelLocation[1];
     let ct = Math.cos(angle),
         st = Math.sin(angle);
-    rotMat = [
+    let rotMat = [
         [ct, -st],
         [st, ct]
     ];
-    // let arrow = [
-    //     [0, -length *  2 + 10 * length / 60],
-    //     [3, -length *  2 + 12 * length / 60],
-    //     [0, -length *  2],
-    //     [-3, -length * 2 + 12 * length / 60],
-    //     [0, -length *  2 + 10 * length / 60]
-    // ];
     let arrow = [
-        [0, -length * 2 + 10 * length / 60],
-        [3, -length * 2 + 12 * length / 60],
-        [0, -length * 2],
-        [-3, -length * 2 + 12 * length / 60],
-        [0, -length * 2 + 10 * length / 60]
+        [-0.125, 0],
+        [-0.125, -1.5],
+        [-0.23, -1.5],
+        [0, -2],
+        [0.23, -1.5],
+        [0.125, -1.5],
+        [0.125, 0],
+        [0, 0] 
     ];
-    let transformedArrow = math.transpose(math.multiply(rotMat, math.transpose(arrow)));
+    let transformedArrow = math.dotMultiply(math.transpose(math.multiply(rotMat, math.transpose(arrow))), length / 2);
     ctx.save();
     ctx.fillStyle = color;
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = 'rgb(30, 30, 50)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    // ctx.translate(cnvs.width / 2 - origin[0] * pixelX / 2 + main_app.display_data.center[0] * pixelX / 2, cnvs.heihgt / 2 + main_app.display_data.center[1] * pixelY * 2 - origin[1] * pixelY * 2);
     ctx.translate(pixelX, pixelY)
-    ctx.moveTo(0, 0);
+    ctx.moveTo(0,0);
     transformedArrow.forEach((point) => {
         ctx.lineTo(point[0], point[1]);
     });
-    ctx.lineWidth = width;
-    ctx.stroke();
     ctx.fill();
+    ctx.stroke();
     ctx.restore();
 }
+
+
 
 function setMouseCallbacks() {
     $('#main-canvas').mousedown(event => {
