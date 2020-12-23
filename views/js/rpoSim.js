@@ -1,8 +1,8 @@
 var main_app = new Vue({
     el: "#main-app",
     data: {
-        // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -701,17 +701,15 @@ function drawBurnPoints(sat) {
 
 function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
     let points, r, v, pixelPos;
-    ctx.strokeStyle = input_object.satellite.color;
-    ctx.lineWidth = 4;
     let nodes = 8;
+    // let nodes = 80 / input_object.satellite.burn_points.length;
+    // console.log(nodes);
+    nodes = nodes < 2 ? 2 : nodes;
     let pRR = PhiRR(input_object.tBurns * 3600 / nodes),
         pRV = PhiRV(input_object.tBurns * 3600 / nodes),
         pVR = PhiVR(input_object.tBurns * 3600 / nodes),
         pVV = PhiVV(input_object.tBurns * 3600 / nodes);
     for (let jj = 0; jj < input_object.satellite.burn_points.length; jj++) {
-        // if (jj === main_app.scenario_data.turn) {
-        //     ctx.globalAlpha = 0.75; // turns future trajectory transparent
-        // }
         points = [];
         pixelPos = [];
         points.push(input_object.satellite.burn_points[jj]);
@@ -722,7 +720,13 @@ function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
             points.push(math.concat(r, v, 0))
             pixelPos.push(getScreenPixel(cnvs, r[0][0], r[1][0], limit, center, true))
         }
+        ctx.strokeStyle = 'rgb(30, 30, 50)';
+        ctx.lineWidth = 8;
         drawCurve(ctx, pixelPos, 1);
+        ctx.strokeStyle = input_object.satellite.color;
+        ctx.lineWidth = 4;
+        drawCurve(ctx, pixelPos, 1);
+
     }
     ctx.globalAlpha = 1;
 
@@ -738,12 +742,12 @@ function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAng
     ctx.save();
     ctx.beginPath();
     ctx.translate(location[0], location[1]);
-    ctx.strokeStyle = color;
-    var grd = ctx.createLinearGradient(-20 * size * Math.sin(-sunAngle), -20 * size * Math.cos(-sunAngle), 20 * size * Math.sin(-sunAngle), 20 * size * Math.cos(-sunAngle));
-    grd.addColorStop(0, color);
-    grd.addColorStop(1, "black");
-    ctx.fillStyle = grd;
-    ctx.lineWidth = 4 * size;
+    ctx.strokeStyle = 'rgb(30, 30, 50)';
+    // var grd = ctx.createLinearGradient(-20 * size * Math.sin(-sunAngle), -20 * size * Math.cos(-sunAngle), 20 * size * Math.sin(-sunAngle), 20 * size * Math.cos(-sunAngle));
+    // grd.addColorStop(0, color);
+    // grd.addColorStop(1, "black");
+    ctx.fillStyle = changeRgb(color, 1.5);
+    ctx.lineWidth = 8 * size;
     ctx.globalAlpha = transparency;
     let sat = [
         // main body
@@ -777,9 +781,9 @@ function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAng
         if (index === 4) {
             ctx.fill();
             ctx.stroke();
-            ctx.fillStyle = color;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 0.7;
+            ctx.fillStyle = changeRgb(color, 0.5);
+            ctx.strokeStyle = 'rgb(30, 30, 50)';
+            // ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(transformedSat[8][0], transformedSat[8][1])
         } else if (index === 8) {
@@ -1126,6 +1130,16 @@ function drawTargetLimit(ctx, cnvs, sat, dV, t) {
     }
     drawCurve(ctx, pixelPos)
     drawCurve(ctx, pixelPos, 1, 'fill')
+}
+
+function changeRgb(color, constant) {
+    let reg = /\d+/g;
+    colors = color.match(reg);
+    colors = colors.map(color => {
+        color = Number(color) * constant;
+        return color > 255 ? 255 : color;
+    })
+    return `rgb(${colors[0]},${colors[1]},${colors[2]})`;
 }
 
 function hrsToTime(hrs) {
