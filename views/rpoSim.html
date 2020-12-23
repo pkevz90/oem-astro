@@ -5,63 +5,111 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <script src="./SupportLibraries/Chart.bundle.min.js"></script>
-    <script src="./SupportLibraries/math.min.js"></script>
-    <script src="./SupportLibraries/vue.js"></script>
-    <script src="./SupportLibraries/jquery.min.js"></script>
-    <script src="./SupportLibraries/jquery.mousewheel.min.js"></script>
+    <script src="../SupportLibraries/math.min.js"></script>
+    <script src="../SupportLibraries/vue.js"></script>
+    <script src="../SupportLibraries/jquery.min.js"></script>
+    <script src="../SupportLibraries/jquery.mousewheel.min.js"></script>
     <title>RPO Simulator</title>
     <link rel="stylesheet" type="text/css" href="css/rpoSim.css">
-    
+
 </head>
 
 
 <body class="noselect">
     <div id="main-app">
         <div id="data-container">
-            <player-data :burntime="turn_length" :inplayer="players[player]" v-for="player in active_players"></player-data>
-            <div id="add-sat-button" v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player">+</div>
+            <div class="player-data" v-for="player in players" v-if="player.exist" v-bind:style="{color: player.color}">
+                <div><span style="font-size:2em">{{ player.name.toUpperCase() }}</span> <span v-if="scenario_data.game_started">{{ player.burn_total.toFixed(2) }} m/s</span><input type="radio" name="player" :value="player.name"></div>
+                <div v-if="!scenario_data.game_started">
+                    <div>Ae <input type="Number" min="0" v-model.Number="player.initial_state[0]"> km</div>
+                    <div>R <input type="Number" v-model.Number="player.initial_state[1]"> km</div>
+                    <div>I <input type="Number" v-model.Number="player.initial_state[2]"> km</div>
+                    <div>B <input type="Number" v-model.Number="player.initial_state[3]"> km</div>
+                    <div>Fuel <input type="Number" min="0" v-model.Number="player.scenario_fuel"> m/s</div>
+                    <div>Fuel/Turn <input type="Number" min="0" v-model.Number="player.turn_fuel"> m/s</div>
+                    <div><input type="Number" min="0" v-model.Number="player.required_cats[0]"> < CATS < <input type="Number" min="0" v-model.Number="player.required_cats[1]"></div>
+                    <div>Range <input type="Number" min="0" v-model.Number="player.max_range"> km</div>
+                </div>
+            </div>
+            <div v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player"
+                style="position: relative; height: 300px;"><span class="slow" id="add-sat-button">+</span></div>
         </div>
         <div id="game-data-container" style="display: none;">
-            <div>Range: {{ scenario_data.sat_data.data.range.toFixed(2) }} km </div>
+            <div><span class="left-float">Range</span> <span
+                    class="right-float">{{ scenario_data.sat_data.data.range.toFixed(2) }} km</span></div>
             <!-- <div>POCA: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (00:00)</div> -->
-            <div>CATS: {{ scenario_data.sat_data.data.cats.toFixed(2) }}<sup>o</sup></div>
-            <div>Time: +{{ scenario_data.game_time_string }} </div>
+            <br>
+            <div><span class="left-float">CATS</span> <span
+                    class="right-float">{{ scenario_data.sat_data.data.cats.toFixed(2) }} deg</span></div>
+            <br>
+            <div><span class="left-float">Time</span> <span
+                    class="right-float">+{{ scenario_data.game_time_string }}</span></div>
         </div>
         <div style="width:100%; height:100%;">
             <canvas id="main-canvas" width="100%" height="100%"></canvas>
         </div>
         <div id="time-slider" style="display: none;">
-            <input type="range" step="0.00001" min="0" :max="scenario_data.scenario_length" value="0" class="slider" class="slider" @input="slider_change" @mousedown="slider_click(false)"  @mouseup="slider_click(true)">
+            <input type="range" step="0.00001" min="0" :max="scenario_data.scenario_length" value="0" class="slider"
+                class="slider" @input="slider_change" @mousedown="slider_click(false)" @mouseup="slider_click(true)">
         </div>
         <div class="setup-zone">
             <div>
-                Game Length <input type="number" value="30" v-model.number="scenario_data.scenario_length">
+                Game Length <input type="number" value="30" min="5" v-model.number="scenario_data.scenario_length">
             </div>
             <div>
-                # Burns <input type="number" value="15" @input="change_num_burns">
+                # Burns <input type="number" min="1" v-model.Number="scenario_data.burns_per_player"
+                    @input="changeNumBurns">
             </div>
             <div>
-                Initial Sun <input type="number" step = "0.01" v-model.number="scenario_data.init_sun_angl">
+                Initial Sun <input type="number" step="0.01" v-model.number="scenario_data.init_sun_angl">
             </div>
-            <div :style="{backgroundColor: (scenario_data.server) ? 'green' : 'red'}" style="border: 4px solid white; cursor: pointer;" @click="server_button_pushed">
-                Server
-            </div>
-            <div>
-                
-            <select style="font-size: 1.5vw;" @change="change_scenario">
-                <option value="custom"    >Scenario</option>
-                <option value="knifefight">Knife Fight</option>
-                <option value="driveby"   >Drive-By</option>
-                <option value="defend"    >Defender</option>
-                <option value="2defend"    >Defenders</option>
-                <option value="mayhem"    >Mayhem</option>
-            </select>
+            <div class="slow" id="start-game" @click="startScreenClick">
+                Start
             </div>
         </div>
-        <div id="turn-button" @click="turn_button_click" >
-            <span style="display: none;">Turn {{ scenario_data.turn }}</span>
-            <span>Start</span>
+        <div class="slow" id="turn-button" @click="turn_button_click" style="display: none;">
+            <span>Turn {{ scenario_data.turn }}</span>
+        </div>
+        <div class="start-game-div" style="display: none;">
+            <div>
+                <span style="font-size: 3vw; color: white;">Start Server</span>
+                <div>
+                    <input type="text" placeholder="Server Name" id="game-name" autocomplete="off">
+                </div>
+                <div>
+                    <input type="password" placeholder="Password">
+                </div>
+                <div>
+                    <button id="start-server" class="start-button slow" @click="startScreenClick">Start Server</button>
+                </div>
+            </div>
+            <div>
+                <span style="font-size: 3vw; color: white;">Join Server</span>
+                <div>
+                    <select id="join-game" @change="chosenGameChange">
+                        <option value="default" disabled selected>Join Game</option>
+                        <option :value="game._id" v-for="game in games">{{ game.name }}</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="team">
+                        <option :value="player" v-for="player in chosenGamePlayers">{{ player.toUpperCase() }}</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="password" placeholder="Password">
+                </div>
+                <div>
+                    <button id="start-refresh" class="start-button slow" @click="startScreenClick">Refresh</button>
+                    <button id="start-join" class="start-button slow" @click="startScreenClick">Join</button>
+                </div>
+            </div>
+            <div>
+                <span style="font-size: 3vw; color: white;">Offline</span>
+                <div>
+                    <button id="start-offline" class="start-button slow" @click="startScreenClick">Start Offline</button>
+                </div>
+            </div>
         </div>
     </div>
     <script src="./js/rpoSim.js"></script>
