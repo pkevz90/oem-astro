@@ -1,8 +1,8 @@
 var main_app = new Vue({
     el: "#main-app",
     data: {
-        // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -160,6 +160,7 @@ var main_app = new Vue({
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             // Draw Sun
             let calcBurns;
+            // console.time('Calculate Burn Points')
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     if (this.players[sat].burn_change.change < 1) {
@@ -175,6 +176,7 @@ var main_app = new Vue({
                     this.players[sat].burn_points = calculateBurnPoints('blue', calcBurns, this.players[sat].initial_state);
                     }
             }
+            // console.timeEnd('Calculate Burn Points')
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time, sat);
@@ -187,23 +189,6 @@ var main_app = new Vue({
                 sunPos = this.players[this.scenario_data.sat_data.target].current_state || [0, 0];
             }
             drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 135, this.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * this.scenario_data.game_time * 3600, 'rgba(150,150,50,1)', 9);
-
-            for (sat in this.players) {
-                if (this.players[sat].exist) {
-                    if (this.players[sat].burn_change.change < 1) {
-                        this.players[sat].burn_change.change += 0.025;
-                        calcBurns = math.add(this.players[sat].burn_change.old, math.multiply(this.players[sat].burn_change.change, math.subtract(this.players[sat].burn_change.new, this.players[sat].burn_change.old)));
-                        if (this.players[sat].burn_change.change > 0.999999) {
-                            this.players[sat].burns = [...this.players[sat].burn_change.new];
-                            this.players[sat].burn_change.change = 1;
-                        }
-                    } else {
-                        calcBurns = this.players[sat].burns;
-                    }
-                    this.players[sat].burn_points = calculateBurnPoints('blue', calcBurns, this.players[sat].initial_state);
-                    drawSatInfo(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.players[sat]);
-                }
-            }
             if (this.scenario_data.game_started) {
                 drawAnimations(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             }
@@ -233,11 +218,13 @@ var main_app = new Vue({
                 }
                 drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, main_app.scenario_data.tactic_data[3] / 1000, main_app.scenario_data.tactic_data[1] * this.scenario_data.target_display)
             }
+            // console.time('Sat info')
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     drawSatInfo(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.players[sat]);
-                    }
+                }
             }
+            // console.timeEnd('Sat info')
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.25, this.players[sat].color);
@@ -670,11 +657,13 @@ function drawAxes(cnvs, ctx, center, limit) {
 }
 
 function drawSatInfo(ctx, cnvs, limit, center, sat) {
+    // console.time('Sat Traj')
     drawSatTrajectory(ctx, cnvs, limit, center, {
         satellite: sat,
         nBurns: main_app.scenario_data.burns_per_player,
         tBurns: main_app.turn_length
     });
+    // console.timeEnd('Sat Traj')
     drawBurnPoints(sat.name);
 }
 
@@ -726,7 +715,7 @@ function drawBurnPoints(sat) {
 
 function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
     let points, r, v, pixelPos;
-    let nodes = 8;
+    let nodes = 4;
     // let nodes = 80 / input_object.satellite.burn_points.length;
     // console.log(nodes);
     nodes = nodes < 2 ? 2 : nodes;
@@ -753,8 +742,6 @@ function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
         drawCurve(ctx, pixelPos, 1);
 
     }
-    ctx.globalAlpha = 1;
-
 }
 
 function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAngle = 0, transparency = 1) {
@@ -989,7 +976,7 @@ fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
 
 
 function animation(time) {
-    // console.time()
+    console.time()
     main_app.updateScreen();
     if (main_app.display_data.update_time) {
         let expected_time;
@@ -1008,6 +995,7 @@ function animation(time) {
         main_app.scenario_data.game_time = game_time;
         main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
     }
+    console.timeEnd()
     window.requestAnimationFrame(animation);
 }
 
