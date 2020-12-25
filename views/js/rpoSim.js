@@ -19,7 +19,9 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                traj: [],
                 burn_total: 0,
+                burned: true,
                 angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
@@ -41,13 +43,15 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                traj: [],
                 burn_total: 0,
+                burned: true,
                 angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
                 required_cats: [0, 90],
                 max_range: 30,
-                target: 'green',
+                target: 'blue',
                 engine: null
             },
             green: {
@@ -63,7 +67,9 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                traj: [],
                 burn_total: 0,
+                burned: true,
                 angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
@@ -85,7 +91,9 @@ var main_app = new Vue({
                 current_state: null,
                 burns: [],
                 burn_points: [],
+                traj: [],
                 burn_total: 0,
+                burned: true,
                 angle: 0,
                 scenario_fuel: 6,
                 turn_fuel: 1,
@@ -170,11 +178,18 @@ var main_app = new Vue({
                             this.players[sat].burns = [...this.players[sat].burn_change.new];
                             this.players[sat].burn_change.change = 1;
                         }
+                        this.players[sat].burned = true;
+                        
                     } else {
                         calcBurns = this.players[sat].burns;
                     }
-                    this.players[sat].burn_points = calculateBurnPoints('blue', calcBurns, this.players[sat].initial_state);
-                    }
+                    calcSatTrajectory(ctx, cnvs, {
+                        sat: this.players[sat],
+                        nBurns: this.scenario_data.burns_per_player,
+                        tBurns: this.turn_length,
+                        burns: this.players[sat].burn_change.change < 1 ? calcBurns : this.players[sat].burns
+                    });
+                }
             }
             // console.timeEnd('Calculate Burn Points')
             for (sat in this.players) {
@@ -221,7 +236,7 @@ var main_app = new Vue({
             // console.time('Sat info')
             for (sat in this.players) {
                 if (this.players[sat].exist) {
-                    drawSatInfo(ctx, cnvs, this.display_data.axis_limit, this.display_data.center, this.players[sat]);
+                    drawSatData(ctx, cnvs, this.players[sat]);
                 }
             }
             // console.timeEnd('Sat info')
@@ -351,6 +366,7 @@ var main_app = new Vue({
                         this.players[player.name].max_range = player.range;
                         this.players[player.name].scenario_fuel = player.fuel;
                         this.players[player.name].turn_fuel = player.turn_fuel;
+                        this.players[player.name].burned = true;
                     })
                     this.scenario_data.scenario_length = responseJoin.scenarioConditions.gameLength;
                     this.scenario_data.burns_per_player = responseJoin.scenarioConditions.nBurns;
@@ -383,10 +399,6 @@ var main_app = new Vue({
             let del_height = window.innerHeight - $cvns.height;
             let del_width = window.innerWidth - $cvns.width;
             let int_ii = 0;
-            // for (player in this.players) {
-            //     this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
-            // }
-            // Probably the dumbest way to do it ever
             function make_right_size() {
                 int_ii++;
                 $cvns.height += del_height / 30;
@@ -426,6 +438,7 @@ var main_app = new Vue({
                             }
                         });
                         this.players[player.name].burn_change.change = 0;
+                        this.players[player.name].burned = true;
                     }
                 })
             }, 5000)
@@ -440,7 +453,17 @@ var main_app = new Vue({
         changeNumBurns: function () {
             for (player in this.players) {
                 this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
+                this.players[player].burned = true;
             }
+        },
+        initialChange: function(player) {
+            if (player === 'all') {
+                for (let player in this.players) {
+                    this.players[player].burned = true;
+                }
+                return;
+            }
+            this.players[player].burned = true;
         }
     },
     watch: {
@@ -656,92 +679,74 @@ function drawAxes(cnvs, ctx, center, limit) {
 
 }
 
-function drawSatInfo(ctx, cnvs, limit, center, sat) {
-    // console.time('Sat Traj')
-    drawSatTrajectory(ctx, cnvs, limit, center, {
-        satellite: sat,
-        nBurns: main_app.scenario_data.burns_per_player,
-        tBurns: main_app.turn_length
-    });
-    // console.timeEnd('Sat Traj')
-    drawBurnPoints(sat.name);
-}
-
-function calculateBurnPoints(sat, burns, initial_state) {
-    let n = 2 * Math.PI / 86164;
-    let state = [
-        [-initial_state[0] / 2 * Math.cos(initial_state[3] * Math.PI / 180) + initial_state[1]],
-        [initial_state[0] * Math.sin(initial_state[3] * Math.PI / 180) + initial_state[2]],
-        [initial_state[0] * n / 2 * Math.sin(initial_state[3] * Math.PI / 180)],
-        [initial_state[0] * n * Math.cos(initial_state[3] * Math.PI / 180) - n * initial_state[1] * 3 / 2],
-    ];
-    state[2][0] += burns[0][0] / 1000;
-    state[3][0] += burns[0][1] / 1000;
-    let out_points = [state];
-    let pRR = PhiRR(main_app.scenario_data.scenario_length * 3600 / main_app.scenario_data.burns_per_player),
-        pRV = PhiRV(main_app.scenario_data.scenario_length * 3600 / main_app.scenario_data.burns_per_player),
-        pVR = PhiVR(main_app.scenario_data.scenario_length * 3600 / main_app.scenario_data.burns_per_player),
-        pVV = PhiVV(main_app.scenario_data.scenario_length * 3600 / main_app.scenario_data.burns_per_player);
-    for (ii = 1; ii < burns.length; ii++) {
-        r = math.add(math.multiply(pRR, out_points[ii - 1].slice(0, 2)), math.multiply(pRV, out_points[ii - 1].slice(2, 4)));
-        v = math.add(math.multiply(pVR, out_points[ii - 1].slice(0, 2)), math.multiply(pVV, out_points[ii - 1].slice(2, 4)));
-        v[0][0] += burns[ii][0] / 1000;
-        v[1][0] += burns[ii][1] / 1000;
-        // console.log(r);
-        out_points.push(math.concat(r, v, 0));
-    }
-
-    return out_points;
-}
-
-function drawBurnPoints(sat) {
-    let cnvs = $('#main-canvas')[0];
-    let ctx = cnvs.getContext('2d');
+function drawSatData(ctx, cnvs, sat) {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = sat.color;
     let pixel_point;
-    ctx.fillStyle = 'black';
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = main_app.players[sat].color;
-    main_app.players[sat].burn_points.forEach((point, ii) => {
-        if (ii >= main_app.scenario_data.turn) {
-            ctx.beginPath()
-            pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
-            // ctx.fillRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
-            // ctx.strokeRect(pixel_point[0] - 3, pixel_point[1] - 3, 6, 6);
-            ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
-            ctx.stroke();
-        }
+    sat.burn_points.forEach(point => {
+        ctx.beginPath()
+        pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
+        ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
+        ctx.stroke();
     })
+
+    let points = sat.traj.map(point => {
+        return getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true);
+    })
+    ctx.strokeStyle = 'rgb(30, 30, 50)';
+    ctx.lineWidth = 8;
+    drawCurve(ctx, points, 1);
+    ctx.strokeStyle = sat.color;
+    ctx.lineWidth = 4;
+    drawCurve(ctx, points, 1);
 }
 
-function drawSatTrajectory(ctx, cnvs, limit, center, input_object) {
-    let points, r, v, pixelPos;
-    let nodes = 4;
-    // let nodes = 80 / input_object.satellite.burn_points.length;
-    // console.log(nodes);
-    nodes = nodes < 2 ? 2 : nodes;
-    let pRR = PhiRR(input_object.tBurns * 3600 / nodes),
-        pRV = PhiRV(input_object.tBurns * 3600 / nodes),
-        pVR = PhiVR(input_object.tBurns * 3600 / nodes),
-        pVV = PhiVV(input_object.tBurns * 3600 / nodes);
-    for (let jj = 0; jj < input_object.satellite.burn_points.length; jj++) {
-        points = [];
-        pixelPos = [];
-        points.push(input_object.satellite.burn_points[jj]);
-        pixelPos.push(getScreenPixel(cnvs, input_object.satellite.burn_points[jj][0], input_object.satellite.burn_points[jj][1], limit, center, true))
-        for (ii = 0; ii < nodes; ii++) {
-            r = math.add(math.multiply(pRR, points[ii].slice(0, 2)), math.multiply(pRV, points[ii].slice(2, 4)));
-            v = math.add(math.multiply(pVR, points[ii].slice(0, 2)), math.multiply(pVV, points[ii].slice(2, 4)));
-            points.push(math.concat(r, v, 0))
-            pixelPos.push(getScreenPixel(cnvs, r[0][0], r[1][0], limit, center, true))
-        }
-        ctx.strokeStyle = 'rgb(30, 30, 50)';
-        ctx.lineWidth = 8;
-        drawCurve(ctx, pixelPos, 1);
-        ctx.strokeStyle = input_object.satellite.color;
-        ctx.lineWidth = 4;
-        drawCurve(ctx, pixelPos, 1);
-
+function calcSatTrajectory(ctx, cnvs, options) {
+    let {
+        sat,
+        tBurns,
+        nBurns,
+        burns
+    } = options;
+    if (!sat.burned) {
+        return;
     }
+    let n = 2 * Math.PI / 86164;
+    let nodes = 4;
+    nodes = nodes < 2 ? 2 : nodes;
+    let pRR = PhiRR(tBurns * 3600 / nodes),
+        pRV = PhiRV(tBurns * 3600 / nodes),
+        pVR = PhiVR(tBurns * 3600 / nodes),
+        pVV = PhiVV(tBurns * 3600 / nodes),
+        r = [
+            [-sat.initial_state[0] / 2 * Math.cos(sat.initial_state[3] * Math.PI / 180) + sat.initial_state[1]],
+            [sat.initial_state[0] * Math.sin(sat.initial_state[3] * Math.PI / 180) + sat.initial_state[2]]
+        ],
+        v = [
+            [sat.initial_state[0] * n / 2 * Math.sin(sat.initial_state[3] * Math.PI / 180)],
+            [sat.initial_state[0] * n * Math.cos(sat.initial_state[3] * Math.PI / 180) - n * sat.initial_state[1] * 3 / 2]
+        ],
+        r1;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = sat.color;
+    sat.burn_points = [];
+    sat.traj = [];
+    sat.traj.push(r);
+    v = math.add(v, math.dotDivide(math.transpose([burns[0]]), 1000));
+    sat.burn_points.push(math.concat(r, v, 0));
+    for (let burn_point = 0; burn_point < nBurns; burn_point++) {
+        for (node = 0; node < nodes; node++) {
+            r1 = math.add(math.multiply(pRR, r), math.multiply(pRV, v));
+            v = math.add(math.multiply(pVR, r), math.multiply(pVV, v));
+            r = r1;
+            sat.traj.push(r);
+        }
+        if (burn_point < nBurns - 1) {
+            v = math.add(v, math.dotDivide(math.transpose([burns[burn_point + 1]]), 1000));
+        }
+        sat.burn_points.push(math.concat(r, v, 0));
+    }
+    sat.burned = false;
 }
 
 function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAngle = 0, transparency = 1) {
@@ -816,7 +821,6 @@ function drawSatShape(ctx, location, ang = 0, size = 0.3, color = '#AAA', sunAng
     ctx.restore();
 }
 
-
 function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255,255,0,1)', width = 6) {
     let pixelX = pixelLocation[0];
     let pixelY = pixelLocation[1];
@@ -834,7 +838,7 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
         [0.23, -1.5],
         [0.125, -1.5],
         [0.125, 0],
-        [0, 0] 
+        [0, 0]
     ];
     let transformedArrow = math.dotMultiply(math.transpose(math.multiply(rotMat, math.transpose(arrow))), length / 2);
     ctx.save();
@@ -843,7 +847,7 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.translate(pixelX, pixelY)
-    ctx.moveTo(0,0);
+    ctx.moveTo(0, 0);
     transformedArrow.forEach((point) => {
         ctx.lineTo(point[0], point[1]);
     });
@@ -851,8 +855,6 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
     ctx.stroke();
     ctx.restore();
 }
-
-
 
 function setMouseCallbacks() {
     $('#main-canvas').mousedown(event => {
@@ -883,6 +885,7 @@ function setMouseCallbacks() {
         main_app.scenario_data.mousedown_location = [event.offsetX, event.offsetY];
         let location_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
         if (checkClose(location_point[0], location_point[1])) {
+            main_app.players[main_app.scenario_data.selected_burn_point.satellite].burned = true;
             let total_burn = 0;
             for (let ii = 0; ii < main_app.scenario_data.selected_burn_point.point; ii++) {
                 total_burn += math.norm(main_app.players[main_app.scenario_data.selected_burn_point.satellite].burns[ii]);
@@ -976,7 +979,6 @@ fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
 
 
 function animation(time) {
-    console.time()
     main_app.updateScreen();
     if (main_app.display_data.update_time) {
         let expected_time;
@@ -995,7 +997,6 @@ function animation(time) {
         main_app.scenario_data.game_time = game_time;
         main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
     }
-    console.timeEnd()
     window.requestAnimationFrame(animation);
 }
 
@@ -1104,8 +1105,8 @@ function burnCalc(sat, position2) {
     if (sat.satellite === main_app.scenario_data.player || !main_app.scenario_data.server) {
         magnitude = magnitude > main_app.scenario_data.tactic_data[1] ? main_app.scenario_data.tactic_data[1] : magnitude;
     }
-    main_app.players[sat.satellite].burns.splice(sat.point, 1, math.dotMultiply(magnitude, math.dotDivide(rel, dist)))
-    main_app.players[sat.satellite].burn_total = math.norm(main_app.players[sat.satellite].burns[ii]);
+    main_app.players[sat.satellite].burns.splice(sat.point, 1, math.dotMultiply(magnitude, math.dotDivide(rel, dist)));
+    main_app.players[sat.satellite].burned = true;
 }
 
 function targetCalc(sat, r2) {
@@ -1116,6 +1117,7 @@ function targetCalc(sat, r2) {
     let dV = math.squeeze(math.transpose(math.subtract(v1f, v10)));
     dV = math.norm(dV) > main_app.scenario_data.tactic_data[3] / 1000 ? math.dotMultiply(main_app.scenario_data.tactic_data[3] / 1000, math.dotDivide(dV, math.norm(dV))) : dV;
     main_app.players[sat.satellite].burns.splice(sat.point, 1, math.dotMultiply(dV, 1000));
+    main_app.players[sat.satellite].burned = true;
 }
 
 function drawTargetLimit(ctx, cnvs, sat, dV, t) {
