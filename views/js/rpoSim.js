@@ -680,15 +680,6 @@ function drawAxes(cnvs, ctx, center, limit) {
 }
 
 function drawSatData(ctx, cnvs, sat) {
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = sat.color;
-    let pixel_point;
-    sat.burn_points.forEach(point => {
-        ctx.beginPath()
-        pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
-        ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
-        ctx.stroke();
-    })
 
     let points = sat.traj.map(point => {
         return getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true);
@@ -699,6 +690,17 @@ function drawSatData(ctx, cnvs, sat) {
     ctx.strokeStyle = sat.color;
     ctx.lineWidth = 4;
     drawCurve(ctx, points, 1);
+
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = sat.color;
+    let pixel_point;
+    sat.burn_points.forEach(point => {
+        ctx.beginPath()
+        pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
+        ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
+        ctx.stroke();
+    })
 }
 
 function calcSatTrajectory(ctx, cnvs, options) {
