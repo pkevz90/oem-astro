@@ -95,6 +95,10 @@
         <li class="nav-item">
           <a class="nav-link" href="https://github.com/pkevz90/oem-astro">Github Repo</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" data-toggle="modal" data-target="#exampleModal">Leave a Comment</a>
+        </li>
+
       </ul>
     </div>
   </nav>
@@ -109,15 +113,6 @@
         </div>
       </div>
     </div>
-    <!-- <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
-            <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
-                <div class="card-body">
-                <h5 class="card-title">GEO Plane and Longitude Analysis <span class="badge badge-secondary">Beta</span></h5>
-                <p class="card-text">Visualize &#916V to traverse differing planes & longitudes</p>
-                <a href="./views/PolarPlot.html" class="btn btn-secondary">Open</a>
-                </div>
-            </div>
-        </div> -->
     <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
       <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
         <div class="card-body">
@@ -179,6 +174,34 @@
           <h5 class="card-title">Least Squares Demonstrator</h5>
           <p class="card-text">Visualize how noisy data is handled</p>
           <a href="./views/leastSquares.html" class="btn btn-secondary">Open</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-sm-12" style="margin-top: 2%;">
+      <div class="card shadow-sm" style="width: auto; border: 2px solid rgb(150, 150, 150); border-radius: 10px;">
+          <div class="card-body">
+            <h5 class="card-title">GEO Plane and Longitude Analysis <span class="badge badge-secondary">Beta</span></h5>
+            <p class="card-text">Visualize &#916V to traverse differing planes & longitudes</p>
+            <a href="./views/PolarPlot.html" class="btn btn-secondary">Open</a>
+          </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Leave a Comment</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <textarea id="comment-box" cols="40" rows="10"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" onclick="sendComment()"  data-dismiss="modal">Send Comment</button>
         </div>
       </div>
     </div>

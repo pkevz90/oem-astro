@@ -28,3 +28,17 @@ window.addEventListener("resize", () => {
     cnvs.width = window.innerWidth;
     earthSize = Math.min(cnvs.height / 8 ,cnvs.width / 10);
 });
+
+async function sendComment() {
+    let comment = document.getElementById("comment-box").value;
+    // let response = await fetch('https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app/comment', 
+    console.log(comment);
+    let reponse = await fetch('https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app/comment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+          // 'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: JSON.stringify({comment: comment})
+    })
+}
