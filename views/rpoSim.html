@@ -19,7 +19,7 @@
     <div id="main-app">
         <div id="data-container">
             <div class="player-data" v-for="player in players" v-if="player.exist" v-bind:style="{color: player.color}">
-                <div><span style="font-size:2em">{{ player.name.toUpperCase() }}</span> <span v-if="scenario_data.game_started">{{ player.burn_total.toFixed(2) }} m/s</span><input type="radio" name="player" :value="player.name"></div>
+                <div @mouseover="player.focus = true" @mouseleave="player.focus = false"><span style="font-size:2em">{{ player.name.toUpperCase() }}</span> <span v-if="scenario_data.game_started">{{ player.burn_total.toFixed(2) }} m/s</span><input type="radio" name="player" :value="player.name"></div>
                 <div v-if="!scenario_data.game_started">
                     <div>Ae <input type="Number" min="0" v-model.Number="player.initial_state[0]" @input="initialChange(player.name)"> km</div>
                     <div>R <input type="Number" v-model.Number="player.initial_state[1]" @input="initialChange(player.name)"> km</div>

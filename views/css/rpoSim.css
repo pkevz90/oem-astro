@@ -22,7 +22,7 @@ html {
   width: 40%;
   height: 7%;
   color: white;
-  z-index: 0;
+  z-index: 4;
   background-color: rgba(50, 50, 50, 0);
   font-family: Segoe UI Heavy, Helvetica, sans-serif;
 }
@@ -271,6 +271,7 @@ tr {
   text-align: left;
   font-size: 1.2vw;
   padding: 2%;
+  cursor: pointer;
 }
 
 .player-data input {
