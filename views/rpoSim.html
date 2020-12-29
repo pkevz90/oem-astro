@@ -29,6 +29,9 @@
                     <div>Fuel/Turn <input type="Number" min="0" v-model.Number="player.turn_fuel"> m/s</div>
                     <div><input type="Number" min="0" v-model.Number="player.required_cats[0]"> < CATS < <input type="Number" min="0" v-model.Number="player.required_cats[1]"></div>
                     <div>Range <input type="Number" min="0" v-model.Number="player.max_range"> km</div>
+                    <!-- <div>Target <select id="selected-target" v-model="player.target">
+                        <option value="closest">Closest</option>
+                    </select></div> -->
                 </div>
             </div>
             <div v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player"
@@ -68,13 +71,16 @@
             </div>
         </div>
         <div class="slow" id="turn-button" @click="turn_button_click" style="display: none;">
-            <span>Turn {{ scenario_data.turn }}</span>
+            <span>Turn {{scenario_data.turnTime === 0 ? scenario_data.turn: (scenario_data.turnTime / 1000).toFixed() + 's'}}</span>
         </div>
         <div class="start-game-div" style="display: none;">
             <div>
                 <span style="font-size: 3vw; color: white;">Start Server</span>
                 <div>
                     <input type="text" placeholder="Server Name" id="game-name" autocomplete="off">
+                </div>
+                <div>
+                    <input type="number" placeholder="Turn Limit (s)" id="turn-time" min="0">
                 </div>
                 <div>
                     <input type="password" placeholder="Password">
@@ -92,7 +98,7 @@
                     </select>
                 </div>
                 <div>
-                    <select id="team">
+                    <select id="team-select">
                         <option :value="player" v-for="player in chosenGamePlayers">{{ player.toUpperCase() }}</option>
                     </select>
                 </div>

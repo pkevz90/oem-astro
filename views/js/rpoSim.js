@@ -27,7 +27,7 @@ var main_app = new Vue({
                 turn_fuel: 1,
                 required_cats: [0, 90],
                 max_range: 30,
-                target: 'red',
+                target: 'closest',
                 engine: null
             },
             red: {
@@ -51,7 +51,7 @@ var main_app = new Vue({
                 turn_fuel: 1,
                 required_cats: [0, 90],
                 max_range: 30,
-                target: 'blue',
+                target: 'closest',
                 engine: null
             },
             green: {
@@ -75,7 +75,7 @@ var main_app = new Vue({
                 turn_fuel: 1,
                 required_cats: [0, 90],
                 max_range: 30,
-                target: null,
+                target: 'closest',
                 engine: null
             },
             gray: {
@@ -99,7 +99,7 @@ var main_app = new Vue({
                 turn_fuel: 1,
                 required_cats: [0, 90],
                 max_range: 30,
-                target: null,
+                target: 'closest',
                 engine: null
             }
         },
@@ -129,7 +129,10 @@ var main_app = new Vue({
             mousemove_location: null,
             tactic_data: ['none'],
             turn: 0,
-            opposingTurn: 0
+            opposingTurn: 0,
+            timeOld: 0,
+            turnTime: 0,
+            turnLimit: 0
         },
         display_data: {
             center: [0, 0],
@@ -268,6 +271,7 @@ var main_app = new Vue({
             if (!this.scenario_data.server) {
                 return;
             }
+            this.scenario_data.turnTime = 0;
             let burnData = this.players[this.scenario_data.player].burns.map((burn, ii) => {
                 if (ii < this.scenario_data.turn) {
                     return burn;
@@ -299,6 +303,7 @@ var main_app = new Vue({
                 case 'start-server':
                     // POST Request new game
                     this.scenario_data.server = true;
+                    this.scenario_data.turnLimit = $('#turn-time').val() === "" ? 0 : Number($('#turn-time').val()) * 1000;
                     let outPlayers = [];
                     for (var player in this.players) {
                         if (!this.players[player].exist) {
@@ -312,7 +317,7 @@ var main_app = new Vue({
                             turn_fuel: this.players[player].turn_fuel,
                             cats: this.players[player].required_cats,
                             range: this.players[player].max_range,
-                            turn: 0
+                            turn: 0,
                         });
                     }
                     let outData = {
@@ -321,6 +326,7 @@ var main_app = new Vue({
                             initSun: this.scenario_data.init_sun_angl,
                             gameLength: this.scenario_data.scenario_length,
                             nBurns: this.scenario_data.burns_per_player,
+                            turnLength: $('#turn-time').val() === "" ? 0 : Number($('#turn-time').val()) * 1000
                         },
                         name: $('#game-name').val()
                     }
@@ -344,13 +350,14 @@ var main_app = new Vue({
                     this.games = response;
                     break;
                 case 'start-join':
-                    let responseJoin = await fetch(this.fetchURL + '/games/' + $('select')[0].value)
+                    let responseJoin = await fetch(this.fetchURL + '/games/' + $('#join-game').val());
+
                     responseJoin = await responseJoin.json();
                     let playerJoin = responseJoin.players.filter(player => {
-                        return player.name === $('select')[1].value;
+                        return player.name === $('#team-select').val();
                     });
                     this.scenario_data.gameId = responseJoin._id;
-                    this.scenario_data.player = $('select')[1].value;
+                    this.scenario_data.player = $('#team-select').val();
                     this.scenario_data.server = true;
                     this.scenario_data.turn = playerJoin[0].turn;
                     // this.scenario_data.turn = responseJoin.turn;
@@ -371,6 +378,7 @@ var main_app = new Vue({
                     this.scenario_data.scenario_length = responseJoin.scenarioConditions.gameLength;
                     this.scenario_data.burns_per_player = responseJoin.scenarioConditions.nBurns;
                     this.scenario_data.init_sun_angl = responseJoin.scenarioConditions.initSun;
+                    this.scenario_data.turnLimit = responseJoin.scenarioConditions.turnLength;
                     setTimeout(this.startGame, 500);
                     break;
                 case 'start-offline':
@@ -420,13 +428,22 @@ var main_app = new Vue({
             }
             setInterval(async () => {
                 if (this.scenario_data.turn <= this.scenario_data.opposingTurn) {
+                    if (this.scenario_data.turnLimit !== 0 && this.scenario_data.turnTime === 0) {
+                        this.scenario_data.turnTime = this.scenario_data.turnLimit;
+                        console.log(this.scenario_data.turnTime);
+                    }
                     return;
                 }
+                console.log('sent');
                 let responseInt = await fetch(this.fetchURL + '/games/' + this.scenario_data.gameId);
                 responseInt = await responseInt.json();
                 this.scenario_data.opposingTurn = math.min(responseInt.players.map(player => {
                     return player.turn;
                 }));
+                if (this.scenario_data.turn === this.scenario_data.opposingTurn) {
+                    this.scenario_data.turnTime = this.scenario_data.turnLimit;
+                    console.log(this.scenario_data.turnTime);
+                }
                 responseInt.players.forEach(player => {
                     if (player.name !== this.scenario_data.player) {
                         this.players[player.name].burn_change.old = [...this.players[player.name].burns];
@@ -491,8 +508,11 @@ function calcData(origin, target) {
         [-Math.sin(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)]
     ];
     main_app.scenario_data.sat_data.data.cats = Math.acos(math.dot(rel_vector, sunVector) / math.norm(rel_vector)) * 180 / Math.PI;
-    for (player in main_app.players) {
-        if (main_app.players[player].exist && main_app.players[player].target !== null && main_app.players[main_app.players[player].target].current_state !== null) {
+    for (let player in main_app.players) {
+        if (main_app.players[player].target === "closest") {
+            continue;
+        }
+        else if (main_app.players[player].exist && main_app.players[player].target !== null && main_app.players[main_app.players[player].target].current_state !== null) {
             rel_vector = math.subtract(main_app.players[main_app.players[player].target].current_state.slice(0, 2), main_app.players[player].current_state.slice(0, 2));
             main_app.players[player].angle = Math.atan2(-rel_vector[1], rel_vector[0]) * 180 / Math.PI;
         }
@@ -714,7 +734,7 @@ function calcSatTrajectory(ctx, cnvs, options) {
         return;
     }
     let n = 2 * Math.PI / 86164;
-    let nodes = 4;
+    let nodes = 10;
     nodes = nodes < 2 ? 2 : nodes;
     let pRR = PhiRR(tBurns * 3600 / nodes),
         pRV = PhiRV(tBurns * 3600 / nodes),
@@ -999,6 +1019,14 @@ function animation(time) {
         main_app.scenario_data.game_time = game_time;
         main_app.scenario_data.game_time_string = hrsToTime(main_app.scenario_data.game_time);
     }
+    if (main_app.scenario_data.turnTime > 0) {
+        main_app.scenario_data.turnTime -= time - main_app.scenario_data.timeOld;
+        if (main_app.scenario_data.turnTime < 0) {
+            main_app.scenario_data.turnTime = 0;
+            main_app.turn_button_click();
+        }
+    }
+    main_app.scenario_data.timeOld = time;
     window.requestAnimationFrame(animation);
 }
 
