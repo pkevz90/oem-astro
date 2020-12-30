@@ -69,7 +69,8 @@ var main_app = new Vue({
             opposingTurn: 0,
             timeOld: 0,
             turnTime: 0,
-            turnLimit: 0
+            turnLimit: 0,
+            nodes: 8
         },
         display_data: {
             center: [0, 0],
@@ -648,12 +649,15 @@ function drawSatData(ctx, cnvs, sat) {
     let points = sat.traj.map(point => {
         return getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true);
     })
-    ctx.strokeStyle = 'rgb(30, 30, 50)';
-    ctx.lineWidth = 8;
-    drawCurve(ctx, points, 1);
-    ctx.strokeStyle = sat.color;
-    ctx.lineWidth = 4;
-    drawCurve(ctx, points, 1);
+    for (let ii = 1; ii < points.length - 1; ii += main_app.scenario_data.nodes) {
+        ctx.strokeStyle = 'rgb(30, 30, 50)';
+        ctx.lineWidth = 10;
+        drawCurve(ctx, points.slice(ii - 1, ii + main_app.scenario_data.nodes), 1);
+        ctx.strokeStyle = sat.color;
+        ctx.lineWidth = 4;
+        drawCurve(ctx, points.slice(ii - 1, ii + main_app.scenario_data.nodes), 1);
+    }
+    
 
 
     ctx.lineWidth = 2;
@@ -680,7 +684,7 @@ function calcSatTrajectory(ctx, cnvs, options) {
         return;
     }
     let n = 2 * Math.PI / 86164;
-    let nodes = 10;
+    let nodes = main_app.scenario_data.nodes;
     nodes = nodes < 2 ? 2 : nodes;
     let pRR = PhiRR(tBurns * 3600 / nodes),
         pRV = PhiRV(tBurns * 3600 / nodes),
@@ -714,6 +718,7 @@ function calcSatTrajectory(ctx, cnvs, options) {
         }
         sat.burn_points.push(math.concat(r, v, 0));
     }
+    sat.burn_points.pop();
     sat.burned = false;
 }
 
@@ -1039,7 +1044,7 @@ function drawCurve(ctx, points, tension, type = 'stroke') {
 
 function checkClose(x, y, change = true) {
     let xPoint, yPoint;
-    let turn = math.ceil(main_app.scenario_data.game_time / main_app.scenario_data.scenario_length * main_app.scenario_data.burns_per_player);
+    let turn = main_app.scenario_data.turn;
     for (sat in main_app.players) {
         for (var ii = turn; ii < main_app.players[sat].burn_points.length; ii++) {
             xPoint = main_app.players[sat].burn_points[ii][1][0];
