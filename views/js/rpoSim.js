@@ -1,3 +1,32 @@
+class Player {
+    constructor(name, initial, color, exist) {
+        this.name = name;
+        this.initial_state = initial;
+        this.color = color;
+        this.exist = exist;
+        this.burn_change = {
+            old_burn: null,
+            new_burn: null,
+            change: 1
+        },
+        this.current_state = null;
+        this.burns = [];
+        this.burn_points = [];
+        this.traj = [];
+        this.burn_total = 0;
+        this.burned = true;
+        this.angle = 0;
+        this.scenario_fuel = 6;
+        this.turn_fuel = 1;
+        this.required_cats = [0, 90];
+        this.max_range = 30;
+        this.target = 'closest';
+        this.engine = null;
+        this.focus = false;
+    }
+}
+
+
 var main_app = new Vue({
     el: "#main-app",
     data: {
@@ -6,102 +35,10 @@ var main_app = new Vue({
         games: [],
         chosenGamePlayers: [],
         players: {
-            blue: {
-                exist: true,
-                name: 'blue',
-                color: 'rgba(100,150,255,1)',
-                initial_state: [20, 20, 0, 0],
-                burn_change: {
-                    old_burn: null,
-                    new_burn: null,
-                    change: 1
-                },
-                current_state: null,
-                burns: [],
-                burn_points: [],
-                traj: [],
-                burn_total: 0,
-                burned: true,
-                angle: 0,
-                scenario_fuel: 6,
-                turn_fuel: 1,
-                required_cats: [0, 90],
-                max_range: 30,
-                target: 'closest',
-                engine: null
-            },
-            red: {
-                exist: true,
-                name: 'red',
-                color: 'rgba(255,150,100,1)',
-                initial_state: [30, 0, 0, 0],
-                burn_change: {
-                    old_burn: null,
-                    new_burn: null,
-                    change: 1
-                },
-                current_state: null,
-                burns: [],
-                burn_points: [],
-                traj: [],
-                burn_total: 0,
-                burned: true,
-                angle: 0,
-                scenario_fuel: 6,
-                turn_fuel: 1,
-                required_cats: [0, 90],
-                max_range: 30,
-                target: 'closest',
-                engine: null
-            },
-            green: {
-                exist: false,
-                name: 'green',
-                color: 'rgba(120,255,120,1)',
-                initial_state: [30, 30, 0, 0],
-                burn_change: {
-                    old_burn: null,
-                    new_burn: null,
-                    change: 1
-                },
-                current_state: null,
-                burns: [],
-                burn_points: [],
-                traj: [],
-                burn_total: 0,
-                burned: true,
-                angle: 0,
-                scenario_fuel: 6,
-                turn_fuel: 1,
-                required_cats: [0, 90],
-                max_range: 30,
-                target: 'closest',
-                engine: null
-            },
-            gray: {
-                exist: false,
-                name: 'gray',
-                color: 'rgba(150,150,150,1)',
-                initial_state: [30, -30, 0, 0],
-                burn_change: {
-                    old_burn: null,
-                    new_burn: null,
-                    change: 1
-                },
-                current_state: null,
-                burns: [],
-                burn_points: [],
-                traj: [],
-                burn_total: 0,
-                burned: true,
-                angle: 0,
-                scenario_fuel: 6,
-                turn_fuel: 1,
-                required_cats: [0, 90],
-                max_range: 30,
-                target: 'closest',
-                engine: null
-            }
+            blue: new Player('blue', [20, 20, 0, 0], 'rgba(100,150,255,1)', true),
+            red: new Player('red', [30, 0, 0, 0], 'rgba(255,150,100,1)', true),
+            green: new Player('green', [30, 30, 0, 0], 'rgba(120,255,120,1)', false),
+            gray: new Player('gray', [30, -30, 0, 0], 'rgba(150,150,150,1)', false),
         },
         scenario_data: {
             scenario_length: 30,
@@ -132,7 +69,8 @@ var main_app = new Vue({
             opposingTurn: 0,
             timeOld: 0,
             turnTime: 0,
-            turnLimit: 0
+            turnLimit: 0,
+            nodes: 8
         },
         display_data: {
             center: [0, 0],
@@ -182,7 +120,7 @@ var main_app = new Vue({
                             this.players[sat].burn_change.change = 1;
                         }
                         this.players[sat].burned = true;
-                        
+
                     } else {
                         calcBurns = this.players[sat].burns;
                     }
@@ -239,6 +177,13 @@ var main_app = new Vue({
             // console.time('Sat info')
             for (sat in this.players) {
                 if (this.players[sat].exist) {
+                    if (this.players[sat].focus) {
+                        this.players[sat].burns.forEach((burn, ii) => {
+                            let location = this.players[sat].burn_points[ii];
+                            let burnN = math.norm(burn);
+                            drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 90 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[sat].color, 4);
+                        });
+                    }
                     drawSatData(ctx, cnvs, this.players[sat]);
                 }
             }
@@ -407,6 +352,7 @@ var main_app = new Vue({
             let del_height = window.innerHeight - $cvns.height;
             let del_width = window.innerWidth - $cvns.width;
             let int_ii = 0;
+
             function make_right_size() {
                 int_ii++;
                 $cvns.height += del_height / 30;
@@ -473,7 +419,7 @@ var main_app = new Vue({
                 this.players[player].burned = true;
             }
         },
-        initialChange: function(player) {
+        initialChange: function (player) {
             if (player === 'all') {
                 for (let player in this.players) {
                     this.players[player].burned = true;
@@ -511,8 +457,7 @@ function calcData(origin, target) {
     for (let player in main_app.players) {
         if (main_app.players[player].target === "closest") {
             continue;
-        }
-        else if (main_app.players[player].exist && main_app.players[player].target !== null && main_app.players[main_app.players[player].target].current_state !== null) {
+        } else if (main_app.players[player].exist && main_app.players[player].target !== null && main_app.players[main_app.players[player].target].current_state !== null) {
             rel_vector = math.subtract(main_app.players[main_app.players[player].target].current_state.slice(0, 2), main_app.players[player].current_state.slice(0, 2));
             main_app.players[player].angle = Math.atan2(-rel_vector[1], rel_vector[0]) * 180 / Math.PI;
         }
@@ -704,22 +649,27 @@ function drawSatData(ctx, cnvs, sat) {
     let points = sat.traj.map(point => {
         return getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true);
     })
-    ctx.strokeStyle = 'rgb(30, 30, 50)';
-    ctx.lineWidth = 8;
-    drawCurve(ctx, points, 1);
-    ctx.strokeStyle = sat.color;
-    ctx.lineWidth = 4;
-    drawCurve(ctx, points, 1);
+    for (let ii = 1; ii < points.length - 1; ii += main_app.scenario_data.nodes) {
+        ctx.strokeStyle = 'rgb(30, 30, 50)';
+        ctx.lineWidth = 10;
+        drawCurve(ctx, points.slice(ii - 1, ii + main_app.scenario_data.nodes), 1);
+        ctx.strokeStyle = sat.color;
+        ctx.lineWidth = 4;
+        drawCurve(ctx, points.slice(ii - 1, ii + main_app.scenario_data.nodes), 1);
+    }
+    
 
 
     ctx.lineWidth = 2;
     ctx.strokeStyle = sat.color;
     let pixel_point;
-    sat.burn_points.forEach(point => {
-        ctx.beginPath()
-        pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
-        ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
-        ctx.stroke();
+    sat.burn_points.forEach((point,ii) => {
+        if (ii >= main_app.scenario_data.turn) {
+            ctx.beginPath()
+            pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
+            ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
+            ctx.stroke();
+        }
     })
 }
 
@@ -734,7 +684,7 @@ function calcSatTrajectory(ctx, cnvs, options) {
         return;
     }
     let n = 2 * Math.PI / 86164;
-    let nodes = 10;
+    let nodes = main_app.scenario_data.nodes;
     nodes = nodes < 2 ? 2 : nodes;
     let pRR = PhiRR(tBurns * 3600 / nodes),
         pRV = PhiRV(tBurns * 3600 / nodes),
@@ -768,6 +718,7 @@ function calcSatTrajectory(ctx, cnvs, options) {
         }
         sat.burn_points.push(math.concat(r, v, 0));
     }
+    sat.burn_points.pop();
     sat.burned = false;
 }
 
@@ -955,6 +906,7 @@ function setMouseCallbacks() {
     $('#main-canvas').mouseup(() => {
         main_app.scenario_data.mousedown_location = null;
         main_app.scenario_data.tactic_data = ['none'];
+        main_app.scenario_data.selected_burn_point = null;
         if (main_app.display_data.drag_data !== null) {
             main_app.display_data.drag_data = null;
         }
@@ -1092,7 +1044,7 @@ function drawCurve(ctx, points, tension, type = 'stroke') {
 
 function checkClose(x, y, change = true) {
     let xPoint, yPoint;
-    let turn = math.ceil(main_app.scenario_data.game_time / main_app.scenario_data.scenario_length * main_app.scenario_data.burns_per_player);
+    let turn = main_app.scenario_data.turn;
     for (sat in main_app.players) {
         for (var ii = turn; ii < main_app.players[sat].burn_points.length; ii++) {
             xPoint = main_app.players[sat].burn_points[ii][1][0];
