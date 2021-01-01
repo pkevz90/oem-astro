@@ -159,35 +159,21 @@ var main_app = new Vue({
                 }
                 main_app.players[player].burn_total = total_burn;
             }
-            // Draw burn if point is focused upon
-            if (this.scenario_data.selected_burn_point !== null) {
-                let location = main_app.players[this.scenario_data.selected_burn_point.satellite].burn_points[this.scenario_data.selected_burn_point.point];
-                let burn = main_app.players[this.scenario_data.selected_burn_point.satellite].burns[this.scenario_data.selected_burn_point.point];
-                let burnN = math.norm(burn);
-                if (burnN > 1e-6) {
-                    drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 90 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[this.scenario_data.selected_burn_point.satellite].color, 4);
-                }
-            }
+
+            // Draw reachability if planning targeted maneuver
             if (main_app.scenario_data.tactic_data[0] === 'target') {
                 if ((1 - main_app.scenario_data.target_display) > 1e-6) {
                     main_app.scenario_data.target_display += 0.08333333;
                 }
                 drawTargetLimit(ctx, cnvs, main_app.scenario_data.selected_burn_point.satellite, main_app.scenario_data.tactic_data[3] / 1000, main_app.scenario_data.tactic_data[1] * this.scenario_data.target_display)
             }
-            // console.time('Sat info')
+            // Draw trajectory, burn points, and burn directions
             for (sat in this.players) {
                 if (this.players[sat].exist) {
-                    if (this.players[sat].focus) {
-                        this.players[sat].burns.forEach((burn, ii) => {
-                            let location = this.players[sat].burn_points[ii];
-                            let burnN = math.norm(burn);
-                            drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], this.display_data.axis_limit, this.display_data.center), 90 * burnN, Math.atan2(-burn[1], burn[0]), main_app.players[sat].color, 4);
-                        });
-                    }
                     drawSatData(ctx, cnvs, this.players[sat]);
                 }
             }
-            // console.timeEnd('Sat info')
+            // Draw satellite picture at current position for players that exist
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     drawSatShape(ctx, getScreenPixel(cnvs, this.players[sat].current_state[0], this.players[sat].current_state[1], this.display_data.axis_limit, this.display_data.center), this.players[sat].angle, 0.25, this.players[sat].color);
@@ -645,7 +631,7 @@ function drawAxes(cnvs, ctx, center, limit) {
 }
 
 function drawSatData(ctx, cnvs, sat) {
-
+    // Draw trajectory of satellite
     let points = sat.traj.map(point => {
         return getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true);
     })
@@ -658,8 +644,26 @@ function drawSatData(ctx, cnvs, sat) {
         drawCurve(ctx, points.slice(ii - 1, ii + main_app.scenario_data.nodes), 1);
     }
     
+    // Draw burn currently being planned if associated with satellite
+    if (main_app.scenario_data.selected_burn_point !== null && main_app.scenario_data.selected_burn_point.satellite === sat.name) {
+        let location = sat.burn_points[main_app.scenario_data.selected_burn_point.point];
+        let burn = sat.burns[main_app.scenario_data.selected_burn_point.point];
+        let burnN = math.norm(burn);
+        if (burnN > 1e-6) {
+            drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], main_app.display_data.axis_limit, main_app.display_data.center), 90 * burnN, Math.atan2(-burn[1], burn[0]), sat.color, 4);
+        }
+    }
 
+    // Draw all burns if mouse hovering over satellite on side
+    if (sat.focus) {
+        sat.burns.forEach((burn, ii) => {
+            let location = sat.burn_points[ii];
+            let burnN = math.norm(burn);
+            drawArrow(ctx, getScreenPixel(cnvs, location[0][0], location[1][0], main_app.display_data.axis_limit, main_app.display_data.center), 90 * burnN, Math.atan2(-burn[1], burn[0]), sat.color, 4);
+        });
+    }
 
+    // Draw burn points
     ctx.lineWidth = 2;
     ctx.strokeStyle = sat.color;
     let pixel_point;
@@ -815,9 +819,8 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
     ];
     let transformedArrow = math.dotMultiply(math.transpose(math.multiply(rotMat, math.transpose(arrow))), length / 2);
     ctx.save();
-    ctx.fillStyle = color;
+    ctx.fillStyle = 'rgba(30, 30, 50, 0.35)';
     ctx.strokeStyle = 'rgb(30, 30, 50)';
-    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.translate(pixelX, pixelY)
     ctx.moveTo(0, 0);
@@ -825,6 +828,10 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
         ctx.lineTo(point[0], point[1]);
     });
     ctx.fill();
+    ctx.lineWidth = 8 * length / 80;
+    ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4 * length / 80;
     ctx.stroke();
     ctx.restore();
 }
