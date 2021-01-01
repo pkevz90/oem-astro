@@ -19,6 +19,8 @@ let axisProperties = {
         y: cnvs.height / 2
     }
 };
+let m_s_div = document.getElementById('m_s');
+let man_time_div = document.getElementById('man_time');
 function getJulianDate() {
     var now = new Date();
     var start = new Date(now.getFullYear(), 0, 0);
@@ -238,19 +240,19 @@ function animate() {
         ctx.font = '30px sans-serif';
         ctx.fillStyle = 'rgb(75,75,75)';
         ctx.lineWidth = 5;
+        let aNewOrbit;
         if (axisState === 'polar') {
             ctx.beginPath();
             ctx.moveTo(dVline.start.x, dVline.start.y);
             ctx.lineTo(dVline.end.x, dVline.end.y);
             ctx.stroke();
-            ctx.fillText((calculateDvBudget(dVline) * 1000).toFixed(2) + ' m/s', 80, 80);
         }
         else {
             let longStart = Math.atan2(-dVline.start.x + axisProperties.center.x, -dVline.start.y + axisProperties.center.y);
             let longEnd = Math.atan2(-dVline.end.x + axisProperties.center.x, -dVline.end.y + axisProperties.center.y);
             let deltaLong = (longEnd - longStart) / travelTime;
             let nNewOrbit = 2*Math.PI / 86164 + deltaLong;
-            let aNewOrbit = Math.pow(398600.4418 / Math.pow(nNewOrbit,2), 1/3);
+            aNewOrbit = Math.pow(398600.4418 / Math.pow(nNewOrbit,2), 1/3);
             let points = [], radius = axisProperties.heightRatio * (aNewOrbit / 42164) * cnvs.height / 2;
             for (let ii = 0; ii < 20; ii += 0.5) {
                 points.push({
@@ -259,10 +261,14 @@ function animate() {
                 });
                 drawCurve(ctx, points, 1);
             }
-            dV = 2000*Math.abs((Math.sqrt(398600.4418 / 42164) - Math.sqrt(398600.4418 * (2/42164-2/(42164 + aNewOrbit)))));
-            ctx.fillText(dV.toFixed(2) + ' m/s', 80, 80);
-
         }
+        dV = axisState === 'polar' ? calculateDvBudget(dVline) * 1000 : 2000*Math.abs((Math.sqrt(398600.4418 / 42164) - Math.sqrt(398600.4418 * (2/42164-2/(42164 + aNewOrbit)))));
+        m_s_div.textContent = dV.toFixed(1) + ' m/s';
+        man_time_div.textContent = axisState === 'polar' ? "" : (travelTime / 86164).toFixed(1) + ' days';
+    }
+    else {
+        m_s_div.textContent = '';
+        man_time_div.textContent = '';
     }
     window.requestAnimationFrame(animate);
 }
@@ -319,38 +325,56 @@ function loadFileAsText(fileToLoad){
 
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
-function handleNewTle(file) {
-    let tle;
-    for (let ii = 0; ii < file.length; ii++) {
+// function handleNewTle(file) {
+//     let tle;
+//     for (let ii = 0; ii < file.length; ii++) {
         
-        if (file[ii].substr(0,4) === 'Name') {
-            tle = [file[ii+2].split(/ +/), file[ii+3].split(/ +/)];
-            tle = {
-                raan: Number(tle[1][3]),
-                inc: Number(tle[1][2]),
-                arg: Number(tle[1][5]),
-                time: Number(tle[0][3].substr(2, tle[0][3].length)),
-                mA: Number(tle[1][6]),
-                mm: Number(tle[1][7])
-            };
-            tle.mA += 360/tle.mm/86400 * ((currentDate.jd - tle.time) * 86400);
-            tle.long = (tle.raan + tle.arg + tle.mA - currentDate.gmst) % 360;
-            satellites.push({
-                name: file[ii].substr(6,file[ii].length),
-                raan: tle.raan,
-                inc: tle.inc,
-                long: tle.long,
-                color:  file[ii+1].substr(0,1).toLowerCase() === 'r' ? 'rgb(200,150,100)' : 'rgb(100,150,200)'
-            })
+//         if (file[ii].substr(0,4) === 'Name') {
+//             tle = [file[ii+2].split(/ +/), file[ii+3].split(/ +/)];
+//             tle = {
+//                 raan: Number(tle[1][3]),
+//                 inc: Number(tle[1][2]),
+//                 arg: Number(tle[1][5]),
+//                 time: Number(tle[0][3].substr(2, tle[0][3].length)),
+//                 mA: Number(tle[1][6]),
+//                 mm: Number(tle[1][7])
+//             };
+//             tle.mA += 360/tle.mm/86400 * ((currentDate.jd - tle.time) * 86400);
+//             tle.long = (tle.raan + tle.arg + tle.mA - currentDate.gmst) % 360;
+//             satellites.push({
+//                 name: file[ii].substr(6,file[ii].length),
+//                 raan: tle.raan,
+//                 inc: tle.inc,
+//                 long: tle.long,
+//                 color:  file[ii+1].substr(0,1).toLowerCase() === 'r' ? 'rgb(200,150,100)' : 'rgb(100,150,200)'
+//             })
 
-        }
+//         }
+//     }
+// }
+
+function handleNewTle(file) {
+    for (let ii = 0; ii < file.length; ii++) {
+        console.log(file[ii]);
+        if(/Name:?/i.test(file[ii])) {
+            let name = file[ii].match(/(?<=Name:\s).+/)[0];
+            let raan = Number(file[ii+1].match(/(?<=Raan:\s).+/)[0]);
+            let inc = Number(file[ii+2].match(/(?<=Inc:\s).+/)[0]);
+            let long = Number(file[ii+3].match(/(?<=Long:\s).+/)[0]);
+            let color = file[ii+4].match(/(?<=Color:\s).+/)[0];
+            satellites.push({
+                name: name,
+                raan: raan,
+                long: long,
+                inc: inc,
+                color:  color === 'Red' ? 'rgb(200,150,100)' : 'rgb(100,150,200)'
+            })
+        };
     }
 }
+
 function julianDateCalcStruct(time) {
     // Good
-    // return 367*time.year-Math.floor(7*(time.year+Math.floor((time.month+9)/12))/4)+Math.floor(275*time.month/9)+time.day+
-    //     1721013.5+((time.second/60+time.minute)/60+time.hour)/24 + 30; //?
-    time.year -= 2000;
     return 2451544.5 + 365 * (time.year - 2000) + Math.floor(0.25 * (time.year - 2000)) - Math.floor(0.01 * (time.year - 2000)) + Math.floor(0.0025 * (time.year - 2000)) + -1 + time.day;
 }
 function thetaGMST(JDUTI) {
@@ -366,6 +390,11 @@ function thetaGMST(JDUTI) {
     return theta / 240;
 }
 window.addEventListener('wheel', event => {
+    if (dVline) {
+        travelTime += event.deltaY > 0 ? -8616.4 : 8616.4;
+        travelTime = travelTime < 0 ? 0.1 : travelTime;
+        return;
+    }
     axisProperties.incLimit += event.deltaY > 0 ? 1 : -1;
 })
 function drawCurve(ctx, points, tension, type = 'stroke') {
