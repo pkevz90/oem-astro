@@ -74,7 +74,8 @@
             </div>
         </div>
         <div class="slow" id="turn-button" @click="turn_button_click" style="display: none;">
-            <span>Turn {{scenario_data.turnTime === 0 ? scenario_data.turn: (scenario_data.turnTime / 1000).toFixed() + 's'}}</span>
+            <span v-if="scenario_data.player === 'referee'">Refresh</span>
+            <span v-if="scenario_data.player !== 'referee'">Turn {{scenario_data.turnTime === 0 ? scenario_data.turn: (scenario_data.turnTime / 1000).toFixed() + 's'}}</span>
         </div>
         <div class="start-game-div" style="display: none;">
             <div>

@@ -196,6 +196,10 @@ var main_app = new Vue({
             this.display_data.update_time = event;
         },
         turn_button_click: async function () {
+            if (this.scenario_data.player === 'referee') {
+                this.getGameData();
+                return;
+            }
             if (this.scenario_data.turn > this.scenario_data.opposingTurn && this.scenario_data.server) {
                 return;
             }
@@ -226,7 +230,7 @@ var main_app = new Vue({
                 return;
             }
             this.scenario_data.turnTime = 0;
-            let burnData = blueBurns.burns.map((burn, ii) => {
+            let burnData = blueBurns.map((burn, ii) => {
                 if (ii < this.scenario_data.turn) {
                     return burn;
                 } else {
@@ -284,7 +288,7 @@ var main_app = new Vue({
                         },
                         name: $('#game-name').val()
                     }
-                    this.scenario_data.player = $("input[name='player']:checked").val();
+                    this.scenario_data.player = 'referee';
                     let responsePost = await fetch(this.fetchURL + '/new', {
                         method: 'POST',
                         headers: {
@@ -310,29 +314,33 @@ var main_app = new Vue({
                     let playerJoin = responseJoin.players.filter(player => {
                         return player.name === $('#team-select').val();
                     });
-                    this.scenario_data.gameId = responseJoin._id;
-                    this.scenario_data.player = $('#team-select').val();
-                    this.scenario_data.server = true;
-                    this.scenario_data.turn = playerJoin[0].turn;
+                    this.scenario_data.turn = playerJoin.length === 0 ? 0 : playerJoin[0].turn;
                     // this.scenario_data.turn = responseJoin.turn;
                     this.players.blue.exist = false;
                     this.players.green.exist = false;
                     this.players.red.exist = false;
                     this.players.gray.exist = false;
                     responseJoin.players.forEach(player => {
-                        this.players[player.name].exist = true;
-                        this.players[player.name].initial_state = player.initState;
-                        this.players[player.name].burns = player.burns;
-                        this.players[player.name].required_cats = player.cats;
-                        this.players[player.name].max_range = player.range;
-                        this.players[player.name].scenario_fuel = player.fuel;
-                        this.players[player.name].turn_fuel = player.turn_fuel;
-                        this.players[player.name].burned = true;
+                        Object.assign(this.players[player.name], {
+                            exist: true,
+                            initial_state: player.initState,
+                            burns: player.burns,
+                            required_cats: player.cats,
+                            max_range: player.range,
+                            scenario_fuel: player.fuel,
+                            turn_fuel: player.turn_fuel,
+                            burned: true
+                        })
                     })
-                    this.scenario_data.scenario_length = responseJoin.scenarioConditions.gameLength;
-                    this.scenario_data.burns_per_player = responseJoin.scenarioConditions.nBurns;
-                    this.scenario_data.init_sun_angl = responseJoin.scenarioConditions.initSun;
-                    this.scenario_data.turnLimit = responseJoin.scenarioConditions.turnLength;
+                    Object.assign(this.scenario_data, {
+                        scenario_length: responseJoin.scenarioConditions.gameLength,
+                        burns_per_player: responseJoin.scenarioConditions.nBurns,
+                        init_sun_angl: responseJoin.scenarioConditions.initSun,
+                        turnLimit: responseJoin.scenarioConditions.turnLength,
+                        server: true,
+                        gameId: responseJoin._id,
+                        player: $('#team-select').val()
+                    });
                     setTimeout(this.startGame, 500);
                     break;
                 case 'start-offline':
@@ -351,7 +359,9 @@ var main_app = new Vue({
             $('#time-slider').fadeIn(500);
             $('.setup-input-div').slideUp(500);
             $("input[name='player']").hide();
-            $('#turn-button').css('color', this.players[this.scenario_data.player].color);
+            if (this.scenario_data.player !== 'referee') {
+                $('#turn-button').css('color', this.players[this.scenario_data.player].color);
+            }
             $('#data-container').animate({
                 opacity: 0
             }, 500, () => {
@@ -381,39 +391,10 @@ var main_app = new Vue({
             if (!this.scenario_data.server) {
                 return;
             }
-            setInterval(async () => {
-                if (this.scenario_data.turn <= this.scenario_data.opposingTurn) {
-                    if (this.scenario_data.turnLimit !== 0 && this.scenario_data.turnTime === 0) {
-                        this.scenario_data.turnTime = this.scenario_data.turnLimit;
-                        console.log(this.scenario_data.turnTime);
-                    }
-                    return;
-                }
-                console.log('sent');
-                let responseInt = await fetch(this.fetchURL + '/games/' + this.scenario_data.gameId);
-                responseInt = await responseInt.json();
-                this.scenario_data.opposingTurn = math.min(responseInt.players.map(player => {
-                    return player.turn;
-                }));
-                if (this.scenario_data.turn === this.scenario_data.opposingTurn) {
-                    this.scenario_data.turnTime = this.scenario_data.turnLimit;
-                    console.log(this.scenario_data.turnTime);
-                }
-                responseInt.players.forEach(player => {
-                    if (player.name !== this.scenario_data.player) {
-                        this.players[player.name].burn_change.old = [...this.players[player.name].burns];
-                        this.players[player.name].burn_change.new = player.burns.map((burn, ii) => {
-                            if (ii >= this.scenario_data.opposingTurn) {
-                                return [0, 0];
-                            } else {
-                                return burn;
-                            }
-                        });
-                        this.players[player.name].burn_change.change = 0;
-                        this.players[player.name].burned = true;
-                    }
-                })
-            }, 5000)
+            if (this.scenario_data.player === 'referee') {
+                return;
+            }
+            setInterval(this.getGameData, 5000);
         },
         add_player: function () {
             if (!this.players.green.exist) {
@@ -436,6 +417,40 @@ var main_app = new Vue({
                 return;
             }
             this.players[player].burned = true;
+        },
+        getGameData: async function() {
+            if (this.scenario_data.turn <= this.scenario_data.opposingTurn && this.scenario_data.player !== 'referee') {
+                if (this.scenario_data.turnLimit !== 0 && this.scenario_data.turnTime === 0) {
+                    this.scenario_data.turnTime = this.scenario_data.turnLimit;
+                    console.log(this.scenario_data.turnTime);
+                }
+                return;
+            }
+            console.log('sent');
+            let responseInt = await fetch(this.fetchURL + '/games/' + this.scenario_data.gameId);
+            responseInt = await responseInt.json();
+            this.scenario_data.opposingTurn = math.min(responseInt.players.map(player => {
+                return player.turn;
+            }));
+            this.scenario_data.turn = this.scenario_data.player === 'referee' ? this.scenario_data.opposingTurn + 0 : this.scenario_data.turn;
+            if (this.scenario_data.turn === this.scenario_data.opposingTurn && this.scenario_data.player !== 'referee') {
+                this.scenario_data.turnTime = this.scenario_data.turnLimit;
+                console.log(this.scenario_data.turnTime);
+            }
+            responseInt.players.forEach(player => {
+                if (player.name !== this.scenario_data.player) {
+                    this.players[player.name].burn_change.old = [...this.players[player.name].burns];
+                    this.players[player.name].burn_change.new = player.burns.map((burn, ii) => {
+                        if (ii >= this.scenario_data.opposingTurn) {
+                            return [0, 0];
+                        } else {
+                            return burn;
+                        }
+                    });
+                    this.players[player.name].burn_change.change = 0;
+                    this.players[player.name].burned = true;
+                }
+            })
         }
     },
     watch: {
@@ -885,7 +900,7 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
         }
         main_app.scenario_data.mousedown_location = [event.offsetX, event.offsetY];
         let location_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
-        if (checkClose(location_point[0], location_point[1])) {
+        if (checkClose(location_point[0], location_point[1]) && main_app.scenario_data.player !== 'referee') {
             main_app.players[main_app.scenario_data.selected_burn_point.satellite].burned = true;
             let total_burn = 0;
             for (let ii = 0; ii < main_app.scenario_data.selected_burn_point.point; ii++) {
