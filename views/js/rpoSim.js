@@ -961,7 +961,7 @@ fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
 
 function animation(time) {
     main_app.updateScreen();
-    if (main_app.display_data.update_time) {
+    if (main_app.display_data.update_time && main_app.scenario_data.server) {
         let expected_time;
         if (main_app.scenario_data.tactic_data[0] === 'target') {
             expected_time = main_app.scenario_data.selected_burn_point.point * main_app.turn_length + main_app.scenario_data.tactic_data[1];
