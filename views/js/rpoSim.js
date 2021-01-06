@@ -36,8 +36,8 @@ class Player {
 var main_app = new Vue({
     el: "#main-app",
     data: {
-        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -315,7 +315,6 @@ var main_app = new Vue({
                         return player.name === $('#team-select').val();
                     });
                     this.scenario_data.turn = playerJoin.length === 0 ? 0 : playerJoin[0].turn;
-                    // this.scenario_data.turn = responseJoin.turn;
                     this.players.blue.exist = false;
                     this.players.green.exist = false;
                     this.players.red.exist = false;
@@ -996,7 +995,7 @@ fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
 
 function animation(time) {
     main_app.updateScreen();
-    if (main_app.display_data.update_time) {
+    if (main_app.display_data.update_time && main_app.scenario_data.server) {
         let expected_time;
         if (main_app.scenario_data.tactic_data[0] === 'target') {
             expected_time = main_app.scenario_data.selected_burn_point.point * main_app.turn_length + main_app.scenario_data.tactic_data[1];
