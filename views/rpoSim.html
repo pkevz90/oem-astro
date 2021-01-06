@@ -19,19 +19,23 @@
     <div id="main-app">
         <div id="data-container">
             <div class="player-data" v-for="player in players" v-if="player.exist" v-bind:style="{color: player.color}">
-                <div @mouseover="player.focus = true" @mouseleave="player.focus = false"><span style="font-size:2em">{{ player.name.toUpperCase() }}</span> <span v-if="scenario_data.game_started">{{ player.burn_total.toFixed(2) }} m/s</span><input type="radio" name="player" :value="player.name"></div>
+                <div @mouseover="player.focus = true" @mouseleave="player.focus = false" :title="player.burnTip"><span style="font-size:2em">{{ player.name.toUpperCase() }}</span> <span v-if="scenario_data.game_started">{{ player.burn_total.toFixed(2) }} m/s</span><input type="radio" name="player" :value="player.name"></div>
+                <div v-if="scenario_data.game_started && player.focus">
+                    <span>R</span> <span>I</span>
+                </div>
+                <div v-if="scenario_data.game_started && player.focus" v-for="burn in player.burns">
+                    <span>{{ burn[0].toFixed(2) }}</span> <span>{{ burn[1].toFixed(2) }}</span> m/s
+                </div>
                 <div v-if="!scenario_data.game_started">
                     <div>Ae <input type="Number" min="0" v-model.Number="player.initial_state[0]" @input="initialChange(player.name)"> km</div>
                     <div>R <input type="Number" v-model.Number="player.initial_state[1]" @input="initialChange(player.name)"> km</div>
                     <div>I <input type="Number" v-model.Number="player.initial_state[2]" @input="initialChange(player.name)"> km</div>
-                    <div>B <input type="Number" v-model.Number="player.initial_state[3]" @input="initialChange(player.name)"> km</div>
-                    <div>Fuel <input type="Number" min="0" v-model.Number="player.scenario_fuel"> m/s</div>
-                    <div>Fuel/Turn <input type="Number" min="0" v-model.Number="player.turn_fuel"> m/s</div>
-                    <!-- <div><input type="Number" min="0" v-model.Number="player.required_cats[0]"> < CATS < <input type="Number" min="0" v-model.Number="player.required_cats[1]"></div>
-                    <div>Range <input type="Number" min="0" v-model.Number="player.max_range"> km</div> -->
-                    <!-- <div>Target <select id="selected-target" v-model="player.target">
-                        <option value="closest">Closest</option>
-                    </select></div> -->
+                    <div>&#946 <input type="Number" v-model.Number="player.initial_state[3]" @input="initialChange(player.name)"> deg</div>
+                    <div title="Maximum total fuel over entire scenario">Fuel <input type="Number" min="0" v-model.Number="player.scenario_fuel"> m/s</div>
+                    <div title="Maximum fuel usage per scenario turn">Fuel/Turn <input type="Number" min="0" v-model.Number="player.turn_fuel"> m/s</div>
+                    <div title="Standard Deviation of Burn Magnitude,&#10;based on percentage of burn magnitude">Burn Mag &#963 <input type="Number" min="0" max="10" step="0.1" v-model.Number="player.uncertainty.magnitude"> %</div>
+                    <div title="Standard Deviation of Burn Direction">Burn Az &#963 <input type="Number" min="0" max="25" step="0.1" v-model.Number="player.uncertainty.direction"> deg</div>
+                    <div title="Chance burn command is not successful">Comm Failure <input type="Number" min="0" max="25" step="0.1" v-model.Number="player.uncertainty.failure"> %</div>
                 </div>
             </div>
             <div v-if="active_players.length < 4 && !scenario_data.game_started" @click="add_player"
@@ -56,22 +60,23 @@
                 class="slider" @input="slider_change" @mousedown="slider_click(false)" @mouseup="slider_click(true)">
         </div>
         <div class="setup-zone">
-            <div>
-                Game Length <input @input="initialChange('all')" type="number" value="30" min="5" v-model.number="scenario_data.scenario_length">
+            <div title="Length of scenario in hours">
+                Scenario Length <input @input="initialChange('all')" type="number" value="30" min="5" v-model.number="scenario_data.scenario_length">
             </div>
-            <div>
+            <div title="Number of burns per player">
                 # Burns <input type="number" min="1" v-model.Number="scenario_data.burns_per_player"
                     @input="changeNumBurns">
             </div>
-            <div>
+            <div title="Measured clockwise in radians from positive radial">
                 Initial Sun <input @input="initialChange('all')" type="number" step="0.01" v-model.number="scenario_data.init_sun_angl">
             </div>
             <div class="slow" id="start-game" @click="startScreenClick">
                 Start
             </div>
         </div>
-        <div class="slow" id="turn-button" @click="turn_button_click" style="display: none;">
-            <span>Turn {{scenario_data.turnTime === 0 ? scenario_data.turn: (scenario_data.turnTime / 1000).toFixed() + 's'}}</span>
+        <div class="slow" id="turn-button" @click="turn_button_click" style="display: none;" v-if="scenario_data.server">
+            <span v-if="scenario_data.player === 'referee'">Refresh</span>
+            <span v-if="scenario_data.player !== 'referee'">Turn {{scenario_data.turnTime === 0 ? scenario_data.turn: (scenario_data.turnTime / 1000).toFixed() + 's'}}</span>
         </div>
         <div class="start-game-div" style="display: none;">
             <div>
@@ -99,6 +104,7 @@
                 </div>
                 <div>
                     <select id="team-select">
+                        <option value="referee">Referee</option>
                         <option :value="player" v-for="player in chosenGamePlayers">{{ player.toUpperCase() }}</option>
                     </select>
                 </div>

@@ -5,11 +5,11 @@ class Player {
         this.color = color;
         this.exist = exist;
         this.burn_change = {
-            old_burn: null,
-            new_burn: null,
-            change: 1
-        },
-        this.current_state = null;
+                old_burn: null,
+                new_burn: null,
+                change: 1
+            },
+            this.current_state = null;
         this.burns = [];
         this.burn_points = [];
         this.traj = [];
@@ -23,6 +23,12 @@ class Player {
         this.target = 'closest';
         this.engine = null;
         this.focus = false;
+        this.burnTip = 'yep';
+        this.uncertainty = {
+            magnitude: 0,
+            direction: 0,
+            failure: 5
+        }
     }
 }
 
@@ -109,7 +115,6 @@ var main_app = new Vue({
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             // Draw Sun
             let calcBurns;
-            // console.time('Calculate Burn Points')
             for (sat in this.players) {
                 if (this.players[sat].exist) {
                     if (this.players[sat].burn_change.change < 1) {
@@ -130,14 +135,10 @@ var main_app = new Vue({
                         tBurns: this.turn_length,
                         burns: this.players[sat].burn_change.change < 1 ? calcBurns : this.players[sat].burns
                     });
-                }
-            }
-            // console.timeEnd('Calculate Burn Points')
-            for (sat in this.players) {
-                if (this.players[sat].exist) {
                     this.players[sat].current_state = calcCurrentPoint(this.scenario_data.game_time, sat);
                 }
             }
+            // Draw Sun
             let sunPos;
             if (this.scenario_data.sat_data.target === null) {
                 sunPos = [0, 0];
@@ -195,15 +196,41 @@ var main_app = new Vue({
             this.display_data.update_time = event;
         },
         turn_button_click: async function () {
+            if (this.scenario_data.player === 'referee') {
+                this.getGameData();
+                return;
+            }
             if (this.scenario_data.turn > this.scenario_data.opposingTurn && this.scenario_data.server) {
                 return;
             }
+            let blueBurns = this.players[this.scenario_data.player].burns.map((burn, ii) => {
+                if (ii === this.scenario_data.turn) {
+                    if (Math.random() < this.players[this.scenario_data.player].uncertainty.failure / 100) {
+                        burn = [0, 0];
+                    }
+                    else {
+                        let burnN = math.norm(burn);
+                        let burnD = math.atan2(burn[1], burn[0]) * 180 / Math.PI;
+                        burnN += burnN * (this.players[this.scenario_data.player].uncertainty.magnitude / 100) * normalRandom();
+                        burnD +=  this.players[this.scenario_data.player].uncertainty.direction * normalRandom();
+                        burn = [burnN * Math.cos(burnD * Math.PI / 180), burnN * Math.sin(burnD * Math.PI / 180)];
+                    }
+
+                }
+                return burn;
+            })
+            this.players[this.scenario_data.player].burn_change.old = [...this.players[this.scenario_data.player].burns];
+            this.players[this.scenario_data.player].burn_change.new = blueBurns;
+            this.players[this.scenario_data.player].burn_change.change = 0;
+            this.players[this.scenario_data.player].burned = true;
             this.scenario_data.turn++;
+
+            console.log(blueBurns);
             if (!this.scenario_data.server) {
                 return;
             }
             this.scenario_data.turnTime = 0;
-            let burnData = this.players[this.scenario_data.player].burns.map((burn, ii) => {
+            let burnData = blueBurns.map((burn, ii) => {
                 if (ii < this.scenario_data.turn) {
                     return burn;
                 } else {
@@ -261,7 +288,7 @@ var main_app = new Vue({
                         },
                         name: $('#game-name').val()
                     }
-                    this.scenario_data.player = $("input[name='player']:checked").val();
+                    this.scenario_data.player = 'referee';
                     let responsePost = await fetch(this.fetchURL + '/new', {
                         method: 'POST',
                         headers: {
@@ -287,29 +314,32 @@ var main_app = new Vue({
                     let playerJoin = responseJoin.players.filter(player => {
                         return player.name === $('#team-select').val();
                     });
-                    this.scenario_data.gameId = responseJoin._id;
-                    this.scenario_data.player = $('#team-select').val();
-                    this.scenario_data.server = true;
-                    this.scenario_data.turn = playerJoin[0].turn;
-                    // this.scenario_data.turn = responseJoin.turn;
+                    this.scenario_data.turn = playerJoin.length === 0 ? 0 : playerJoin[0].turn;
                     this.players.blue.exist = false;
                     this.players.green.exist = false;
                     this.players.red.exist = false;
                     this.players.gray.exist = false;
                     responseJoin.players.forEach(player => {
-                        this.players[player.name].exist = true;
-                        this.players[player.name].initial_state = player.initState;
-                        this.players[player.name].burns = player.burns;
-                        this.players[player.name].required_cats = player.cats;
-                        this.players[player.name].max_range = player.range;
-                        this.players[player.name].scenario_fuel = player.fuel;
-                        this.players[player.name].turn_fuel = player.turn_fuel;
-                        this.players[player.name].burned = true;
+                        Object.assign(this.players[player.name], {
+                            exist: true,
+                            initial_state: player.initState,
+                            burns: player.burns,
+                            required_cats: player.cats,
+                            max_range: player.range,
+                            scenario_fuel: player.fuel,
+                            turn_fuel: player.turn_fuel,
+                            burned: true
+                        })
                     })
-                    this.scenario_data.scenario_length = responseJoin.scenarioConditions.gameLength;
-                    this.scenario_data.burns_per_player = responseJoin.scenarioConditions.nBurns;
-                    this.scenario_data.init_sun_angl = responseJoin.scenarioConditions.initSun;
-                    this.scenario_data.turnLimit = responseJoin.scenarioConditions.turnLength;
+                    Object.assign(this.scenario_data, {
+                        scenario_length: responseJoin.scenarioConditions.gameLength,
+                        burns_per_player: responseJoin.scenarioConditions.nBurns,
+                        init_sun_angl: responseJoin.scenarioConditions.initSun,
+                        turnLimit: responseJoin.scenarioConditions.turnLength,
+                        server: true,
+                        gameId: responseJoin._id,
+                        player: $('#team-select').val()
+                    });
                     setTimeout(this.startGame, 500);
                     break;
                 case 'start-offline':
@@ -328,7 +358,9 @@ var main_app = new Vue({
             $('#time-slider').fadeIn(500);
             $('.setup-input-div').slideUp(500);
             $("input[name='player']").hide();
-            $('#turn-button').css('color', this.players[this.scenario_data.player].color);
+            if (this.scenario_data.player !== 'referee') {
+                $('#turn-button').css('color', this.players[this.scenario_data.player].color);
+            }
             $('#data-container').animate({
                 opacity: 0
             }, 500, () => {
@@ -358,39 +390,10 @@ var main_app = new Vue({
             if (!this.scenario_data.server) {
                 return;
             }
-            setInterval(async () => {
-                if (this.scenario_data.turn <= this.scenario_data.opposingTurn) {
-                    if (this.scenario_data.turnLimit !== 0 && this.scenario_data.turnTime === 0) {
-                        this.scenario_data.turnTime = this.scenario_data.turnLimit;
-                        console.log(this.scenario_data.turnTime);
-                    }
-                    return;
-                }
-                console.log('sent');
-                let responseInt = await fetch(this.fetchURL + '/games/' + this.scenario_data.gameId);
-                responseInt = await responseInt.json();
-                this.scenario_data.opposingTurn = math.min(responseInt.players.map(player => {
-                    return player.turn;
-                }));
-                if (this.scenario_data.turn === this.scenario_data.opposingTurn) {
-                    this.scenario_data.turnTime = this.scenario_data.turnLimit;
-                    console.log(this.scenario_data.turnTime);
-                }
-                responseInt.players.forEach(player => {
-                    if (player.name !== this.scenario_data.player) {
-                        this.players[player.name].burn_change.old = [...this.players[player.name].burns];
-                        this.players[player.name].burn_change.new = player.burns.map((burn, ii) => {
-                            if (ii >= this.scenario_data.opposingTurn) {
-                                return [0, 0];
-                            } else {
-                                return burn;
-                            }
-                        });
-                        this.players[player.name].burn_change.change = 0;
-                        this.players[player.name].burned = true;
-                    }
-                })
-            }, 5000)
+            if (this.scenario_data.player === 'referee') {
+                return;
+            }
+            setInterval(this.getGameData, 5000);
         },
         add_player: function () {
             if (!this.players.green.exist) {
@@ -413,6 +416,40 @@ var main_app = new Vue({
                 return;
             }
             this.players[player].burned = true;
+        },
+        getGameData: async function() {
+            if (this.scenario_data.turn <= this.scenario_data.opposingTurn && this.scenario_data.player !== 'referee') {
+                if (this.scenario_data.turnLimit !== 0 && this.scenario_data.turnTime === 0) {
+                    this.scenario_data.turnTime = this.scenario_data.turnLimit;
+                    console.log(this.scenario_data.turnTime);
+                }
+                return;
+            }
+            console.log('sent');
+            let responseInt = await fetch(this.fetchURL + '/games/' + this.scenario_data.gameId);
+            responseInt = await responseInt.json();
+            this.scenario_data.opposingTurn = math.min(responseInt.players.map(player => {
+                return player.turn;
+            }));
+            this.scenario_data.turn = this.scenario_data.player === 'referee' ? this.scenario_data.opposingTurn + 0 : this.scenario_data.turn;
+            if (this.scenario_data.turn === this.scenario_data.opposingTurn && this.scenario_data.player !== 'referee') {
+                this.scenario_data.turnTime = this.scenario_data.turnLimit;
+                console.log(this.scenario_data.turnTime);
+            }
+            responseInt.players.forEach(player => {
+                if (player.name !== this.scenario_data.player) {
+                    this.players[player.name].burn_change.old = [...this.players[player.name].burns];
+                    this.players[player.name].burn_change.new = player.burns.map((burn, ii) => {
+                        if (ii >= this.scenario_data.opposingTurn) {
+                            return [0, 0];
+                        } else {
+                            return burn;
+                        }
+                    });
+                    this.players[player.name].burn_change.change = 0;
+                    this.players[player.name].burned = true;
+                }
+            })
         }
     },
     watch: {
@@ -425,9 +462,7 @@ var main_app = new Vue({
 })
 
 
-window.addEventListener('resize', () => {
-    resizeCanvas();
-});
+window.addEventListener('resize', resizeCanvas);
 
 function calcData(origin, target) {
     if (main_app.scenario_data.sat_data.target === null) {
@@ -643,7 +678,7 @@ function drawSatData(ctx, cnvs, sat) {
         ctx.lineWidth = 4;
         drawCurve(ctx, points.slice(ii - 1, ii + main_app.scenario_data.nodes), 1);
     }
-    
+
     // Draw burn currently being planned if associated with satellite
     if (main_app.scenario_data.selected_burn_point !== null && main_app.scenario_data.selected_burn_point.satellite === sat.name) {
         let location = sat.burn_points[main_app.scenario_data.selected_burn_point.point];
@@ -667,7 +702,7 @@ function drawSatData(ctx, cnvs, sat) {
     ctx.lineWidth = 2;
     ctx.strokeStyle = sat.color;
     let pixel_point;
-    sat.burn_points.forEach((point,ii) => {
+    sat.burn_points.forEach((point, ii) => {
         if (ii >= main_app.scenario_data.turn) {
             ctx.beginPath()
             pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
@@ -836,13 +871,13 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
     ctx.restore();
 }
 
-function setMouseCallbacks() {
+(function setMouseCallbacks() {
     $('#main-canvas').mousedown(event => {
+        // If shift key down, change data players
         if (main_app.display_data.shift_key) {
             let location;
             let click_location = [event.offsetX, event.offsetY];
             let cnvs = document.getElementById("main-canvas");
-            // let ctx = cnvs.getContext('2d');
             for (player in main_app.players) {
                 if (main_app.players[player].exist) {
                     location = main_app.players[player].current_state;
@@ -864,7 +899,7 @@ function setMouseCallbacks() {
         }
         main_app.scenario_data.mousedown_location = [event.offsetX, event.offsetY];
         let location_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
-        if (checkClose(location_point[0], location_point[1])) {
+        if (checkClose(location_point[0], location_point[1]) && main_app.scenario_data.player !== 'referee') {
             main_app.players[main_app.scenario_data.selected_burn_point.satellite].burned = true;
             let total_burn = 0;
             for (let ii = 0; ii < main_app.scenario_data.selected_burn_point.point; ii++) {
@@ -945,9 +980,8 @@ function setMouseCallbacks() {
             }
         }
     })
-}
+})()
 
-setMouseCallbacks();
 resizeCanvas();
 window.requestAnimationFrame(animation);
 $("input[name='player']")[0].checked = true;
@@ -961,7 +995,7 @@ fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
 
 function animation(time) {
     main_app.updateScreen();
-    if (main_app.display_data.update_time) {
+    if (main_app.display_data.update_time && main_app.scenario_data.server) {
         let expected_time;
         if (main_app.scenario_data.tactic_data[0] === 'target') {
             expected_time = main_app.scenario_data.selected_burn_point.point * main_app.turn_length + main_app.scenario_data.tactic_data[1];
@@ -1111,10 +1145,8 @@ function targetCalc(sat, r2) {
 
 function drawTargetLimit(ctx, cnvs, sat, dV, t) {
     let first_state = main_app.players[sat].burn_points[main_app.scenario_data.selected_burn_point.point];
-    // console.log(first_state, sat, main_app.scenario_data.selected_burn_point)
     let r = first_state.slice(0, 2);
     let v = main_app.scenario_data.tactic_data[2];
-    // console.log(r,v)
     let ang, dVcomponents, r2, pixelPos = [];
     let pRR = PhiRR(t * 3600),
         pRV = PhiRV(t * 3600);
@@ -1130,7 +1162,6 @@ function drawTargetLimit(ctx, cnvs, sat, dV, t) {
         r2 = math.add(math.multiply(pRR, r), math.multiply(pRV, math.add(v, dVcomponents)));
         pixelPos.push(getScreenPixel(cnvs, r2[0][0], r2[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true));
     }
-    drawCurve(ctx, pixelPos)
     drawCurve(ctx, pixelPos, 1, 'fill')
 }
 
@@ -1147,4 +1178,31 @@ function changeRgb(color, constant) {
 function hrsToTime(hrs) {
     hrs = Math.round(hrs * 100) / 100; // rounding to truncate and not have for example 2.9999999 instead of 3, producing 2:59 instread of 3:00
     return ("0" + Math.floor(hrs)).slice(-2) + ':' + ('0' + Math.floor(60 * (hrs - Math.floor(hrs)))).slice(-2);
+}
+
+function normalRandom() {
+	var val, u, v, s, mul;
+    spareRandom = null;
+	if(spareRandom !== null)
+	{
+		val = spareRandom;
+		spareRandom = null;
+	}
+	else
+	{
+		do
+		{
+			u = Math.random()*2-1;
+			v = Math.random()*2-1;
+
+			s = u*u+v*v;
+		} while(s === 0 || s >= 1);
+
+		mul = Math.sqrt(-2 * Math.log(s) / s);
+
+		val = u * mul;
+		spareRandom = v * mul;
+	}
+	
+	return val;
 }
