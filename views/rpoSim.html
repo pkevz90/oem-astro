@@ -24,14 +24,20 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>R</th>
-                                <th>I</th>
+                                <th>Radial</th>
+                                <th>In-Track</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
+                                <td colspan="2"><u>Current Position</u></td>
+                            </tr>
+                            <tr>
                                 <td>{{ player.current_state[0].toFixed(2) }} km</td>
                                 <td>{{ player.current_state[1].toFixed(2) }} km</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2"><u>Burns</u></td>
                             </tr>
                             <tr v-for="burn in player.burns">
                                 <td>{{ burn[0].toFixed(2) }} m/s</td>
@@ -82,7 +88,7 @@
                     @input="changeNumBurns">
             </div>
             <div title="Measured clockwise in radians from positive radial">
-                Initial Sun <input @input="initialChange('all')" type="number" step="0.01" v-model.number="scenario_data.init_sun_angl">
+                Initial Sun <input @input="initialChange('all')" type="number" step="1" v-model.number="scenario_data.init_sun_angl">
             </div>
             <div class="slow" id="start-game" @click="startScreenClick">
                 Start

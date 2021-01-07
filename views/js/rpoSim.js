@@ -113,7 +113,7 @@ var main_app = new Vue({
             ctx.clearRect(0, 0, cnvs.width, cnvs.height);
             drawStars(cnvs, ctx);
             drawAxes(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
-            // Draw Sun
+            // Calculate Player Burns
             let calcBurns;
             for (sat in this.players) {
                 if (this.players[sat].exist) {
@@ -145,7 +145,7 @@ var main_app = new Vue({
             } else {
                 sunPos = this.players[this.scenario_data.sat_data.target].current_state || [0, 0];
             }
-            drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 135, this.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * this.scenario_data.game_time * 3600, 'rgba(150,150,50,1)', 9);
+            drawArrow(ctx, getScreenPixel(cnvs, sunPos[0], sunPos[1], this.display_data.axis_limit, this.display_data.center), 135, -this.scenario_data.init_sun_angl * Math.PI / 180 + 2 * Math.PI / 86164 * this.scenario_data.game_time * 3600, 'rgba(150,150,50,1)', 9);
             if (this.scenario_data.game_started) {
                 drawAnimations(cnvs, ctx, this.display_data.center, this.display_data.axis_limit);
             }
@@ -471,8 +471,8 @@ function calcData(origin, target) {
     let rel_vector = math.subtract(main_app.players[origin].current_state.slice(0, 2), main_app.players[target].current_state.slice(0, 2));
     main_app.scenario_data.sat_data.data.range = math.norm(rel_vector);
     let sunVector = [
-        [Math.cos(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)],
-        [-Math.sin(main_app.scenario_data.init_sun_angl + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)]
+        [Math.cos(-main_app.scenario_data.init_sun_angl * Math.PI / 180 + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)],
+        [-Math.sin(-main_app.scenario_data.init_sun_angl * Math.PI / 180 + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)]
     ];
     main_app.scenario_data.sat_data.data.cats = Math.acos(math.dot(rel_vector, sunVector) / math.norm(rel_vector)) * 180 / Math.PI;
     for (let player in main_app.players) {
@@ -702,8 +702,9 @@ function drawSatData(ctx, cnvs, sat) {
     ctx.lineWidth = 2;
     ctx.strokeStyle = sat.color;
     let pixel_point;
+    let burn_turn = main_app.scenario_data.server ? main_app.scenario_data.turn : Number(main_app.scenario_data.game_time) / main_app.turn_length;
     sat.burn_points.forEach((point, ii) => {
-        if (ii >= main_app.scenario_data.turn) {
+        if (ii >= burn_turn) {
             ctx.beginPath()
             pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
             ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
@@ -1086,6 +1087,8 @@ function drawCurve(ctx, points, tension, type = 'stroke') {
 function checkClose(x, y, change = true) {
     let xPoint, yPoint;
     let turn = main_app.scenario_data.turn;
+    turn = main_app.scenario_data.server ? turn : Math.ceil(Number(main_app.scenario_data.game_time) / main_app.turn_length);
+    
     for (sat in main_app.players) {
         for (var ii = turn; ii < main_app.players[sat].burn_points.length; ii++) {
             xPoint = main_app.players[sat].burn_points[ii][1][0];
