@@ -27,7 +27,7 @@ class Player {
         this.uncertainty = {
             magnitude: 0,
             direction: 0,
-            failure: 5
+            failure: 0
         }
     }
 }
