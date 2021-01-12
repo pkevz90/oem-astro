@@ -1000,9 +1000,7 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
             targetCalc(main_app.scenario_data.selected_burn_point, math.transpose([cart_point]));
             return;
         }
-        if (main_app.display_data.axis_limit > 2 || event.deltaY < 0) {
-            main_app.display_data.axis_limit -= event.deltaY * 2;
-        }
+        main_app.display_data.axis_limit /= 1 + event.deltaY/10;
     })
     window.addEventListener('keydown', (event) => {
         if (event.key === 'Shift') {
