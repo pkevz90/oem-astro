@@ -69,13 +69,21 @@
                 style="position: relative; height: 300px;"><span class="slow" id="add-sat-button">+</span></div>
         </div>
         <div id="game-data-container" style="display: none;">
-            <div><span class="left-float">Range</span> <span
+            <div @click="display_data.rangeExtended = !display_data.rangeExtended" class="pointer"><span class="left-float">Range</span> <span
                     class="right-float">{{ scenario_data.sat_data.data.range.toFixed(2) }} km</span></div>
-            <!-- <div>POCA: {{ scenario_data.sat_data.data.range.toFixed(2) }} km (00:00)</div> -->
             <br>
+            <div v-if="display_data.rangeExtended"><span class="left-float">R Rate</span> <span
+                class="right-float">{{ scenario_data.sat_data.data.range_rate.toFixed(2) }} m/s</span></div>
+            <br v-if="display_data.rangeExtended">
+            <div v-if="display_data.rangeExtended"><span class="left-float">Radial</span> <span
+                class="right-float">{{ scenario_data.sat_data.data.relative[0].toFixed(2) }} km</span></div>
+            <br v-if="display_data.rangeExtended">
+            <div v-if="display_data.rangeExtended"><span class="left-float">IT</span> <span
+                class="right-float">{{ scenario_data.sat_data.data.relative[1].toFixed(2) }} km</span></div>
+            <br v-if="display_data.rangeExtended">
             <div><span class="left-float">CATS</span> <span
                     class="right-float">{{ scenario_data.sat_data.data.cats.toFixed(2) }} deg</span></div>
-            <br>
+            <br v-if="display_data.rangeExtended">
             <div><span class="left-float">Time</span> <span
                     class="right-float">+{{ scenario_data.game_time_string }}</span></div>
         </div>
