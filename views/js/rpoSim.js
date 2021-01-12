@@ -36,8 +36,8 @@ class Player {
 var main_app = new Vue({
     el: "#main-app",
     data: {
-        // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -63,6 +63,12 @@ var main_app = new Vue({
             server: false,
             gameId: '',
             player: '',
+            playerFail: {
+                blue: 0,
+                red: 0,
+                gray: 0,
+                green: 0
+            },
             selected_burn_point: null,
             game_started: false,
             game_time: 0,
@@ -219,10 +225,6 @@ var main_app = new Vue({
                 }
                 return burn;
             })
-            this.players[this.scenario_data.player].burn_change.old = [...this.players[this.scenario_data.player].burns];
-            this.players[this.scenario_data.player].burn_change.new = blueBurns;
-            this.players[this.scenario_data.player].burn_change.change = 0;
-            this.players[this.scenario_data.player].burned = true;
             this.scenario_data.turn++;
 
             console.log(blueBurns);
@@ -241,13 +243,22 @@ var main_app = new Vue({
                 burns: burnData,
                 turn: this.scenario_data.turn
             };
-            await fetch(this.fetchURL + '/update/' + this.scenario_data.gameId + '/' + this.scenario_data.player, {
+            let response = await fetch(this.fetchURL + '/update/' + this.scenario_data.gameId + '/' + this.scenario_data.player, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(outData)
             });
+            response = await response.json();
+            if (!response.resp && math.norm(blueBurns[this.scenario_data.turn - 1]) > 1e-6) {
+                blueBurns[this.scenario_data.turn - 1] = [0,0];
+                alert('Burn Failed');
+            }
+            this.players[this.scenario_data.player].burn_change.old = [...this.players[this.scenario_data.player].burns];
+            this.players[this.scenario_data.player].burn_change.new = blueBurns;
+            this.players[this.scenario_data.player].burn_change.change = 0;
+            this.players[this.scenario_data.player].burned = true;
         },
         startScreenClick: async function (event = {
             target: {
@@ -450,6 +461,21 @@ var main_app = new Vue({
                     this.players[player.name].burned = true;
                 }
             })
+        },
+        setPlayerFail: async function(player) {
+            let outData = {
+                player: player,
+                failRate: this.scenario_data.playerFail[player]
+            };
+            let response = await fetch(this.fetchURL + '/referee/' + this.scenario_data.gameId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(outData)
+            });
+            await response.json();
+            alert(`${player.toUpperCase()} fail rate updated to ${outData.failRate}%`)
         }
     },
     watch: {
