@@ -639,12 +639,9 @@ function drawAxes(cnvs, ctx, center, limit) {
     } else {
         otherPoint = axis_center[1]
     }
-    axisStep = 20;
+    axisStep = Math.floor(limit / 50) * 10;
     while (point > 0) {
-        // point -= 7.359 / limit / 2 * width;
         point -= axisStep / limit / 2 * width;
-        // ctx.moveTo(point, otherPoint - height / 70);
-        // ctx.lineTo(point, otherPoint + height / 70);
         ctx.moveTo(point, -height);
         ctx.lineTo(point, height);
         ii++;
@@ -653,15 +650,11 @@ function drawAxes(cnvs, ctx, center, limit) {
     ii = 0;
     point = axis_center[0] + 0;
     while (point < width) {
-        // point += 7.359 / limit / 2 * width;
         point += axisStep / limit / 2 * width;
-        // ctx.moveTo(point, otherPoint - height / 70);
-        // ctx.lineTo(point, otherPoint + height / 70);
         ctx.moveTo(point, -height);
         ctx.lineTo(point, height);
         ii++;
         ctx.fillText(-ii * axisStep, point, otherPoint + height / 30);
-        // ctx.fillText(-ii*0.01,point, otherPoint + height / 30);
     }
     point = axis_center[1] + 0;
     ii = 0;
@@ -674,8 +667,6 @@ function drawAxes(cnvs, ctx, center, limit) {
     }
     while (point < height) {
         point += axisStep / limit / 2 / yxRatio * height;
-        // ctx.moveTo(otherPoint - height / 70, point);
-        // ctx.lineTo(otherPoint + height / 70, point);
         ctx.moveTo(-width / 70, point);
         ctx.lineTo(width, point);
         ii++
@@ -685,8 +676,6 @@ function drawAxes(cnvs, ctx, center, limit) {
     ii = 0;
     while (point > 0) {
         point -= axisStep / limit / 2 / yxRatio * height;
-        // ctx.moveTo(otherPoint - height / 70, point);
-        // ctx.lineTo(otherPoint + height / 70, point);
         ctx.moveTo(-width / 70, point);
         ctx.lineTo(width, point);
         ii++
