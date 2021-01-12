@@ -36,8 +36,8 @@ class Player {
 var main_app = new Vue({
     el: "#main-app",
     data: {
-        // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -354,6 +354,12 @@ var main_app = new Vue({
                         player: $('#team-select').val()
                     });
                     setTimeout(this.startGame, 500);
+                    break;
+                case 'start-delete':
+                    await fetch(this.fetchURL + '/' + $('#join-game').val(), {
+                        method: 'DELETE'
+                    });
+                    this.games = this.games.filter(game => game._id !== $('#join-game').val());
                     break;
                 case 'start-offline':
                     // Start with no requests
