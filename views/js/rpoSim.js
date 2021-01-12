@@ -36,8 +36,8 @@ class Player {
 var main_app = new Vue({
     el: "#main-app",
     data: {
-        // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -57,12 +57,19 @@ var main_app = new Vue({
                     range: 0,
                     cats: 0,
                     range_rate: 0,
+                    relative: [0,0],
                     poca: 0
                 }
             },
             server: false,
             gameId: '',
             player: '',
+            playerFail: {
+                blue: 0,
+                red: 0,
+                gray: 0,
+                green: 0
+            },
             selected_burn_point: null,
             game_started: false,
             game_time: 0,
@@ -87,7 +94,8 @@ var main_app = new Vue({
             shift_key: false,
             stars: math.random([100, 3], -0.5, 0.5),
             update_time: true,
-            transition: false
+            transition: false,
+            rangeExtended: false
         }
     },
     computed: {
@@ -219,10 +227,6 @@ var main_app = new Vue({
                 }
                 return burn;
             })
-            this.players[this.scenario_data.player].burn_change.old = [...this.players[this.scenario_data.player].burns];
-            this.players[this.scenario_data.player].burn_change.new = blueBurns;
-            this.players[this.scenario_data.player].burn_change.change = 0;
-            this.players[this.scenario_data.player].burned = true;
             this.scenario_data.turn++;
 
             console.log(blueBurns);
@@ -241,13 +245,22 @@ var main_app = new Vue({
                 burns: burnData,
                 turn: this.scenario_data.turn
             };
-            await fetch(this.fetchURL + '/update/' + this.scenario_data.gameId + '/' + this.scenario_data.player, {
+            let response = await fetch(this.fetchURL + '/update/' + this.scenario_data.gameId + '/' + this.scenario_data.player, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(outData)
             });
+            response = await response.json();
+            if (!response.resp && math.norm(blueBurns[this.scenario_data.turn - 1]) > 1e-6) {
+                blueBurns[this.scenario_data.turn - 1] = [0,0];
+                alert('Burn Failed');
+            }
+            this.players[this.scenario_data.player].burn_change.old = [...this.players[this.scenario_data.player].burns];
+            this.players[this.scenario_data.player].burn_change.new = blueBurns;
+            this.players[this.scenario_data.player].burn_change.change = 0;
+            this.players[this.scenario_data.player].burned = true;
         },
         startScreenClick: async function (event = {
             target: {
@@ -450,6 +463,21 @@ var main_app = new Vue({
                     this.players[player.name].burned = true;
                 }
             })
+        },
+        setPlayerFail: async function(player) {
+            let outData = {
+                player: player,
+                failRate: this.scenario_data.playerFail[player]
+            };
+            let response = await fetch(this.fetchURL + '/referee/' + this.scenario_data.gameId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(outData)
+            });
+            await response.json();
+            alert(`${player.toUpperCase()} fail rate updated to ${outData.failRate}%`)
         }
     },
     watch: {
@@ -469,6 +497,9 @@ function calcData(origin, target) {
         return;
     }
     let rel_vector = math.subtract(main_app.players[origin].current_state.slice(0, 2), main_app.players[target].current_state.slice(0, 2));
+    let rel_velocity = math.subtract(main_app.players[origin].current_state.slice(2, 4), main_app.players[target].current_state.slice(2, 4));
+    main_app.scenario_data.sat_data.data.relative = rel_vector;
+    main_app.scenario_data.sat_data.data.range_rate = math.dot(rel_vector, rel_velocity) / math.norm(rel_vector) * 1000;
     main_app.scenario_data.sat_data.data.range = math.norm(rel_vector);
     let sunVector = [
         [Math.cos(-main_app.scenario_data.init_sun_angl * Math.PI / 180 + 2 * Math.PI / 86164 * main_app.scenario_data.game_time * 3600)],
@@ -873,11 +904,14 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
 }
 
 (function setMouseCallbacks() {
-    $('#main-canvas').mousedown(event => {
+    $(window).mousedown(event => {
         // If shift key down, change data players
+        if (event.target.className === 'slider') {
+            return;
+        }
         if (main_app.display_data.shift_key) {
             let location;
-            let click_location = [event.offsetX, event.offsetY];
+            let click_location = [event.pageX, event.pageY];
             let cnvs = document.getElementById("main-canvas");
             for (player in main_app.players) {
                 if (main_app.players[player].exist) {
@@ -898,8 +932,8 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
             }
             return;
         }
-        main_app.scenario_data.mousedown_location = [event.offsetX, event.offsetY];
-        let location_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
+        main_app.scenario_data.mousedown_location = [event.pageX, event.pageY];
+        let location_point = getScreenPoint(event.pageX, event.pageY, main_app.display_data.axis_limit, main_app.display_data.center);
         if (checkClose(location_point[0], location_point[1]) && main_app.scenario_data.player !== 'referee') {
             main_app.players[main_app.scenario_data.selected_burn_point.satellite].burned = true;
             let total_burn = 0;
@@ -920,17 +954,17 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
             return;
         }
         main_app.display_data.drag_data = [
-            [event.offsetX, event.offsetY],
+            [event.pageX, event.pageY],
             [...main_app.display_data.center]
         ];
     })
-    $('#main-canvas').mousemove(event => {
-        main_app.scenario_data.mousemove_location = [event.offsetX, event.offsetY];
-        let cart_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
+    $(window).mousemove(event => {
+        main_app.scenario_data.mousemove_location = [event.pageX, event.pageY];
+        let cart_point = getScreenPoint(event.pageX, event.pageY, main_app.display_data.axis_limit, main_app.display_data.center);
         if (main_app.scenario_data.tactic_data !== null) {
             switch (main_app.scenario_data.tactic_data[0]) {
                 case 'burn':
-                    burnCalc(main_app.scenario_data.selected_burn_point, [event.offsetX, event.offsetY]);
+                    burnCalc(main_app.scenario_data.selected_burn_point, [event.pageX, event.pageY]);
                     break;
                 case 'target':
                     targetCalc(main_app.scenario_data.selected_burn_point, math.transpose([cart_point]));
@@ -940,13 +974,13 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
         }
         let easement = 0.5;
         if (main_app.display_data.drag_data !== null) {
-            let targetCenterX = (event.offsetX - main_app.display_data.drag_data[0][0]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][0];
-            let targetCenterY = (event.offsetY - main_app.display_data.drag_data[0][1]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][1];
+            let targetCenterX = (event.pageX - main_app.display_data.drag_data[0][0]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][0];
+            let targetCenterY = (event.pageY - main_app.display_data.drag_data[0][1]) * 2 * main_app.display_data.axis_limit / main_app.display_data.width + main_app.display_data.drag_data[1][1];
             main_app.display_data.center[0] = (targetCenterX - main_app.display_data.center[0]) * easement + main_app.display_data.center[0];
             main_app.display_data.center[1] = (targetCenterY - main_app.display_data.center[1]) * easement + main_app.display_data.center[1];
         }
     })
-    $('#main-canvas').mouseup(() => {
+    $(window).mouseup(() => {
         main_app.scenario_data.mousedown_location = null;
         main_app.scenario_data.tactic_data = ['none'];
         main_app.scenario_data.selected_burn_point = null;
@@ -954,12 +988,12 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
             main_app.display_data.drag_data = null;
         }
     })
-    $('#main-canvas').on('mousewheel', event => {
+    $(window).on('mousewheel', event => {
         if (main_app.scenario_data.tactic_data[0] === 'target') {
             if (main_app.scenario_data.tactic_data[1] > 1 || event.deltaY > 0) {
                 main_app.scenario_data.tactic_data[1] += event.deltaY / 10
             }
-            let cart_point = getScreenPoint(event.offsetX, event.offsetY, main_app.display_data.axis_limit, main_app.display_data.center);
+            let cart_point = getScreenPoint(event.pageX, event.pageY, main_app.display_data.axis_limit, main_app.display_data.center);
             targetCalc(main_app.scenario_data.selected_burn_point, math.transpose([cart_point]));
             return;
         }
