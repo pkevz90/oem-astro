@@ -36,8 +36,8 @@ class Player {
 var main_app = new Vue({
     el: "#main-app",
     data: {
-        // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -355,6 +355,12 @@ var main_app = new Vue({
                     });
                     setTimeout(this.startGame, 500);
                     break;
+                case 'start-delete':
+                    await fetch(this.fetchURL + '/' + $('#join-game').val(), {
+                        method: 'DELETE'
+                    });
+                    this.games = this.games.filter(game => game._id !== $('#join-game').val());
+                    break;
                 case 'start-offline':
                     // Start with no requests
                     this.scenario_data.player = $("input[name='player']:checked").val();
@@ -633,18 +639,23 @@ function drawAxes(cnvs, ctx, center, limit) {
         ii = 0;
     if (axis_center[1] < 0) {
         otherPoint = 0;
-        // console.log('hey');
     } else if (axis_center[1] > height) {
         otherPoint = height;
     } else {
         otherPoint = axis_center[1]
     }
-    axisStep = 20;
+    axisStep = Math.floor(limit / 50) * 10;
+    if (limit / 50 < 0.1) {
+        axisStep = 1;
+    }
+    else if (limit / 50 < 0.5) {
+        axisStep = 2;
+    }
+    else if (axisStep === 0) {
+        axisStep = 5;
+    }
     while (point > 0) {
-        // point -= 7.359 / limit / 2 * width;
         point -= axisStep / limit / 2 * width;
-        // ctx.moveTo(point, otherPoint - height / 70);
-        // ctx.lineTo(point, otherPoint + height / 70);
         ctx.moveTo(point, -height);
         ctx.lineTo(point, height);
         ii++;
@@ -653,15 +664,11 @@ function drawAxes(cnvs, ctx, center, limit) {
     ii = 0;
     point = axis_center[0] + 0;
     while (point < width) {
-        // point += 7.359 / limit / 2 * width;
         point += axisStep / limit / 2 * width;
-        // ctx.moveTo(point, otherPoint - height / 70);
-        // ctx.lineTo(point, otherPoint + height / 70);
         ctx.moveTo(point, -height);
         ctx.lineTo(point, height);
         ii++;
         ctx.fillText(-ii * axisStep, point, otherPoint + height / 30);
-        // ctx.fillText(-ii*0.01,point, otherPoint + height / 30);
     }
     point = axis_center[1] + 0;
     ii = 0;
@@ -674,8 +681,6 @@ function drawAxes(cnvs, ctx, center, limit) {
     }
     while (point < height) {
         point += axisStep / limit / 2 / yxRatio * height;
-        // ctx.moveTo(otherPoint - height / 70, point);
-        // ctx.lineTo(otherPoint + height / 70, point);
         ctx.moveTo(-width / 70, point);
         ctx.lineTo(width, point);
         ii++
@@ -685,8 +690,6 @@ function drawAxes(cnvs, ctx, center, limit) {
     ii = 0;
     while (point > 0) {
         point -= axisStep / limit / 2 / yxRatio * height;
-        // ctx.moveTo(otherPoint - height / 70, point);
-        // ctx.lineTo(otherPoint + height / 70, point);
         ctx.moveTo(-width / 70, point);
         ctx.lineTo(width, point);
         ii++
