@@ -633,13 +633,21 @@ function drawAxes(cnvs, ctx, center, limit) {
         ii = 0;
     if (axis_center[1] < 0) {
         otherPoint = 0;
-        // console.log('hey');
     } else if (axis_center[1] > height) {
         otherPoint = height;
     } else {
         otherPoint = axis_center[1]
     }
     axisStep = Math.floor(limit / 50) * 10;
+    if (limit / 50 < 0.1) {
+        axisStep = 1;
+    }
+    else if (limit / 50 < 0.5) {
+        axisStep = 2;
+    }
+    else if (axisStep === 0) {
+        axisStep = 5;
+    }
     while (point > 0) {
         point -= axisStep / limit / 2 * width;
         ctx.moveTo(point, -height);
