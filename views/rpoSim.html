@@ -50,8 +50,8 @@
                     </table>
                 </div>
                 <div v-if="scenario_data.game_started && scenario_data.player === 'referee'">
-                    <input type="number" min="0" max="100" value="0" v-model.Number="scenario_data.playerFail[player.name]">%
-                    <button @click="setPlayerFail(player.name)">Update Fail Rate</button>
+                    <input type="number" min="0" max="100" value="0" v-model.Number="scenario_data.playerFail[player.name]">
+                    <button class="start-button slow" @click="setPlayerFail(player.name)" style="font-size: 0.5em; padding: 2%">Update Fail Rate</button>
                 </div>
                 <div v-if="!scenario_data.game_started">
                     <div>Ae <input type="Number" min="0" v-model.Number="player.initial_state[0]" @input="initialChange(player.name)"> km</div>
@@ -122,9 +122,9 @@
                 <div>
                     <input type="number" placeholder="Turn Limit (s)" id="turn-time" min="0">
                 </div>
-                <div>
+                <!-- <div>
                     <input type="password" placeholder="Password">
-                </div>
+                </div> -->
                 <div>
                     <button id="start-server" class="start-button slow" @click="startScreenClick">Start Server</button>
                 </div>
