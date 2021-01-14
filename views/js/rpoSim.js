@@ -38,6 +38,7 @@ var main_app = new Vue({
     data: {
         // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
         fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        // fetchURL: 'https://rposimapi.glitch.me/',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -422,12 +423,15 @@ var main_app = new Vue({
             }
         },
         changeNumBurns: function () {
+            this.scenario_data.burns_per_player = this.scenario_data.burns_per_player === 0 || this.scenario_data.burns_per_player === '' ? 1 : this.scenario_data.burns_per_player;
             for (player in this.players) {
                 this.players[player].burns = math.zeros(this.scenario_data.burns_per_player, 2)._data;
                 this.players[player].burned = true;
             }
         },
         initialChange: function (player) {
+            this.scenario_data.scenario_length = this.scenario_data.scenario_length < 5 || this.scenario_data.scenario_length === '' ? 5 : this.scenario_data.scenario_length;
+            
             if (player === 'all') {
                 for (let player in this.players) {
                     this.players[player].burned = true;
@@ -758,7 +762,7 @@ function calcSatTrajectory(ctx, cnvs, options) {
         return;
     }
     let n = 2 * Math.PI / 86164;
-    let nodes = main_app.scenario_data.nodes;
+    let nodes = main_app.scenario_data.nodes / 2 * main_app.turn_length;
     nodes = nodes < 2 ? 2 : nodes;
     let pRR = PhiRR(tBurns * 3600 / nodes),
         pRV = PhiRV(tBurns * 3600 / nodes),
