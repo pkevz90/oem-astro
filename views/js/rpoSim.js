@@ -89,7 +89,8 @@ var main_app = new Vue({
             timeOld: 0,
             turnTime: 0,
             turnLimit: 0,
-            nodes: 8
+            nodes: 8,
+            updating: false
         },
         display_data: {
             center: [0, 0],
@@ -322,9 +323,11 @@ var main_app = new Vue({
                     break;
                 case 'start-refresh':
                     // GET request for current games
+                    this.scenario_data.updating = true;
                     let response = await fetch(this.fetchURL + '/games');
                     response = await response.json();
                     this.games = response;
+                    this.scenario_data.updating = false;
                     break;
                 case 'start-join':
                     let responseJoin = await fetch(this.fetchURL + '/games/' + $('#join-game').val());
@@ -1047,8 +1050,10 @@ $("input[name='player']")[0].checked = true;
 for (player in main_app.players) {
     main_app.players[player].burns = math.zeros(main_app.scenario_data.burns_per_player, 2)._data;
 }
+main_app.scenario_data.updating = true;
 fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
     main_app.games = res;
+    main_app.scenario_data.updating = false; 
 }).catch(err => alert("Server blocked, contact the 533 TRS for support"))
 
 

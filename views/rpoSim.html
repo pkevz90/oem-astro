@@ -23,7 +23,7 @@
                     <span style="font-size:2em">{{ player.name.toUpperCase() }}</span> 
                     <span v-if="scenario_data.game_started">{{ player.burn_total.toFixed(2) }} m/s</span><input type="radio" name="player" :value="player.name">
                 </div>
-                <div v-if="scenario_data.game_started && player.focus">
+                <div v-if="scenario_data.game_started && player.focus" style="max-height: 350px; overflow-y: scroll; overflow-x: hidden">
                     <input title="Trajectory Line Thickness" type="range" step="0.1" min="0.1" max="10" class="slider" style="width: 100%;" v-model.number="player.display.thickness">
                     <input title="Trajectory Line Opacity" type="range" step="0.01" min="0" max="1" class="slider" style="width: 100%;" v-model.number="player.display.opacity">
                     <input title="Burn Point Size" type="range" step="0.01" min="0" max="10" class="slider" style="width: 100%;" v-model.number="player.display.point">
@@ -134,6 +134,9 @@
             </div>
             <div>
                 <span style="font-size: 3vw; color: white;">Join Server</span>
+                <div v-if="scenario_data.updating">
+                    Updating....
+                </div>
                 <div>
                     <select id="join-game" @change="chosenGameChange">
                         <option value="default" disabled selected>Join Game</option>
