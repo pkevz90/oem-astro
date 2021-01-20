@@ -24,6 +24,11 @@ class Player {
         this.engine = null;
         this.focus = false;
         this.burnTip = 'yep';
+        this.display = {
+            thickness: 4,
+            opacity: 1,
+            point: 5
+        }
         this.uncertainty = {
             magnitude: 0,
             direction: 0,
@@ -448,12 +453,22 @@ var main_app = new Vue({
                 }
                 return;
             }
-            console.log('sent');
             let responseInt = await fetch(this.fetchURL + '/games/' + this.scenario_data.gameId);
             responseInt = await responseInt.json();
             this.scenario_data.opposingTurn = math.min(responseInt.players.map(player => {
                 return player.turn;
             }));
+            if (this.scenario_data.player !== 'referee') {
+                let serverTurn = responseInt.players.filter(player => {
+                    console.log(player.name === this.scenario_data.player);
+                    return player.name === this.scenario_data.player
+                });
+                if (serverTurn[0].turn < this.scenario_data.turn) {
+                    this.scenario_data.turn--;
+                    this.turn_button_click();
+                    return;
+                }
+            }
             this.scenario_data.turn = this.scenario_data.player === 'referee' ? this.scenario_data.opposingTurn + 0 : this.scenario_data.turn;
             if (this.scenario_data.turn === this.scenario_data.opposingTurn && this.scenario_data.player !== 'referee') {
                 this.scenario_data.turnTime = this.scenario_data.turnLimit;
@@ -708,12 +723,13 @@ function drawSatData(ctx, cnvs, sat) {
     let points = sat.traj.map(point => {
         return getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center, true);
     })
+    ctx.globalAlpha = sat.display.opacity;
     for (let ii = 1; ii < points.length - 1; ii += main_app.scenario_data.nodes) {
-        ctx.strokeStyle = 'rgb(30, 30, 50)';
-        ctx.lineWidth = 10;
+        ctx.strokeStyle = 'rgba(30, 30, 50)';
+        ctx.lineWidth = sat.display.thickness * 2;
         drawCurve(ctx, points.slice(ii - 1, ii + main_app.scenario_data.nodes), 1);
         ctx.strokeStyle = sat.color;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = sat.display.thickness;
         drawCurve(ctx, points.slice(ii - 1, ii + main_app.scenario_data.nodes), 1);
     }
 
@@ -737,18 +753,21 @@ function drawSatData(ctx, cnvs, sat) {
     }
 
     // Draw burn points
-    ctx.lineWidth = 2;
+    ctx.lineWidth = sat.display.thickness;
     ctx.strokeStyle = sat.color;
+    ctx.fillStyle = 'rgba(30, 30, 50)';
     let pixel_point;
     let burn_turn = main_app.scenario_data.server ? main_app.scenario_data.turn : Number(main_app.scenario_data.game_time) / main_app.turn_length;
     sat.burn_points.forEach((point, ii) => {
         if (ii >= burn_turn) {
             ctx.beginPath()
             pixel_point = getScreenPixel(cnvs, point[0][0], point[1][0], main_app.display_data.axis_limit, main_app.display_data.center);
-            ctx.arc(pixel_point[0], pixel_point[1], 7, 0, 2 * Math.PI);
+            ctx.arc(pixel_point[0], pixel_point[1], sat.display.point, 0, 2 * Math.PI);
             ctx.stroke();
+            ctx.fill();
         }
     })
+    ctx.globalAlpha = 1;
 }
 
 function calcSatTrajectory(ctx, cnvs, options) {
@@ -941,7 +960,7 @@ function drawArrow(ctx, pixelLocation, length = 30, angle = 0, color = 'rgba(255
         }
         main_app.scenario_data.mousedown_location = [event.pageX, event.pageY];
         let location_point = getScreenPoint(event.pageX, event.pageY, main_app.display_data.axis_limit, main_app.display_data.center);
-        if (checkClose(location_point[0], location_point[1]) && main_app.scenario_data.player !== 'referee') {
+        if (checkClose(location_point[0], location_point[1], true, cnvs.width) && main_app.scenario_data.player !== 'referee') {
             main_app.players[main_app.scenario_data.selected_burn_point.satellite].burned = true;
             let total_burn = 0;
             for (let ii = 0; ii < main_app.scenario_data.selected_burn_point.point; ii++) {
@@ -1123,7 +1142,7 @@ function drawCurve(ctx, points, tension, type = 'stroke') {
     }
 }
 
-function checkClose(x, y, change = true) {
+function checkClose(x, y, change = true, width = 100) {
     let xPoint, yPoint;
     let turn = main_app.scenario_data.turn;
     turn = main_app.scenario_data.server ? turn : Math.ceil(Number(main_app.scenario_data.game_time) / main_app.turn_length);
@@ -1132,7 +1151,7 @@ function checkClose(x, y, change = true) {
         for (var ii = turn; ii < main_app.players[sat].burn_points.length; ii++) {
             xPoint = main_app.players[sat].burn_points[ii][1][0];
             yPoint = main_app.players[sat].burn_points[ii][0][0];
-            if (math.norm([xPoint - x, yPoint - y]) < main_app.display_data.axis_limit / 50) {
+            if (math.norm([xPoint - x, yPoint - y]) < main_app.players[sat].display.point / width * 8 * main_app.display_data.axis_limit) {
                 if (change) {
                     main_app.scenario_data.selected_burn_point = {
                         satellite: sat,
