@@ -1049,7 +1049,7 @@ for (player in main_app.players) {
 }
 fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
     main_app.games = res;
-}).catch(err => alert(err))
+}).catch(err => alert("Server blocked, contact the 533 TRS for support"))
 
 
 function animation(time) {
