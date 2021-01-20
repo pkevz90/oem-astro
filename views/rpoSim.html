@@ -18,12 +18,15 @@
 <body class="noselect">
     <div id="main-app">
         <div id="data-container">
-            <div class="player-data" v-for="player in players" v-if="player.exist" v-bind:style="{color: player.color}">
-                <div @mouseover="player.focus = true" @mouseleave="player.focus = false" :title="player.burnTip">
+            <div class="player-data" v-for="player in players" v-if="player.exist" v-bind:style="{color: player.color}" @mouseleave="player.focus = false">
+                <div @mouseover="player.focus = true" :title="player.burnTip">
                     <span style="font-size:2em">{{ player.name.toUpperCase() }}</span> 
                     <span v-if="scenario_data.game_started">{{ player.burn_total.toFixed(2) }} m/s</span><input type="radio" name="player" :value="player.name">
                 </div>
                 <div v-if="scenario_data.game_started && player.focus">
+                    <input type="range" step="0.1" min="0.1" max="10" class="slider" style="width: 100%;" v-model.number="player.display.thickness">
+                    <input type="range" step="0.01" min="0" max="1" class="slider" style="width: 100%;" v-model.number="player.display.opacity">
+                    <input type="range" step="0.01" min="0" max="10" class="slider" style="width: 100%;" v-model.number="player.display.point">
                     <table>
                         <thead>
                             <tr>
