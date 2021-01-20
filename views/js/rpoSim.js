@@ -42,8 +42,8 @@ var main_app = new Vue({
     el: "#main-app",
     data: {
         // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
-        fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
-        // fetchURL: 'https://rposimapi.glitch.me/',
+        // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
+        fetchURL: 'https://rposimapi.glitch.me/',
         games: [],
         chosenGamePlayers: [],
         players: {
@@ -1049,7 +1049,7 @@ for (player in main_app.players) {
 }
 fetch(main_app.fetchURL + '/games').then(res => res.json()).then(res => {
     main_app.games = res;
-}).catch(err => alert(err))
+}).catch(err => alert("Server blocked, contact the 533 TRS for support"))
 
 
 function animation(time) {
