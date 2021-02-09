@@ -44,7 +44,7 @@ var main_app = new Vue({
         // fetchURL: 'http://localhost:5000/first-firebase-app-964fe/us-central1/app',
         // fetchURL: 'https://us-central1-first-firebase-app-964fe.cloudfunctions.net/app',
 //         fetchURL: 'https://rposimapi.glitch.me/',
-        fetchURL: 'https://cf-nodejs-silly-koala-ay.app.cloud.gov/',
+        fetchURL: 'https://cf-nodejs-silly-koala-ay.app.cloud.gov',
         games: [],
         chosenGamePlayers: [],
         players: {
