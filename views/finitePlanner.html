@@ -12,6 +12,17 @@
         }
         #radial-intrack-plot {
             cursor: none;
+            position: fixed;
+            width: 50%;
+            left: 0%;
+            height: 100%;
+        }
+        #cross-intrack-plot {
+            cursor: none;
+            position: fixed;
+            width: 50%;
+            left: 50%;
+            height: 100%;
         }
         #time-slider {
             position: fixed;
@@ -28,12 +39,15 @@
 </head>
 <body>
     <canvas id="radial-intrack-plot"></canvas>
+    <canvas id="cross-intrack-plot"></canvas>
     <div id="time-slider">
         <input id="time-slider-range" type="range" min=0 max=86164 value=0>
     </div>
     <script>
         let cnvsRI = document.getElementById("radial-intrack-plot");
         let ctxRI = cnvsRI.getContext("2d");
+        let cnvsCI = document.getElementById("cross-intrack-plot");
+        let ctxCI = cnvsCI.getContext("2d");
         let timeSlider = document.getElementById('time-slider-range');
         let windowOptions = {
             center: [0, 0],
@@ -52,7 +66,7 @@
             color: 'blue',
             shape: 'triangle',
             size: 0.03,
-            position: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
+            position: {r: 0, i: 25, c: 5, rd: 0, id: 0, cd: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [
                 {
@@ -76,7 +90,7 @@
             color: 'red',
             shape: 'square',
             size: 0.03,
-            position: {r: 0, i: 15, c: 0, cd: 0, rd: 0, id: 0},
+            position: {r: 0, i: 15, c: 10, cd: 0, rd: 0, id: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [],
             shownTraj: []
@@ -84,7 +98,7 @@
             color: 'red',
             shape: 'square',
             size: 0.03,
-            position: {r: 0, i: -15, c: 0, cd: 0, rd: -0.001, id: 0},
+            position: {r: 0, i: -15, c: -5, cd: 0.001, rd: -0.001, id: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [],
             shownTraj: []
@@ -92,7 +106,7 @@
             color: 'green',
             shape: 'up-triangle',
             size: 0.03,
-            position: {r: 0, i: 0, c: 0, cd: 0, rd: 0, id: 0},
+            position: {r: 0, i: 0, c: 30, cd: -0.0010, rd: 0, id: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [{
                     time: 3600,
@@ -151,7 +165,10 @@
         });
         function animation() {
             // let a = performance.now()
+            // console.time()
             ctxRI.clearRect(0, 0, cnvsRI.width, cnvsRI.height);
+            ctxCI.clearRect(0, 0, cnvsRI.width, cnvsRI.height);
+            // Draw mouse positon on radial-intrack axis
             ctxRI.beginPath();
             ctxRI.strokeStyle = windowOptions.closeSat === false ?'black' : satellites[windowOptions.closeSat].color;
             ctxRI.lineWidth = windowOptions.closeSat === false ? 0.75 : 2;
@@ -160,31 +177,42 @@
             ctxRI.moveTo(windowOptions.mousePosition.pixel[0], 0);
             ctxRI.lineTo(windowOptions.mousePosition.pixel[0], cnvsRI.height);
             ctxRI.stroke();
+            // Record mouse RIC position on bottom left of RI axis
             ctxRI.font = cnvsRI.height * 0.025 + 'px serif';
             ctxRI.fillStyle = 'black';
             ctxRI.fillText('R: ' + windowOptions.mousePosition.ric.r.toFixed(1) + ' km  I: ' + windowOptions.mousePosition.ric.i.toFixed(1) + ' km', 0, cnvsRI.height - 0.05 * cnvsRI.height);
+            // Draw axis arrows on each graph
             drawArrow();
             drawArrow({angle: -90, backHalf: true});
+            drawArrow({cnvs: cnvsCI, ctx: ctxCI});
+            drawArrow({angle: -90, backHalf: true, cnvs: cnvsCI, ctx: ctxCI});
+            // If mouse hovering over object, predict future path
             if (windowOptions.closeSat !== false) {
                 previewSatPath();
             }
             ctxRI.lineWidth = 2;
+            ctxCI.lineWidth = 2;
             satellites.forEach(satellite => {
                 ctxRI.strokeStyle = satellite.color;
+                ctxCI.strokeStyle = satellite.color;
                 drawCurve(ctxRI, satellite.shownTraj, {ric: true});
+                drawCurve(ctxCI, satellite.shownTraj, {ric: true, cross: true});
                 drawSatellite(satellite);
             })
             // console.log(performance.now() - a);
+            // console.timeEnd()
             window.requestAnimationFrame(animation);
         }
         function formatCanvas() {
-            cnvsRI.width = document.documentElement.clientWidth;
+            cnvsRI.width = document.documentElement.clientWidth / 2;
             cnvsRI.height = document.documentElement.clientHeight;
+            cnvsCI.width = document.documentElement.clientWidth / 2;
+            cnvsCI.height = document.documentElement.clientHeight;
             windowOptions.w_h_ratio = cnvsRI.width / cnvsRI.height;
             // windowOptions.closeLimit = 0.05 * cnvsRI.height
         }
         function drawArrow(options = {}) {
-            let {height = 200, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', origin = [cnvsRI.width / 2, cnvsRI.height / 2], angle = 0, backHalf = false} = options;
+            let {cvns = cnvsRI, ctx = ctxRI, height = 200, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', origin = [cvns.width / 2, cvns.height / 2], angle = 0, backHalf = false} = options;
             let points = [
                 [-lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
                 [-lineWidth / 2, - height + arrowHeight],
@@ -196,17 +224,17 @@
                 [-lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
             ];
             points = math.transpose(math.multiply(rotMatrix({angle: angle}),math.transpose(points)));
-            ctxRI.fillStyle = color;
-            ctxRI.beginPath();
+            ctx.fillStyle = color;
+            ctx.beginPath();
             points.forEach((point, ii) => {
                 if (ii === 0) {
-                    ctxRI.moveTo(origin[0] + point[0], origin[1] + point[1]);
+                    ctx.moveTo(origin[0] + point[0], origin[1] + point[1]);
                 }
                 else {
-                    ctxRI.lineTo(origin[0] + point[0], origin[1] + point[1]);
+                    ctx.lineTo(origin[0] + point[0], origin[1] + point[1]);
                 }
             });
-            ctxRI.fill();
+            ctx.fill();
         }
         function rotMatrix(options = {}) {
             let {axis = 3, angle = 45, units = 'deg'} = options;
@@ -255,11 +283,15 @@
                     break;
             }
         }
-        function ricToPixel(point = {r: 0, i: 0}, struct = false) {
-            if (struct) {
-                return {x: cnvsRI.width / 2 * (1 - point.i / windowOptions.width), y: cnvsRI.height / 2 * (1 - point.r * windowOptions.w_h_ratio / windowOptions.width )};
+        function ricToPixel(point = {r: 0, i: 0}, options = {}) {
+            let {struct = false, cross = false, cnvs = cnvsRI} = options;
+            let pointOut;
+            if (cross) {
+                pointOut = [cnvs.width / 2 * (1 - point.i / windowOptions.width), cnvs.height / 2 * (1 - point.c * windowOptions.w_h_ratio / windowOptions.width )];
             }
-            return [cnvsRI.width / 2 * (1 - point.i / windowOptions.width), cnvsRI.height / 2 * (1 - point.r * windowOptions.w_h_ratio / windowOptions.width )];
+            else {
+                pointOut = [cnvs.width / 2 * (1 - point.i / windowOptions.width), cnvs.height / 2 * (1 - point.r * windowOptions.w_h_ratio / windowOptions.width )];
+            }return struct ? {x: pointOut[0], y: pointOut[1]} : pointOut;
         }
         function pixelToRic(point = [0,0]) {
             return {i: (1 - point[0] * 2 / cnvsRI.width) * windowOptions.width, r: (1 - point[1] * 2 / cnvsRI.height) * windowOptions.width / windowOptions.w_h_ratio};
@@ -368,16 +400,16 @@
             }
         }
         function drawCurve(ctx, points, options = {}) {
-            let {tension = 1, type = 'stroke', ric = false} = options;
+            let {tension = 1, type = 'stroke', ric = false, cross = false} = options;
             ctx.beginPath();
-            let point1 = ric === false ? points[0] : ricToPixel(points[0], true);
+            let point1 = ric === false ? points[0] : ricToPixel(points[0], {struct: true, cross});
             ctx.moveTo(point1.x, point1.y);
             var t = tension;
             for (var i = 0; i < points.length - 1; i++) {
-                var p0 = (i > 0) ? ric === true ? ricToPixel(points[i - 1], true) : points[i-1] : point1;
-                var p1 = ric === false ? points[i] : ricToPixel(points[i], true);
-                var p2 = ric === false ? points[i + 1] : ricToPixel(points[i + 1], true);
-                var p3 = (i != points.length - 2) ? ric === false ? points[i + 2] : ricToPixel(points[i + 2], true) : p2;
+                var p0 = (i > 0) ? ric === true ? ricToPixel(points[i - 1], {struct: true, cross}) : points[i-1] : point1;
+                var p1 = ric === false ? points[i] : ricToPixel(points[i], {struct: true, cross});
+                var p2 = ric === false ? points[i + 1] : ricToPixel(points[i + 1], {struct: true, cross});
+                var p3 = (i != points.length - 2) ? ric === false ? points[i + 2] : ricToPixel(points[i + 2], {struct: true, cross}) : p2;
 
                 var cp1x = p1.x + (p2.x - p0.x) / 6 * t;
                 var cp1y = p1.y + (p2.y - p0.y) / 6 * t;
