@@ -13,16 +13,19 @@
         #radial-intrack-plot {
             cursor: none;
             position: fixed;
-            width: 50%;
+            width: 100%;
+            top: 0%;
             left: 0%;
             height: 100%;
+            border-bottom: 1px solid black;
         }
         #cross-intrack-plot {
             cursor: none;
             position: fixed;
-            width: 50%;
-            left: 50%;
-            height: 100%;
+            width: 100%;
+            left: 0%;
+            bottom: 0%;
+            height: 0%;
         }
         #time-slider {
             position: fixed;
@@ -51,7 +54,7 @@
         let timeSlider = document.getElementById('time-slider-range');
         let windowOptions = {
             center: [0, 0],
-            width: 60,
+            width: 120,
             w_h_ratio: cnvsRI.width / cnvsRI.height,
             mousePosition: {pixel: [0, 0], ric: {r: 0, i: 0}},
             closeLimit: 0.025 * 60,
@@ -59,13 +62,21 @@
             scenario_length: 24,
             scenario_time: 0,
             previewTime: 0,
-            previewPath: []
+            previewPath: [],
+            mode: 'ri only',
+            burn_point_size: 0.125, 
+            mouse_time: false,
+            mouse_hold: 1000,
+            origin: {
+                ri: {r: 0, i: 0},
+                ci: {c: 0, i: 0}
+            }
         }
         formatCanvas();
         satellites = [{
             color: 'blue',
             shape: 'triangle',
-            size: 0.03,
+            size: 0.025,
             position: {r: 0, i: 25, c: 5, rd: 0, id: 0, cd: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [
@@ -89,7 +100,7 @@
         },{
             color: 'red',
             shape: 'square',
-            size: 0.03,
+            size: 0.025,
             position: {r: 0, i: 15, c: 10, cd: 0, rd: 0, id: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [],
@@ -97,7 +108,7 @@
         },{
             color: 'red',
             shape: 'square',
-            size: 0.03,
+            size: 0.025,
             position: {r: 0, i: -15, c: -5, cd: 0.001, rd: -0.001, id: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [],
@@ -105,7 +116,7 @@
         },{
             color: 'green',
             shape: 'up-triangle',
-            size: 0.03,
+            size: 0.025,
             position: {r: 0, i: 0, c: 30, cd: -0.0010, rd: 0, id: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [{
@@ -124,17 +135,25 @@
             shownTraj: []
         },{
             color: 'blue',
-            shape: 'circle',
-            size: 0.03,
+            shape: 'square',
+            size: 0.025,
             position: {r: -10, i: -25, c: 0, cd: 0,  rd: 0, id: 1.5*10*2*Math.PI / 86164},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [{
+                    time: 3600,
+                    direction: {r: 0, c: 0.0005, i: 0},
+                    magnitude: 1,
+                },{
                     time: 10600,
                     direction: {r: 0, i: 0.0005, c: 0},
                     magnitude: 1,
                 },{
                     time: 12600,
                     direction: {r: 0, i: -0.0005, c: 0},
+                    magnitude: 1,
+                },{
+                    time: 3600 + 43164 ,
+                    direction: {r: 0, c: 0.0005, i: 0},
                     magnitude: 1,
                 }],
             shownTraj: []
@@ -145,12 +164,31 @@
 
 
         window.addEventListener("resize", formatCanvas)
+        window.addEventListener("keydown", e => {
+            if (e.key === ' ') {
+                switch (windowOptions.mode) {
+                    case 'ri only':
+                        windowOptions.mode = 'both';
+                        break;
+                    case 'both':
+                        windowOptions.mode = 'ci only';
+                        break;
+                    case 'ci only':
+                        windowOptions.mode = 'ri only';
+                        break;
+
+                }
+                formatCanvas();
+            }
+        })
         timeSlider.addEventListener("input", e => {
             windowOptions.scenario_time = Number(e.target.value);
             calcShownTrajectories();
         })
         cnvsRI.addEventListener('mousedown', click => {
-            // console.log(pixelToRic([click.clientX, click.clientY]));
+            if (windowOptions.closeSat !== false) {
+                windowOptions.mouse_time = performance.now(); 
+            }
         });
         cnvsRI.addEventListener('mousemove', move => {
             let pixel = [move.clientX, move.clientY];
@@ -163,11 +201,10 @@
             windowOptions.previewPath = [];
             windowOptions.mousePosition = {pixel: windowOptions.closeSat !== false ? ricToPixel(satellites[windowOptions.closeSat].currentPosition) : pixel, ric: windowOptions.closeSat !== false ? satellites[windowOptions.closeSat].position : ric};
         });
-        function animation() {
-            // let a = performance.now()
+        function animation(time) {
             // console.time()
             ctxRI.clearRect(0, 0, cnvsRI.width, cnvsRI.height);
-            ctxCI.clearRect(0, 0, cnvsRI.width, cnvsRI.height);
+            ctxCI.clearRect(0, 0, cnvsCI.width, cnvsCI.height);
             // Draw mouse positon on radial-intrack axis
             ctxRI.beginPath();
             ctxRI.strokeStyle = windowOptions.closeSat === false ?'black' : satellites[windowOptions.closeSat].color;
@@ -178,41 +215,61 @@
             ctxRI.lineTo(windowOptions.mousePosition.pixel[0], cnvsRI.height);
             ctxRI.stroke();
             // Record mouse RIC position on bottom left of RI axis
-            ctxRI.font = cnvsRI.height * 0.025 + 'px serif';
+            ctxRI.font = cnvsRI.height * 0.05 + 'px serif';
             ctxRI.fillStyle = 'black';
-            ctxRI.fillText('R: ' + windowOptions.mousePosition.ric.r.toFixed(1) + ' km  I: ' + windowOptions.mousePosition.ric.i.toFixed(1) + ' km', 0, cnvsRI.height - 0.05 * cnvsRI.height);
+            ctxRI.fillText('R: ' + windowOptions.mousePosition.ric.r.toFixed(1) + ' km  I: ' + windowOptions.mousePosition.ric.i.toFixed(1) + ' km', 0.05 * cnvsRI.height, cnvsRI.height - 0.05 * cnvsRI.height);
             // Draw axis arrows on each graph
             drawArrow();
             drawArrow({angle: -90, backHalf: true});
-            drawArrow({cnvs: cnvsCI, ctx: ctxCI});
-            drawArrow({angle: -90, backHalf: true, cnvs: cnvsCI, ctx: ctxCI});
+            drawArrow({cnvs: cnvsCI, ctx: ctxCI, origin: [cnvsCI.width / 2, cnvsCI.height / 2]});
+            drawArrow({angle: -90, backHalf: true, cnvs: cnvsCI, ctx: ctxCI, origin: [cnvsCI.width / 2, cnvsCI.height / 2]});
             // If mouse hovering over object, predict future path
-            if (windowOptions.closeSat !== false) {
-                previewSatPath();
-            }
+            // if (windowOptions.closeSat !== false) {
+            //     previewSatPath();
+            // }
             ctxRI.lineWidth = 2;
             ctxCI.lineWidth = 2;
-            satellites.forEach(satellite => {
+            satellites.forEach((satellite, ii) => {
                 ctxRI.strokeStyle = satellite.color;
                 ctxCI.strokeStyle = satellite.color;
                 drawCurve(ctxRI, satellite.shownTraj, {ric: true});
                 drawCurve(ctxCI, satellite.shownTraj, {ric: true, cross: true});
-                drawSatellite(satellite);
+                if (!windowOptions.mouse_time && windowOptions.closeSat === ii) {
+                    
+                }
+                drawSatellite(satellite, cnvsRI, ctxRI);
+                drawSatellite(satellite, cnvsCI, ctxCI);
             })
-            // console.log(performance.now() - a);
             // console.timeEnd()
             window.requestAnimationFrame(animation);
         }
         function formatCanvas() {
-            cnvsRI.width = document.documentElement.clientWidth / 2;
-            cnvsRI.height = document.documentElement.clientHeight;
-            cnvsCI.width = document.documentElement.clientWidth / 2;
-            cnvsCI.height = document.documentElement.clientHeight;
-            windowOptions.w_h_ratio = cnvsRI.width / cnvsRI.height;
-            // windowOptions.closeLimit = 0.05 * cnvsRI.height
+            if (windowOptions.mode === 'ri only') {
+                cnvsRI.style.height = '100%';
+                cnvsCI.style.height = '0%';
+                cnvsRI.width = document.documentElement.clientWidth;
+                cnvsRI.height = document.documentElement.clientHeight;
+                windowOptions.w_h_ratio = cnvsRI.width / cnvsRI.height;
+            }
+            else if (windowOptions.mode === 'ci only') {
+                cnvsCI.style.height = '100%';
+                cnvsRI.style.height = '0%';
+                cnvsCI.width = document.documentElement.clientWidth;
+                cnvsCI.height = document.documentElement.clientHeight;
+                windowOptions.w_h_ratio = cnvsCI.width / cnvsCI.height;
+            }
+            else {
+                cnvsCI.style.height = '50%';
+                cnvsRI.style.height = '50%';
+                cnvsRI.width = document.documentElement.clientWidth;
+                cnvsRI.height = document.documentElement.clientHeight / 2;
+                cnvsCI.width = document.documentElement.clientWidth;
+                cnvsCI.height = document.documentElement.clientHeight / 2;
+                windowOptions.w_h_ratio = cnvsRI.width / cnvsRI.height;
+            }
         }
         function drawArrow(options = {}) {
-            let {cvns = cnvsRI, ctx = ctxRI, height = 200, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', origin = [cvns.width / 2, cvns.height / 2], angle = 0, backHalf = false} = options;
+            let {cvns = cnvsRI, ctx = ctxRI, height = 150, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', origin = [cvns.width / 2, cvns.height / 2], angle = 0, backHalf = false} = options; 
             let points = [
                 [-lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
                 [-lineWidth / 2, - height + arrowHeight],
@@ -241,10 +298,10 @@
             return [[Math.cos(angle * (units === 'deg' ? Math.PI / 180 : 1)), -Math.sin(angle * (units === 'deg' ? Math.PI / 180 : 1))],
                     [Math.sin(angle * (units === 'deg' ? Math.PI / 180 : 1)), Math.cos(angle * (units === 'deg' ? Math.PI / 180 : 1))]];
         }
-        function drawSatellite(satellite) {
+        function drawSatellite(satellite, cnvs, ctx) {
             let {color = 'blue', shape = 'triangle', size = 0.1, position = {r: 0, i: 0}} = satellite;
-            let pixelPosition = ricToPixel({r: satellite.shownTraj[satellite.shownTraj.length - 1].r, i: satellite.shownTraj[satellite.shownTraj.length - 1].i});
-            let shapeHeight = size * cnvsRI.height;
+            let pixelPosition = ricToPixel({r: satellite.shownTraj[satellite.shownTraj.length - 1].r, i: satellite.shownTraj[satellite.shownTraj.length - 1].i, c: satellite.shownTraj[satellite.shownTraj.length - 1].c}, {cross: (cnvs === cnvsCI)});
+            let shapeHeight = size * cnvs.height;
             let points;
             switch (shape) {
                 case 'triangle': 
@@ -254,7 +311,7 @@
                         [shapeHeight / 2, shapeHeight / 2],
                         [0, -shapeHeight / 2]
                     ];
-                    drawPoints({points: points, color: color, origin: pixelPosition});
+                    drawPoints({points: points, color: color, origin: pixelPosition, ctx});
                     break;
                 case 'square': 
                     points = [
@@ -264,7 +321,7 @@
                         [-shapeHeight / 2, shapeHeight / 2],
                         [-shapeHeight / 2, -shapeHeight / 2]
                     ];
-                    drawPoints({points: points, color: color, origin: pixelPosition});
+                    drawPoints({points: points, color: color, origin: pixelPosition, ctx});
                     break;
                 case 'up-triangle': 
                     points = [
@@ -273,18 +330,19 @@
                         [shapeHeight / 2, -shapeHeight / 2],
                         [0, shapeHeight / 2]
                     ];
-                    drawPoints({points: points, color: color, origin: pixelPosition});
+                    drawPoints({points: points, color: color, origin: pixelPosition, ctx});
                     break;
                 case 'circle':
-                    ctxRI.fillStyle = color;
-                    ctxRI.beginPath();
-                    ctxRI.arc(pixelPosition[0], pixelPosition[1], shapeHeight / 2, 0, 2 * Math.PI)
-                    ctxRI.fill()
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(pixelPosition[0], pixelPosition[1], shapeHeight / 2, 0, 2 * Math.PI)
+                    ctx.fill()
                     break;
             }
         }
         function ricToPixel(point = {r: 0, i: 0}, options = {}) {
             let {struct = false, cross = false, cnvs = cnvsRI} = options;
+            cnvs = cross ? cnvsCI : cnvs;
             let pointOut;
             if (cross) {
                 pointOut = [cnvs.width / 2 * (1 - point.i / windowOptions.width), cnvs.height / 2 * (1 - point.c * windowOptions.w_h_ratio / windowOptions.width )];
@@ -302,13 +360,16 @@
             ctx.beginPath();
             points.forEach((point, ii) => {
                 if (ii === 0) {
-                    ctxRI.moveTo(origin[0] + point[0], origin[1] + point[1]);
+                    ctx.moveTo(origin[0] + point[0], origin[1] + point[1]);
                 }
                 else {
-                    ctxRI.lineTo(origin[0] + point[0], origin[1] + point[1]);
+                    ctx.lineTo(origin[0] + point[0], origin[1] + point[1]);
                 }
             });
             ctx.fill();
+        }
+        function drawBurnPoints(satellite) {
+             
         }
         function checkClose(point1, point2) {
             return windowOptions.closeLimit > math.norm([point1.r - point2.r, point1.i - point2.i]);
