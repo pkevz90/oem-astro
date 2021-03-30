@@ -58,6 +58,7 @@
         let windowOptions = {
             center: [0, 0],
             width: 120,
+            width_des: 120,
             w_h_ratio: cnvsRI.width / cnvsRI.height,
             mousePosition: {pixel: [0, 0], ric: {r: 0, i: 0}, screen: 'ri', object: false},
             mouseState: false, // true if down
@@ -65,10 +66,11 @@
             closeLimit: 0.025 * 60,
             closeSat: false,
             scenario_length: 24,
-            time_vector: math.range(0, 86164, 86164 / 150, true)._data,
+            time_delta: 86164 / 300,
+            time_vector: math.range(0, 86164, 86164 / 300, true)._data,
             scenario_time: 0,
             previewTime: 0,
-            points_per_satellite: 150,
+            points_per_satellite: 300,
             previewPath: [],
             mode: 'ri only',
             burn_point_size: 0.00625, 
@@ -152,7 +154,6 @@
         })
         timeSlider.addEventListener("input", e => {
             windowOptions.scenario_time = Number(e.target.value);
-            calcShownTrajectories();
         })
         document.getElementById('canvas-div').addEventListener('mousemove', event => {
             windowOptions.mousePosition = getMousePosition(event.clientX, event.clientY);
@@ -162,7 +163,7 @@
                 return;
             }
             satellites.forEach((sat, ii) => {
-                windowOptions.mousePosition.object = checkClose(windowOptions.mousePosition.ric, sat.currentPosition, windowOptions.mousePosition.screen === 'ci') ? ii : windowOptions.mousePosition.object === false ? false : windowOptions.mousePosition.object;
+                windowOptions.mousePosition.object = checkClose(windowOptions.mousePosition.ric, getCurrentPosition(sat.position, sat.burns, windowOptions.scenario_time), windowOptions.mousePosition.screen === 'ci') ? ii : windowOptions.mousePosition.object === false ? false : windowOptions.mousePosition.object;
             });
         })
         document.getElementById('canvas-div').addEventListener('mousedown', event => {
@@ -202,8 +203,8 @@
             windowOptions.frame_move = false;
         })
         document.getElementById('canvas-div').addEventListener('wheel', event => {
-            windowOptions.width = event.deltaY < 0 ? windowOptions.width / 1.1 : windowOptions.width * 1.1;
-            windowOptions.closeLimit = 0.0125 * windowOptions.width;
+            windowOptions.width_des = event.deltaY < 0 ? windowOptions.width_des / 1.1 : windowOptions.width_des * 1.1;
+            windowOptions.closeLimit = 0.0125 * windowOptions.width_des;
         })
         function getMousePosition(mouseX, mouseY) {
             let plot = mouseY > cnvsCI.offsetTop ? 'ci' : 'ri';
@@ -214,6 +215,7 @@
         function animation(time) {
             let a = performance.now();
             windowOptions.origin_it = (windowOptions.origin_it_des - windowOptions.origin_it) * 0.2 + windowOptions.origin_it;
+            windowOptions.width = (windowOptions.width_des - windowOptions.width) * 0.2 + windowOptions.width;
             ctxRI.clearRect(0, 0, cnvsRI.width, cnvsRI.height);
             ctxCI.clearRect(0, 0, cnvsCI.width, cnvsCI.height);
             // Draw mouse positon on the active axis
@@ -233,17 +235,26 @@
             drawArrow({angle: -90, backHalf: true,  origin: [cnvsRI.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvsRI.width, cnvsRI.height / 2]});
             drawArrow({cnvs: cnvsCI, ctx: ctxCI, origin: [cnvsCI.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvsRI.width, cnvsCI.height / 2]});
             drawArrow({angle: -90, backHalf: true, cnvs: cnvsCI, ctx: ctxCI, origin: [cnvsCI.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvsRI.width, cnvsCI.height / 2]});
+            ctxActive.textAlign = 'center';
+            ctxActive.font = '30px Arial';
+            ctxActive.fillStyle = 'black';
+            console.log(cnvsActive.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvsActive.width, cnvsActive.height / 2);
+            ctxActive.fillText('I', cnvsActive.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvsActive.width - 160, cnvsActive.height / 2 + 10);
+            ctxActive.fillText(windowOptions.mousePosition.screen === 'ri' ? 'R' : 'C', cnvsActive.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvsActive.width, cnvsActive.height / 2 - 157.5);
+            ctxActive.textAlign = 'start';
             // If mouse hovering over object, predict future path
             // if (windowOptions.closeSat !== false) {
             //     previewSatPath();
             // }
             ctxRI.lineWidth = 2;
             ctxCI.lineWidth = 2;
+            let drawnTraj, currentLocation; 
             satellites.forEach((satellite, ii) => {
                 ctxRI.strokeStyle = satellite.color;
                 ctxCI.strokeStyle = satellite.color;
-                drawCurve(ctxRI, satellite.shownTraj, {ric: true});
-                drawCurve(ctxCI, satellite.shownTraj, {ric: true, cross: true});
+                currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
+                drawCurve(ctxRI, satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true});
+                drawCurve(ctxCI, satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true, cross: true});
                 drawBurns(ctxCI, satellite, {cross: true});
                 drawBurns(ctxRI, satellite);
                 drawSatellite(satellite, cnvsRI, ctxRI);
@@ -325,7 +336,7 @@
         }
         function drawSatellite(satellite, cnvs, ctx) {
             let {color = 'blue', shape = 'triangle', size = 0.1, position = {r: 0, i: 0}} = satellite;
-            let pixelPosition = ricToPixel({r: satellite.shownTraj[satellite.shownTraj.length - 1].r, i: satellite.shownTraj[satellite.shownTraj.length - 1].i, c: satellite.shownTraj[satellite.shownTraj.length - 1].c}, {cross: (cnvs === cnvsCI)});
+            let pixelPosition = ricToPixel(getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time), {cross: (cnvs === cnvsCI)});
             let shapeHeight = size * window.innerHeight;
             let points;
             switch (shape) {
@@ -475,22 +486,17 @@
             };
         }
         function calcShownTrajectories(satCalc = 'all') {
-            let times = math.range(0, windowOptions.scenario_time, windowOptions.scenario_time / windowOptions.points_per_satellite, true)._data;
-            if (times.length === 0) {
-                times = [0, 0.1, 0.2, 0.3];
-            }
             satellites.forEach((sat, ii) => {
                 if (satCalc === 'all' || satCalc === ii) {
                     sat.shownTraj = [];
                 }
             })
-            for (let ii = 0; ii < times.length; ii++) {
+            for (let ii = 0; ii < windowOptions.time_vector.length; ii++) {
                 satellites.forEach((sat, jj) => {
                     if (satCalc === 'all' || satCalc === jj) {
-                        sat.shownTraj.push(getCurrentPosition(sat.position, sat.burns, times[ii]));
-                        if (ii === times.length - 1) {
-                            console.log(times[ii]);
-                            sat.currentPosition = getCurrentPosition(sat.position, sat.burns, times[ii]);
+                        sat.shownTraj.push(getCurrentPosition(sat.position, sat.burns, windowOptions.time_vector[ii]));
+                        if (ii === windowOptions.time_vector.length - 1) {
+                            sat.currentPosition = getCurrentPosition(sat.position, sat.burns, windowOptions.time_vector[ii]);
                         }
                     }
                 })
