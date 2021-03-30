@@ -65,9 +65,10 @@
             closeLimit: 0.025 * 60,
             closeSat: false,
             scenario_length: 24,
+            time_vector: math.range(0, 86164, 86164 / 150, true)._data,
             scenario_time: 0,
             previewTime: 0,
-            points_per_satellite: 200,
+            points_per_satellite: 150,
             previewPath: [],
             mode: 'ri only',
             burn_point_size: 0.00625, 
@@ -211,7 +212,7 @@
             return {screen: plot, pixel, ric}
         }
         function animation(time) {
-            // console.time()
+            let a = performance.now();
             windowOptions.origin_it = (windowOptions.origin_it_des - windowOptions.origin_it) * 0.2 + windowOptions.origin_it;
             ctxRI.clearRect(0, 0, cnvsRI.width, cnvsRI.height);
             ctxCI.clearRect(0, 0, cnvsCI.width, cnvsCI.height);
@@ -227,10 +228,6 @@
             ctxActive.moveTo(windowOptions.mousePosition.pixel[0], 0);
             ctxActive.lineTo(windowOptions.mousePosition.pixel[0], cnvsActive.height);
             ctxActive.stroke();
-            // Record mouse RIC position on bottom left of RI axis
-            ctxActive.font = cnvsActive.height * 0.05 + 'px serif';
-            ctxActive.fillStyle = 'black';
-            ctxActive.fillText((windowOptions.mousePosition.screen === 'ri' ? 'R: ' : 'C: ') + windowOptions.mousePosition.ric[windowOptions.mousePosition.screen === 'ri' ? 'r' : 'c'].toFixed(1) + ' km  I: ' + windowOptions.mousePosition.ric.i.toFixed(1) + ' km', 0.05 * cnvsActive.height, cnvsActive.height - 0.05 * cnvsActive.height  );
             // Draw axis arrows on each graph
             drawArrow({origin: [cnvsRI.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvsRI.width, cnvsRI.height / 2]});
             drawArrow({angle: -90, backHalf: true,  origin: [cnvsRI.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvsRI.width, cnvsRI.height / 2]});
@@ -256,6 +253,11 @@
                 calcBurns(windowOptions.burn_status, windowOptions.mousePosition.screen === 'ci')
             }
             // console.timeEnd()
+            // Record mouse RIC position on bottom left of RI axis
+            ctxActive.font = cnvsActive.height * 0.05 + 'px serif';
+            ctxActive.fillStyle = 'black';
+            ctxActive.fillText((windowOptions.mousePosition.screen === 'ri' ? 'R: ' : 'C: ') + windowOptions.mousePosition.ric[windowOptions.mousePosition.screen === 'ri' ? 'r' : 'c'].toFixed(1) + ' km  I: ' + windowOptions.mousePosition.ric.i.toFixed(1) + ' km ' + (performance.now() - a).toFixed(2), 0.05 * cnvsActive.height, cnvsActive.height - 0.05 * cnvsActive.height  );
+            
             window.requestAnimationFrame(animation);
         }
         function formatCanvas() {
@@ -472,19 +474,24 @@
                      [0, 0, cnt]]
             };
         }
-        function calcShownTrajectories() {
+        function calcShownTrajectories(satCalc = 'all') {
             let times = math.range(0, windowOptions.scenario_time, windowOptions.scenario_time / windowOptions.points_per_satellite, true)._data;
             if (times.length === 0) {
                 times = [0, 0.1, 0.2, 0.3];
             }
-            satellites.forEach(sat => {
-                sat.shownTraj = [];
+            satellites.forEach((sat, ii) => {
+                if (satCalc === 'all' || satCalc === ii) {
+                    sat.shownTraj = [];
+                }
             })
             for (let ii = 0; ii < times.length; ii++) {
-                satellites.forEach(sat => {
-                    sat.shownTraj.push(getCurrentPosition(sat.position, sat.burns, times[ii]));
-                    if (ii === times.length - 1) {
-                        sat.currentPosition = getCurrentPosition(sat.position, sat.burns, times[ii]);
+                satellites.forEach((sat, jj) => {
+                    if (satCalc === 'all' || satCalc === jj) {
+                        sat.shownTraj.push(getCurrentPosition(sat.position, sat.burns, times[ii]));
+                        if (ii === times.length - 1) {
+                            console.log(times[ii]);
+                            sat.currentPosition = getCurrentPosition(sat.position, sat.burns, times[ii]);
+                        }
                     }
                 })
             }
@@ -543,7 +550,7 @@
                 c: cross ? (windowOptions.mousePosition.ric.c - burnLocation.c[0]) * windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
             }
             drawRicArrow({startRic: burnLocation, stopRic: windowOptions.mousePosition.ric, cross, color: sat.color, angle: 180 / Math.PI * (cross ? Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c) : Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.r))})
-            calcShownTrajectories();
+            calcShownTrajectories(burn.object);
         }
     </script>
 </body>
