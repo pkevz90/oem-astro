@@ -66,11 +66,11 @@
             closeLimit: 0.025 * 60,
             closeSat: false,
             scenario_length: 24,
-            time_delta: 86164 / 300,
-            time_vector: math.range(0, 86164, 86164 / 300, true)._data,
+            time_delta: 86164 / 200,
+            time_vector: math.range(0, 86164, 86164 / 200, true)._data,
             scenario_time: 0,
             previewTime: 0,
-            points_per_satellite: 300,
+            points_per_satellite: 200,
             previewPath: [],
             mode: 'ri only',
             burn_point_size: 0.00625, 
@@ -86,7 +86,7 @@
             color: 'red',
             shape: 'triangle',
             size: 0.025,
-            position: {r: 0, i: 444, c: 0, rd: 0, id: 0, cd: 0.015 },
+            position: {r: 0, i: -40, c: 0, rd: 0, id: 0, cd: 0.015 },
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
             burns: [
                 // {
@@ -100,32 +100,8 @@
             color: 'blue',
             shape: 'up-triangle',
             size: 0.025,
-            position: {r: 0, i: 344, c: 00, cd: 0.0125, rd: 0, id: 0},
+            position: {r: 0, i: 40, c: 00, cd: 0.0125, rd: 0, id: 0},
             currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0.0125},
-            burns: [],
-            shownTraj: []
-        },{
-            color: 'blue',
-            shape: 'triangle',
-            size: 0.025,
-            position: {r: 0, i: 100, c: 00, cd: 0.005, rd: 0, id: 0},
-            currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0.005},
-            burns: [],
-            shownTraj: []
-        },{
-            color: 'blue',
-            shape: 'square',
-            size: 0.025,
-            position: {r: 0, i: 0, c: 00, cd: 0, rd: 0, id: 0},
-            currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
-            burns: [],
-            shownTraj: []
-        },{
-            color: 'blue',
-            shape: 'square',
-            size: 0.025,
-            position: {r: 0, i: 944, c: 00, cd: -0.005, rd: 0, id: 0},
-            currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: -0.005},
             burns: [],
             shownTraj: []
         }];
