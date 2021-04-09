@@ -218,15 +218,17 @@
             ctx.fillRect(0, 0, cnvs.width, cnvs.height);
 
             // Draw mouse positon on the active axis
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.strokeStyle = windowOptions.mousePosition.object === false ? 'black' : satellites[windowOptions.mousePosition.object].color;
-            ctx.lineWidth = windowOptions.closeSat === false ? 0.75 : 2;
-            ctx.moveTo(0, windowOptions.mousePosition.pixel[1]);
-            ctx.lineTo(cnvs.width, windowOptions.mousePosition.pixel[1]);
-            ctx.moveTo(windowOptions.mousePosition.pixel[0], 0);
-            ctx.lineTo(windowOptions.mousePosition.pixel[0], cnvs.height);
-            ctx.stroke();
+            if (!windowOptions.makeGif.start) { 
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.strokeStyle = windowOptions.mousePosition.object === false ? 'black' : satellites[windowOptions.mousePosition.object].color;
+                ctx.lineWidth = windowOptions.closeSat === false ? 0.75 : 2;
+                ctx.moveTo(0, windowOptions.mousePosition.pixel[1]);
+                ctx.lineTo(cnvs.width, windowOptions.mousePosition.pixel[1]);
+                ctx.moveTo(windowOptions.mousePosition.pixel[0], 0);
+                ctx.lineTo(windowOptions.mousePosition.pixel[0], cnvs.height);
+                ctx.stroke();
+            }
 
             // Draw Sun
             drawArrow({
