@@ -62,6 +62,7 @@
             center: [0, 0],
             width: 120,
             width_des: 120,
+            sunInit: 0,
             w_h_ratio: cnvs.width / cnvs.height,
             mousePosition: {pixel: [0, 0], ric: {r: 0, i: 0}, screen: 'ri', object: false},
             mouseState: false, // true if down
@@ -80,7 +81,7 @@
             burn_sensitivity: 0.5, // 0.5 m/s per 1 km distance
             burn_status: false, // {object: null, burn: null}
             mouse_time: false,
-            mouse_hold: 1000,
+            mouse_hold: 500,
             origin_it: 0,
             origin_it_des: 0,
             makeGif: {
@@ -187,7 +188,7 @@
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn => burn.time === windowOptions.scenario_time);
                     windowOptions.burn_status = {object: windowOptions.mousePosition.object, burn: burnN};
                 }
-            }, 1000)
+            }, windowOptions.mouse_hold)
         })
         document.getElementById('canvas-div').addEventListener('mouseup', event => {
             windowOptions.mouseState = false;
@@ -227,6 +228,18 @@
             ctx.lineTo(windowOptions.mousePosition.pixel[0], cnvs.height);
             ctx.stroke();
 
+            // Draw Sun
+            drawArrow({
+                origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ri_center],
+                color: 'rgb(255,128,0)',
+                lineWidth: 20,
+                arrowWidth: 40,
+                arrowHeight: 40,
+                angle: windowOptions.sunInit + 180 + 360 * windowOptions.scenario_time / 86164
+            });
+            
+            
+
             // Draw axis arrows on each graph, RI Frame
             drawArrow({origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ri_center]});
             drawArrow({angle: -90, backHalf: true,  origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ri_center]});
@@ -249,10 +262,16 @@
             satellites.forEach((satellite, ii) => {
                 ctx.strokeStyle = satellite.color;
                 currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
-                drawCurve(ctx, satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true});
-                drawCurve(ctx, satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true, cross: true});
-                // drawBurns(ctxCI, satellite, {cross: true});
-                drawBurns(ctx, satellite);
+                if (windowOptions.burn_status) {
+                    drawCurve(ctx, satellite.shownTraj, {ric: true});
+                    drawCurve(ctx, satellite.shownTraj, {ric: true, cross: true});
+                }
+                else {
+                    drawCurve(ctx, satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true});
+                    drawCurve(ctx, satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true, cross: true});
+                }
+                drawBurns(satellite, {cross: true});
+                drawBurns(satellite);
                 drawSatellite(satellite, );
                 drawSatellite(satellite, true);
             })
@@ -327,6 +346,13 @@
         function drawSatellite(satellite, cross = false) {
             let {color = 'blue', shape = 'triangle', size = 0.1, position = {r: 0, i: 0}} = satellite;
             let pixelPosition = ricToPixel(getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time), {cross});
+            let limit = {
+                min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
+                max: cross ? cnvs.height : (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
+            }
+            if (pixelPosition[1] > limit.max || pixelPosition[1] < limit.min) {
+                return;
+            }
             let shapeHeight = size * window.innerHeight;
             let points;
             switch (shape) {
@@ -528,21 +554,27 @@
                 ctx.fill();
             }
         }
-        function drawBurns(ctx, satellite, options = {}) {
+        function drawBurns(satellite, options = {}) {
             let {cross = false} = options;
             let position;
+            let limit = {
+                min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
+                max: cross ? cnvs.height : (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
+            }
             satellite.burns.forEach(burn => {
                 if (burn.time < windowOptions.scenario_time) {
                     position = getCurrentPosition(satellite.position, satellite.burns, burn.time);
                     position = ricToPixel(position, {cross});
-                    ctx.fillStyle = 'white';
-                    ctx.beginPath();
-                    ctx.arc(position[0], position[1], window.innerHeight * windowOptions.burn_point_size*1.4, 0, 2 * Math.PI)
-                    ctx.fill()
-                    ctx.fillStyle = satellite.color;
-                    ctx.beginPath();
-                    ctx.arc(position[0], position[1], window.innerHeight * windowOptions.burn_point_size , 0, 2 * Math.PI)
-                    ctx.fill()
+                    if (position[1] > limit.min && position[1] < limit.max) {
+                        ctx.fillStyle = 'white';
+                        ctx.beginPath();
+                        ctx.arc(position[0], position[1], window.innerHeight * windowOptions.burn_point_size*1.4, 0, 2 * Math.PI)
+                        ctx.fill()
+                        ctx.fillStyle = satellite.color;
+                        ctx.beginPath();
+                        ctx.arc(position[0], position[1], window.innerHeight * windowOptions.burn_point_size , 0, 2 * Math.PI)
+                        ctx.fill()
+                    }
                 }
             })
         }
