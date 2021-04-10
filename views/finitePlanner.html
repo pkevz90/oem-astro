@@ -14,7 +14,7 @@
             overflow: hidden;
         }
         canvas {
-            cursor: pointer;
+            cursor: none;
         }
         #radial-intrack-plot {
             position: fixed;
@@ -42,14 +42,184 @@
             width: 100%;
             cursor: pointer;
         }
+        #add-satellite {
+            position: fixed;
+            height: 4vw;
+            width: 4vw;
+            border: 1px solid black;
+            z-index: 3;
+            bottom: 2.5%;
+            right: 2.5%;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 4vw;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 900;
+            font-size: 4vw;
+        }
+        #option-button {
+            position: fixed;
+            height: auto;
+            width: auto;
+            padding: 0.5% 1%;
+            border: 1px solid black;
+            z-index: 3;
+            bottom: 12.5%;
+            right: 2.5%;
+            border-radius: 2vw;
+            text-align: center;
+            line-height: 2vw;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 900;
+            font-size: 1.5vw;
+        }
+        #export-button {
+            position: fixed;
+            height: auto;
+            width: auto;
+            padding: 0.5% 1%;
+            border: 1px solid black;
+            z-index: 3;
+            bottom: 22.5%;
+            right: 2.5%;
+            border-radius: 2vw;
+            text-align: center;
+            line-height: 2vw;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 900;
+            font-size: 1.5vw;
+        }
+        .hoverable:hover {
+            background-color: black;
+            color: white;
+        }
+        .hoverable:active {
+            background-color: gray;
+            color: white;
+        }
+        .noselect {
+            -webkit-touch-callout: none; /* iOS Safari */
+                -webkit-user-select: none; /* Safari */
+                -khtml-user-select: none; /* Konqueror HTML */
+                -moz-user-select: none; /* Firefox */
+                    -ms-user-select: none; /* Internet Explorer/Edge */
+                        user-select: none; /* Non-prefixed version, currently
+                                            supported by Chrome and Opera */
+        }
+        .panel-button {
+            height: auto;
+            width: auto;
+            padding: 0.5% 1%;
+            border: 1px solid black;
+            margin: 10% 1%;
+            z-index: 3;
+            bottom: 22.5%;
+            right: 2.5%;
+            border-radius: 2vw;
+            text-align: center;
+            line-height: 2vw;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 900;
+            font-size: 1.5vw;
+        }
+        #add-satellite-panel, #options-panel {
+            position: fixed;
+            display: flex;
+            z-index: 4;
+            background-color: white;
+            border: 10px solid black;
+            border-radius: 30px;
+            width: 50%;
+            height: auto;
+            padding: 4%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            justify-content: space-around;
+        }
+        #add-satellite-panel div, #options-panel div {
+            text-align: center;
+        }
+        #add-satellite-panel div input, #add-satellite-panel div select, #options-panel div input{
+            text-align: center;
+            margin: 2%;
+            width: 25%;
+        }
+        .m-fadeIn {
+            visibility: visible;
+            opacity: 1;
+            transition: visibility 0s linear 0s, opacity 300ms;
+        }
+        .hidden {
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s linear 500ms, opacity 500ms;
+        }
     </style>
 </head>
-<body>
+<body class="noselect">
     <div id="canvas-div"> 
         <canvas id="main-plot"></canvas>
     </div>
     <div id="time-slider">
         <input id="time-slider-range" type="range" min=0 max=86164 step=0.1 value=0>
+    </div>
+    <div id="add-satellite" class="noselect hoverable" title="Add Satellite">
+        +
+    </div>
+    <div id="option-button" class="noselect hoverable" title="Add Satellite">
+        Options
+    </div>
+    <div id="export-button" class="noselect hoverable" title="Add Satellite">
+        Export
+    </div>
+    <div id="add-satellite-panel" class="hidden">
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Initial State</div>
+            <div>A<sub>e</sub><input value="0" type="Number"> km</div>
+            <div>X<sub>c</sub><input value="0" type="Number"> km</div>
+            <div>Y<sub>c</sub><input value="0" type="Number"> km</div>
+            <div>B<sub>o</sub><input value="0" type="Number"><sup>o</sup></div>
+            <div>M<sub>o</sub><input value="0" type="Number"><sup>o</sup></div>
+            <div>Z<sub>max</sub><input value="0" type="Number"> km</div>
+        </div>      
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Satellite Details</div>
+            <div>Shape 
+                <select name="" id="">
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="up-triangle">Reverse Triangle</option>
+                </select>
+            </div>
+            <div>Fuel<sub>burn</sub><input value="999" type="Number"> m/s</div>
+            <div>Cooldown</sub><input value="0" type="Number"> mins</div>
+            <div>Color</sub><input value="#ff0000" type="color"> mins</div>
+            <div id="add-satellite-button" class="panel-button hoverable noselect">Insert</div>
+            <div id="cancel-satellite-button" class="panel-button hoverable noselect">Cancel</div>
+        </div>
+    </div>
+    <div id="options-panel" class="hidden">
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Time & Location</div>
+            <div>Start Date <input style="width: 75%" type="datetime-local" id="start-time"
+                name="meeting-time" value="2021-04-01T00:00"></div>
+            <div>Reference Longitude <input value="0" type="Number" min="0" max="360" step="1"><sup>o</sup></div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Recording</div>
+            <div>Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
+            <div>FPS <input value="30" type="Number" min="15" max="60" step="1"></div>
+        </div>      
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Visualization</div>
+            <div>Data Points<input value="200" type="Number" min="100" max="500"></div>
+            <div>Line Width</sub><input value="2" type="Number" min="1" max="10"> px</div>
+            <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
+            <div id="cancel-option-button" class="panel-button hoverable noselect">Cancel</div>
+        </div>
     </div>
     <script>
         let cnvs = document.getElementById("main-plot");
@@ -64,12 +234,13 @@
             width_des: 120,
             sunInit: 0,
             w_h_ratio: cnvs.width / cnvs.height,
-            mousePosition: {pixel: [0, 0], ric: {r: 0, i: 0}, screen: 'ri', object: false},
+            mousePosition: {pixel: [0, 0], ric: {r: 0, i: 0}, screen: 'ri', object: false, fill: 0},
             mouseState: false, // true if down
             frame_move: false,
             closeLimit: 0.025 * 60,
             closeSat: false,
             scenario_length: 24,
+            start_date: new Date(document.getElementById('confirm-option-button').parentNode.parentNode.children.item(0).children[1].children[0].value),
             time_delta: 86164 / 200,
             time_vector: math.range(0, 86164, 86164 / 200, true)._data,
             scenario_time: 0,
@@ -91,29 +262,19 @@
         }
         formatCanvas();
         windowOptions.screen = {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height};
-        satellites = [{
-            color: 'red',
-            shape: 'triangle',
-            size: 0.025,
-            position: {r: 0, i: -40, c: 0, rd: 0, id: 0, cd: 0.005 },
-            currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0},
-            burns: [
-                // {
-                //     time: 0,
-                //     direction: {r: 0, i: 0.0005, c: 0},
-                //     magnitude: 1,
-                // }
-            ],
-            shownTraj: []
-        },{
-            color: 'blue',
-            shape: 'up-triangle',
-            size: 0.025,
-            position: {r: 0, i: 40, c: 00, cd: 0.0125, rd: 0, id: 0},
-            currentPosition: {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0.0025},
-            burns: [],
-            shownTraj: []
-        }];
+        function newSatellite(options) {
+            let {color = 'red', shape = "square", size = 0.035, position, currentPosition = {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0}, burns = [], shownTraj = []} = options;
+            return {
+                color,
+                shape, 
+                size,
+                position, 
+                currentPosition,
+                burns,
+                shownTraj
+            };
+        }
+        satellites = [];
         calcShownTrajectories();
         animation();
 
@@ -166,7 +327,9 @@
                 sat.burns.forEach((burn, jj) => {
                     let burnLocation = getCurrentPosition(sat.position, sat.burns, burn.time);
                     if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions.mousePosition.screen === 'ci')) {
-                        windowOptions.burn_status = {object: ii, burn: jj};
+                        satellites[ii].burns[jj].direction = {r: 0, i: 0, c: 0};
+                        let burnLocation = getCurrentPosition(satellites[ii].position, satellites[ii].burns, satellites[ii].burns[jj].time);
+                        windowOptions.burn_status = {object: ii, burn: jj, type: 'waypoint', time: 1800, burnLocation};
                         return;
                     }
                 })
@@ -186,7 +349,9 @@
                         return a.time - b.time;
                     })
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn => burn.time === windowOptions.scenario_time);
-                    windowOptions.burn_status = {object: windowOptions.mousePosition.object, burn: burnN};
+                    
+                    let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object].position, satellites[windowOptions.mousePosition.object].burns, satellites[windowOptions.mousePosition.object].burns[burnN].time);
+                    windowOptions.burn_status = {object: windowOptions.mousePosition.object, burn: burnN, type: 'waypoint', time: 1800, burnLocation};
                 }
             }, windowOptions.mouse_hold)
         })
@@ -196,8 +361,56 @@
             windowOptions.frame_move = false;
         })
         document.getElementById('canvas-div').addEventListener('wheel', event => {
+            if (windowOptions.burn_status) {
+                windowOptions.burn_status.time += event.deltaY < 0 ? 600 : -60;
+                return;
+            }
             windowOptions.width_des = event.deltaY < 0 ? windowOptions.width_des / 1.1 : windowOptions.width_des * 1.1;
             windowOptions.closeLimit = 0.0125 * windowOptions.width_des;
+        })
+        document.getElementById('add-satellite').addEventListener('click', () => {
+            document.getElementById('add-satellite-panel').classList.toggle("hidden")
+        })
+        document.getElementById('option-button').addEventListener('click', () => {
+            document.getElementById('options-panel').classList.toggle("hidden")
+        })
+        document.getElementById('add-satellite-button').addEventListener('click', (click) => {
+            let el = click.target, n = 2 * Math.PI / 86164;
+            let state = {
+                a: Number(el.parentNode.parentNode.children.item(0).children[1].children[1].value),
+                x: Number(el.parentNode.parentNode.children.item(0).children[2].children[1].value),
+                y: Number(el.parentNode.parentNode.children.item(0).children[3].children[1].value),
+                b: Number(el.parentNode.parentNode.children.item(0).children[4].children[1].value) * Math.PI / 180,
+                m: Number(el.parentNode.parentNode.children.item(0).children[5].children[1].value) * Math.PI / 180,
+                z: Number(el.parentNode.parentNode.children.item(0).children[6].children[1].value)
+            };
+            let color = el.parentNode.parentNode.children.item(1).children[4].children[0].value;
+            let shape = el.parentNode.parentNode.children.item(1).children[1].children[0].value;
+            state = {
+                r: -state.a / 2 * Math.cos(state.b) + state.x,
+                i: state.a * Math.sin(state.b) + state.y,
+                c: state.z * Math.sin(state.m),
+                rd: state.a * n / 2 * Math.sin(state.b),
+                id: state.a * n * Math.cos(state.b) - 1.5 * state.x * n,
+                cd: state.z * n * Math.cos(state.m),
+            }
+            satellites.push(newSatellite({position: state, color, shape}));
+            calcShownTrajectories(satellites.length - 1)
+            document.getElementById('add-satellite-panel').classList.toggle("hidden")
+        })
+        document.getElementById('cancel-satellite-button').addEventListener('click', (click) => {
+            document.getElementById('add-satellite-panel').classList.toggle("hidden")
+        })
+        document.getElementById('confirm-option-button').addEventListener('click', (click) => {
+            let el = click.target;
+            let date = el.parentNode.parentNode.children.item(0).children[1].children[0].value;
+            let dateOb = new Date(date);
+
+            console.log(new Date(dateOb.getTime() + 86400000).toString());
+            document.getElementById('options-panel').classList.toggle("hidden")
+        })
+        document.getElementById('cancel-satellite-button').addEventListener('click', (click) => {
+            document.getElementById('options-panel').classList.toggle("hidden")
         })
         function getMousePosition(mouseX, mouseY) {
             let plot = mouseY > (windowOptions.screen.ci_center + windowOptions.screen.ri_center) / 2  ? 'ci' : 'ri';
@@ -214,6 +427,12 @@
             windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : cnvs.height / 4) - windowOptions.screen.ri_center)*0.1;
             windowOptions.screen.ci_center += ((mode === 'ri only' ? 3 * cnvs.height / 2 : 3 * cnvs.height / 4) - windowOptions.screen.ci_center)*0.1;
             windowOptions.screen.lineHeight += ((mode === 'ri only' ?  cnvs.height : cnvs.height / 2) - windowOptions.screen.lineHeight)*0.1;
+            if (windowOptions.mouseState) {
+                windowOptions.mousePosition.fill += (1 - windowOptions.mousePosition.fill) * 0.08;
+            }
+            else {
+                windowOptions.mousePosition.fill = 0;
+            }
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, cnvs.width, cnvs.height);
 
@@ -227,6 +446,11 @@
                 ctx.lineTo(cnvs.width, windowOptions.mousePosition.pixel[1]);
                 ctx.moveTo(windowOptions.mousePosition.pixel[0], 0);
                 ctx.lineTo(windowOptions.mousePosition.pixel[0], cnvs.height);
+                ctx.stroke();
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.arc(windowOptions.mousePosition.pixel[0], windowOptions.mousePosition.pixel[1], 15, 0, 2 * Math.PI * windowOptions.mousePosition.fill);
                 ctx.stroke();
             }
 
@@ -261,6 +485,7 @@
             
             ctx.lineWidth = 2;
             let drawnTraj, currentLocation; 
+            ctx.lineWidth = 2;
             satellites.forEach((satellite, ii) => {
                 ctx.strokeStyle = satellite.color;
                 currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
@@ -582,11 +807,22 @@
         }
         function calcBurns(burn, cross = false) {
             let sat = satellites[burn.object];
-            let burnLocation = getCurrentPosition(sat.position, sat.burns, sat.burns[burn.burn].time);
+            if (windowOptions.burn_status.type === 'waypoint') {
+                let r1 = [windowOptions.burn_status.burnLocation.r, windowOptions.burn_status.burnLocation.i, [0]], r1_2 = r1;
+                let v0 = [windowOptions.burn_status.burnLocation.rd, windowOptions.burn_status.burnLocation.id, [0]];
+                let r2 = [[windowOptions.mousePosition.ric.r], [windowOptions.mousePosition.ric.i], [0]];
+                let phi = phiMatrix(windowOptions.burn_status.time);
+                let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
+                sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
+                sat.burns[burn.burn].direction.i = v1[1][0] - v0[1][0];
+                console.log(sat.burns[burn.burn].direction.r);
+                calcShownTrajectories(burn.object);
+                return;
+            }
             sat.burns[burn.burn].direction = {
-                r: cross ? sat.burns[burn.burn].direction.r : (windowOptions.mousePosition.ric.r - burnLocation.r[0]) * windowOptions.burn_sensitivity / 1000,
-                i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
-                c: cross ? (windowOptions.mousePosition.ric.c - burnLocation.c[0]) * windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
+                r: cross ? sat.burns[burn.burn].direction.r : (windowOptions.mousePosition.ric.r - windowOptions.burn_status.burnLocation.r[0]) * windowOptions.burn_sensitivity / 1000,
+                i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions.burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
+                c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) * windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
             }
             drawRicArrow({startRic: burnLocation, stopRic: windowOptions.mousePosition.ric, cross, color: sat.color, angle: 180 / Math.PI * (cross ? Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c) : Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.r))})
             calcShownTrajectories(burn.object);
