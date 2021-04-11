@@ -9,157 +9,7 @@
     <script src="../SupportLibraries/LZWEncoder.js"></script>
     <script src="../SupportLibraries/NeuQuant.js"></script>
     <script src="../SupportLibraries/GIFEncoder.js"></script>
-    <style>
-        html, body {
-            overflow: hidden;
-        }
-        canvas {
-            cursor: none;
-        }
-        #radial-intrack-plot {
-            position: fixed;
-            width: 100%;
-            top: 0%;
-            left: 0%;
-            height: 100%;
-            border-bottom: 1px solid black;
-        }
-        #cross-intrack-plot {
-            position: fixed;
-            width: 100%;
-            left: 0%;
-            bottom: 0%;
-            height: 0%;
-        }
-        #time-slider {
-            position: fixed;
-            top: 0%;
-            left: 0%;
-            width:100%;
-            cursor: pointer;
-        }
-        #time-slider input {
-            width: 100%;
-            cursor: pointer;
-        }
-        #add-satellite {
-            position: fixed;
-            height: 4vw;
-            width: 4vw;
-            border: 1px solid black;
-            z-index: 3;
-            bottom: 2.5%;
-            right: 2.5%;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 4vw;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: 900;
-            font-size: 4vw;
-        }
-        #option-button {
-            position: fixed;
-            height: auto;
-            width: auto;
-            padding: 0.5% 1%;
-            border: 1px solid black;
-            z-index: 3;
-            bottom: 12.5%;
-            right: 2.5%;
-            border-radius: 2vw;
-            text-align: center;
-            line-height: 2vw;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: 900;
-            font-size: 1.5vw;
-        }
-        #export-button {
-            position: fixed;
-            height: auto;
-            width: auto;
-            padding: 0.5% 1%;
-            border: 1px solid black;
-            z-index: 3;
-            bottom: 22.5%;
-            right: 2.5%;
-            border-radius: 2vw;
-            text-align: center;
-            line-height: 2vw;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: 900;
-            font-size: 1.5vw;
-        }
-        .hoverable:hover {
-            background-color: black;
-            color: white;
-        }
-        .hoverable:active {
-            background-color: gray;
-            color: white;
-        }
-        .noselect {
-            -webkit-touch-callout: none; /* iOS Safari */
-                -webkit-user-select: none; /* Safari */
-                -khtml-user-select: none; /* Konqueror HTML */
-                -moz-user-select: none; /* Firefox */
-                    -ms-user-select: none; /* Internet Explorer/Edge */
-                        user-select: none; /* Non-prefixed version, currently
-                                            supported by Chrome and Opera */
-        }
-        .panel-button {
-            height: auto;
-            width: auto;
-            padding: 0.5% 1%;
-            border: 1px solid black;
-            margin: 10% 1%;
-            z-index: 3;
-            bottom: 22.5%;
-            right: 2.5%;
-            border-radius: 2vw;
-            text-align: center;
-            line-height: 2vw;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: 900;
-            font-size: 1.5vw;
-        }
-        #add-satellite-panel, #options-panel {
-            position: fixed;
-            display: flex;
-            z-index: 4;
-            background-color: white;
-            border: 10px solid black;
-            border-radius: 30px;
-            width: 50%;
-            height: auto;
-            padding: 4%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            justify-content: space-around;
-        }
-        #add-satellite-panel div, #options-panel div {
-            text-align: center;
-        }
-        #add-satellite-panel div input, #add-satellite-panel div select, #options-panel div input{
-            text-align: center;
-            margin: 2%;
-            width: 25%;
-        }
-        .m-fadeIn {
-            visibility: visible;
-            opacity: 1;
-            transition: visibility 0s linear 0s, opacity 300ms;
-        }
-        .hidden {
-            visibility: hidden;
-            opacity: 0;
-            transition: visibility 0s linear 500ms, opacity 500ms;
-        }
-    </style>
+    <link rel="stylesheet" href="./css/finitePlanner.css">
 </head>
 <body class="noselect">
     <div id="canvas-div"> 
@@ -174,8 +24,25 @@
     <div id="option-button" class="noselect hoverable" title="Add Satellite">
         Options
     </div>
-    <div id="export-button" class="noselect hoverable" title="Add Satellite">
-        Export
+    <div id="maneuver-type-slider">
+        <span>Manual</span>
+        <label class="switch">
+            <input id="maneuver-type-input" type="checkbox">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div id="instructions-button" class="noselect hoverable" title="Add Satellite">
+        Instructions
+    </div>
+    <div id="instructions-panel" class="hidden">
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Maneuver Hotkeys</div>
+            <div>1 - Zero relative eccentricity</div>
+            <div>2 - Zero relative semi-major axis</div>
+        </div>      
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Satellite Details</div>
+        </div>
     </div>
     <div id="add-satellite-panel" class="hidden">
         <div>
@@ -261,7 +128,8 @@
             makeGif: {
                 start: false,
                 stop: false
-            }
+            },
+            maneuver_type: 'manual'
         }
         formatCanvas();
         windowOptions.screen = {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height};
@@ -331,14 +199,21 @@
                     let burnLocation = getCurrentPosition(sat.position, sat.burns, burn.time);
                     if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions.mousePosition.screen === 'ci')) {
                         satellites[ii].burns[jj].direction = {r: 0, i: 0, c: 0};
+                        let type = windowOptions.maneuver_type;
+                        if (type === 'waypoint') {
+                            windowOptions.scenario_time_des += 7200;
+                        }
                         let burnLocation = getCurrentPosition(satellites[ii].position, satellites[ii].burns, satellites[ii].burns[jj].time);
-                        windowOptions.burn_status = {object: ii, burn: jj, type: 'waypoint', time: 1800, burnLocation};
+                        windowOptions.burn_status = {object: ii, burn: jj, type, time: 7200, burnLocation};
                         return;
                     }
                 })
             })
             if (windowOptions.mousePosition.object === false) {
                 windowOptions.frame_move = {i: windowOptions.mousePosition.ric.i, origin: windowOptions.origin_it};
+                return;
+            }
+            if (windowOptions.burn_status) {
                 return;
             }
             setTimeout(() =>{
@@ -353,7 +228,7 @@
                     })
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn => burn.time === windowOptions.scenario_time);
                     let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object].position, satellites[windowOptions.mousePosition.object].burns, satellites[windowOptions.mousePosition.object].burns[burnN].time);
-                    let type = 'waypoint';
+                    let type = windowOptions.maneuver_type;
                     if (type === 'waypoint') {
                         windowOptions.scenario_time_des += 7200;
                     }
@@ -363,6 +238,9 @@
         })
         document.getElementById('canvas-div').addEventListener('mouseup', event => {
             windowOptions.mouseState = false;
+            if (windowOptions.burn_status) {
+                windowOptions.scenario_time_des = satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].time;
+            }
             windowOptions.burn_status = false;
             windowOptions.frame_move = false;
         })
@@ -417,6 +295,19 @@
         document.getElementById('cancel-option-button').addEventListener('click', (click) => {
             document.getElementById('options-panel').classList.toggle("hidden")
         })
+        document.getElementById('maneuver-type-input').addEventListener('change', (click) => {
+            el = click.target;
+            switch (windowOptions.maneuver_type) {
+                case 'manual':
+                    windowOptions.maneuver_type = 'waypoint';
+                    el.parentNode.parentNode.children[0].innerText = 'Waypoint';
+                    break;
+                default:
+                    windowOptions.maneuver_type = 'manual';
+                    el.parentNode.parentNode.children[0].innerText = 'Manual';
+                    break;
+            }
+        })
         function getMousePosition(mouseX, mouseY) {
             let plot = mouseY > (windowOptions.screen.ci_center + windowOptions.screen.ri_center) / 2  ? 'ci' : 'ri';
             let pixel = [mouseX, mouseY];
@@ -462,7 +353,7 @@
                 ctx.beginPath();
                 ctx.arc(windowOptions.mousePosition.pixel[0], windowOptions.mousePosition.pixel[1], 15, 0, 2 * Math.PI * windowOptions.mousePosition.fill);
                 ctx.stroke();
-                ctx.fillText('R:' + windowOptions.mousePosition.ric.r.toFixed(2) + ' km    I: ' + windowOptions.mousePosition.ric.i.toFixed(2) +' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45);
+                ctx.fillText((windowOptions.mousePosition.screen === 'ci' ? 'C: ' : 'R:') + windowOptions.mousePosition.ric[windowOptions.mousePosition.screen === 'ci' ? 'c' : 'r'].toFixed(2) + ' km    I: ' + windowOptions.mousePosition.ric.i.toFixed(2) +' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45);
             
             }
 
@@ -837,7 +728,7 @@
                 i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions.burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
                 c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) * windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
             }
-            drawRicArrow({startRic: burnLocation, stopRic: windowOptions.mousePosition.ric, cross, color: sat.color, angle: 180 / Math.PI * (cross ? Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c) : Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.r))})
+            drawRicArrow({startRic: windowOptions.burn_status.burnLocation, stopRic: windowOptions.mousePosition.ric, cross, color: sat.color, angle: 180 / Math.PI * (cross ? Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c) : Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.r))})
             calcShownTrajectories(burn.object);
         }
     </script>
