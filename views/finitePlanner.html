@@ -208,6 +208,7 @@
             <div style="font-size:2em; margin: 4%; font-weight: bold">Time & Location</div>
             <div>Start Date <input style="width: 75%" type="datetime-local" id="start-time"
                 name="meeting-time" value="2021-04-01T00:00"></div>
+            <div>Scenario Length <input value="24" type="Number" min="0" max="360" step="1">hrs</div>
             <div>Reference Longitude <input value="0" type="Number" min="0" max="360" step="1"><sup>o</sup></div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Recording</div>
             <div>Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
@@ -244,8 +245,10 @@
             time_delta: 86164 / 200,
             time_vector: math.range(0, 86164, 86164 / 200, true)._data,
             scenario_time: 0,
+            scenario_time_des: 0,
+            animate_step: 120,
+            lineWidth: 3,
             previewTime: 0,
-            points_per_satellite: 200,
             previewPath: [],
             screen: {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height},
             burn_point_size: 0.00625, 
@@ -307,7 +310,7 @@
             }
         })
         timeSlider.addEventListener("input", e => {
-            windowOptions.scenario_time = Number(e.target.value);
+            windowOptions.scenario_time_des = Number(e.target.value);
         })
         document.getElementById('canvas-div').addEventListener('mousemove', event => {
             windowOptions.mousePosition = getMousePosition(event.clientX, event.clientY);
@@ -349,9 +352,12 @@
                         return a.time - b.time;
                     })
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn => burn.time === windowOptions.scenario_time);
-                    
                     let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object].position, satellites[windowOptions.mousePosition.object].burns, satellites[windowOptions.mousePosition.object].burns[burnN].time);
-                    windowOptions.burn_status = {object: windowOptions.mousePosition.object, burn: burnN, type: 'waypoint', time: 1800, burnLocation};
+                    let type = 'waypoint';
+                    if (type === 'waypoint') {
+                        windowOptions.scenario_time_des += 7200;
+                    }
+                    windowOptions.burn_status = {object: windowOptions.mousePosition.object, burn: burnN, type, time: 7200, burnLocation};
                 }
             }, windowOptions.mouse_hold)
         })
@@ -363,6 +369,7 @@
         document.getElementById('canvas-div').addEventListener('wheel', event => {
             if (windowOptions.burn_status) {
                 windowOptions.burn_status.time += event.deltaY < 0 ? 600 : -60;
+                windowOptions.scenario_time_des += event.deltaY < 0 ? 600 : -60;
                 return;
             }
             windowOptions.width_des = event.deltaY < 0 ? windowOptions.width_des / 1.1 : windowOptions.width_des * 1.1;
@@ -409,7 +416,7 @@
             console.log(new Date(dateOb.getTime() + 86400000).toString());
             document.getElementById('options-panel').classList.toggle("hidden")
         })
-        document.getElementById('cancel-satellite-button').addEventListener('click', (click) => {
+        document.getElementById('cancel-option-button').addEventListener('click', (click) => {
             document.getElementById('options-panel').classList.toggle("hidden")
         })
         function getMousePosition(mouseX, mouseY) {
@@ -422,6 +429,7 @@
             let a = performance.now();
             windowOptions.origin_it += (windowOptions.origin_it_des - windowOptions.origin_it) * 0.2;
             windowOptions.width += (windowOptions.width_des - windowOptions.width) * 0.2;
+            windowOptions.scenario_time += (windowOptions.scenario_time_des - windowOptions.scenario_time) * 0.2;
             // Transition frames
             let mode = windowOptions.screen.mode;
             windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : cnvs.height / 4) - windowOptions.screen.ri_center)*0.1;
@@ -482,10 +490,9 @@
             ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160, windowOptions.screen.ci_center + 10);
             ctx.fillText('C', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ci_center - 157.5);
             ctx.textAlign = 'start';
-            
-            ctx.lineWidth = 2;
+            ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString().split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
             let drawnTraj, currentLocation; 
-            ctx.lineWidth = 2;
+            ctx.lineWidth = windowOptions.lineWidth;
             satellites.forEach((satellite, ii) => {
                 ctx.strokeStyle = satellite.color;
                 currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
@@ -503,7 +510,7 @@
                 drawSatellite(satellite, true);
             })
             if (windowOptions.makeGif.start) {
-                windowOptions.scenario_time += 360;
+                windowOptions.scenario_time += windowOptions.animate_step;
                 encoder.addFrame(ctx);
                 if (windowOptions.makeGif.stop) {
                     windowOptions.makeGif = {
@@ -815,7 +822,6 @@
                 let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
                 sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
                 sat.burns[burn.burn].direction.i = v1[1][0] - v0[1][0];
-                console.log(sat.burns[burn.burn].direction.r);
                 calcShownTrajectories(burn.object);
                 return;
             }
