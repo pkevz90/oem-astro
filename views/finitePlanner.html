@@ -411,9 +411,7 @@
         document.getElementById('confirm-option-button').addEventListener('click', (click) => {
             let el = click.target;
             let date = el.parentNode.parentNode.children.item(0).children[1].children[0].value;
-            let dateOb = new Date(date);
-
-            console.log(new Date(dateOb.getTime() + 86400000).toString());
+            windowOptions.start_date = new Date(date);
             document.getElementById('options-panel').classList.toggle("hidden")
         })
         document.getElementById('cancel-option-button').addEventListener('click', (click) => {
@@ -444,6 +442,10 @@
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, cnvs.width, cnvs.height);
 
+            
+            ctx.textAlign = 'start';
+            ctx.font = '30px Arial';
+            ctx.fillStyle = 'black';
             // Draw mouse positon on the active axis
             if (!windowOptions.makeGif.start) { 
                 ctx.lineWidth = 2;
@@ -460,6 +462,8 @@
                 ctx.beginPath();
                 ctx.arc(windowOptions.mousePosition.pixel[0], windowOptions.mousePosition.pixel[1], 15, 0, 2 * Math.PI * windowOptions.mousePosition.fill);
                 ctx.stroke();
+                ctx.fillText('R:' + windowOptions.mousePosition.ric.r.toFixed(2) + ' km    I: ' + windowOptions.mousePosition.ric.i.toFixed(2) +' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45);
+            
             }
 
             // Draw Sun
@@ -491,6 +495,8 @@
             ctx.fillText('C', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ci_center - 157.5);
             ctx.textAlign = 'start';
             ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString().split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
+            
+            
             let drawnTraj, currentLocation; 
             ctx.lineWidth = windowOptions.lineWidth;
             satellites.forEach((satellite, ii) => {
@@ -510,7 +516,8 @@
                 drawSatellite(satellite, true);
             })
             if (windowOptions.makeGif.start) {
-                windowOptions.scenario_time += windowOptions.animate_step;
+                windowOptions.scenario_time_des += windowOptions.animate_step;
+                console.log(windowOptions.scenario_time);
                 encoder.addFrame(ctx);
                 if (windowOptions.makeGif.stop) {
                     windowOptions.makeGif = {
@@ -537,7 +544,7 @@
                 cnvs.style.height = '100%';
                 cnvs.width = document.documentElement.clientWidth;
                 cnvs.height = document.documentElement.clientHeight;
-                windowOptions.w_h_ratio = cnvs.width / cnvs.height;
+                windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode !== 'ri onlyS' ? 2 : 1) / cnvs.width;
         }
         function drawRicArrow(options) {
             let {startRic, stopRic, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', cross = false, angle = 0} = options;
