@@ -200,8 +200,10 @@
                 sat.burns.forEach((burn, jj) => {
                     let burnLocation = getCurrentPosition(sat.position, sat.burns, burn.time);
                     if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions.mousePosition.screen === 'ci')) {
-                        satellites[ii].burns[jj].direction = {r: 0, i: 0, c: 0};
-                        let type = windowOptions.maneuver_type;
+                        if (windowOptions.mousePosition.screen !== 'ci') {
+                            satellites[ii].burns[jj].direction = {r: 0, i: 0, c: satellites[ii].burns[jj].direction.c};
+                        }
+                        let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions.maneuver_type;
                         if (type === 'waypoint') {
                             windowOptions.scenario_time_des += 7200;
                         }
@@ -230,7 +232,7 @@
                     })
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn => burn.time === windowOptions.scenario_time);
                     let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object].position, satellites[windowOptions.mousePosition.object].burns, satellites[windowOptions.mousePosition.object].burns[burnN].time);
-                    let type = windowOptions.maneuver_type;
+                    let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions.maneuver_type;
                     if (type === 'waypoint') {
                         windowOptions.scenario_time_des += 7200;
                     }
@@ -394,7 +396,8 @@
                 currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
                 satellite.burns.forEach(burn => {
                     if (burn.time < windowOptions.scenario_time) {
-                        drawBurnArrow(burn, {object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time})
+                        drawBurnArrow(burn, {cross: false, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time})
+                        drawBurnArrow(burn, {cross: true, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time})
                     }
                 })
                 if (windowOptions.burn_status) {
@@ -433,6 +436,7 @@
                 ctx.fillStyle = 'black';
                 ctx.fillRect(0, windowOptions.screen.lineHeight - cnvs.height * 0.00125, cnvs.width, cnvs.height * 0.0025)
             }
+            console.log(performance.now() - a);
             window.requestAnimationFrame(animation);
         }
         function formatCanvas() {
@@ -568,24 +572,23 @@
             ctx.stroke();
         }
         function drawBurnArrow(burn, options) {
-            let {location = undefined, constant = 1, object = undefined} = options;
+            let {location = undefined, constant = 1, object = undefined, cross = windowOptions.mousePosition.screen === 'ci'} = options;
             constant = constant > 1 ? 1 : constant;
             if (location === undefined) {
                 location = getCurrentPosition(satellites[object].position, satellites[object].burns, burn.time);
             }
-            let burnMag = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]);
-            let angle = math.atan2(-burn.direction.i, burn.direction.r) * 180 / Math.PI;
+            let burnMag = math.norm([!cross ? burn.direction.r : 0, burn.direction.i, cross ? burn.direction.c : 0]);
+            let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c: burn.direction.r) * 180 / Math.PI;
             let height = burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width / 2;
-            console.log(burnMag, windowOptions.burn_sensitivity, height);
-            let origin = ricToPixel(location);
+            let origin = ricToPixel(location, {cross});
             let color = satellites[object].color || 'black';
             ctx.textAlign = 'center';
-            ctx.font = '25px Arial';
-            ctx.fillStyle = 'white';
-            ctx.strokeStyle = color;
-            ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 35)
-            ctx.strokeText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 35)
+            ctx.font = '35px Arial';
+            ctx.fillStyle = color;
+            // ctx.strokeStyle = color;
+            ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 40)
             drawArrow({angle, origin, color, cnvs, ctx, height})
+            // ctx.strokeText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 55)
 
         }
         function checkClose(point1, point2, cross) {
