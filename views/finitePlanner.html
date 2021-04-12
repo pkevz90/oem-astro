@@ -592,10 +592,10 @@
             let origin = ricToPixel(location, {cross});
             let color = satellites[object].color || 'black';
             ctx.textAlign = 'center';
-            ctx.font = '35px Arial';
+            ctx.font = '25px Arial';
             ctx.fillStyle = color;
             // ctx.strokeStyle = color;
-            ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 40)
+            ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 30)
             drawArrow({angle, origin, color, cnvs, ctx, height})
             // ctx.strokeText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 55)
 
