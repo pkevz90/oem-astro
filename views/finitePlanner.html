@@ -80,6 +80,7 @@
             <div style="font-size:2em; margin: 4%; font-weight: bold">Recording</div>
             <div>Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
             <div>FPS <input value="30" type="Number" min="15" max="60" step="1"></div>
+            <div>Repeat <input type="checkbox"></div>
         </div>      
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Visualization</div>
@@ -119,7 +120,7 @@
             previewPath: [],
             screen: {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height},
             burn_point_size: 0.00625, 
-            burn_sensitivity: 0.5, // 0.5 m/s per 1 km distance
+            burn_sensitivity: 0.15, // 0.15 m/s per 1 km distance
             burn_status: false, // {object: null, burn: null}
             mouse_time: false,
             mouse_hold: 500,
@@ -129,7 +130,8 @@
                 start: false,
                 stop: false
             },
-            maneuver_type: 'manual'
+            maneuver_type: 'manual',
+            full_burn_vis_time: 86164 * 0.1
         }
         formatCanvas();
         windowOptions.screen = {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height};
@@ -221,7 +223,7 @@
                     satellites[windowOptions.mousePosition.object].burns.push({
                         time: windowOptions.scenario_time,
                         direction: {r: 0, i: 0, c: 0},
-                        magnitude: 0
+                        magnitude: 0,
                     })
                     satellites[windowOptions.mousePosition.object].burns.sort((a, b) => {
                         return a.time - b.time;
@@ -354,7 +356,6 @@
                 ctx.arc(windowOptions.mousePosition.pixel[0], windowOptions.mousePosition.pixel[1], 15, 0, 2 * Math.PI * windowOptions.mousePosition.fill);
                 ctx.stroke();
                 ctx.fillText((windowOptions.mousePosition.screen === 'ci' ? 'C: ' : 'R:') + windowOptions.mousePosition.ric[windowOptions.mousePosition.screen === 'ci' ? 'c' : 'r'].toFixed(2) + ' km    I: ' + windowOptions.mousePosition.ric.i.toFixed(2) +' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45);
-            
             }
 
             // Draw Sun
@@ -366,8 +367,6 @@
                 arrowHeight: 40,
                 angle: windowOptions.sunInit + 180 + 360 * windowOptions.scenario_time / 86164
             });
-            
-            
 
             // Draw axis arrows on each graph, RI Frame
             drawArrow({origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ri_center]});
@@ -393,6 +392,11 @@
             satellites.forEach((satellite, ii) => {
                 ctx.strokeStyle = satellite.color;
                 currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
+                satellite.burns.forEach(burn => {
+                    if (burn.time < windowOptions.scenario_time) {
+                        drawBurnArrow(burn, {object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time})
+                    }
+                })
                 if (windowOptions.burn_status) {
                     drawCurve(ctx, satellite.shownTraj, {ric: true});
                     drawCurve(ctx, satellite.shownTraj, {ric: true, cross: true});
@@ -563,8 +567,26 @@
             ctx.fill();
             ctx.stroke();
         }
-        function drawBurnPoints(satellite) {
-             
+        function drawBurnArrow(burn, options) {
+            let {location = undefined, constant = 1, object = undefined} = options;
+            constant = constant > 1 ? 1 : constant;
+            if (location === undefined) {
+                location = getCurrentPosition(satellites[object].position, satellites[object].burns, burn.time);
+            }
+            let burnMag = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]);
+            let angle = math.atan2(-burn.direction.i, burn.direction.r) * 180 / Math.PI;
+            let height = burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width / 2;
+            console.log(burnMag, windowOptions.burn_sensitivity, height);
+            let origin = ricToPixel(location);
+            let color = satellites[object].color || 'black';
+            ctx.textAlign = 'center';
+            ctx.font = '25px Arial';
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = color;
+            ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 35)
+            ctx.strokeText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 35)
+            drawArrow({angle, origin, color, cnvs, ctx, height})
+
         }
         function checkClose(point1, point2, cross) {
             return windowOptions.closeLimit > math.norm([point1[cross ? 'c' : 'r'] - point2[cross ? 'c' : 'r'] , point1.i - point2.i]);
@@ -728,7 +750,7 @@
                 i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions.burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
                 c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) * windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
             }
-            drawRicArrow({startRic: windowOptions.burn_status.burnLocation, stopRic: windowOptions.mousePosition.ric, cross, color: sat.color, angle: 180 / Math.PI * (cross ? Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c) : Math.atan2(-sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.r))})
+            drawBurnArrow(sat.burns[burn.burn], {location: windowOptions.burn_status.burnLocation, object: burn.object});
             calcShownTrajectories(burn.object);
         }
     </script>
