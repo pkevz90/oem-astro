@@ -388,6 +388,15 @@
             ctx.textAlign = 'start';
             ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString().split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
             
+            // Draw Scale
+            ctx.lineWidth = 2;
+            let scaleLength = Math.pow(10,math.floor(math.log(windowOptions.width * 2, 10) - 1)) * 2;
+            ctx.beginPath();
+            // ctx.moveTo(cnvs.width / 2 - scaleLength / windowOptions.width, cnvs.height * 0.97);
+            // ctx.lineTo(cnvs.width / 2 + scaleLength / windowOptions.width, cnvs.height * 0.97);
+            ctx.moveTo(cnvs.width / 2 - scaleLength / 2 / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.97);
+            ctx.lineTo(cnvs.width / 2 + scaleLength / 2 / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.97);
+            ctx.stroke();
             
             let drawnTraj, currentLocation; 
             ctx.lineWidth = windowOptions.lineWidth;
@@ -436,7 +445,7 @@
                 ctx.fillStyle = 'black';
                 ctx.fillRect(0, windowOptions.screen.lineHeight - cnvs.height * 0.00125, cnvs.width, cnvs.height * 0.0025)
             }
-            console.log(performance.now() - a);
+            // console.log(performance.now() - a);
             window.requestAnimationFrame(animation);
         }
         function formatCanvas() {
