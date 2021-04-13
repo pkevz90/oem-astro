@@ -88,7 +88,7 @@
             <div>Data Points<input value="200" type="Number" min="100" max="500"></div>
             <div>Line Width</sub><input value="2" type="Number" min="1" max="10"> px</div>
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
-            <div id="import-option-button" class="panel-button hoverable noselect">Import</div>
+            <div>Import <input id="upload-options-button" type="file" accept=".sas"></div>
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div id="cancel-option-button" class="panel-button hoverable noselect">Cancel</div>
         </div>
@@ -323,6 +323,9 @@
                     break;
             }
         })
+        document.getElementById('export-option-button').addEventListener('click',() => {
+            downloadFile('test.sas', JSON.stringify(satellites));
+        })
         function getMousePosition(mouseX, mouseY) {
             let plot = mouseY > (windowOptions.screen.ci_center + windowOptions.screen.ri_center) / 2  ? 'ci' : 'ri';
             let pixel = [mouseX, mouseY];
@@ -416,8 +419,8 @@
                 currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
                 satellite.burns.forEach(burn => {
                     if (burn.time < windowOptions.scenario_time) {
-                        drawBurnArrow(burn, {cross: false, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time})
-                        drawBurnArrow(burn, {cross: true, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time})
+                        drawBurnArrow(burn, {cross: false, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time, trans: true})
+                        drawBurnArrow(burn, {cross: true, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time, trans: true})
                     }
                 })
                 if (windowOptions.burn_status) {
@@ -593,7 +596,10 @@
             ctx.stroke();
         }
         function drawBurnArrow(burn, options) {
-            let {location = undefined, constant = 1, object = undefined, cross = windowOptions.mousePosition.screen === 'ci'} = options;
+            let {location = undefined, constant = 1, object = undefined, cross = windowOptions.mousePosition.screen === 'ci', trans = false} = options;
+            if (trans) {
+                ctx.globalAlpha = 0.5;
+            }
             constant = constant > 1 ? 1 : constant;
             if (location === undefined) {
                 location = getCurrentPosition(satellites[object].position, satellites[object].burns, burn.time);
@@ -609,6 +615,7 @@
             // ctx.strokeStyle = color;
             ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 30)
             drawArrow({angle, origin, color, cnvs, ctx, height})
+            ctx.globalAlpha = 1;
             // ctx.strokeText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 55)
 
         }
@@ -776,6 +783,33 @@
             }
             drawBurnArrow(sat.burns[burn.burn], {location: windowOptions.burn_status.burnLocation, object: burn.object});
             calcShownTrajectories(burn.object);
+        }
+        function downloadFile(filename, text) {
+            var pom = document.createElement('a');
+            pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            pom.setAttribute('download', filename);
+
+            if (document.createEvent) {
+                var event = document.createEvent('MouseEvents');
+                event.initEvent('click', true, true);
+                pom.dispatchEvent(event);
+            }
+            else {
+                pom.click();
+            }
+        }
+        document.getElementById('upload-options-button').addEventListener('change', event => {
+            loadFileAsText(event.path[0].files[0])
+        })
+        function loadFileAsText(fileToLoad){
+
+            var fileReader = new FileReader();
+            fileReader.onload = function(fileLoadedEvent){
+                var textFromFileLoaded = fileLoadedEvent.target.result;
+                satellites = JSON.parse(textFromFileLoaded);
+            };
+
+            fileReader.readAsText(fileToLoad, "UTF-8");
         }
     </script>
 </body>
