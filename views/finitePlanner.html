@@ -87,6 +87,8 @@
             <div style="font-size:2em; margin: 4%; font-weight: bold">Visualization</div>
             <div>Data Points<input value="200" type="Number" min="100" max="500"></div>
             <div>Line Width</sub><input value="2" type="Number" min="1" max="10"> px</div>
+            <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
+            <div id="import-option-button" class="panel-button hoverable noselect">Import</div>
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div id="cancel-option-button" class="panel-button hoverable noselect">Cancel</div>
         </div>
@@ -97,7 +99,7 @@
         let timeSlider = document.getElementById('time-slider-range');
         let encoder = new GIFEncoder();
         encoder.setRepeat(0);
-        encoder.setDelay(16);
+        encoder.setDelay(33);
         let windowOptions = {
             center: [0, 0],
             width: 120,
@@ -115,7 +117,7 @@
             time_vector: math.range(0, 86164, 86164 / 200, true)._data,
             scenario_time: 0,
             scenario_time_des: 0,
-            animate_step: 120,
+            animate_step: 240,
             lineWidth: 3,
             previewTime: 0,
             previewPath: [],
@@ -201,6 +203,11 @@
                 sat.burns.forEach((burn, jj) => {
                     let burnLocation = getCurrentPosition(sat.position, sat.burns, burn.time);
                     if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions.mousePosition.screen === 'ci')) {
+                        if (event.ctrlKey) {
+                            satellites[ii].burns.splice(jj, 1);
+                            calcShownTrajectories(ii);
+                            return;
+                        }
                         if (windowOptions.mousePosition.screen !== 'ci') {
                             satellites[ii].burns[jj].direction = {r: 0, i: 0, c: satellites[ii].burns[jj].direction.c};
                         }
@@ -428,6 +435,7 @@
             })
             if (windowOptions.makeGif.start) {
                 windowOptions.scenario_time_des += windowOptions.animate_step;
+                windowOptions.scenario_time += windowOptions.animate_step;
                 console.log(windowOptions.scenario_time);
                 encoder.addFrame(ctx);
                 if (windowOptions.makeGif.stop) {
