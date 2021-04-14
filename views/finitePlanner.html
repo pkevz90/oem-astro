@@ -88,7 +88,7 @@
             <div>Data Points<input value="200" type="Number" min="100" max="500"></div>
             <div>Line Width</sub><input value="2" type="Number" min="1" max="10"> px</div>
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
-            <div>Import <input id="upload-options-button" type="file" accept=".sas"></div>
+            <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div id="cancel-option-button" class="panel-button hoverable noselect">Cancel</div>
         </div>
@@ -134,7 +134,8 @@
                 stop: false
             },
             maneuver_type: 'manual',
-            full_burn_vis_time: 86164 * 0.1
+            full_burn_vis_time: 86164 * 0.1,
+            refresh_time: 0
         }
         formatCanvas();
         windowOptions.screen = {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height};
@@ -401,6 +402,7 @@
             ctx.fillText('C', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ci_center - 157.5);
             ctx.textAlign = 'start';
             ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString().split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
+            ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
             
             // Draw Scale
             ctx.lineWidth = 2;
@@ -461,13 +463,13 @@
                 ctx.fillRect(0, windowOptions.screen.lineHeight - cnvs.height * 0.00125, cnvs.width, cnvs.height * 0.0025)
             }
             // console.log(performance.now() - a);
+            windowOptions.refresh_time += (performance.now() - a - windowOptions.refresh_time) * 0.01;
             window.requestAnimationFrame(animation);
         }
         function formatCanvas() {
-                cnvs.style.height = '100%';
                 cnvs.width = document.documentElement.clientWidth;
                 cnvs.height = document.documentElement.clientHeight;
-                windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode !== 'ri onlyS' ? 2 : 1) / cnvs.width;
+                windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode !== 'ri only' ? 2 : 1) / cnvs.width;
         }
         function drawRicArrow(options) {
             let {startRic, stopRic, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', cross = false, angle = 0} = options;
@@ -643,17 +645,19 @@
                 size
             }
         }
-        function getCurrentPosition(position = {r: 0, i: 0, rd: 0.001, id: 0, c: 0, cd: 0}, burns = [], time = 86164) {
+        function getCurrentPosition(position = {r: 0, i: 0, rd: 0.001, id: 0, c: 0, cd: 0}, burns = [], time = 86164, phi) {
             let r = [[position.r],
                  [position.i],
-                 [position.c]], r1, phi;
+                 [position.c]], r1;
             let v = [[position.rd],
                      [position.id],
                      [position.cd]];
             let timeProp = 0;       
             for (let ii = 0; ii < burns.length; ii++) {
                 if (burns[ii].time <= time) {
-                    phi = phiMatrix(burns[ii].time - timeProp);
+                    if (!phi) {
+                        phi = phiMatrix(burns[ii].time - timeProp);
+                    }
                     r1 = math.add(math.multiply(phi.rr, r), math.multiply(phi.rv, v));
                     v = math.add(math.multiply(phi.vr, r), math.multiply(phi.vv, v));
                     r = r1;
@@ -712,12 +716,12 @@
             let {tension = 1, type = 'stroke', ric = false, cross = false} = options;
             ctx.beginPath();
             let point1 = ric === false ? points[0] : ricToPixel(points[0], {struct: true, cross});
-            ctx.moveTo(point1.x, point1.y);
             var t = tension;
             let limit = {
                 min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
                 max: cross ? cnvs.height : (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
             }
+            let withinBounds;
             for (var i = 0; i < points.length - 1; i++) {
                 var p0 = (i > 0) ? ric === true ? ricToPixel(points[i - 1], {struct: true, cross}) : points[i-1] : point1;
                 var p1 = ric === false ? points[i] : ricToPixel(points[i], {struct: true, cross});
@@ -730,7 +734,18 @@
                 var cp2x = p2.x - (p3.x - p1.x) / 6 * t;
                 var cp2y = p2.y - (p3.y - p1.y) / 6 * t;
                 if ((cp1y < limit.max && cp1y > limit.min) && (cp2y < limit.max && cp2y > limit.min)) {
+                    if (!withinBounds) {
+                        ctx.beginPath();
+                        ctx.moveTo(p0.x, p0.y);
+                    }
                     ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+                    withinBounds = true;
+                }
+                else {
+                    if (withinBounds) {
+                        ctx.stroke();
+                    }
+                    withinBounds = false;
                 }
             }
             if (type === 'stroke') {
