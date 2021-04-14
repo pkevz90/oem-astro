@@ -645,19 +645,17 @@
                 size
             }
         }
-        function getCurrentPosition(position = {r: 0, i: 0, rd: 0.001, id: 0, c: 0, cd: 0}, burns = [], time = 86164, phi) {
+        function getCurrentPosition(position = {r: 0, i: 0, rd: 0.001, id: 0, c: 0, cd: 0}, burns = [], time = 86164) {
             let r = [[position.r],
                  [position.i],
-                 [position.c]], r1;
+                 [position.c]], r1, phi;
             let v = [[position.rd],
                      [position.id],
                      [position.cd]];
             let timeProp = 0;       
             for (let ii = 0; ii < burns.length; ii++) {
                 if (burns[ii].time <= time) {
-                    if (!phi) {
-                        phi = phiMatrix(burns[ii].time - timeProp);
-                    }
+                    phi = phiMatrix(burns[ii].time - timeProp);
                     r1 = math.add(math.multiply(phi.rr, r), math.multiply(phi.rv, v));
                     v = math.add(math.multiply(phi.vr, r), math.multiply(phi.vv, v));
                     r = r1;
@@ -704,6 +702,7 @@
             for (let ii = 0; ii < windowOptions.time_vector.length; ii++) {
                 satellites.forEach((sat, jj) => {
                     if (satCalc === 'all' || satCalc === jj) {
+                        // console.log(windowOptions.time_vector[ii]);
                         sat.shownTraj.push(getCurrentPosition(sat.position, sat.burns, windowOptions.time_vector[ii]));
                         if (ii === windowOptions.time_vector.length - 1) {
                             sat.currentPosition = getCurrentPosition(sat.position, sat.burns, windowOptions.time_vector[ii]);
@@ -714,14 +713,14 @@
         }
         function drawCurve(ctx, points, options = {}) {
             let {tension = 1, type = 'stroke', ric = false, cross = false} = options;
-            ctx.beginPath();
+            // ctx.beginPath();
             let point1 = ric === false ? points[0] : ricToPixel(points[0], {struct: true, cross});
             var t = tension;
             let limit = {
                 min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
                 max: cross ? cnvs.height : (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
             }
-            let withinBounds;
+            let withinBounds, lineDrawn = false;
             for (var i = 0; i < points.length - 1; i++) {
                 var p0 = (i > 0) ? ric === true ? ricToPixel(points[i - 1], {struct: true, cross}) : points[i-1] : point1;
                 var p1 = ric === false ? points[i] : ricToPixel(points[i], {struct: true, cross});
@@ -733,10 +732,11 @@
 
                 var cp2x = p2.x - (p3.x - p1.x) / 6 * t;
                 var cp2y = p2.y - (p3.y - p1.y) / 6 * t;
-                if ((cp1y < limit.max && cp1y > limit.min) && (cp2y < limit.max && cp2y > limit.min)) {
+                if ((p1.y < limit.max && p1.y > limit.min) && (p2.y < limit.max && p2.y > limit.min)) {
                     if (!withinBounds) {
                         ctx.beginPath();
-                        ctx.moveTo(p0.x, p0.y);
+                        ctx.moveTo(p1.x, p1.y);
+                        lineDrawn = false;
                     }
                     ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
                     withinBounds = true;
@@ -744,14 +744,13 @@
                 else {
                     if (withinBounds) {
                         ctx.stroke();
+                        lineDrawn = true;
                     }
                     withinBounds = false;
                 }
             }
-            if (type === 'stroke') {
+            if (!lineDrawn) {
                 ctx.stroke();
-            } else {
-                ctx.fill();
             }
         }
         function drawBurns(satellite, options = {}) {
