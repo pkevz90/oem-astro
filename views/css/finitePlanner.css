@@ -79,6 +79,22 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
+#kinematic-slider {
+    position: fixed;
+    height: auto;
+    width: auto;
+    padding: 0.5% 1%;
+    z-index: 3;
+    bottom: 36%;
+    right: 2.5%;
+    border-radius: 2vw;
+    text-align: center;
+    line-height: 2vw;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+    font-size: 1.5vw;
+}
 #instructions-button {
     position: fixed;
     height: auto;
