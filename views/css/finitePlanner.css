@@ -63,13 +63,30 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
+#waypoints-button {
+    position: fixed;
+    height: auto;
+    width: auto;
+    padding: 0.5% 1%;
+    border: 1px solid black;
+    z-index: 3;
+    bottom: 32.5%;
+    right: 2.5%;
+    border-radius: 2vw;
+    text-align: center;
+    line-height: 2vw;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+    font-size: 1.5vw;
+}
 #maneuver-type-slider {
     position: fixed;
     height: auto;
     width: auto;
     padding: 0.5% 1%;
     z-index: 3;
-    bottom: 30%;
+    bottom: 42.5%;
     right: 2.5%;
     border-radius: 2vw;
     text-align: center;
@@ -161,7 +178,26 @@ canvas {
     transform: translate(-50%, -50%);
     justify-content: space-around;
 }
+#waypoints-panel {
+    position: fixed;
+    display: flex;
+    z-index: 4;
+    background-color: white;
+    border: 10px solid black;
+    border-radius: 30px;
+    width: 50%;
+    height: auto;
+    padding: 1%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    justify-content: space-around;
+}
 #add-satellite-panel div, #options-panel div {
+    text-align: center;
+}
+#waypoints-panel div {
+    width: 100%;
     text-align: center;
 }
 #add-satellite-panel div input, #add-satellite-panel div select, #options-panel div input{
@@ -238,4 +274,14 @@ canvas {
   
   .slider.round:before {
     border-radius: 50%;
+  }
+
+  .edit-button {
+      cursor: pointer;
+      border: 1px solid black;
+      border-radius: 10px;
+  }
+  .edit-button:hover {
+    background-color: black;
+    color: white;
   }

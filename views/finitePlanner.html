@@ -16,13 +16,16 @@
         <canvas id="main-plot"></canvas>
     </div>
     <div id="time-slider">
-        <input id="time-slider-range" type="range" min=0.1 max=86164 step=0.1 value=0.1\>
+        <input id="time-slider-range" type="range" min=0.1 max=86164 step=0.1 value=0>
     </div>
     <div id="add-satellite" class="noselect hoverable" title="Add Satellite">
         +
     </div>
     <div id="option-button" class="noselect hoverable" title="Add Satellite">
         Options
+    </div>
+    <div id="waypoints-button" class="noselect hoverable" title="Add Satellite">
+        Waypoints
     </div>
     <div id="maneuver-type-slider">
         <span>Manual</span>
@@ -41,11 +44,38 @@
     <div id="instructions-button" class="noselect hoverable" title="Add Satellite">
         Instructions
     </div>
+    <div id="waypoints-panel" class="hidden">
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">View/Edit Waypoints</div>
+            <select id="satellite-way-select">
+                <option value="0">Blue Triangle</option>
+                <option value="1">Red Circle</option>
+            </select> 
+            <table id="waypoint-table" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Radial</th>
+                        <th>In-Track</th>
+                        <th>Cross-Track</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div style="width: 50%" id="close-waypoints-button" class="panel-button hoverable noselect">Close</div>
+        </div>
+    </div>
     <div id="instructions-panel" class="hidden">
         <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Instructions</div>
             <ul>
                 <li>
-                    Building a plan (work in progress)
+                    Building a plan (instructions are work in progress)
                     <ol>
                         <li>Add Satellite with + button in bottom right</li>
                         <li>To insert a burn, click and hold current satellite position, use slider to change shown time</li>
@@ -54,7 +84,13 @@
                     </ol>
                 </li>
                 <li>See cross-track view by hitting spacebar</li>
-                <li>Generate GIF by hitting 'a', then 'a' again to download produced GIF</li>
+                <li>Generate GIF by hitting 'a', then 'a' again to download produced GIF
+                    <ul>
+                        <li>Will generate from the time set on the slider</li>
+                        <li>Frames per second and time step set in options</li>
+                        <li>Can either repeat indefinitely or stop after one</li>
+                    </ul>
+                </li>
             </ul>
             <div id="close-instructions-button" class="panel-button hoverable noselect">Close</div>
         </div> 
@@ -113,7 +149,7 @@
         let ctx = cnvs.getContext("2d");
         let timeSlider = document.getElementById('time-slider-range');
         let encoder = new GIFEncoder();
-        encoder.setRepeat(0);
+        encoder.setRepeat(1);
         encoder.setDelay(33);
         let windowOptions = {
             center: [0, 0],
@@ -291,8 +327,31 @@
         document.getElementById('instructions-button').addEventListener('click', () => {
             document.getElementById('instructions-panel').classList.toggle("hidden")
         })
-        document.getElementById('close-instructions-button').addEventListener('click', () => {
-            document.getElementById('instructions-panel').classList.toggle("hidden")
+        document.getElementById('waypoints-button').addEventListener('click', () => {
+            if (satellites.length === 0) {return;}
+            let selectEl = document.getElementById('satellite-way-select');
+            let chosenSat = Number(selectEl.value);
+            generateTable(chosenSat);
+            while (selectEl.firstChild) {
+                selectEl.removeChild(selectEl.firstChild);
+            }
+            satellites.forEach((sat, ii) => {
+                addedElement = document.createElement('option');
+                addedElement.value = ii;
+                addedElement.textContent = sat.shape;
+                addedElement.style.color = sat.color;
+                selectEl.appendChild(addedElement);
+            })
+            selectEl.selectedIndex = chosenSat;
+            selectEl.style.color = satellites[chosenSat].color;
+            document.getElementById('waypoints-panel').classList.toggle("hidden")
+        })
+        document.getElementById('satellite-way-select').addEventListener('change', event => {
+            generateTable(event.target.value)
+            event.target.style.color = satellites[event.target.value].color;
+        })
+        document.getElementById('close-waypoints-button').addEventListener('click', () => {
+            document.getElementById('waypoints-panel').classList.toggle("hidden")
         })
         document.getElementById('add-satellite-button').addEventListener('click', (click) => {
             let el = click.target, n = 2 * Math.PI / 86164;
@@ -334,6 +393,9 @@
             sun = Number(sun.substring(0,2)) * 3600 + Number(sun.substring(2,4));
             windowOptions.sunInit = sun;
             windowOptions.start_date = new Date(date);
+            document.getElementById('options-panel').classList.toggle("hidden")
+        })
+        document.getElementById('cancel-option-button').addEventListener('click', (click) => {
             document.getElementById('options-panel').classList.toggle("hidden")
         })
         document.getElementById('cancel-option-button').addEventListener('click', (click) => {
@@ -431,7 +493,7 @@
             ctx.textAlign = 'start';
             ctx.fillStyle = 'black';
             ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString().split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
-            ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
+            // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
             
             // Draw Scale
             ctx.strokeStyle = 'RGB(0,0,0,0.5)';
@@ -835,6 +897,57 @@
             }
             drawBurnArrow(sat.burns[burn.burn], {location: windowOptions.burn_status.burnLocation, object: burn.object});
             calcShownTrajectories(burn.object);
+        }
+        function generateTable(object = 0) {
+            let table = document.getElementById('waypoint-table').children[1];
+            while (table.firstChild) {
+                table.removeChild(table.firstChild);
+            }
+            let addedElement, position;
+            if (satellites[object].burns.length === 0) {
+                addedElement = document.createElement('tr');
+                addedElement.innerHTML = `
+                    <td>0.0 hrs</td>
+                    <td><span class="position-element">${(satellites[object].position.r).toFixed(1)}</span> km</td>
+                    <td><span class="position-element">${(satellites[object].position.i).toFixed(1)}</span> km</td>
+                    <td><span class="position-element">${(satellites[object].position.c).toFixed(1)}</span> km</td>
+                    <td class="edit-button">Edit</td>
+                `;
+                table.appendChild(addedElement);
+            }
+            else if (satellites[object].burns[0].time !== 0) {
+                addedElement = document.createElement('tr');
+                addedElement.innerHTML = `
+                    <td>0.0 hrs</td>
+                    <td><span class="position-element">${(satellites[object].position.r).toFixed(1)}</span> km</td>
+                    <td><span class="position-element">${(satellites[object].position.i).toFixed(1)}</span> km</td>
+                    <td><span class="position-element">${(satellites[object].position.c).toFixed(1)}</span> km</td>
+                    <td class="edit-button">Edit</td>
+                `;
+                table.appendChild(addedElement);
+            }
+            satellites[object].burns.forEach(burn => {
+                addedElement = document.createElement('tr');
+                position = getCurrentPosition(satellites[object].position, satellites[object].burns, burn.time);
+                addedElement.innerHTML = `
+                    <td>${(burn.time / 3600).toFixed(1)} hrs</td>
+                    <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
+                    <td><span class="position-element" contentEditable="true">${(position.i[0]).toFixed(1)}</span> km</td>
+                    <td><span class="position-element" contentEditable="true">${(position.c[0]).toFixed(1)}</span> km</td>
+                    <td class="edit-button">Edit</td>
+                `;
+                table.appendChild(addedElement);
+            });
+            position = getCurrentPosition(satellites[object].position, satellites[object].burns, satellites[object].burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length-1].time + 7200);
+            addedElement = document.createElement('tr');
+            addedElement.innerHTML = `
+                <td>${((satellites[object].burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length-1].time + 7200) / 3600).toFixed(1)} hrs</td>
+                <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
+                <td><span class="position-element" contentEditable="true">${(position.i[0]).toFixed(1)}</span> km</td>
+                <td><span class="position-element" contentEditable="true">${(position.c[0]).toFixed(1)}</span> km</td>
+                <td class="edit-button">Edit</td>
+            `;
+            table.appendChild(addedElement);
         }
         function downloadFile(filename, text) {
             var pom = document.createElement('a');
