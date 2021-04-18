@@ -945,7 +945,7 @@
                 <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
                 <td><span class="position-element" contentEditable="true">${(position.i[0]).toFixed(1)}</span> km</td>
                 <td><span class="position-element" contentEditable="true">${(position.c[0]).toFixed(1)}</span> km</td>
-                <td class="edit-button" id="burn-edit-end">Edit</td>
+                ${satellites[object].burns.length === 0 ? '' : '<td class="edit-button" id="burn-edit-end">Edit</td>'}
             `;
             table.appendChild(addedElement);
             let buttons = document.getElementsByClassName('edit-button')
