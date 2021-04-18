@@ -1,5 +1,6 @@
 html, body {
     overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
 }
 canvas {
     cursor: none;

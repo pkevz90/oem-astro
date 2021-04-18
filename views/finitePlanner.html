@@ -398,8 +398,8 @@
         document.getElementById('cancel-option-button').addEventListener('click', (click) => {
             document.getElementById('options-panel').classList.toggle("hidden")
         })
-        document.getElementById('cancel-option-button').addEventListener('click', (click) => {
-            document.getElementById('options-panel').classList.toggle("hidden")
+        document.getElementById('close-instructions-button').addEventListener('click', (click) => {
+            document.getElementById('instructions-panel').classList.toggle("hidden")
         })
         document.getElementById('maneuver-type-input').addEventListener('change', (click) => {
             el = click.target;
@@ -983,6 +983,7 @@
                         sat.position = {...waypoints[0]};
                         if (sat.burns.length === 0) {
                             generateTable(document.getElementById('satellite-way-select').value);
+                            calcShownTrajectories(Number(document.getElementById('satellite-way-select').value));
                             return;
                         }
                         if (sat.burns[0].time !== 0) {
@@ -993,7 +994,6 @@
                         console.log(waypoints);
                     }
                     else if (id[0] === 'burn') {
-                        console.log(`edit burn ${id[2]}`);
                         let wayN = sat.burns[0].time === 0 ? Number(id[2]) : Number(id[2]) + 1;
                         wayN = id[2] === 'end' ? waypoints.length - 1 : wayN;
                         oldT = waypoints[wayN].t;
@@ -1018,7 +1018,6 @@
         function waypoints2burns(waypoints) {
             let dt, r1, v0, r2, phi, v1, dV, vOld = [[waypoints[0].rd], [waypoints[0].id], [waypoints[0].cd]], burn;
             let burns = [];
-            console.log(waypoints);
             for (let n = 0; n < waypoints.length - 1; n++) {
                 dt = waypoints[n+1].t - waypoints[n].t;
                 r1 = [[waypoints[n].r], [waypoints[n].i], [waypoints[n].c]]
