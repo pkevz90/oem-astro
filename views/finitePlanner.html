@@ -945,6 +945,7 @@
                 <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
                 <td><span class="position-element" contentEditable="true">${(position.i[0]).toFixed(1)}</span> km</td>
                 <td><span class="position-element" contentEditable="true">${(position.c[0]).toFixed(1)}</span> km</td>
+                <td class="edit-button" id="burn-edit-end">Edit</td>
             `;
             table.appendChild(addedElement);
             let buttons = document.getElementsByClassName('edit-button')
@@ -994,12 +995,19 @@
                     else if (id[0] === 'burn') {
                         console.log(`edit burn ${id[2]}`);
                         let wayN = sat.burns[0].time === 0 ? Number(id[2]) : Number(id[2]) + 1;
+                        wayN = id[2] === 'end' ? waypoints.length - 1 : wayN;
+                        oldT = waypoints[wayN].t;
+                        let t =  Number(window.prompt("Time [hrs]: ", waypoints[wayN].t / 3600)) * 3600;
                         let r =  Number(window.prompt("Radial: ", waypoints[wayN].r));
                         let i =  Number(window.prompt("In-Track: ", waypoints[wayN].i));
                         let c =  Number(window.prompt("Cross-Track: ", waypoints[wayN].c));
+                        waypoints[wayN].t = t;
                         waypoints[wayN].r = r;
                         waypoints[wayN].i = i;
                         waypoints[wayN].c = c;
+                        for (let kk = wayN + 1; kk < waypoints.length; kk++) {
+                            waypoints[kk].t += t - oldT;
+                        }
                     }
                     satellites[document.getElementById('satellite-way-select').value].burns = [...waypoints2burns(waypoints)];
                     calcShownTrajectories(Number(document.getElementById('satellite-way-select').value));
