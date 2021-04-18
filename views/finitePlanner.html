@@ -47,7 +47,7 @@
     <div id="waypoints-panel" class="hidden">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">View/Edit Waypoints</div>
-            <select id="satellite-way-select">
+            <select id="satellite-way-select" style="font-size: 2em">
                 <option value="0">Blue Triangle</option>
                 <option value="1">Red Circle</option>
             </select> 
@@ -66,6 +66,11 @@
                     </tr>
                 </tbody>
             </table>
+            <div style="margin-top:2%; border: 1px solid black; border-radius: 20px; padding: 2% 0%">
+                Time: <input type="Number" value="0" style="width: 7%" min="0"> hrs R: <input type="Number" value="0" style="width: 7%"> km I: <input type="Number" value="0" style="width: 7%"> km C: <input type="Number" value="0" style="width: 7%"> km
+                <span id="add-waypoint-button">Add</span>
+            </div>
+            
             
             <div style="width: 50%" id="close-waypoints-button" class="panel-button hoverable noselect">Close</div>
         </div>
@@ -206,9 +211,6 @@
         satellites = [];
         calcShownTrajectories();
         animation();
-
-
-
         window.addEventListener("resize", formatCanvas)
         window.addEventListener("keydown", e => {
             if (e.key === ' ') {
@@ -416,6 +418,46 @@
         })
         document.getElementById('export-option-button').addEventListener('click',() => {
             downloadFile('test.sas', JSON.stringify(satellites));
+        })
+        document.getElementById('add-waypoint-button').addEventListener('click',event => {
+            let divTarget = event.target.parentNode.children;
+            let t = Number(divTarget[0].value);
+            if (t < 0.5) {return;}
+            t *= 3600;
+            let r = Number(divTarget[1].value);
+            let i = Number(divTarget[2].value);
+            let c = Number(divTarget[3].value);
+            let waypoints = [], wayPos;
+            let sat = satellites[document.getElementById('satellite-way-select').value];
+            waypoints.push(sat.position);
+            waypoints[0].t = 0;
+            sat.burns.forEach((burn, ii) => {
+                if (burn.time !== 0) {
+                    wayPos = getCurrentPosition(sat.position, sat.burns, burn.time);
+                    waypoints.push({t: burn.time, r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]});
+                }
+            })
+            wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200);
+            let identWay = waypoints.findIndex((way, ii) => Math.abs(way.t - t) < 900);
+            console.log(identWay);
+            if (identWay !== -1) {
+                waypoints[identWay] = {t, r, i, c};
+            }
+            else {
+                waypoints.push({t, r, i, c})
+                waypoints.sort((a,b) => a.t - b.t);
+            }
+            waypoints.push({t: waypoints[waypoints.length - 1].t + 7200, r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]});
+            satellites[document.getElementById('satellite-way-select').value].burns = [...waypoints2burns(waypoints)];
+            if (waypoints[waypoints.length - 2].t === t && identWay === -1) {
+                satellites[document.getElementById('satellite-way-select').value].burns[satellites[document.getElementById('satellite-way-select').value].burns.length - 1].direction = {
+                    r: 0,
+                    i: 0,
+                    c: 0
+                }
+            }
+            calcShownTrajectories(Number(document.getElementById('satellite-way-select').value));
+            generateTable(document.getElementById('satellite-way-select').value);
         })
         function getMousePosition(mouseX, mouseY) {
             let plot = mouseY > (windowOptions.screen.ci_center + windowOptions.screen.ri_center) / 2  ? 'ci' : 'ri';
@@ -953,7 +995,7 @@
                 buttons[ii].addEventListener('click',event => {
                     let id = event.target.id.split('-');
                     let waypoints = [], wayPos;
-                    sat = satellites[document.getElementById('satellite-way-select').value];
+                    let sat = satellites[document.getElementById('satellite-way-select').value];
                     waypoints.push(sat.position);
                     waypoints[0].t = 0;
                     sat.burns.forEach((burn, ii) => {

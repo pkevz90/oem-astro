@@ -152,7 +152,7 @@ canvas {
     width: auto;
     padding: 0.5% 1%;
     border: 1px solid black;
-    margin: 10% 1%;
+    margin: 5% 1%;
     z-index: 3;
     bottom: 22.5%;
     right: 2.5%;
@@ -277,12 +277,16 @@ canvas {
     border-radius: 50%;
   }
 
-  .edit-button {
+  .edit-button, #add-waypoint-button {
       cursor: pointer;
       border: 1px solid black;
       border-radius: 10px;
   }
-  .edit-button:hover {
+  .edit-button:hover, #add-waypoint-button:hover {
     background-color: black;
     color: white;
+  }
+  #add-waypoint-button {
+      padding: 0.5% 2%;
+      margin-left: 7%;
   }
