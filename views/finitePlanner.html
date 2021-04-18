@@ -911,7 +911,7 @@
                     <td><span class="position-element">${(satellites[object].position.r).toFixed(1)}</span> km</td>
                     <td><span class="position-element">${(satellites[object].position.i).toFixed(1)}</span> km</td>
                     <td><span class="position-element">${(satellites[object].position.c).toFixed(1)}</span> km</td>
-                    <td class="edit-button">Edit</td>
+                    <td class="edit-button" id="start-edit">Edit</td>
                 `;
                 table.appendChild(addedElement);
             }
@@ -922,11 +922,11 @@
                     <td><span class="position-element">${(satellites[object].position.r).toFixed(1)}</span> km</td>
                     <td><span class="position-element">${(satellites[object].position.i).toFixed(1)}</span> km</td>
                     <td><span class="position-element">${(satellites[object].position.c).toFixed(1)}</span> km</td>
-                    <td class="edit-button">Edit</td>
+                    <td class="edit-button" id="start-edit"">Edit</td>
                 `;
                 table.appendChild(addedElement);
             }
-            satellites[object].burns.forEach(burn => {
+            satellites[object].burns.forEach((burn, ii) => {
                 addedElement = document.createElement('tr');
                 position = getCurrentPosition(satellites[object].position, satellites[object].burns, burn.time);
                 addedElement.innerHTML = `
@@ -934,7 +934,7 @@
                     <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
                     <td><span class="position-element" contentEditable="true">${(position.i[0]).toFixed(1)}</span> km</td>
                     <td><span class="position-element" contentEditable="true">${(position.c[0]).toFixed(1)}</span> km</td>
-                    <td class="edit-button">Edit</td>
+                    <td class="edit-button" id="burn-edit-${ii}">Edit</td>
                 `;
                 table.appendChild(addedElement);
             });
@@ -945,9 +945,93 @@
                 <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
                 <td><span class="position-element" contentEditable="true">${(position.i[0]).toFixed(1)}</span> km</td>
                 <td><span class="position-element" contentEditable="true">${(position.c[0]).toFixed(1)}</span> km</td>
-                <td class="edit-button">Edit</td>
             `;
             table.appendChild(addedElement);
+            let buttons = document.getElementsByClassName('edit-button')
+            for (let ii = 0; ii < buttons.length; ii++) {
+                buttons[ii].addEventListener('click',event => {
+                    let id = event.target.id.split('-');
+                    let waypoints = [], wayPos;
+                    sat = satellites[document.getElementById('satellite-way-select').value];
+                    waypoints.push(sat.position);
+                    waypoints[0].t = 0;
+                    sat.burns.forEach((burn, ii) => {
+                        if (burn.time !== 0) {
+                            wayPos = getCurrentPosition(sat.position, sat.burns, burn.time);
+                            waypoints.push({t: burn.time, r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]});
+                        }
+                    })
+                    wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200);
+                    waypoints.push({t: (sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200), r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]});
+                    if (id[0] === 'start' || (sat.burns[0].time === 0 && id[2] == 0)) {
+                        let startStatus = waypoints[0];
+                        let n = 2 * Math.PI / 86164;
+                        let a =  Number(window.prompt("RMOE Semi-Major Axis: ", 2 * Math.sqrt(Math.pow(3 * startStatus.r + 2 * startStatus.id / n, 2) + Math.pow(startStatus.rd / n, 2))));
+                        let xd = Number(window.prompt("RMOE Radial Center: ", 4 * startStatus.r + 2 * startStatus.id / n));
+                        let yd = Number(window.prompt("RMOE In-Track Center: (Instantaneous): ", startStatus.i - 2 * startStatus.rd / n));
+                        let b =  Number(window.prompt("RMOE Beta (Instantaneous): ", math.atan2(startStatus.rd, 3 * n * startStatus.r + 2 * startStatus.id)* 180 / Math.PI));
+                        let m =  Number(window.prompt("RMOE Out-of-Plane Phase: (Instantaneous): ", math.atan2(startStatus.c, startStatus.cd / n) * 180 / Math.PI));
+                        let zm = Number(window.prompt("RMOE Max Cross-Track: ", Math.sqrt(Math.pow(startStatus.c, 2) + Math.pow(startStatus.cd / n, 2))));
+                        
+                        waypoints[0] = {r: -a / 2 * Math.cos(b * Math.PI / 180) + xd, 
+                                        i: a * Math.sin(b * Math.PI / 180) + yd, 
+                                        c: zm * Math.sin(m * Math.PI / 180), 
+                                        rd: a * n / 2 * Math.sin(b * Math.PI / 180), 
+                                        id: a * n * Math.cos(b * Math.PI / 180) - 1.5 * n * xd, 
+                                        cd: zm * n * Math.cos(b * Math.PI / 180)};
+                        sat.position = {...waypoints[0]};
+                        if (sat.burns.length === 0) {
+                            generateTable(document.getElementById('satellite-way-select').value);
+                            return;
+                        }
+                        if (sat.burns[0].time !== 0) {
+                            wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns[0].time);
+                            waypoints[1] = {t: sat.burns[0].time, r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]};
+                        }
+                        waypoints[0].t = 0;
+                        console.log(waypoints);
+                    }
+                    else if (id[0] === 'burn') {
+                        console.log(`edit burn ${id[2]}`);
+                        let wayN = sat.burns[0].time === 0 ? Number(id[2]) : Number(id[2]) + 1;
+                        let r =  Number(window.prompt("Radial: ", waypoints[wayN].r));
+                        let i =  Number(window.prompt("In-Track: ", waypoints[wayN].i));
+                        let c =  Number(window.prompt("Cross-Track: ", waypoints[wayN].c));
+                        waypoints[wayN].r = r;
+                        waypoints[wayN].i = i;
+                        waypoints[wayN].c = c;
+                    }
+                    satellites[document.getElementById('satellite-way-select').value].burns = [...waypoints2burns(waypoints)];
+                    calcShownTrajectories(Number(document.getElementById('satellite-way-select').value));
+                    generateTable(document.getElementById('satellite-way-select').value);
+                })
+            }
+        }
+        function waypoints2burns(waypoints) {
+            let dt, r1, v0, r2, phi, v1, dV, vOld = [[waypoints[0].rd], [waypoints[0].id], [waypoints[0].cd]], burn;
+            let burns = [];
+            console.log(waypoints);
+            for (let n = 0; n < waypoints.length - 1; n++) {
+                dt = waypoints[n+1].t - waypoints[n].t;
+                r1 = [[waypoints[n].r], [waypoints[n].i], [waypoints[n].c]]
+                r2 = [[waypoints[n+1].r], [waypoints[n+1].i], [waypoints[n+1].c]];
+                phi = phiMatrix(dt);
+                v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
+                burn = math.squeeze(math.subtract(v1, vOld));
+                dV = math.norm(burn);
+                vOld = math.add(math.multiply(phi.vr, r1), math.multiply(phi.vv, v1));
+                if (dV < 1e-6) {continue;}
+                burns.push({
+                    time: waypoints[n].t,
+                    direction: {
+                        r: burn[0],
+                        i: burn[1],
+                        c: burn[2]
+                    },
+                    magnitude: 0
+                });
+            }
+            return burns;
         }
         function downloadFile(filename, text) {
             var pom = document.createElement('a');
