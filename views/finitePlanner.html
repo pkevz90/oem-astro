@@ -192,7 +192,11 @@
             maneuver_type: 'manual',
             full_burn_vis_time: 86164 * 0.1,
             refresh_time: 0,
-            arrowColor: 'rgb(100,100,100)'
+            arrowColor: 'rgb(100,100,100)',
+            passiveDropoff: {
+                time: 7200,
+                constant: 0.00025
+            }
         }
         formatCanvas();
         windowOptions.screen = {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height};
@@ -554,15 +558,29 @@
             ctx.strokeText(scaleLength + ' km', 4*cnvs.width / 5, cnvs.height * 0.12);
             ctx.stroke();
             
-            let drawnTraj, currentLocation; 
+            let drawnTraj, currentLocation, passiveBurns; 
             ctx.lineWidth = windowOptions.lineWidth;
             satellites.forEach((satellite, ii) => {
                 ctx.strokeStyle = satellite.color;
                 currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
-                satellite.burns.forEach(burn => {
+                satellite.burns.forEach((burn, jj) => {
                     if (burn.time < windowOptions.scenario_time) {
                         drawBurnArrow(burn, {cross: false, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time, trans: true})
                         drawBurnArrow(burn, {cross: true, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time, trans: true})
+                        if ((windowOptions.scenario_time - burn.time) < windowOptions.passiveDropoff.time) {
+                            console.log(jj);
+                            passiveBurns = satellite.burns.slice(0,jj);
+                            ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * (windowOptions.scenario_time - burn.time));
+                            drawSatellite({
+                                position: satellite.position,
+                                burns: passiveBurns,
+                                data: false,
+                                shape: satellite.shape,
+                                size: satellite.size,
+                                color: satellite.color
+                            });
+                            ctx.globalAlpha = 1;
+                        }
                     }
                 })
                 
@@ -647,8 +665,10 @@
                     [Math.sin(angle * (units === 'deg' ? Math.PI / 180 : 1)), Math.cos(angle * (units === 'deg' ? Math.PI / 180 : 1))]];
         }
         function drawSatellite(satellite, cross = false) {
-            let {color = 'blue', shape = 'triangle', size = 0.1, position = {r: 0, i: 0}} = satellite;
+            let {color = 'blue', shape = 'triangle', size = 0.1, position = {r: 0, i: 0}, data = false} = satellite;
             let pixelPosition = ricToPixel(getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time), {cross});
+            if (data) {console.log(getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time))}
+            // console.log(pixelPosition, satellite.position, satellite.burns)
             let limit = {
                 min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
                 max: cross ? cnvs.height : (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
@@ -782,7 +802,8 @@
                 size
             }
         }
-        function getCurrentPosition(position = {r: 0, i: 0, rd: 0.001, id: 0, c: 0, cd: 0}, burns = [], time = 86164) {
+        function getCurrentPosition(position = {r: 0, i: 0, rd: 0.001, id: 0, c: 0, cd: 0}, burns = [], time = 86164, notate = false) {
+            if (notate){console.log(position, burns, time);}
             let r = [[position.r],
                  [position.i],
                  [position.c]], r1, phi;
@@ -809,6 +830,7 @@
             r1 = math.add(math.multiply(phi.rr, r), math.multiply(phi.rv, v));
             v = math.add(math.multiply(phi.vr, r), math.multiply(phi.vv, v));
             r = r1;
+            if (notate){console.log(r)}
             return {r: r[0], i: r[1], c: r[2], rd: v[0], id: v[1], cd: v[2]};
         }
         function phiMatrix(t = 0, n = 2 * Math.PI / 86164) {
