@@ -627,7 +627,7 @@
                         }
                     }
                 })
-                
+                ctx.strokeStyle = satellite.color;
                 if (windowOptions.screen.mode !== 'ri only') {
                     drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true, cross: true});
                     drawBurns(satellite, {cross: true});
