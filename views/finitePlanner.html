@@ -85,6 +85,14 @@
                         <li>Add Satellite with + button in bottom right</li>
                         <li>To insert a burn, click and hold current satellite position, use slider to change shown time</li>
                         <li>Burns can either be planned with a manual direction or with a waypoint by hitting the switch to the right</li>
+                        <li>The Following hotkeys can assist with precise burns, hit them while planning burn
+                            <ul>
+                                <li>1 - Remove relative eccentricity</li>
+                                <li>2 - Remove relative semi-major axis (assumes starting top or bottom of NMC)</li>
+                                <li>3 - Remove relative semi-major axis (allows selecting of NMC center on in-track)</li>
+                                <li>4 - Zero cross-track velocity</li>
+                            </ul>
+                        </li>
                         <li>Burns can be deleted by cntrl-clicking on the burn</li>
                     </ol>
                 </li>
@@ -194,8 +202,8 @@
             refresh_time: 0,
             arrowColor: 'rgb(100,100,100)',
             passiveDropoff: {
-                time: 7200,
-                constant: 0.00025
+                time: 10800,
+                constant: 0.0003
             }
         }
         formatCanvas();
@@ -217,6 +225,42 @@
         animation();
         window.addEventListener("resize", formatCanvas)
         window.addEventListener("keydown", e => {
+            if (windowOptions.burn_status) {
+                let currentLocation = getCurrentPosition(satellites[windowOptions.burn_status.object].position, satellites[windowOptions.burn_status.object].burns.slice(0,windowOptions.burn_status.burn), satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].time);
+                let n = 2 * Math.PI / 86164, desVel, dV;
+                switch (e.key) {
+                    case '1':
+                        // Zero relative eccentricity
+                        desVel = [[0],[-3 * currentLocation.r * n / 2], currentLocation.cd];
+                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation.cd]);
+                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction = {r: dV[0][0], i: dV[1][0], c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction.c}
+                        break;
+                    case '2':
+                        // Zero relative semi-major axis (assumes top or bottom of NMC for now)
+                        desVel = [[0],[-4 * currentLocation.r * n / 2], currentLocation.cd];
+                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation.cd]);
+                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction = {r: dV[0][0], i: dV[1][0], c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction.c}
+                        break;
+                    case '4':
+                        // Zero cross-track velocity
+                        break;
+                    case '3':
+                        // Zero relative semi-major axis with chosen center
+                        let yd = window.prompt("In-Track Center of NMC [km]: ", 0);
+                        let rd = (currentLocation.i - yd) * n / 2;
+                        desVel = [[rd],[-4 * currentLocation.r * n / 2], currentLocation.cd];
+                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation.cd]);
+                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction = {r: dV[0][0], i: dV[1][0], c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction.c}
+                        break;
+                    default: 
+                        return;
+                }
+                windowOptions.scenario_time_des = satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].time + 7200;
+                calcShownTrajectories(windowOptions.burn_status.object)
+                windowOptions.burn_status = false;
+                windowOptions.mouseState = false;
+                return;
+            }
             if (e.key === ' ') {
                 switch (windowOptions.screen.mode) {
                     case 'ri only':
@@ -568,7 +612,7 @@
                         drawBurnArrow(burn, {cross: false, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time, trans: true})
                         drawBurnArrow(burn, {cross: true, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time, trans: true})
                         if ((windowOptions.scenario_time - burn.time) < windowOptions.passiveDropoff.time) {
-                            console.log(jj);
+                            // console.log(jj);
                             passiveBurns = satellite.burns.slice(0,jj);
                             ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * (windowOptions.scenario_time - burn.time));
                             drawSatellite({
