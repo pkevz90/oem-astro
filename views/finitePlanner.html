@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -11,8 +12,9 @@
     <script src="../SupportLibraries/GIFEncoder.js"></script>
     <link rel="stylesheet" href="./css/finitePlanner.css">
 </head>
+
 <body class="noselect">
-    <div id="canvas-div"> 
+    <div id="canvas-div">
         <canvas id="main-plot"></canvas>
     </div>
     <div id="time-slider">
@@ -50,7 +52,7 @@
             <select id="satellite-way-select" style="font-size: 2em">
                 <option value="0">Blue Triangle</option>
                 <option value="1">Red Circle</option>
-            </select> 
+            </select>
             <table id="waypoint-table" style="width: 100%;">
                 <thead>
                     <tr>
@@ -67,11 +69,13 @@
                 </tbody>
             </table>
             <div style="margin-top:2%; border: 1px solid black; border-radius: 20px; padding: 2% 0%">
-                Time: <input type="Number" value="0" style="width: 7%" min="0"> hrs R: <input type="Number" value="0" style="width: 7%"> km I: <input type="Number" value="0" style="width: 7%"> km C: <input type="Number" value="0" style="width: 7%"> km
+                Time: <input type="Number" value="0" style="width: 7%" min="0"> hrs R: <input type="Number" value="0"
+                    style="width: 7%"> km I: <input type="Number" value="0" style="width: 7%"> km C: <input
+                    type="Number" value="0" style="width: 7%"> km
                 <span id="add-waypoint-button">Add</span>
             </div>
-            
-            
+
+
             <div style="width: 50%" id="close-waypoints-button" class="panel-button hoverable noselect">Close</div>
         </div>
     </div>
@@ -83,13 +87,16 @@
                     Building a plan (instructions are work in progress)
                     <ol>
                         <li>Add Satellite with + button in bottom right</li>
-                        <li>To insert a burn, click and hold current satellite position, use slider to change shown time</li>
-                        <li>Burns can either be planned with a manual direction or with a waypoint by hitting the switch to the right</li>
+                        <li>To insert a burn, click and hold current satellite position, use slider to change shown time
+                        </li>
+                        <li>Burns can either be planned with a manual direction or with a waypoint by hitting the switch
+                            to the right</li>
                         <li>The Following hotkeys can assist with precise burns, hit them while planning burn
                             <ul>
                                 <li>1 - Remove relative eccentricity</li>
                                 <li>2 - Remove relative semi-major axis (assumes starting top or bottom of NMC)</li>
-                                <li>3 - Remove relative semi-major axis (allows selecting of NMC center on in-track)</li>
+                                <li>3 - Remove relative semi-major axis (allows selecting of NMC center on in-track)
+                                </li>
                                 <li>4 - Zero cross-track velocity</li>
                             </ul>
                         </li>
@@ -106,7 +113,7 @@
                 </li>
             </ul>
             <div id="close-instructions-button" class="panel-button hoverable noselect">Close</div>
-        </div> 
+        </div>
     </div>
     <div id="add-satellite-panel" class="hidden">
         <div>
@@ -117,10 +124,10 @@
             <div>B<sub>o</sub><input value="0" type="Number"><sup>o</sup></div>
             <div>M<sub>o</sub><input value="0" type="Number"><sup>o</sup></div>
             <div>Z<sub>max</sub><input value="0" type="Number"> km</div>
-        </div>      
+        </div>
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Satellite Details</div>
-            <div>Shape 
+            <div>Shape
                 <select name="" id="">
                     <option value="square">Square</option>
                     <option value="triangle">Triangle</option>
@@ -137,16 +144,16 @@
     <div id="options-panel" class="hidden">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Time & Location</div>
-            <div>Start Date <input style="width: 75%" type="datetime-local" id="start-time"
-                name="meeting-time" value="2021-04-01T00:00"></div>
+            <div>Start Date <input style="width: 75%" type="datetime-local" id="start-time" name="meeting-time"
+                    value="2021-04-01T00:00"></div>
             <div>Scenario Length <input value="24" type="Number" min="0" max="360" step="1">hrs</div>
             <div>Reference Longitude <input value="0" type="Number" min="0" max="360" step="1"><sup>o</sup></div>
-            <div>Local Sun Time <input value="0000" type="Text"maxLength="4">L</div>
+            <div>Local Sun Time <input value="0000" type="Text" maxLength="4">L</div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Recording</div>
             <div>Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
             <div>FPS <input value="30" type="Number" min="15" max="60" step="1"></div>
             <div>Repeat <input type="checkbox"></div>
-        </div>      
+        </div>
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Visualization</div>
             <div>Data Points<input value="200" type="Number" min="100" max="500"></div>
@@ -170,13 +177,23 @@
             width_des: 120,
             sunInit: 0,
             w_h_ratio: cnvs.width / cnvs.height,
-            mousePosition: {pixel: [0, 0], ric: {r: 0, i: 0}, screen: 'ri', object: false, fill: 0},
+            mousePosition: {
+                pixel: [0, 0],
+                ric: {
+                    r: 0,
+                    i: 0
+                },
+                screen: 'ri',
+                object: false,
+                fill: 0
+            },
             mouseState: false, // true if down
             frame_move: false,
             closeLimit: 0.025 * 60,
             closeSat: false,
             scenario_length: 24,
-            start_date: new Date(document.getElementById('confirm-option-button').parentNode.parentNode.children.item(0).children[1].children[0].value),
+            start_date: new Date(document.getElementById('confirm-option-button').parentNode.parentNode.children
+                .item(0).children[1].children[0].value),
             time_delta: 86164 / 200,
             time_vector: math.range(0, 86164, 86164 / 200, true)._data,
             scenario_time: 0,
@@ -185,8 +202,15 @@
             lineWidth: 3,
             previewTime: 0,
             previewPath: [],
-            screen: {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height},
-            burn_point_size: 0.00625, 
+            screen: {
+                mode: 'ri only',
+                ri_center: cnvs.height / 2,
+                ci_center: 3 * cnvs.height / 2,
+                ri_h_w_ratio: cnvs.height / cnvs.width,
+                ci_h_w_ratio: 0,
+                lineHeight: cnvs.height
+            },
+            burn_point_size: 0.00625,
             burn_sensitivity: 0.15, // 0.15 m/s per 1 km distance
             burn_status: false, // {object: null, burn: null}
             mouse_time: false,
@@ -207,14 +231,31 @@
             }
         }
         formatCanvas();
-        windowOptions.screen = {mode: 'ri only', ri_center: cnvs.height / 2, ci_center: 3 * cnvs.height / 2, ri_h_w_ratio: cnvs.height / cnvs.width, ci_h_w_ratio: 0, lineHeight: cnvs.height};
+        windowOptions.screen = {
+            mode: 'ri only',
+            ri_center: cnvs.height / 2,
+            ci_center: 3 * cnvs.height / 2,
+            ri_h_w_ratio: cnvs.height / cnvs.width,
+            ci_h_w_ratio: 0,
+            lineHeight: cnvs.height
+        };
+
         function newSatellite(options) {
-            let {color = 'red', shape = "square", size = 0.035, position, currentPosition = {r: 0, i: 25, c: 0, rd: 0, id: 0, cd: 0}, burns = [], shownTraj = []} = options;
+            let {
+                color = 'red', shape = "square", size = 0.035, position, currentPosition = {
+                    r: 0,
+                    i: 25,
+                    c: 0,
+                    rd: 0,
+                    id: 0,
+                    cd: 0
+                }, burns = [], shownTraj = []
+            } = options;
             return {
                 color,
-                shape, 
+                shape,
                 size,
-                position, 
+                position,
                 currentPosition,
                 burns,
                 shownTraj
@@ -226,20 +267,44 @@
         window.addEventListener("resize", formatCanvas)
         window.addEventListener("keydown", e => {
             if (windowOptions.burn_status) {
-                let currentLocation = getCurrentPosition(satellites[windowOptions.burn_status.object].position, satellites[windowOptions.burn_status.object].burns.slice(0,windowOptions.burn_status.burn), satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].time);
-                let n = 2 * Math.PI / 86164, desVel, dV;
+                let currentLocation = getCurrentPosition(satellites[windowOptions.burn_status.object].position,
+                    satellites[windowOptions.burn_status.object].burns.slice(0, windowOptions.burn_status
+                        .burn), satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
+                        .burn].time);
+                let n = 2 * Math.PI / 86164,
+                    desVel, dV;
                 switch (e.key) {
                     case '1':
                         // Zero relative eccentricity
-                        desVel = [[0],[-3 * currentLocation.r * n / 2], currentLocation.cd];
-                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation.cd]);
-                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction = {r: dV[0][0], i: dV[1][0], c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction.c}
+                        desVel = [
+                            [0],
+                            [-3 * currentLocation.r * n / 2], currentLocation.cd
+                        ];
+                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation
+                        .cd]);
+                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn]
+                            .direction = {
+                                r: dV[0][0],
+                                i: dV[1][0],
+                                c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
+                                    .burn].direction.c
+                            }
                         break;
                     case '2':
                         // Zero relative semi-major axis (assumes top or bottom of NMC for now)
-                        desVel = [[0],[-4 * currentLocation.r * n / 2], currentLocation.cd];
-                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation.cd]);
-                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction = {r: dV[0][0], i: dV[1][0], c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction.c}
+                        desVel = [
+                            [0],
+                            [-4 * currentLocation.r * n / 2], currentLocation.cd
+                        ];
+                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation
+                        .cd]);
+                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn]
+                            .direction = {
+                                r: dV[0][0],
+                                i: dV[1][0],
+                                c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
+                                    .burn].direction.c
+                            }
                         break;
                     case '4':
                         // Zero cross-track velocity
@@ -248,14 +313,25 @@
                         // Zero relative semi-major axis with chosen center
                         let yd = window.prompt("In-Track Center of NMC [km]: ", 0);
                         let rd = (currentLocation.i - yd) * n / 2;
-                        desVel = [[rd],[-4 * currentLocation.r * n / 2], currentLocation.cd];
-                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation.cd]);
-                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction = {r: dV[0][0], i: dV[1][0], c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].direction.c}
+                        desVel = [
+                            [rd],
+                            [-4 * currentLocation.r * n / 2], currentLocation.cd
+                        ];
+                        dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation
+                        .cd]);
+                        satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn]
+                            .direction = {
+                                r: dV[0][0],
+                                i: dV[1][0],
+                                c: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
+                                    .burn].direction.c
+                            }
                         break;
-                    default: 
+                    default:
                         return;
                 }
-                windowOptions.scenario_time_des = satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].time + 7200;
+                windowOptions.scenario_time_des = satellites[windowOptions.burn_status.object].burns[
+                    windowOptions.burn_status.burn].time + 7200;
                 calcShownTrajectories(windowOptions.burn_status.object)
                 windowOptions.burn_status = false;
                 windowOptions.mouseState = false;
@@ -275,8 +351,7 @@
 
                 }
                 formatCanvas();
-            }
-            else if (e.key === 'a') {
+            } else if (e.key === 'a') {
                 if (windowOptions.makeGif.start) {
                     windowOptions.makeGif.stop = true;
                     return
@@ -292,11 +367,15 @@
             windowOptions.mousePosition = getMousePosition(event.clientX, event.clientY);
             windowOptions.mousePosition.object = false;
             if (windowOptions.frame_move && !windowOptions.burn_status) {
-                windowOptions.origin_it_des = -windowOptions.mousePosition.ric.i + windowOptions.frame_move.i + windowOptions.frame_move.origin;
+                windowOptions.origin_it_des = -windowOptions.mousePosition.ric.i + windowOptions.frame_move.i +
+                    windowOptions.frame_move.origin;
                 return;
             }
             satellites.forEach((sat, ii) => {
-                windowOptions.mousePosition.object = checkClose(windowOptions.mousePosition.ric, getCurrentPosition(sat.position, sat.burns, windowOptions.scenario_time), windowOptions.mousePosition.screen === 'ci') ? ii : windowOptions.mousePosition.object === false ? false : windowOptions.mousePosition.object;
+                windowOptions.mousePosition.object = checkClose(windowOptions.mousePosition.ric,
+                        getCurrentPosition(sat.position, sat.burns, windowOptions.scenario_time),
+                        windowOptions.mousePosition.screen === 'ci') ? ii : windowOptions.mousePosition
+                    .object === false ? false : windowOptions.mousePosition.object;
             });
         })
         document.getElementById('canvas-div').addEventListener('mousedown', event => {
@@ -305,56 +384,87 @@
             satellites.forEach((sat, ii) => {
                 for (let jj = sat.burns.length - 1; jj >= 0; jj--) {
                     let burnLocation = getCurrentPosition(sat.position, sat.burns, sat.burns[jj].time);
-                    if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions.mousePosition.screen === 'ci')) {
+                    if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions
+                            .mousePosition.screen === 'ci')) {
                         if (event.ctrlKey) {
                             satellites[ii].burns.splice(jj, 1);
                             calcShownTrajectories(ii);
                             return;
                         }
                         if (windowOptions.mousePosition.screen !== 'ci') {
-                            satellites[ii].burns[jj].direction = {r: 0, i: 0, c: satellites[ii].burns[jj].direction.c};
+                            satellites[ii].burns[jj].direction = {
+                                r: 0,
+                                i: 0,
+                                c: satellites[ii].burns[jj].direction.c
+                            };
                         }
-                        let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions.maneuver_type;
+                        let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' :
+                            windowOptions.maneuver_type;
                         if (type === 'waypoint') {
                             windowOptions.scenario_time_des += 7200;
                         }
-                        let burnLocation = getCurrentPosition(satellites[ii].position, satellites[ii].burns, satellites[ii].burns[jj].time);
-                        windowOptions.burn_status = {object: ii, burn: jj, type, time: 7200, burnLocation};
+                        let burnLocation = getCurrentPosition(satellites[ii].position, satellites[ii]
+                            .burns, satellites[ii].burns[jj].time);
+                        windowOptions.burn_status = {
+                            object: ii,
+                            burn: jj,
+                            type,
+                            time: 7200,
+                            burnLocation
+                        };
                         return;
                     }
                 }
             })
             if (windowOptions.mousePosition.object === false) {
-                windowOptions.frame_move = {i: windowOptions.mousePosition.ric.i, origin: windowOptions.origin_it};
+                windowOptions.frame_move = {
+                    i: windowOptions.mousePosition.ric.i,
+                    origin: windowOptions.origin_it
+                };
                 return;
             }
             if (windowOptions.burn_status) {
                 return;
             }
-            setTimeout(() =>{
+            setTimeout(() => {
                 if (windowOptions.mouseState && windowOptions.mousePosition.object !== false) {
                     satellites[windowOptions.mousePosition.object].burns.push({
                         time: windowOptions.scenario_time,
-                        direction: {r: 0, i: 0, c: 0},
+                        direction: {
+                            r: 0,
+                            i: 0,
+                            c: 0
+                        },
                         magnitude: 0,
                     })
                     satellites[windowOptions.mousePosition.object].burns.sort((a, b) => {
                         return a.time - b.time;
                     })
-                    let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn => burn.time === windowOptions.scenario_time);
-                    let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object].position, satellites[windowOptions.mousePosition.object].burns, satellites[windowOptions.mousePosition.object].burns[burnN].time);
-                    let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions.maneuver_type;
+                    let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn =>
+                        burn.time === windowOptions.scenario_time);
+                    let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object]
+                        .position, satellites[windowOptions.mousePosition.object].burns, satellites[
+                            windowOptions.mousePosition.object].burns[burnN].time);
+                    let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions
+                        .maneuver_type;
                     if (type === 'waypoint') {
                         windowOptions.scenario_time_des += 7200;
                     }
-                    windowOptions.burn_status = {object: windowOptions.mousePosition.object, burn: burnN, type, time: 7200, burnLocation};
+                    windowOptions.burn_status = {
+                        object: windowOptions.mousePosition.object,
+                        burn: burnN,
+                        type,
+                        time: 7200,
+                        burnLocation
+                    };
                 }
             }, windowOptions.mouse_hold)
         })
         document.getElementById('canvas-div').addEventListener('mouseup', event => {
             windowOptions.mouseState = false;
             if (windowOptions.burn_status) {
-                windowOptions.scenario_time_des = satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn].time;
+                windowOptions.scenario_time_des = satellites[windowOptions.burn_status.object].burns[
+                    windowOptions.burn_status.burn].time;
             }
             windowOptions.burn_status = false;
             windowOptions.frame_move = false;
@@ -365,7 +475,8 @@
                 windowOptions.scenario_time_des += event.deltaY < 0 ? 600 : -60;
                 return;
             }
-            windowOptions.width_des = event.deltaY < 0 ? windowOptions.width_des / 1.1 : windowOptions.width_des * 1.1;
+            windowOptions.width_des = event.deltaY < 0 ? windowOptions.width_des / 1.1 : windowOptions
+                .width_des * 1.1;
             windowOptions.closeLimit = 0.0125 * windowOptions.width_des;
         })
         document.getElementById('add-satellite').addEventListener('click', () => {
@@ -378,7 +489,9 @@
             document.getElementById('instructions-panel').classList.toggle("hidden")
         })
         document.getElementById('waypoints-button').addEventListener('click', () => {
-            if (satellites.length === 0) {return;}
+            if (satellites.length === 0) {
+                return;
+            }
             let selectEl = document.getElementById('satellite-way-select');
             let chosenSat = Number(selectEl.value);
             generateTable(chosenSat);
@@ -404,13 +517,16 @@
             document.getElementById('waypoints-panel').classList.toggle("hidden")
         })
         document.getElementById('add-satellite-button').addEventListener('click', (click) => {
-            let el = click.target, n = 2 * Math.PI / 86164;
+            let el = click.target,
+                n = 2 * Math.PI / 86164;
             let state = {
                 a: Number(el.parentNode.parentNode.children.item(0).children[1].children[1].value),
                 x: Number(el.parentNode.parentNode.children.item(0).children[2].children[1].value),
                 y: Number(el.parentNode.parentNode.children.item(0).children[3].children[1].value),
-                b: Number(el.parentNode.parentNode.children.item(0).children[4].children[1].value) * Math.PI / 180,
-                m: Number(el.parentNode.parentNode.children.item(0).children[5].children[1].value) * Math.PI / 180,
+                b: Number(el.parentNode.parentNode.children.item(0).children[4].children[1].value) * Math
+                    .PI / 180,
+                m: Number(el.parentNode.parentNode.children.item(0).children[5].children[1].value) * Math
+                    .PI / 180,
                 z: Number(el.parentNode.parentNode.children.item(0).children[6].children[1].value)
             };
             let color = el.parentNode.parentNode.children.item(1).children[4].children[0].value;
@@ -423,7 +539,11 @@
                 id: state.a * n * Math.cos(state.b) - 1.5 * state.x * n,
                 cd: state.z * n * Math.cos(state.m),
             }
-            satellites.push(newSatellite({position: state, color, shape}));
+            satellites.push(newSatellite({
+                position: state,
+                color,
+                shape
+            }));
             calcShownTrajectories(satellites.length - 1)
             document.getElementById('add-satellite-panel').classList.toggle("hidden")
         })
@@ -440,7 +560,7 @@
             encoder.setRepeat(repeat ? 0 : 1);
             encoder.setDelay(1000 / fps);
             windowOptions.animate_step = timeStep * 60;
-            sun = Number(sun.substring(0,2)) * 3600 + Number(sun.substring(2,4));
+            sun = Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4));
             windowOptions.sunInit = sun;
             windowOptions.start_date = new Date(date);
             document.getElementById('options-panel').classList.toggle("hidden")
@@ -464,41 +584,66 @@
                     break;
             }
         })
-        document.getElementById('export-option-button').addEventListener('click',() => {
+        document.getElementById('export-option-button').addEventListener('click', () => {
             downloadFile('test.sas', JSON.stringify(satellites));
         })
-        document.getElementById('add-waypoint-button').addEventListener('click',event => {
+        document.getElementById('add-waypoint-button').addEventListener('click', event => {
             let divTarget = event.target.parentNode.children;
             let t = Number(divTarget[0].value);
-            if (t < 0.5) {return;}
+            if (t < 0.5) {
+                return;
+            }
             t *= 3600;
             let r = Number(divTarget[1].value);
             let i = Number(divTarget[2].value);
             let c = Number(divTarget[3].value);
-            let waypoints = [], wayPos;
+            let waypoints = [],
+                wayPos;
             let sat = satellites[document.getElementById('satellite-way-select').value];
             waypoints.push(sat.position);
             waypoints[0].t = 0;
             sat.burns.forEach((burn, ii) => {
                 if (burn.time !== 0) {
                     wayPos = getCurrentPosition(sat.position, sat.burns, burn.time);
-                    waypoints.push({t: burn.time, r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]});
+                    waypoints.push({
+                        t: burn.time,
+                        r: wayPos.r[0],
+                        i: wayPos.i[0],
+                        c: wayPos.c[0]
+                    });
                 }
             })
-            wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200);
+            wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns.length > 0 ? sat.burns[sat.burns
+                .length - 1].time + 7200 : 7200);
             let identWay = waypoints.findIndex((way, ii) => Math.abs(way.t - t) < 900);
             console.log(identWay);
             if (identWay !== -1) {
-                waypoints[identWay] = {t, r, i, c};
+                waypoints[identWay] = {
+                    t,
+                    r,
+                    i,
+                    c
+                };
+            } else {
+                waypoints.push({
+                    t,
+                    r,
+                    i,
+                    c
+                })
+                waypoints.sort((a, b) => a.t - b.t);
             }
-            else {
-                waypoints.push({t, r, i, c})
-                waypoints.sort((a,b) => a.t - b.t);
-            }
-            waypoints.push({t: waypoints[waypoints.length - 1].t + 7200, r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]});
-            satellites[document.getElementById('satellite-way-select').value].burns = [...waypoints2burns(waypoints)];
+            waypoints.push({
+                t: waypoints[waypoints.length - 1].t + 7200,
+                r: wayPos.r[0],
+                i: wayPos.i[0],
+                c: wayPos.c[0]
+            });
+            satellites[document.getElementById('satellite-way-select').value].burns = [...waypoints2burns(
+                waypoints)];
             if (waypoints[waypoints.length - 2].t === t && identWay === -1) {
-                satellites[document.getElementById('satellite-way-select').value].burns[satellites[document.getElementById('satellite-way-select').value].burns.length - 1].direction = {
+                satellites[document.getElementById('satellite-way-select').value].burns[satellites[document
+                    .getElementById('satellite-way-select').value].burns.length - 1].direction = {
                     r: 0,
                     i: 0,
                     c: 0
@@ -507,12 +652,18 @@
             calcShownTrajectories(Number(document.getElementById('satellite-way-select').value));
             generateTable(document.getElementById('satellite-way-select').value);
         })
+
         function getMousePosition(mouseX, mouseY) {
-            let plot = mouseY > (windowOptions.screen.ci_center + windowOptions.screen.ri_center) / 2  ? 'ci' : 'ri';
+            let plot = mouseY > (windowOptions.screen.ci_center + windowOptions.screen.ri_center) / 2 ? 'ci' : 'ri';
             let pixel = [mouseX, mouseY];
-            let ric = pixelToRic(pixel , plot === 'ci');
-            return {screen: plot, pixel, ric}
+            let ric = pixelToRic(pixel, plot === 'ci');
+            return {
+                screen: plot,
+                pixel,
+                ric
+            }
         }
+
         function animation(time) {
             let a = performance.now();
             windowOptions.origin_it += (windowOptions.origin_it_des - windowOptions.origin_it) * 0.2;
@@ -520,27 +671,30 @@
             windowOptions.scenario_time += (windowOptions.scenario_time_des - windowOptions.scenario_time) * 0.2;
             // Transition frames
             let mode = windowOptions.screen.mode;
-            windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : cnvs.height / 4) - windowOptions.screen.ri_center)*0.1;
-            windowOptions.screen.ci_center += ((mode === 'ri only' ? 3 * cnvs.height / 2 : 3 * cnvs.height / 4) - windowOptions.screen.ci_center)*0.1;
-            windowOptions.screen.lineHeight += ((mode === 'ri only' ?  cnvs.height : cnvs.height / 2) - windowOptions.screen.lineHeight)*0.1;
+            windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : cnvs.height / 4) - windowOptions
+                .screen.ri_center) * 0.1;
+            windowOptions.screen.ci_center += ((mode === 'ri only' ? 3 * cnvs.height / 2 : 3 * cnvs.height / 4) -
+                windowOptions.screen.ci_center) * 0.1;
+            windowOptions.screen.lineHeight += ((mode === 'ri only' ? cnvs.height : cnvs.height / 2) - windowOptions
+                .screen.lineHeight) * 0.1;
             if (windowOptions.mouseState) {
                 windowOptions.mousePosition.fill += (1 - windowOptions.mousePosition.fill) * 0.08;
-            }
-            else {
+            } else {
                 windowOptions.mousePosition.fill = 0;
             }
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, cnvs.width, cnvs.height);
 
-            
+
             ctx.textAlign = 'start';
             ctx.font = '30px Arial';
             ctx.fillStyle = 'black';
             // Draw mouse positon on the active axis
-            if (!windowOptions.makeGif.start) { 
+            if (!windowOptions.makeGif.start) {
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.strokeStyle = windowOptions.mousePosition.object === false ? 'black' : satellites[windowOptions.mousePosition.object].color;
+                ctx.strokeStyle = windowOptions.mousePosition.object === false ? 'black' : satellites[windowOptions
+                    .mousePosition.object].color;
                 ctx.lineWidth = windowOptions.closeSat === false ? 0.75 : 2;
                 ctx.moveTo(0, windowOptions.mousePosition.pixel[1]);
                 ctx.lineTo(cnvs.width, windowOptions.mousePosition.pixel[1]);
@@ -550,71 +704,121 @@
                 ctx.strokeStyle = 'black';
                 ctx.lineWidth = 6;
                 ctx.beginPath();
-                ctx.arc(windowOptions.mousePosition.pixel[0], windowOptions.mousePosition.pixel[1], 15, 0, 2 * Math.PI * windowOptions.mousePosition.fill);
+                ctx.arc(windowOptions.mousePosition.pixel[0], windowOptions.mousePosition.pixel[1], 15, 0, 2 * Math.PI *
+                    windowOptions.mousePosition.fill);
                 ctx.stroke();
-                ctx.fillText((windowOptions.mousePosition.screen === 'ci' ? 'C: ' : 'R:') + windowOptions.mousePosition.ric[windowOptions.mousePosition.screen === 'ci' ? 'c' : 'r'].toFixed(2) + ' km    I: ' + windowOptions.mousePosition.ric.i.toFixed(2) +' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45);
+                ctx.fillText((windowOptions.mousePosition.screen === 'ci' ? 'C: ' : 'R:') + windowOptions.mousePosition
+                    .ric[windowOptions.mousePosition.screen === 'ci' ? 'c' : 'r'].toFixed(2) + ' km    I: ' +
+                    windowOptions.mousePosition.ric.i.toFixed(2) + ' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45
+                    );
             }
 
             // Draw Sun
             drawArrow({
-                origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ri_center],
+                origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+                    windowOptions.screen.ri_center
+                ],
                 color: 'rgb(255,128,0)',
                 lineWidth: 20,
                 arrowWidth: 40,
                 arrowHeight: 40,
-                angle:  + 180 + 360 * (windowOptions.scenario_time + windowOptions.sunInit) / 86164
+                angle: +180 + 360 * (windowOptions.scenario_time + windowOptions.sunInit) / 86164
             });
 
-            
+
             // Draw axis arrows on each graph, RI Frame
-            drawArrow({origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ri_center], color: windowOptions.arrowColor});
-            drawArrow({angle: -90, backHalf: true,  origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ri_center], color: windowOptions.arrowColor});
+            drawArrow({
+                origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+                    windowOptions.screen.ri_center
+                ],
+                color: windowOptions.arrowColor
+            });
+            drawArrow({
+                angle: -90,
+                backHalf: true,
+                origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+                    windowOptions.screen.ri_center
+                ],
+                color: windowOptions.arrowColor
+            });
             // CI Frame
-            drawArrow({origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ci_center], color: windowOptions.arrowColor});
-            drawArrow({angle: -90, backHalf: true,  origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ci_center], color: windowOptions.arrowColor});
+            drawArrow({
+                origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+                    windowOptions.screen.ci_center
+                ],
+                color: windowOptions.arrowColor
+            });
+            drawArrow({
+                angle: -90,
+                backHalf: true,
+                origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+                    windowOptions.screen.ci_center
+                ],
+                color: windowOptions.arrowColor
+            });
             ctx.strokeStyle = 'RGB(0,0,0,0.5)';
             // Write current mouse position
             ctx.textAlign = 'center';
             ctx.font = '30px Arial';
-            ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160, windowOptions.screen.ri_center + 10);
-            ctx.fillText('R', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ri_center - 157.5);
-            ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160, windowOptions.screen.ci_center + 10);
-            ctx.fillText('C', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width, windowOptions.screen.ci_center - 157.5);
+            ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
+                windowOptions.screen.ri_center + 10);
+            ctx.fillText('R', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+                windowOptions.screen.ri_center - 157.5);
+            ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
+                windowOptions.screen.ci_center + 10);
+            ctx.fillText('C', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+                windowOptions.screen.ci_center - 157.5);
             ctx.textAlign = 'start';
             ctx.fillStyle = 'black';
-            ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString().split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
+            ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
+                .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
             // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
-            
+
             // Draw Scale
             ctx.strokeStyle = 'RGB(0,0,0,0.5)';
             ctx.textAlign = 'center';
             ctx.lineWidth = 2;
             let scaleLength = windowOptions.width * 0.7;
-            let logScale = Math.pow(10,math.floor(math.log(windowOptions.width * 2, 10) - 1));
+            let logScale = Math.pow(10, math.floor(math.log(windowOptions.width * 2, 10) - 1));
             scaleLength = math.ceil(scaleLength / logScale) * logScale;
             ctx.beginPath();
-            ctx.moveTo( 0.97 * cnvs.width, cnvs.height * 0.05);
-            ctx.lineTo( 0.97 * cnvs.width, cnvs.height * 0.09);
-            ctx.lineTo( 0.97 * cnvs.width, cnvs.height * 0.07);
-            ctx.lineTo( 0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.07);
-            ctx.lineTo( 0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.09);
-            ctx.lineTo( 0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.05);
-            ctx.strokeText(scaleLength + ' km', 4*cnvs.width / 5, cnvs.height * 0.12);
+            ctx.moveTo(0.97 * cnvs.width, cnvs.height * 0.05);
+            ctx.lineTo(0.97 * cnvs.width, cnvs.height * 0.09);
+            ctx.lineTo(0.97 * cnvs.width, cnvs.height * 0.07);
+            ctx.lineTo(0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.07);
+            ctx.lineTo(0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.09);
+            ctx.lineTo(0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.05);
+            ctx.strokeText(scaleLength + ' km', 4 * cnvs.width / 5, cnvs.height * 0.12);
             ctx.stroke();
-            
-            let drawnTraj, currentLocation, passiveBurns; 
+
+            let drawnTraj, currentLocation, passiveBurns;
             ctx.lineWidth = windowOptions.lineWidth;
             satellites.forEach((satellite, ii) => {
                 ctx.strokeStyle = satellite.color;
-                currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time);
+                currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, windowOptions
+                    .scenario_time);
                 satellite.burns.forEach((burn, jj) => {
                     if (burn.time < windowOptions.scenario_time) {
-                        drawBurnArrow(burn, {cross: false, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time, trans: true})
-                        drawBurnArrow(burn, {cross: true, object: ii, constant: (windowOptions.scenario_time - burn.time) / windowOptions.full_burn_vis_time, trans: true})
-                        if ((windowOptions.scenario_time - burn.time) < windowOptions.passiveDropoff.time) {
+                        drawBurnArrow(burn, {
+                            cross: false,
+                            object: ii,
+                            constant: (windowOptions.scenario_time - burn.time) / windowOptions
+                                .full_burn_vis_time,
+                            trans: true
+                        })
+                        drawBurnArrow(burn, {
+                            cross: true,
+                            object: ii,
+                            constant: (windowOptions.scenario_time - burn.time) / windowOptions
+                                .full_burn_vis_time,
+                            trans: true
+                        })
+                        if ((windowOptions.scenario_time - burn.time) < windowOptions.passiveDropoff
+                            .time) {
                             // console.log(jj);
-                            passiveBurns = satellite.burns.slice(0,jj);
-                            ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * (windowOptions.scenario_time - burn.time));
+                            passiveBurns = satellite.burns.slice(0, jj);
+                            ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * (
+                                windowOptions.scenario_time - burn.time));
                             drawSatellite({
                                 position: satellite.position,
                                 burns: passiveBurns,
@@ -629,12 +833,23 @@
                 })
                 ctx.strokeStyle = satellite.color;
                 if (windowOptions.screen.mode !== 'ri only') {
-                    drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true, cross: true});
-                    drawBurns(satellite, {cross: true});
+                    drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(
+                        0, math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
+                        currentLocatinon), {
+                        ric: true,
+                        cross: true
+                    });
+                    drawBurns(satellite, {
+                        cross: true
+                    });
                     drawSatellite(satellite, true);
                 }
                 ctx.strokeStyle = satellite.color;
-                drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(currentLocatinon), {ric: true});
+                drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,
+                    math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
+                    currentLocatinon), {
+                    ric: true
+                });
                 drawBurns(satellite);
                 drawSatellite(satellite);
             })
@@ -659,59 +874,108 @@
                 ctx.fillStyle = 'white';
                 ctx.fillRect(0, windowOptions.screen.lineHeight - cnvs.height * 0.01, cnvs.width, cnvs.height * 0.02)
                 ctx.fillStyle = 'black';
-                ctx.fillRect(0, windowOptions.screen.lineHeight - cnvs.height * 0.00125, cnvs.width, cnvs.height * 0.0025)
+                ctx.fillRect(0, windowOptions.screen.lineHeight - cnvs.height * 0.00125, cnvs.width, cnvs.height *
+                    0.0025)
             }
             // console.log(performance.now() - a);
             windowOptions.refresh_time += (performance.now() - a - windowOptions.refresh_time) * 0.01;
             window.requestAnimationFrame(animation);
         }
+
         function formatCanvas() {
-                cnvs.width = document.documentElement.clientWidth;
-                cnvs.height = document.documentElement.clientHeight;
-                windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode !== 'ri only' ? 2 : 1) / cnvs.width;
+            cnvs.width = document.documentElement.clientWidth;
+            cnvs.height = document.documentElement.clientHeight;
+            windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode !== 'ri only' ? 2 : 1) / cnvs
+                .width;
         }
+
         function drawRicArrow(options) {
-            let {startRic, stopRic, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', cross = false, angle = 0} = options;
-            let height = math.norm([startRic[cross ? 'c' : 'r'] - stopRic[cross ? 'c' : 'r'] , startRic.i - stopRic.i]);
+            let {
+                startRic,
+                stopRic,
+                lineWidth = 10,
+                arrowWidth = 20,
+                arrowHeight = 20,
+                color = 'black',
+                cross = false,
+                angle = 0
+            } = options;
+            let height = math.norm([startRic[cross ? 'c' : 'r'] - stopRic[cross ? 'c' : 'r'], startRic.i - stopRic.i]);
             height = height / windowOptions.width / 2 * cnvs.width;
-            let origin = ricToPixel(startRic, {cross});
-            drawArrow({angle, origin, lineWidth, arrowWidth, arrowHeight, color, cnvs, ctx, height})
+            let origin = ricToPixel(startRic, {
+                cross
+            });
+            drawArrow({
+                angle,
+                origin,
+                lineWidth,
+                arrowWidth,
+                arrowHeight,
+                color,
+                cnvs,
+                ctx,
+                height
+            })
         }
+
         function drawArrow(options = {}) {
-            let {height = 150, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', origin = [cvns.width / 2, cvns.height / 2], angle = 0, backHalf = false} = options; 
+            let {
+                height = 150, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', origin = [cvns.width /
+                    2, cvns.height / 2
+                ], angle = 0, backHalf = false
+            } = options;
             // console.log(origin);
             let points = [
                 [-lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
-                [-lineWidth / 2, - height + arrowHeight],
-                [-arrowWidth / 2, - height + arrowHeight],
-                [0, - height],
-                [arrowWidth / 2, - height + arrowHeight],
-                [lineWidth / 2, - height + arrowHeight],
+                [-lineWidth / 2, -height + arrowHeight],
+                [-arrowWidth / 2, -height + arrowHeight],
+                [0, -height],
+                [arrowWidth / 2, -height + arrowHeight],
+                [lineWidth / 2, -height + arrowHeight],
                 [lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
                 [-lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
             ];
-            points = math.transpose(math.multiply(rotMatrix({angle: angle}),math.transpose(points)));
+            points = math.transpose(math.multiply(rotMatrix({
+                angle: angle
+            }), math.transpose(points)));
             ctx.fillStyle = color;
             ctx.beginPath();
             points.forEach((point, ii) => {
                 if (ii === 0) {
                     ctx.moveTo(origin[0] + point[0], origin[1] + point[1]);
-                }
-                else {
+                } else {
                     ctx.lineTo(origin[0] + point[0], origin[1] + point[1]);
                 }
             });
             ctx.fill();
         }
+
         function rotMatrix(options = {}) {
-            let {axis = 3, angle = 45, units = 'deg'} = options;
-            return [[Math.cos(angle * (units === 'deg' ? Math.PI / 180 : 1)), -Math.sin(angle * (units === 'deg' ? Math.PI / 180 : 1))],
-                    [Math.sin(angle * (units === 'deg' ? Math.PI / 180 : 1)), Math.cos(angle * (units === 'deg' ? Math.PI / 180 : 1))]];
+            let {
+                axis = 3, angle = 45, units = 'deg'
+            } = options;
+            return [
+                [Math.cos(angle * (units === 'deg' ? Math.PI / 180 : 1)), -Math.sin(angle * (units === 'deg' ? Math
+                    .PI / 180 : 1))],
+                [Math.sin(angle * (units === 'deg' ? Math.PI / 180 : 1)), Math.cos(angle * (units === 'deg' ? Math
+                    .PI / 180 : 1))]
+            ];
         }
+
         function drawSatellite(satellite, cross = false) {
-            let {color = 'blue', shape = 'triangle', size = 0.1, position = {r: 0, i: 0}, data = false} = satellite;
-            let pixelPosition = ricToPixel(getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time), {cross});
-            if (data) {console.log(getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time))}
+            let {
+                color = 'blue', shape = 'triangle', size = 0.1, position = {
+                    r: 0,
+                    i: 0
+                }, data = false
+            } = satellite;
+            let pixelPosition = ricToPixel(getCurrentPosition(satellite.position, satellite.burns, windowOptions
+                .scenario_time), {
+                cross
+            });
+            if (data) {
+                console.log(getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time))
+            }
             // console.log(pixelPosition, satellite.position, satellite.burns)
             let limit = {
                 min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
@@ -723,33 +987,48 @@
             let shapeHeight = size * window.innerHeight;
             let points;
             switch (shape) {
-                case 'triangle': 
+                case 'triangle':
                     points = [
-                        [0, -shapeHeight / 2], 
+                        [0, -shapeHeight / 2],
                         [-shapeHeight / 2, shapeHeight / 2],
                         [shapeHeight / 2, shapeHeight / 2],
                         [0, -shapeHeight / 2]
                     ];
-                    drawPoints({points: points, color: color, origin: pixelPosition, ctx});
+                    drawPoints({
+                        points: points,
+                        color: color,
+                        origin: pixelPosition,
+                        ctx
+                    });
                     break;
-                case 'square': 
+                case 'square':
                     points = [
-                        [-shapeHeight / 2, -shapeHeight / 2], 
+                        [-shapeHeight / 2, -shapeHeight / 2],
                         [shapeHeight / 2, -shapeHeight / 2],
                         [shapeHeight / 2, shapeHeight / 2],
                         [-shapeHeight / 2, shapeHeight / 2],
                         [-shapeHeight / 2, -shapeHeight / 2]
                     ];
-                    drawPoints({points: points, color: color, origin: pixelPosition, ctx});
+                    drawPoints({
+                        points: points,
+                        color: color,
+                        origin: pixelPosition,
+                        ctx
+                    });
                     break;
-                case 'up-triangle': 
+                case 'up-triangle':
                     points = [
-                        [0, shapeHeight / 2], 
+                        [0, shapeHeight / 2],
                         [-shapeHeight / 2, -shapeHeight / 2],
                         [shapeHeight / 2, -shapeHeight / 2],
                         [0, shapeHeight / 2]
                     ];
-                    drawPoints({points: points, color: color, origin: pixelPosition, ctx});
+                    drawPoints({
+                        points: points,
+                        color: color,
+                        origin: pixelPosition,
+                        ctx
+                    });
                     break;
                 case 'circle':
                     ctx.fillStyle = color;
@@ -759,30 +1038,62 @@
                     break;
             }
         }
-        function ricToPixel(point = {r: 0, i: 0, c: 0}, options = {}) {
-            let {struct = false, cross = false} = options;
+
+        function ricToPixel(point = {
+            r: 0,
+            i: 0,
+            c: 0
+        }, options = {}) {
+            let {
+                struct = false, cross = false
+            } = options;
             let pointOut;
             let plotW = cnvs.width;
             let plotH = (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2;
             let hwr = windowOptions.screen.ri_h_w_ratio;
             if (cross) {
-                pointOut = [plotW / 2 - (point.i - windowOptions.origin_it) / windowOptions.width * plotW / 2, - point.c / windowOptions.width / hwr * plotH / 2 + windowOptions.screen.ci_center];
-                return struct ? {x: pointOut[0], y: pointOut[1]} : pointOut;
+                pointOut = [plotW / 2 - (point.i - windowOptions.origin_it) / windowOptions.width * plotW / 2, -point
+                    .c / windowOptions.width / hwr * plotH / 2 + windowOptions.screen.ci_center
+                ];
+                return struct ? {
+                    x: pointOut[0],
+                    y: pointOut[1]
+                } : pointOut;
             }
-            pointOut = [plotW / 2 - (point.i - windowOptions.origin_it) / windowOptions.width * plotW / 2, - point.r / windowOptions.width / hwr * plotH / 2 + windowOptions.screen.ri_center];
-            return struct ? {x: pointOut[0], y: pointOut[1]} : pointOut;
+            pointOut = [plotW / 2 - (point.i - windowOptions.origin_it) / windowOptions.width * plotW / 2, -point.r /
+                windowOptions.width / hwr * plotH / 2 + windowOptions.screen.ri_center
+            ];
+            return struct ? {
+                x: pointOut[0],
+                y: pointOut[1]
+            } : pointOut;
         }
-        function pixelToRic(point = [0,0], cross = false) {
+
+        function pixelToRic(point = [0, 0], cross = false) {
             let plotW = cnvs.width;
             let plotH = (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2;
             let hwr = windowOptions.screen.ri_h_w_ratio;
             if (cross) {
-                return {i: (plotW / 2 - point[0]) * windowOptions.width * 2 / plotW + windowOptions.origin_it, c: (windowOptions.screen.ci_center - point[1]) * windowOptions.width * hwr * 2 / plotH};
+                return {
+                    i: (plotW / 2 - point[0]) * windowOptions.width * 2 / plotW + windowOptions.origin_it,
+                    c: (windowOptions.screen.ci_center - point[1]) * windowOptions.width * hwr * 2 / plotH
+                };
             }
-            return {i: (plotW / 2 - point[0]) * windowOptions.width * 2 / plotW + windowOptions.origin_it, r: (windowOptions.screen.ri_center - point[1]) * windowOptions.width * hwr * 2 / plotH};
+            return {
+                i: (plotW / 2 - point[0]) * windowOptions.width * 2 / plotW + windowOptions.origin_it,
+                r: (windowOptions.screen.ri_center - point[1]) * windowOptions.width * hwr * 2 / plotH
+            };
         }
+
         function drawPoints(options = {}) {
-            let {color, points, borderWidth = 3, borderColor = 'white', ctx = ctx, origin} = options;
+            let {
+                color,
+                points,
+                borderWidth = 3,
+                borderColor = 'white',
+                ctx = ctx,
+                origin
+            } = options;
             ctx.fillStyle = color;
             ctx.strokeStyle = borderColor;
             ctx.lineWidth = borderWidth;
@@ -790,16 +1101,19 @@
             points.forEach((point, ii) => {
                 if (ii === 0) {
                     ctx.moveTo(origin[0] + point[0], origin[1] + point[1]);
-                }
-                else {
+                } else {
                     ctx.lineTo(origin[0] + point[0], origin[1] + point[1]);
                 }
             });
             ctx.fill();
             ctx.stroke();
         }
+
         function drawBurnArrow(burn, options) {
-            let {location = undefined, constant = 1, object = undefined, cross = windowOptions.mousePosition.screen === 'ci', trans = false} = options;
+            let {
+                location = undefined, constant = 1, object = undefined, cross = windowOptions.mousePosition.screen ===
+                    'ci', trans = false
+            } = options;
             if (trans) {
                 ctx.globalAlpha = 0.5;
             }
@@ -808,53 +1122,92 @@
                 location = getCurrentPosition(satellites[object].position, satellites[object].burns, burn.time);
             }
             let burnMag = math.norm([!cross ? burn.direction.r : 0, burn.direction.i, cross ? burn.direction.c : 0]);
-            let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c: burn.direction.r) * 180 / Math.PI;
-            let height = burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width / 2;
-            let origin = ricToPixel(location, {cross});
+            let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c : burn.direction.r) * 180 / Math.PI;
+            let height = burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width /
+                2;
+            let origin = ricToPixel(location, {
+                cross
+            });
             let color = satellites[object].color || 'black';
             ctx.textAlign = 'center';
             ctx.font = '25px Arial';
             ctx.fillStyle = color;
             // ctx.strokeStyle = color;
             ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 30)
-            drawArrow({angle, origin, color, cnvs, ctx, height})
+            drawArrow({
+                angle,
+                origin,
+                color,
+                cnvs,
+                ctx,
+                height
+            })
             ctx.globalAlpha = 1;
             // ctx.strokeText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 55)
 
         }
+
         function checkClose(point1, point2, cross) {
-            return windowOptions.closeLimit > math.norm([point1[cross ? 'c' : 'r'] - point2[cross ? 'c' : 'r'] , point1.i - point2.i]);
+            return windowOptions.closeLimit > math.norm([point1[cross ? 'c' : 'r'] - point2[cross ? 'c' : 'r'], point1
+                .i - point2.i
+            ]);
         }
+
         function previewSatPath() {
-            windowOptions.previewPath.push(getCurrentPosition(satellites[windowOptions.closeSat].position, satellites[windowOptions.closeSat].burns, windowOptions.previewTime * 3600));
+            windowOptions.previewPath.push(getCurrentPosition(satellites[windowOptions.closeSat].position, satellites[
+                windowOptions.closeSat].burns, windowOptions.previewTime * 3600));
             if (windowOptions.previewTime < windowOptions.scenario_length) {
                 windowOptions.previewTime += windowOptions.scenario_length / 200;
-            }
-            else {
+            } else {
                 windowOptions.previewTime = windowOptions.scenario_time;
                 windowOptions.previewPath = [];
             }
             ctx.lineWidth = 5;
-            drawCurve(ctx, windowOptions.previewPath, {ric: true})
+            drawCurve(ctx, windowOptions.previewPath, {
+                ric: true
+            })
         }
+
         function satellite(options) {
-            let {position = {r: 0, i: 0, rd: 0, id: 0}, color = 'blue', shape = "square", size = 0.03} = options;
+            let {
+                position = {
+                    r: 0,
+                    i: 0,
+                    rd: 0,
+                    id: 0
+                }, color = 'blue', shape = "square", size = 0.03
+            } = options;
             return {
-                position, 
+                position,
                 color,
-                shape, 
+                shape,
                 size
             }
         }
-        function getCurrentPosition(position = {r: 0, i: 0, rd: 0.001, id: 0, c: 0, cd: 0}, burns = [], time = 86164, notate = false) {
-            if (notate){console.log(position, burns, time);}
-            let r = [[position.r],
-                 [position.i],
-                 [position.c]], r1, phi;
-            let v = [[position.rd],
-                     [position.id],
-                     [position.cd]];
-            let timeProp = 0;       
+
+        function getCurrentPosition(position = {
+            r: 0,
+            i: 0,
+            rd: 0.001,
+            id: 0,
+            c: 0,
+            cd: 0
+        }, burns = [], time = 86164, notate = false) {
+            if (notate) {
+                console.log(position, burns, time);
+            }
+            let r = [
+                    [position.r],
+                    [position.i],
+                    [position.c]
+                ],
+                r1, phi;
+            let v = [
+                [position.rd],
+                [position.id],
+                [position.cd]
+            ];
+            let timeProp = 0;
             for (let ii = 0; ii < burns.length; ii++) {
                 if (burns[ii].time <= time) {
                     phi = phiMatrix(burns[ii].time - timeProp);
@@ -865,8 +1218,7 @@
                     v[1][0] += burns[ii].direction.i;
                     v[2][0] += burns[ii].direction.c;
                     timeProp = burns[ii].time;
-                }
-                else {
+                } else {
                     break;
                 }
             }
@@ -874,28 +1226,47 @@
             r1 = math.add(math.multiply(phi.rr, r), math.multiply(phi.rv, v));
             v = math.add(math.multiply(phi.vr, r), math.multiply(phi.vv, v));
             r = r1;
-            if (notate){console.log(r)}
-            return {r: r[0], i: r[1], c: r[2], rd: v[0], id: v[1], cd: v[2]};
+            if (notate) {
+                console.log(r)
+            }
+            return {
+                r: r[0],
+                i: r[1],
+                c: r[2],
+                rd: v[0],
+                id: v[1],
+                cd: v[2]
+            };
         }
+
         function phiMatrix(t = 0, n = 2 * Math.PI / 86164) {
             let nt = n * t;
             let cnt = Math.cos(nt);
             let snt = Math.sin(nt);
             return {
-                rr: [[4 - 3 * cnt, 0, 0],
+                rr: [
+                    [4 - 3 * cnt, 0, 0],
                     [6 * (snt - nt), 1, 0],
-                    [0, 0, cnt]],
-                rv: [[snt / n, 2 * (1 - cnt) / n, 0],
-                     [2 * (cnt - 1) / n, (4 * snt - 3 * nt) / n, 0],
-                     [0, 0, snt / n]],
-                vr: [[3 * n * snt, 0, 0],
-                     [6 * n * (cnt - 1), 0, 0],
-                     [0, 0, -n * snt]],
-                vv: [[cnt, 2 * snt, 0],
-                     [-2 * snt, 4 * cnt - 3, 0],
-                     [0, 0, cnt]]
+                    [0, 0, cnt]
+                ],
+                rv: [
+                    [snt / n, 2 * (1 - cnt) / n, 0],
+                    [2 * (cnt - 1) / n, (4 * snt - 3 * nt) / n, 0],
+                    [0, 0, snt / n]
+                ],
+                vr: [
+                    [3 * n * snt, 0, 0],
+                    [6 * n * (cnt - 1), 0, 0],
+                    [0, 0, -n * snt]
+                ],
+                vv: [
+                    [cnt, 2 * snt, 0],
+                    [-2 * snt, 4 * cnt - 3, 0],
+                    [0, 0, cnt]
+                ]
             };
         }
+
         function calcShownTrajectories(satCalc = 'all') {
             let calcSats = [];
             satellites.forEach((sat, ii) => {
@@ -907,29 +1278,50 @@
             for (let ii = 0; ii < timeLength; ii++) {
                 satellites.forEach((sat, jj) => {
                     if (satCalc === 'all' || satCalc === jj) {
-                        sat.shownTraj.push(getCurrentPosition(sat.position, sat.burns, windowOptions.time_vector[ii]));
+                        sat.shownTraj.push(getCurrentPosition(sat.position, sat.burns, windowOptions
+                            .time_vector[ii]));
                         if (ii === timeLength - 1) {
-                            sat.currentPosition = getCurrentPosition(sat.position, sat.burns, windowOptions.time_vector[ii]);
+                            sat.currentPosition = getCurrentPosition(sat.position, sat.burns, windowOptions
+                                .time_vector[ii]);
                         }
                     }
                 })
             }
         }
+
         function drawCurve(ctx, points, options = {}) {
-            let {tension = 1, type = 'stroke', ric = false, cross = false} = options;
+            let {
+                tension = 1, type = 'stroke', ric = false, cross = false
+            } = options;
             // ctx.beginPath();
-            let point1 = ric === false ? points[0] : ricToPixel(points[0], {struct: true, cross});
+            let point1 = ric === false ? points[0] : ricToPixel(points[0], {
+                struct: true,
+                cross
+            });
             var t = tension;
             let limit = {
                 min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
                 max: cross ? cnvs.height : (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
             }
-            let withinBounds, lineDrawn = false, pathBegun = false;
+            let withinBounds, lineDrawn = false,
+                pathBegun = false;
             for (var i = 0; i < points.length - 1; i++) {
-                var p0 = (i > 0) ? ric === true ? ricToPixel(points[i - 1], {struct: true, cross}) : points[i-1] : point1;
-                var p1 = ric === false ? points[i] : ricToPixel(points[i], {struct: true, cross});
-                var p2 = ric === false ? points[i + 1] : ricToPixel(points[i + 1], {struct: true, cross});
-                var p3 = (i != points.length - 2) ? ric === false ? points[i + 2] : ricToPixel(points[i + 2], {struct: true, cross}) : p2;
+                var p0 = (i > 0) ? ric === true ? ricToPixel(points[i - 1], {
+                    struct: true,
+                    cross
+                }) : points[i - 1] : point1;
+                var p1 = ric === false ? points[i] : ricToPixel(points[i], {
+                    struct: true,
+                    cross
+                });
+                var p2 = ric === false ? points[i + 1] : ricToPixel(points[i + 1], {
+                    struct: true,
+                    cross
+                });
+                var p3 = (i != points.length - 2) ? ric === false ? points[i + 2] : ricToPixel(points[i + 2], {
+                    struct: true,
+                    cross
+                }) : p2;
 
                 var cp1x = p1.x + (p2.x - p0.x) / 6 * t;
                 var cp1y = p1.y + (p2.y - p0.y) / 6 * t;
@@ -945,8 +1337,7 @@
                     }
                     ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
                     withinBounds = true;
-                }
-                else {
+                } else {
                     if (withinBounds) {
                         ctx.stroke();
                         lineDrawn = true;
@@ -961,8 +1352,11 @@
                 ctx.stroke();
             }
         }
+
         function drawBurns(satellite, options = {}) {
-            let {cross = false} = options;
+            let {
+                cross = false
+            } = options;
             let position;
             let limit = {
                 min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
@@ -971,26 +1365,36 @@
             satellite.burns.forEach(burn => {
                 if (burn.time < windowOptions.scenario_time) {
                     position = getCurrentPosition(satellite.position, satellite.burns, burn.time);
-                    position = ricToPixel(position, {cross});
+                    position = ricToPixel(position, {
+                        cross
+                    });
                     if (position[1] > limit.min && position[1] < limit.max) {
                         ctx.fillStyle = 'white';
                         ctx.beginPath();
-                        ctx.arc(position[0], position[1], window.innerHeight * windowOptions.burn_point_size*1.4, 0, 2 * Math.PI)
+                        ctx.arc(position[0], position[1], window.innerHeight * windowOptions.burn_point_size *
+                            1.4, 0, 2 * Math.PI)
                         ctx.fill()
                         ctx.fillStyle = satellite.color;
                         ctx.beginPath();
-                        ctx.arc(position[0], position[1], window.innerHeight * windowOptions.burn_point_size , 0, 2 * Math.PI)
+                        ctx.arc(position[0], position[1], window.innerHeight * windowOptions.burn_point_size, 0,
+                            2 * Math.PI)
                         ctx.fill()
                     }
                 }
             })
         }
+
         function calcBurns(burn, cross = false) {
             let sat = satellites[burn.object];
             if (windowOptions.burn_status.type === 'waypoint') {
-                let r1 = [windowOptions.burn_status.burnLocation.r, windowOptions.burn_status.burnLocation.i, [0]], r1_2 = r1;
+                let r1 = [windowOptions.burn_status.burnLocation.r, windowOptions.burn_status.burnLocation.i, [0]],
+                    r1_2 = r1;
                 let v0 = [windowOptions.burn_status.burnLocation.rd, windowOptions.burn_status.burnLocation.id, [0]];
-                let r2 = [[windowOptions.mousePosition.ric.r], [windowOptions.mousePosition.ric.i], [0]];
+                let r2 = [
+                    [windowOptions.mousePosition.ric.r],
+                    [windowOptions.mousePosition.ric.i],
+                    [0]
+                ];
                 let phi = phiMatrix(windowOptions.burn_status.time);
                 let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
                 sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
@@ -999,13 +1403,20 @@
                 return;
             }
             sat.burns[burn.burn].direction = {
-                r: cross ? sat.burns[burn.burn].direction.r : (windowOptions.mousePosition.ric.r - windowOptions.burn_status.burnLocation.r[0]) * windowOptions.burn_sensitivity / 1000,
-                i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions.burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
-                c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) * windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
+                r: cross ? sat.burns[burn.burn].direction.r : (windowOptions.mousePosition.ric.r - windowOptions
+                    .burn_status.burnLocation.r[0]) * windowOptions.burn_sensitivity / 1000,
+                i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions
+                    .burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
+                c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) *
+                    windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
             }
-            drawBurnArrow(sat.burns[burn.burn], {location: windowOptions.burn_status.burnLocation, object: burn.object});
+            drawBurnArrow(sat.burns[burn.burn], {
+                location: windowOptions.burn_status.burnLocation,
+                object: burn.object
+            });
             calcShownTrajectories(burn.object);
         }
+
         function generateTable(object = 0) {
             let table = document.getElementById('waypoint-table').children[1];
             while (table.firstChild) {
@@ -1022,8 +1433,7 @@
                     <td class="edit-button" id="start-edit">Edit</td>
                 `;
                 table.appendChild(addedElement);
-            }
-            else if (satellites[object].burns[0].time !== 0) {
+            } else if (satellites[object].burns[0].time !== 0) {
                 addedElement = document.createElement('tr');
                 addedElement.innerHTML = `
                     <td>0.0 hrs</td>
@@ -1046,7 +1456,9 @@
                 `;
                 table.appendChild(addedElement);
             });
-            position = getCurrentPosition(satellites[object].position, satellites[object].burns, satellites[object].burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length-1].time + 7200);
+            position = getCurrentPosition(satellites[object].position, satellites[object].burns, satellites[object]
+                .burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length - 1].time +
+                7200);
             addedElement = document.createElement('tr');
             addedElement.innerHTML = `
                 <td>${((satellites[object].burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length-1].time + 7200) / 3600).toFixed(1)} hrs</td>
@@ -1058,57 +1470,85 @@
             table.appendChild(addedElement);
             let buttons = document.getElementsByClassName('edit-button')
             for (let ii = 0; ii < buttons.length; ii++) {
-                buttons[ii].addEventListener('click',event => {
+                buttons[ii].addEventListener('click', event => {
                     let id = event.target.id.split('-');
-                    let waypoints = [], wayPos;
+                    let waypoints = [],
+                        wayPos;
                     let sat = satellites[document.getElementById('satellite-way-select').value];
                     waypoints.push(sat.position);
                     waypoints[0].t = 0;
                     sat.burns.forEach((burn, ii) => {
                         if (burn.time !== 0) {
                             wayPos = getCurrentPosition(sat.position, sat.burns, burn.time);
-                            waypoints.push({t: burn.time, r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]});
+                            waypoints.push({
+                                t: burn.time,
+                                r: wayPos.r[0],
+                                i: wayPos.i[0],
+                                c: wayPos.c[0]
+                            });
                         }
                     })
-                    wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200);
-                    waypoints.push({t: (sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200), r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]});
+                    wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns.length > 0 ? sat.burns[sat
+                        .burns.length - 1].time + 7200 : 7200);
+                    waypoints.push({
+                        t: (sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200),
+                        r: wayPos.r[0],
+                        i: wayPos.i[0],
+                        c: wayPos.c[0]
+                    });
                     if (id[0] === 'start' || (sat.burns[0].time === 0 && id[2] == 0)) {
                         let startStatus = waypoints[0];
                         let n = 2 * Math.PI / 86164;
-                        let a =  Number(window.prompt("RMOE Semi-Major Axis: ", 2 * Math.sqrt(Math.pow(3 * startStatus.r + 2 * startStatus.id / n, 2) + Math.pow(startStatus.rd / n, 2))));
-                        let xd = Number(window.prompt("RMOE Radial Center: ", 4 * startStatus.r + 2 * startStatus.id / n));
-                        let yd = Number(window.prompt("RMOE In-Track Center: (Instantaneous): ", startStatus.i - 2 * startStatus.rd / n));
-                        let b =  Number(window.prompt("RMOE Beta (Instantaneous): ", math.atan2(startStatus.rd, 3 * n * startStatus.r + 2 * startStatus.id)* 180 / Math.PI));
-                        let m =  Number(window.prompt("RMOE Out-of-Plane Phase: (Instantaneous): ", math.atan2(startStatus.c, startStatus.cd / n) * 180 / Math.PI));
-                        let zm = Number(window.prompt("RMOE Max Cross-Track: ", Math.sqrt(Math.pow(startStatus.c, 2) + Math.pow(startStatus.cd / n, 2))));
-                        
-                        waypoints[0] = {r: -a / 2 * Math.cos(b * Math.PI / 180) + xd, 
-                                        i: a * Math.sin(b * Math.PI / 180) + yd, 
-                                        c: zm * Math.sin(m * Math.PI / 180), 
-                                        rd: a * n / 2 * Math.sin(b * Math.PI / 180), 
-                                        id: a * n * Math.cos(b * Math.PI / 180) - 1.5 * n * xd, 
-                                        cd: zm * n * Math.cos(b * Math.PI / 180)};
-                        sat.position = {...waypoints[0]};
+                        let a = Number(window.prompt("RMOE Semi-Major Axis: ", 2 * Math.sqrt(Math.pow(3 *
+                            startStatus.r + 2 * startStatus.id / n, 2) + Math.pow(startStatus
+                            .rd / n, 2))));
+                        let xd = Number(window.prompt("RMOE Radial Center: ", 4 * startStatus.r + 2 *
+                            startStatus.id / n));
+                        let yd = Number(window.prompt("RMOE In-Track Center: (Instantaneous): ", startStatus.i -
+                            2 * startStatus.rd / n));
+                        let b = Number(window.prompt("RMOE Beta (Instantaneous): ", math.atan2(startStatus.rd,
+                            3 * n * startStatus.r + 2 * startStatus.id) * 180 / Math.PI));
+                        let m = Number(window.prompt("RMOE Out-of-Plane Phase: (Instantaneous): ", math.atan2(
+                            startStatus.c, startStatus.cd / n) * 180 / Math.PI));
+                        let zm = Number(window.prompt("RMOE Max Cross-Track: ", Math.sqrt(Math.pow(startStatus
+                            .c, 2) + Math.pow(startStatus.cd / n, 2))));
+
+                        waypoints[0] = {
+                            r: -a / 2 * Math.cos(b * Math.PI / 180) + xd,
+                            i: a * Math.sin(b * Math.PI / 180) + yd,
+                            c: zm * Math.sin(m * Math.PI / 180),
+                            rd: a * n / 2 * Math.sin(b * Math.PI / 180),
+                            id: a * n * Math.cos(b * Math.PI / 180) - 1.5 * n * xd,
+                            cd: zm * n * Math.cos(b * Math.PI / 180)
+                        };
+                        sat.position = {
+                            ...waypoints[0]
+                        };
                         if (sat.burns.length === 0) {
                             generateTable(document.getElementById('satellite-way-select').value);
-                            calcShownTrajectories(Number(document.getElementById('satellite-way-select').value));
+                            calcShownTrajectories(Number(document.getElementById('satellite-way-select')
+                            .value));
                             return;
                         }
                         if (sat.burns[0].time !== 0) {
                             wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns[0].time);
-                            waypoints[1] = {t: sat.burns[0].time, r: wayPos.r[0], i: wayPos.i[0], c: wayPos.c[0]};
+                            waypoints[1] = {
+                                t: sat.burns[0].time,
+                                r: wayPos.r[0],
+                                i: wayPos.i[0],
+                                c: wayPos.c[0]
+                            };
                         }
                         waypoints[0].t = 0;
                         console.log(waypoints);
-                    }
-                    else if (id[0] === 'burn') {
+                    } else if (id[0] === 'burn') {
                         let wayN = sat.burns[0].time === 0 ? Number(id[2]) : Number(id[2]) + 1;
                         wayN = id[2] === 'end' ? waypoints.length - 1 : wayN;
                         oldT = waypoints[wayN].t;
-                        let t =  Number(window.prompt("Time [hrs]: ", waypoints[wayN].t / 3600)) * 3600;
-                        let r =  Number(window.prompt("Radial: ", waypoints[wayN].r));
-                        let i =  Number(window.prompt("In-Track: ", waypoints[wayN].i));
-                        let c =  Number(window.prompt("Cross-Track: ", waypoints[wayN].c));
+                        let t = Number(window.prompt("Time [hrs]: ", waypoints[wayN].t / 3600)) * 3600;
+                        let r = Number(window.prompt("Radial: ", waypoints[wayN].r));
+                        let i = Number(window.prompt("In-Track: ", waypoints[wayN].i));
+                        let c = Number(window.prompt("Cross-Track: ", waypoints[wayN].c));
                         waypoints[wayN].t = t;
                         waypoints[wayN].r = r;
                         waypoints[wayN].i = i;
@@ -1117,25 +1557,43 @@
                             waypoints[kk].t += t - oldT;
                         }
                     }
-                    satellites[document.getElementById('satellite-way-select').value].burns = [...waypoints2burns(waypoints)];
+                    satellites[document.getElementById('satellite-way-select').value].burns = [...
+                        waypoints2burns(waypoints)
+                    ];
                     calcShownTrajectories(Number(document.getElementById('satellite-way-select').value));
                     generateTable(document.getElementById('satellite-way-select').value);
                 })
             }
         }
+
         function waypoints2burns(waypoints) {
-            let dt, r1, v0, r2, phi, v1, dV, vOld = [[waypoints[0].rd], [waypoints[0].id], [waypoints[0].cd]], burn;
+            let dt, r1, v0, r2, phi, v1, dV, vOld = [
+                    [waypoints[0].rd],
+                    [waypoints[0].id],
+                    [waypoints[0].cd]
+                ],
+                burn;
             let burns = [];
             for (let n = 0; n < waypoints.length - 1; n++) {
-                dt = waypoints[n+1].t - waypoints[n].t;
-                r1 = [[waypoints[n].r], [waypoints[n].i], [waypoints[n].c]]
-                r2 = [[waypoints[n+1].r], [waypoints[n+1].i], [waypoints[n+1].c]];
+                dt = waypoints[n + 1].t - waypoints[n].t;
+                r1 = [
+                    [waypoints[n].r],
+                    [waypoints[n].i],
+                    [waypoints[n].c]
+                ]
+                r2 = [
+                    [waypoints[n + 1].r],
+                    [waypoints[n + 1].i],
+                    [waypoints[n + 1].c]
+                ];
                 phi = phiMatrix(dt);
                 v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
                 burn = math.squeeze(math.subtract(v1, vOld));
                 dV = math.norm(burn);
                 vOld = math.add(math.multiply(phi.vr, r1), math.multiply(phi.vv, v1));
-                if (dV < 1e-6) {continue;}
+                if (dV < 1e-6) {
+                    continue;
+                }
                 burns.push({
                     time: waypoints[n].t,
                     direction: {
@@ -1148,6 +1606,7 @@
             }
             return burns;
         }
+
         function downloadFile(filename, text) {
             var pom = document.createElement('a');
             pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -1157,18 +1616,18 @@
                 var event = document.createEvent('MouseEvents');
                 event.initEvent('click', true, true);
                 pom.dispatchEvent(event);
-            }
-            else {
+            } else {
                 pom.click();
             }
         }
         document.getElementById('upload-options-button').addEventListener('change', event => {
             loadFileAsText(event.path[0].files[0])
         })
-        function loadFileAsText(fileToLoad){
+
+        function loadFileAsText(fileToLoad) {
 
             var fileReader = new FileReader();
-            fileReader.onload = function(fileLoadedEvent){
+            fileReader.onload = function (fileLoadedEvent) {
                 var textFromFileLoaded = fileLoadedEvent.target.result;
                 satellites = JSON.parse(textFromFileLoaded);
             };
@@ -1177,4 +1636,5 @@
         }
     </script>
 </body>
+
 </html>
