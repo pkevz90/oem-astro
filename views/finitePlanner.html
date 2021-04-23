@@ -1266,27 +1266,62 @@
                 ]
             };
         }
+        
+        function phiMatrixWhole(t = 0, n = 2 * Math.PI / 86164) {
+            let nt = n * t;
+            let cnt = Math.cos(nt);
+            let snt = Math.sin(nt);
+            return [
+                    [4 - 3 * cnt, 0, 0, snt / n, 2 * (1 - cnt) / n, 0],
+                    [6 * (snt - nt), 1, 0, 2 * (cnt - 1) / n, (4 * snt - 3 * nt) / n, 0],
+                    [0, 0, cnt, 0, 0, snt / n],
+                    [3 * n * snt, 0, 0, cnt, 2 * snt, 0],
+                    [6 * n * (cnt - 1), 0, 0, -2 * snt, 4 * cnt - 3, 0],
+                    [0, 0, -n * snt, 0, 0, cnt]
+                ];
+        }
 
         function calcShownTrajectories(satCalc = 'all') {
-            let calcSats = [];
+            let t_calc, currentState, satBurn;
+            phiMain = phiMatrixWhole(windowOptions.time_delta); 
             satellites.forEach((sat, ii) => {
                 if (satCalc === 'all' || satCalc === ii) {
                     sat.shownTraj = [];
+                    t_calc = 0;
+                    currentState = [[sat.position.r],
+                                    [sat.position.i],
+                                    [sat.position.c],
+                                    [sat.position.rd],
+                                    [sat.position.id],
+                                    [sat.position.cd]];
+                    satBurn = sat.burns.length > 0 ? 0 : undefined;
+                    while (t_calc <= windowOptions.scenario_length * 3600) {
+                        sat.shownTraj.push({
+                            r: currentState[0][0],
+                            i: currentState[1][0],
+                            c: currentState[2][0]
+                        });
+                        // console.log(phiMain, currentState);
+                        if (satBurn !== undefined) {
+                            if ((sat.burns[satBurn].time - t_calc) <= windowOptions.time_delta) {
+                                let phiI = phiMatrixWhole(sat.burns[satBurn].time - t_calc),
+                                    phiF = phiMatrixWhole(windowOptions.time_delta - (sat.burns[satBurn].time - t_calc));
+                                    currentState = math.multiply(phiI, currentState);
+                                    currentState[3][0] += sat.burns[satBurn].direction.r;
+                                    currentState[4][0] += sat.burns[satBurn].direction.i;
+                                    currentState[5][0] += sat.burns[satBurn].direction.c;
+                                    currentState = math.multiply(phiF, currentState);
+                                satBurn = sat.burns.length === satBurn + 1 ? undefined : satBurn + 1;
+                                t_calc += windowOptions.time_delta;
+                                continue;
+                            }
+                        }
+                        currentState = math.multiply(phiMain, currentState);
+                        t_calc += windowOptions.time_delta;
+                    }
                 }
             })
-            let timeLength = windowOptions.time_vector.length;
-            for (let ii = 0; ii < timeLength; ii++) {
-                satellites.forEach((sat, jj) => {
-                    if (satCalc === 'all' || satCalc === jj) {
-                        sat.shownTraj.push(getCurrentPosition(sat.position, sat.burns, windowOptions
-                            .time_vector[ii]));
-                        if (ii === timeLength - 1) {
-                            sat.currentPosition = getCurrentPosition(sat.position, sat.burns, windowOptions
-                                .time_vector[ii]);
-                        }
-                    }
-                })
-            }
+            
         }
 
         function drawCurve(ctx, points, options = {}) {
