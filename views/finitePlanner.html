@@ -157,7 +157,8 @@
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Visualization</div>
             <div>Data Points<input value="200" type="Number" min="100" max="500"></div>
-            <div>Line Width</sub><input value="3" type="Number" min="1" max="10"> px</div>
+            <div>Line Width<input value="3" type="Number" min="1" max="10"> px</div>
+            <div>Line Trajectory<input type="checkbox"></div>
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
             <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
@@ -217,6 +218,7 @@
             mouse_hold: 500,
             origin_it: 0,
             origin_it_des: 0,
+            draw_style: 'points',
             makeGif: {
                 start: false,
                 stop: false
@@ -551,6 +553,7 @@
             let timeStep = el.parentNode.parentNode.children.item(0).children[6].children[0].value;
             let fps = el.parentNode.parentNode.children.item(0).children[7].children[0].value;
             let repeat = el.parentNode.parentNode.children.item(0).children[8].children[0].checked;
+            windowOptions.draw_style = el.parentNode.parentNode.children.item(1).children[3].children[0].checked ? 'line' : 'points';
             encoder.setRepeat(repeat ? 0 : 1);
             encoder.setDelay(1000 / fps);
             windowOptions.animate_step = timeStep * 60;
@@ -838,23 +841,43 @@
                 })
                 ctx.strokeStyle = satellite.color;
                 if (windowOptions.screen.mode !== 'ri only') {
-                    drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(
-                        0, math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
-                        currentLocatinon), {
-                        ric: true,
-                        cross: true
-                    });
+                    if (windowOptions.draw_style === 'line') {
+                        drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(
+                            0, math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
+                            currentLocatinon), {
+                            ric: true,
+                            cross: true
+                        });
+                    }
+                    else {
+                        drawCurvePoints(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(
+                            0, math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
+                            currentLocatinon), {
+                            ric: true,
+                            cross: true,
+                            color: satellite.color
+                        });
+                    }
                     drawBurns(satellite, {
                         cross: true
                     });
                     drawSatellite(satellite, true);
                 }
                 ctx.strokeStyle = satellite.color;
-                drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,
-                    math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
-                    currentLocatinon), {
-                    ric: true
-                });
+                if (windowOptions.draw_style === 'line') {
+                    drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,
+                        math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
+                        currentLocatinon), {
+                        ric: true
+                    });
+                }
+                else {
+                    drawCurvePoints(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,
+                        math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
+                        currentLocatinon), {
+                        ric: true, color: satellite.color
+                    });
+                }
                 drawBurns(satellite);
                 drawSatellite(satellite);
             })
@@ -1391,6 +1414,32 @@
             if (!lineDrawn) {
                 ctx.stroke();
             }
+        }
+
+        function drawCurvePoints(ctx, points, options = {}) {
+            let {
+                ric = false, cross = false, color = 'red'
+            } = options;
+            
+            let limit = {
+                min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
+                max: cross ? cnvs.height : (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
+            }
+            points.forEach((point, ii) => {
+                if (ii % 3 === 0) {
+                    let draw_point = ric === false ? point : ricToPixel(point, {
+                        struct: true,
+                        cross
+                    });
+                    if (draw_point.y < limit.max && draw_point.y > limit.min) {
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(draw_point.x-2.5, draw_point.y-2.5, 5, 5);
+                        ctx.fillStyle = color;
+                        ctx.fillRect(draw_point.x-1.5, draw_point.y-1.5, 3, 3);
+                    }
+                }
+            })
+            
         }
 
         function drawBurns(satellite, options = {}) {
