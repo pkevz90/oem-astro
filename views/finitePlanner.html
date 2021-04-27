@@ -266,6 +266,9 @@
         animation();
         window.addEventListener("resize", formatCanvas)
         window.addEventListener("keydown", e => {
+            if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
+                mouseWheelFunction({deltaY: e.key === ',' || e.key === '<' ? 1 : -1});
+            }
             if (windowOptions.burn_status) {
                 let currentLocation = getCurrentPosition(satellites[windowOptions.burn_status.object].position,
                     satellites[windowOptions.burn_status.object].burns.slice(0, windowOptions.burn_status
@@ -469,16 +472,7 @@
             windowOptions.burn_status = false;
             windowOptions.frame_move = false;
         })
-        document.getElementById('canvas-div').addEventListener('wheel', event => {
-            if (windowOptions.burn_status) {
-                windowOptions.burn_status.time += event.deltaY < 0 ? 600 : -60;
-                windowOptions.scenario_time_des += event.deltaY < 0 ? 600 : -60;
-                return;
-            }
-            windowOptions.width_des = event.deltaY < 0 ? windowOptions.width_des / 1.1 : windowOptions
-                .width_des * 1.1;
-            windowOptions.closeLimit = 0.0125 * windowOptions.width_des;
-        })
+        document.getElementById('canvas-div').addEventListener('wheel', mouseWheelFunction)
         document.getElementById('add-satellite').addEventListener('click', () => {
             document.getElementById('add-satellite-panel').classList.toggle("hidden")
         })
@@ -653,6 +647,17 @@
             generateTable(document.getElementById('satellite-way-select').value);
         })
 
+        function mouseWheelFunction(event) {
+            if (windowOptions.burn_status) {
+                windowOptions.burn_status.time += event.deltaY < 0 ? 600 : -60;
+                windowOptions.scenario_time_des += event.deltaY < 0 ? 600 : -60;
+                return;
+            }
+            windowOptions.width_des = event.deltaY < 0 ? windowOptions.width_des / 1.1 : windowOptions
+                .width_des * 1.1;
+            windowOptions.closeLimit = 0.0125 * windowOptions.width_des;
+        }
+        
         function getMousePosition(mouseX, mouseY) {
             let plot = mouseY > (windowOptions.screen.ci_center + windowOptions.screen.ri_center) / 2 ? 'ci' : 'ri';
             let pixel = [mouseX, mouseY];
@@ -772,7 +777,7 @@
             ctx.fillStyle = 'black';
             ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
                 .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
-            ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
+            // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
 
             // Draw Scale
             ctx.strokeStyle = 'RGB(0,0,0,0.5)';
