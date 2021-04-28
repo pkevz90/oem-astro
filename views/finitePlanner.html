@@ -277,8 +277,8 @@
             if (windowOptions.burn_status) {
                 let currentLocation = getCurrentPosition(satellites[windowOptions.burn_status.object].position,
                     satellites[windowOptions.burn_status.object].burns.slice(0, windowOptions.burn_status
-                        .burn), satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
-                        .burn].time);
+                        .burn), {time: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
+                        .burn].time, a: satellites[windowOptions.burn_status.object].a});
                 let n = 2 * Math.PI / 86164,
                     desVel, dV;
                 switch (e.key) {
@@ -412,7 +412,7 @@
                             windowOptions.scenario_time_des += 7200;
                         }
                         let burnLocation = getCurrentPosition(satellites[ii].position, satellites[ii]
-                            .burns, satellites[ii].burns[jj].time);
+                            .burns, {time: satellites[ii].burns[jj].time, a: sat.a});
                         windowOptions.burn_status = {
                             object: ii,
                             burn: jj,
@@ -451,8 +451,8 @@
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn =>
                         burn.time === windowOptions.scenario_time);
                     let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object]
-                        .position, satellites[windowOptions.mousePosition.object].burns, satellites[
-                            windowOptions.mousePosition.object].burns[burnN].time);
+                        .position, satellites[windowOptions.mousePosition.object].burns, {time: satellites[
+                            windowOptions.mousePosition.object].burns[burnN].time, a: satellites[windowOptions.mousePosition.object].a});
                     let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions
                         .maneuver_type;
                     if (type === 'waypoint') {
@@ -606,7 +606,7 @@
             waypoints[0].t = 0;
             sat.burns.forEach((burn, ii) => {
                 if (burn.time !== 0) {
-                    wayPos = getCurrentPosition(sat.position, sat.burns, burn.time);
+                    wayPos = getCurrentPosition(sat.position, sat.burns, {time: burn.time, a: sat.a});
                     waypoints.push({
                         t: burn.time,
                         r: wayPos.r[0],
@@ -615,8 +615,8 @@
                     });
                 }
             })
-            wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns.length > 0 ? sat.burns[sat.burns
-                .length - 1].time + 7200 : 7200);
+            wayPos = getCurrentPosition(sat.position, sat.burns, {time: sat.burns.length > 0 ? sat.burns[sat.burns
+                .length - 1].time + 7200 : 7200, a: sat.a});
             let identWay = waypoints.findIndex((way, ii) => Math.abs(way.t - t) < 900);
             console.log(identWay);
             if (identWay !== -1) {
@@ -1608,7 +1608,7 @@
             }
             satellites[object].burns.forEach((burn, ii) => {
                 addedElement = document.createElement('tr');
-                position = getCurrentPosition(satellites[object].position, satellites[object].burns, burn.time);
+                position = getCurrentPosition(satellites[object].position, satellites[object].burns, {time: burn.time, a: satellites[object].a});
                 addedElement.innerHTML = `
                     <td>${(burn.time / 3600).toFixed(1)} hrs</td>
                     <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
@@ -1618,9 +1618,9 @@
                 `;
                 table.appendChild(addedElement);
             });
-            position = getCurrentPosition(satellites[object].position, satellites[object].burns, satellites[object]
+            position = getCurrentPosition(satellites[object].position, satellites[object].burns, {time: satellites[object]
                 .burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length - 1].time +
-                7200);
+                7200, a: satellites[object].a});
             addedElement = document.createElement('tr');
             addedElement.innerHTML = `
                 <td>${((satellites[object].burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length-1].time + 7200) / 3600).toFixed(1)} hrs</td>
@@ -1641,7 +1641,7 @@
                     waypoints[0].t = 0;
                     sat.burns.forEach((burn, ii) => {
                         if (burn.time !== 0) {
-                            wayPos = getCurrentPosition(sat.position, sat.burns, burn.time);
+                            wayPos = getCurrentPosition(sat.position, sat.burns, {time: burn.time, a: sat.a});
                             waypoints.push({
                                 t: burn.time,
                                 r: wayPos.r[0],
@@ -1650,8 +1650,8 @@
                             });
                         }
                     })
-                    wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns.length > 0 ? sat.burns[sat
-                        .burns.length - 1].time + 7200 : 7200);
+                    wayPos = getCurrentPosition(sat.position, sat.burns, {time: sat.burns.length > 0 ? sat.burns[sat
+                        .burns.length - 1].time + 7200 : 7200, a: sat.a});
                     waypoints.push({
                         t: (sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200),
                         r: wayPos.r[0],
@@ -1693,7 +1693,7 @@
                             return;
                         }
                         if (sat.burns[0].time !== 0) {
-                            wayPos = getCurrentPosition(sat.position, sat.burns, sat.burns[0].time);
+                            wayPos = getCurrentPosition(sat.position, sat.burns, {time: sat.burns[0].time, a: sat.a});
                             waypoints[1] = {
                                 t: sat.burns[0].time,
                                 r: wayPos.r[0],
