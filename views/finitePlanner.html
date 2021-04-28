@@ -837,7 +837,8 @@
                                 data: false,
                                 shape: satellite.shape,
                                 size: satellite.size,
-                                color: satellite.color
+                                color: satellite.color,
+                                a: satellite.a
                             });
                             ctx.globalAlpha = 1;
                         }
@@ -1240,30 +1241,34 @@
                     t_burn = math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i, burns[n_burn].direction.c]) / a;
                     alpha = math.atan2(burns[n_burn].direction.i, burns[n_burn].direction.r);
                     phi_angle = math.atan2(burns[n_burn].direction.c, math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i]));
+                    if (log) console.log(t_prop, t_burn, time);
                     if ((t_prop + t_burn) > time) {
                         t_burn = time - t_prop;
                         return {
                             r: [radialPosClosed(position[0][0],position[3][0],position[4][0],a,alpha,phi_angle,t_burn,n)],
                             i: [intrackPosClosed(position[0][0],position[3][0],position[1][0],position[4][0],a,alpha,phi_angle,t_burn,n)],
-                            c: [crosstrackPosClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)]
+                            c: [crosstrackPosClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)],
+                            rd: [radialVelClosed(position[0][0], position[3][0], position[4][0],a,alpha, phi_angle,t_burn,n)],
+                            id: [intrackVelClosed(position[0][0], position[3][0], position[4][0],a,alpha, phi_angle,t_burn,n)],
+                            cd: [crosstrackVelClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)]
                         }
+                    }
+                    if (log) {
+                        console.log(position);
                     }
                     position = [
                         [radialPosClosed(position[0][0],position[3][0],position[4][0],a,alpha,phi_angle,t_burn,n)],
                         [intrackPosClosed(position[0][0],position[3][0],position[1][0],position[4][0],a,alpha,phi_angle,t_burn,n)],
-                        [crosstrackPosClosed(position[3][0],position[5][0],a,phi_angle,t_burn,n)],
+                        [crosstrackPosClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)],
                         [radialVelClosed(position[0][0], position[3][0], position[4][0],a,alpha, phi_angle,t_burn,n)],
                         [intrackVelClosed(position[0][0], position[3][0], position[4][0],a,alpha, phi_angle,t_burn,n)],
                         [crosstrackVelClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)]
                     ];
                     if (log) {
-                        // console.log(position);
+                        console.log(position);
                     }
                     t_prop += t_burn;
                 }
-                    if (log) {
-                        console.log(t_prop);
-                    }
                 phi = phiMatrixWhole(time - t_prop);
                 position = math.multiply(phi, position);
                 return {r: position[0], i: position[1], c: position[2], rd: position[3], id: position[4], cd: position[5]};
@@ -1392,7 +1397,7 @@
                                     currentState = [
                                         [radialPosClosed(position_start[0][0],position_start[3][0],position_start[4][0],sat.a,alpha,phi_angle,t_burn,n)],
                                         [intrackPosClosed(position_start[0][0],position_start[3][0],position_start[1][0],position_start[4][0],sat.a,alpha,phi_angle,t_burn,n)],
-                                        [crosstrackPosClosed(position_start[3][0],position_start[5][0],sat.a,phi_angle,t_burn,n)],
+                                        [crosstrackPosClosed(position_start[2][0],position_start[5][0],sat.a,phi_angle,t_burn,n)],
                                         [radialVelClosed(position_start[0][0], position_start[3][0], position_start[4][0],sat.a,alpha, phi_angle,t_burn,n)],
                                         [intrackVelClosed(position_start[0][0], position_start[3][0], position_start[4][0],sat.a,alpha, phi_angle,t_burn,n)],
                                         [crosstrackVelClosed(position_start[2][0],position_start[5][0],sat.a,phi_angle,t_burn,n)]
