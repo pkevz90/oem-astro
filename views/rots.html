@@ -134,6 +134,7 @@
                     <option value="up-triangle">Reverse Triangle</option>
                 </select>
             </div>
+            <div>Acceleration<input value="10" type="Number"> mm/s<sup>2</sup></div>
             <div>Fuel<sub>burn</sub><input value="999" type="Number"> m/s</div>
             <div>Cooldown</sub><input value="0" type="Number"> mins</div>
             <div>Color</sub><input value="#ff0000" type="color"> mins</div>
@@ -533,8 +534,9 @@
                     .PI / 180,
                 z: Number(el.parentNode.parentNode.children.item(0).children[6].children[1].value)
             };
-            let color = el.parentNode.parentNode.children.item(1).children[4].children[0].value;
+            let color = el.parentNode.parentNode.children.item(1).children[5].children[0].value;
             let shape = el.parentNode.parentNode.children.item(1).children[1].children[0].value;
+            let a = el.parentNode.parentNode.children.item(1).children[2].children[0].value / 1e6;
             state = {
                 r: -state.a / 2 * Math.cos(state.b) + state.x,
                 i: state.a * Math.sin(state.b) + state.y,
@@ -546,7 +548,8 @@
             satellites.push(newSatellite({
                 position: state,
                 color,
-                shape
+                shape,
+                a
             }));
             calcShownTrajectories(satellites.length - 1)
             document.getElementById('add-satellite-panel').classList.toggle("hidden")
