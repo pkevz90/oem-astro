@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finite Planner</title>
+    <title>ROTS</title>
     <script src="../SupportLibraries/math.min.js"></script>
     <script src="../SupportLibraries/LZWEncoder.js"></script>
     <script src="../SupportLibraries/NeuQuant.js"></script>
@@ -272,6 +272,11 @@
         window.addEventListener("resize", formatCanvas)
         window.addEventListener("keydown", e => {
             if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
+                if (e.shiftKey || e.ctrlKey) {
+                    windowOptions.scenario_time_des += (e.key === ',' || e.key === '<' ? -1 : (e.ctrlKey ? 5 : 6)) * (e.ctrlKey ? 60 : 300);
+                    windowOptions.scenario_time = windowOptions.scenario_time_des + 0;
+                    return;
+                }
                 mouseWheelFunction({deltaY: e.key === ',' || e.key === '<' ? 1 : -1});
             }
             if (windowOptions.burn_status) {
@@ -1402,7 +1407,7 @@
                                         [intrackVelClosed(position_start[0][0], position_start[3][0], position_start[4][0],sat.a,alpha, phi_angle,t_burn,n)],
                                         [crosstrackVelClosed(position_start[2][0],position_start[5][0],sat.a,phi_angle,t_burn,n)]
                                     ];
-                                    // console.log(currentState);
+                                     // console.log(currentState);
                                     currentState = math.multiply(phiMatrixWhole(t_calc - sat.burns[satBurn].time - t_burn), currentState);
                                     // console.log(currentState);
                                     satBurn = sat.burns.length === satBurn + 1 ? undefined : satBurn + 1;
