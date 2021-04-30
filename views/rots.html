@@ -160,7 +160,8 @@
             <div>Data Points<input value="200" type="Number" min="100" max="500"></div>
             <div>Line Width<input value="3" type="Number" min="1" max="10"> px</div>
             <div>Line Trajectory<input type="checkbox"></div>
-            <div>Finite<input type="checkbox"></div>
+            <div>Finite Burns<input type="checkbox"></div>
+            <div>Finite Targeting<input type="checkbox"></div>
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
             <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
@@ -233,7 +234,8 @@
                 time: 10800,
                 constant: 0.0003
             },
-            showFinite: false
+            showFinite: false,
+            finiteTarget: false
         }
         formatCanvas();
         windowOptions.screen = {
@@ -566,6 +568,7 @@
             let repeat = el.parentNode.parentNode.children.item(0).children[8].children[0].checked;
             windowOptions.draw_style = el.parentNode.parentNode.children.item(1).children[3].children[0].checked ? 'line' : 'points';
             windowOptions.showFinite = el.parentNode.parentNode.children.item(1).children[4].children[0].checked;
+            windowOptions.finiteTarget = el.parentNode.parentNode.children.item(1).children[5].children[0].checked;
             calcShownTrajectories();
             encoder.setRepeat(repeat ? 0 : 1);
             encoder.setDelay(1000 / fps);
@@ -1562,10 +1565,37 @@
         function calcBurns(burn, cross = false) {
             let sat = satellites[burn.object];
             if (windowOptions.burn_status.type === 'waypoint') {
-                let r1 = [windowOptions.burn_status.burnLocation.r, windowOptions.burn_status.burnLocation.i, [0]],
+                let r1, r2;
+                if (windowOptions.showFinite && windowOptions.finiteTarget) {
+                    r1 = {
+                        x: windowOptions.burn_status.burnLocation.r[0],
+                        y: windowOptions.burn_status.burnLocation.i[0],
+                        z: windowOptions.burn_status.burnLocation.c[0],
+                        xd: windowOptions.burn_status.burnLocation.rd[0],
+                        yd: windowOptions.burn_status.burnLocation.id[0],
+                        zd: windowOptions.burn_status.burnLocation.cd[0]
+                    };
+                    r2 = {
+                        x: windowOptions.mousePosition.ric.r,
+                        y: windowOptions.mousePosition.ric.i, 
+                        z: 0,
+                        xd: 0,
+                        yd: 0,
+                        zd: 0
+                    };
+                    let dir = hcwFiniteBurnOneBurn(r1, r2, windowOptions.burn_status.time, sat.a);
+                    // console.log(dir);
+                    if (dir && (dir.t > 0 || dir.t < 1)) {
+                        sat.burns[burn.burn].direction.r = dir.r;
+                        sat.burns[burn.burn].direction.i = dir.i;
+                        calcShownTrajectories(burn.object);
+                        return;
+                    }
+                }
+                r1 = [windowOptions.burn_status.burnLocation.r, windowOptions.burn_status.burnLocation.i, [0]],
                     r1_2 = r1;
                 let v0 = [windowOptions.burn_status.burnLocation.rd, windowOptions.burn_status.burnLocation.id, [0]];
-                let r2 = [
+                r2 = [
                     [windowOptions.mousePosition.ric.r],
                     [windowOptions.mousePosition.ric.i],
                     [0]
@@ -1834,6 +1864,141 @@
 
         function crosstrackVelClosed(z0,zd0,a0,phi,t,n) {
             return (Math.pow(n,2)*zd0*Math.cos(n*t)-Math.pow(n,3)*z0*Math.sin(n*t)+a0*n*Math.sin(phi)*Math.sin(n*t))/Math.pow(n,2);
+        }
+    
+        function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 86164) {
+            state = [[stateInit.x],[stateInit.y],[stateInit.z],[stateInit.xd],[stateInit.yd],[stateInit.zd]];
+            stateFinal = [[stateFinal.x],[stateFinal.y],[stateFinal.z],[stateFinal.xd],[stateFinal.yd],[stateFinal.zd]];
+            let v = proxOpsTargeter(state.slice(0,3),stateFinal.slice(0,3),tf);
+            let v1 = v[0], yErr,S,dX = 1,F;
+            let dv1 = math.subtract(v1,state.slice(3,6));
+            // console.log(state, stateFinal, v1, dv1);
+            // [alpha - in plane angle, phi - out of plane angle, tB - total burn time %]
+            let Xret = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf]];
+            let X = Xret.slice();
+            if (X[2] > 1) {
+                return false;
+            }
+            let errCount = 0;
+            while (math.norm(math.squeeze(dX)) > 1e-6){
+                F = oneBurnFiniteHcw (stateInit,X[0][0],X[1][0],X[2][0],tf,a0,n);
+                yErr = [[stateFinal[0][0]-F.x],[stateFinal[1][0]-F.y],[stateFinal[2][0]-F.z]];
+                S = proxOpsJacobianOneBurn(stateInit,a0,X[0][0],X[1][0],X[2][0],tf,n);
+                dX = math.multiply(math.inv(S),yErr);
+                // console.log(X,F)
+                X = math.add(X,dX)
+                if (errCount > 30) {
+                    // console.log(X)
+                    return false;
+                }
+                errCount++;
+            }
+            return {r: a0 * X[2] * tf * Math.cos(X[0][0]) * Math.cos(X[1][0]), i: a0 * X[2] * tf * Math.sin(X[0][0]) * Math.cos(X[1][0]), c: a0 * X[2] * tf * Math.sin(X[1][0]), t: X[2]}
+            // return [Xret,X];
+        }
+        function oneBurnFiniteHcw (state,alpha,phi,tB,t,a0,n) {
+            if (n === undefined) {
+                n = 2*Math.PI/86164;
+            }
+            x0 = state.x; xd0 = state.xd;
+            y0 = state.y; yd0 = state.yd;
+            z0 = state.z; zd0 = state.zd;
+            // console.log(x0,y0,z0)
+            let xM = radialPosClosed(x0,xd0,yd0,a0,alpha,phi,tB*t,n);
+            let xdM = radialVelClosed(x0,xd0,yd0,a0,alpha,phi,tB*t,n);
+            let yM = intrackPosClosed(x0,xd0,y0,yd0,a0,alpha,phi,tB*t,n);
+            let ydM = intrackVelClosed(x0,xd0,yd0,a0,alpha,phi,tB*t,n);
+            let zM = crosstrackPosClosed(z0,zd0,a0,phi,tB*t,n);
+            let zdM = crosstrackVelClosed(z0,zd0,a0,phi,tB*t,n);
+            let xF = radialPosClosed(xM,xdM,ydM,0,0,0,t-tB*t,n);
+            let xdF = radialVelClosed(xM,xdM,ydM,0,0,0,t-tB*t,n);
+            let yF = intrackPosClosed(xM,xdM,yM,ydM,0,0,0,t-tB*t,n);
+            let ydF = intrackVelClosed(xM,xdM,ydM,0,0,0,t-tB*t,n);
+            let zF = crosstrackPosClosed(zM,zdM,0,0,t-tB*t,n);
+            let zdF = crosstrackVelClosed(zM,zdM,0,0,t-tB*t,n);
+            return {
+                x: xF,
+                y: yF,
+                z: zF,
+                xd: xdF,
+                yd: ydF,
+                zd: zdF
+            };
+
+        }
+        function proxOpsJacobianOneBurn(state,a,alpha,phi,tB,tF,n){
+            let m1,m2,mC,mFinal=[];
+            //alpha
+            m1 = oneBurnFiniteHcw (state,alpha,phi,tB,tF,a,n);
+            m1 = [[m1.x],
+                [m1.y],
+                [m1.z]];
+            m2 = oneBurnFiniteHcw (state,alpha+0.01,phi,tB,tF,a,n);
+            m2 = [[m2.x],
+                [m2.y],
+                [m2.z]];
+            // console.log(m1,m2)
+            mC = math.dotDivide(math.subtract(m2,m1),0.01);
+            mFinal = mC;
+            //phi
+            m1 = oneBurnFiniteHcw (state,alpha,phi,tB,tF,a,n);
+            m1 = [[m1.x],
+                [m1.y],
+                [m1.z]];
+            m2 = oneBurnFiniteHcw (state,alpha,phi+0.01,tB,tF,a,n);
+            m2 = [[m2.x],
+                [m2.y],
+                [m2.z]];
+            m = math.dotDivide(math.subtract(m2,m1),0.01);
+            mC = math.concat(mC,m);
+            //tB
+            m1 = oneBurnFiniteHcw (state,alpha,phi,tB,tF,a,n);
+            m1 = [[m1.x],
+                [m1.y],
+                [m1.z]];
+            m2 = oneBurnFiniteHcw (state,alpha,phi,tB+0.01,tF,a,n);
+            m2 = [[m2.x],
+                [m2.y],
+                [m2.z]];
+            m = math.dotDivide(math.subtract(m2,m1),0.01);
+            mC = math.concat(mC,m);
+            return mC;
+        }
+        function proxOpsTargeter(r1,r2,t) {   
+            v1 = math.multiply(math.inv(PhiRV3d(t)),math.subtract(r2,math.multiply(PhiRR3d(t),r1)));
+            v2 = math.add(math.multiply(PhiVR3d(t),r1),math.multiply(PhiVV3d(t),v1));
+            return [v1,v2];
+        }
+        function PhiRR3d(t,n){
+            if (n === undefined){
+                n = 2*Math.PI/86164;
+            }
+            let nt = n*t;
+            return [[4-3*Math.cos(nt),0,0],[6*(Math.sin(nt)-nt), 1,0],[0,0,Math.cos(nt)]];
+        }
+
+        function PhiRV3d(t,n){
+            if (n === undefined){
+                n = 2*Math.PI/86164;
+            }
+            let nt = n*t;
+            return [[Math.sin(nt)/n, 2*(1-Math.cos(nt))/n,0],[(Math.cos(nt)-1)*2/n, (4*Math.sin(nt)-3*nt)/n,0],[0,0,Math.sin(nt)/n]];
+        }
+
+        function PhiVR3d(t,n){
+            if (n === undefined){
+                n = 2*Math.PI/86164;
+            }
+            let nt = n*t;
+            return [[3*n*Math.sin(nt), 0, 0],[6*n*(Math.cos(nt)-1), 0, 0],[0,0,-n*Math.sin(nt)]];
+        }
+
+        function PhiVV3d(t,n){
+            if (n === undefined){
+                n = 2*Math.PI/86164;
+            }
+            let nt = n*t;
+            return [[Math.cos(nt), 2*Math.sin(nt), 0],[-2*Math.sin(nt), 4*Math.cos(nt)-3, 0],[0,0,Math.cos(nt)]];
         }
     </script>
 </body>
