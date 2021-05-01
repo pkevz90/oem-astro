@@ -267,6 +267,7 @@
                 burns,
                 shownTraj,
                 a,
+                completedBurn: false,
                 calcTraj: calcSatShownTrajectories
             };
         }
@@ -605,7 +606,7 @@
             windowOptions.draw_style = el.parentNode.parentNode.children.item(1).children[3].children[0]
                 .checked ? 'line' : 'points';
             windowOptions.showFinite = el.parentNode.parentNode.children.item(1).children[4].children[0]
-            .checked;
+                .checked;
             windowOptions.finiteTarget = el.parentNode.parentNode.children.item(1).children[5].children[0]
                 .checked;
             satellites.forEach(sat => sat.calcTraj());
@@ -874,13 +875,14 @@
                 satellite.burns.forEach((burn, jj) => {
                     if (burn.time < windowOptions.scenario_time) {
                         let burnTime = math.norm([burn.direction.i, burn.direction.r, burn.direction
-                            .c]) / satellite.a;
+                            .c
+                        ]) / satellite.a;
                         let constant = (windowOptions.scenario_time - burn.time) / burnTime;
-                        isBurning = isBurning ? isBurning : constant < 1 && constant > 0.05 ?
-                            windowOptions.showFinite ? {
-                                constant,
-                                burn: jj
-                            } : false : false;
+                        isBurning = isBurning ? isBurning : constant < 1 && constant > 0.05 ? {
+                            constant,
+                            burn: jj
+                        } : false;
+                        satellite.completedBurn = isBurning == true;
                         drawBurnArrow(burn, {
                             cross: false,
                             object: ii,
@@ -913,29 +915,19 @@
                     }
                 })
                 ctx.strokeStyle = satellite.color;
-                let drawnTraj;
                 if (isBurning) {
-                    let burns = JSON.parse(JSON.stringify(satellite.burns));
-                    burns = burns.slice(0, isBurning.burn + 1);
-                    burns[burns.length - 1].direction = {
-                        r: burns[burns.length - 1].direction.r * isBurning.constant,
-                        i: burns[burns.length - 1].direction.i * isBurning.constant,
-                        c: burns[burns.length - 1].direction.c * isBurning.constant
-                    };
-                    let cloneSat = JSON.parse(JSON.stringify(satellites[ii]));
-                    cloneSat.burns = burns;
-                    cloneSat = calcShownTrajectories('none', cloneSat);
-                    satellite.shownTraj = cloneSat.shownTraj;
+                    satellite.calcTraj();
+                    satellite.completedBurn = false;
                 }
-                drawnTraj = satellite.shownTraj;
+                if (satellite.completedBurn) satellite.calcTraj();
                 if (windowOptions.screen.mode !== 'ri only') {
                     if (windowOptions.draw_style === 'line') {
-                        drawCurve(ctx, drawnTraj, {
+                        drawCurve(ctx, satellite.shownTraj, {
                             ric: true,
                             cross: true
                         });
                     } else {
-                        drawCurvePoints(ctx, drawnTraj, {
+                        drawCurvePoints(ctx, satellite.shownTraj, {
                             ric: true,
                             cross: true,
                             color: satellite.color
@@ -948,11 +940,11 @@
                 }
                 ctx.strokeStyle = satellite.color;
                 if (windowOptions.draw_style === 'line') {
-                    drawCurve(ctx, drawnTraj, {
+                    drawCurve(ctx, satellite.shownTraj, {
                         ric: true
                     });
                 } else {
-                    drawCurvePoints(ctx, drawnTraj, {
+                    drawCurvePoints(ctx, satellite.shownTraj, {
                         ric: true,
                         color: satellite.color
                     });
@@ -1293,7 +1285,8 @@
                     position = math.multiply(phiMatrixWhole(burns[n_burn].time - t_prop), position);
                     t_prop = burns[n_burn].time;
                     t_burn = math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i, burns[n_burn].direction
-                        .c]) / a;
+                        .c
+                    ]) / a;
                     alpha = math.atan2(burns[n_burn].direction.i, burns[n_burn].direction.r);
                     phi_angle = math.atan2(burns[n_burn].direction.c, math.norm([burns[n_burn].direction.r, burns[
                         n_burn].direction.i]));
@@ -1447,68 +1440,68 @@
                     c: currentState[2][0]
                 });
                 if (satBurn !== undefined) {
-                    if ((this.burns[satBurn].time - t_calc) <= windowOptions.time_delta && (this.burns[satBurn].time <= windowOptions.scenario_time_des)) {
+                    if ((this.burns[satBurn].time - t_calc) <= windowOptions.time_delta && (this.burns[satBurn].time <=
+                            windowOptions.scenario_time_des)) {
                         if (windowOptions.showFinite) {
                             let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
-                                .direction.i,this.burns[satBurn].direction.c
-                            ]) /this.a;
+                                .direction.i, this.burns[satBurn].direction.c
+                            ]) / this.a;
                             let position_start = math.multiply(phiMatrixWhole(this.burns[satBurn].time -
                                 t_calc), currentState);
                             let position_finite;
                             let n = 2 * Math.PI / 86164;
-                            let alpha = math.atan2(this.burns[satBurn].direction.i,this.burns[satBurn]
+                            let alpha = math.atan2(this.burns[satBurn].direction.i, this.burns[satBurn]
                                 .direction.r);
                             let phi_angle = math.atan2(this.burns[satBurn].direction.c, math.norm([this
-                                .burns[satBurn].direction.r,this.burns[satBurn].direction.i
+                                .burns[satBurn].direction.r, this.burns[satBurn].direction.i
                             ]));
                             while ((this.burns[satBurn].time + t_burn - t_calc) > windowOptions
                                 .time_delta) {
                                 t_calc += windowOptions.time_delta;
                                 position_finite = {
                                     r: radialPosClosed(position_start[0][0], position_start[3][0],
-                                        position_start[4][0],this.a, alpha, phi_angle, t_calc -
-                                       this.burns[satBurn].time, n),
+                                        position_start[4][0], this.a, alpha, phi_angle, t_calc -
+                                        this.burns[satBurn].time, n),
                                     i: intrackPosClosed(position_start[0][0], position_start[3][0],
-                                        position_start[1][0], position_start[4][0],this.a,
-                                        alpha, phi_angle, t_calc -this.burns[satBurn].time, n),
+                                        position_start[1][0], position_start[4][0], this.a,
+                                        alpha, phi_angle, t_calc - this.burns[satBurn].time, n),
                                     c: crosstrackPosClosed(position_start[2][0], position_start[5][
-                                            0],this.a, phi_angle, t_calc -this.burns[satBurn]
+                                            0
+                                        ], this.a, phi_angle, t_calc - this.burns[satBurn]
                                         .time, n)
                                 }
-                               this.shownTraj.push(position_finite);
+                                this.shownTraj.push(position_finite);
                             }
                             t_calc += windowOptions.time_delta;
                             currentState = [
                                 [radialPosClosed(position_start[0][0], position_start[3][0],
-                                    position_start[4][0],this.a, alpha, phi_angle, t_burn, n)],
+                                    position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
                                 [intrackPosClosed(position_start[0][0], position_start[3][0],
-                                    position_start[1][0], position_start[4][0],this.a, alpha,
+                                    position_start[1][0], position_start[4][0], this.a, alpha,
                                     phi_angle, t_burn, n)],
                                 [crosstrackPosClosed(position_start[2][0], position_start[5][0], this
                                     .a, phi_angle, t_burn, n)],
                                 [radialVelClosed(position_start[0][0], position_start[3][0],
-                                    position_start[4][0],this.a, alpha, phi_angle, t_burn, n)],
+                                    position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
                                 [intrackVelClosed(position_start[0][0], position_start[3][0],
-                                    position_start[4][0],this.a, alpha, phi_angle, t_burn, n)],
+                                    position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
                                 [crosstrackVelClosed(position_start[2][0], position_start[5][0], this
                                     .a, phi_angle, t_burn, n)]
                             ];
-                            // console.log(currentState);
-                            currentState = math.multiply(phiMatrixWhole(t_calc -this.burns[satBurn]
+                            currentState = math.multiply(phiMatrixWhole(t_calc - this.burns[satBurn]
                                 .time - t_burn), currentState);
-                            // console.log(currentState);
-                            satBurn =this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
+                            satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
                             continue;
                         } else {
                             let phiI = phiMatrixWhole(this.burns[satBurn].time - t_calc),
                                 phiF = phiMatrixWhole(windowOptions.time_delta - (this.burns[satBurn]
                                     .time - t_calc));
                             currentState = math.multiply(phiI, currentState);
-                            currentState[3][0] +=this.burns[satBurn].direction.r;
-                            currentState[4][0] +=this.burns[satBurn].direction.i;
-                            currentState[5][0] +=this.burns[satBurn].direction.c;
+                            currentState[3][0] += this.burns[satBurn].direction.r;
+                            currentState[4][0] += this.burns[satBurn].direction.i;
+                            currentState[5][0] += this.burns[satBurn].direction.c;
                             currentState = math.multiply(phiF, currentState);
-                            satBurn =this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
+                            satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
                             t_calc += windowOptions.time_delta;
                             continue;
                         }
@@ -1517,107 +1510,6 @@
                 currentState = math.multiply(phiMain, currentState);
                 t_calc += windowOptions.time_delta;
             }
-        }
-        
-        function calcShownTrajectories(satCalc = 'all', cloneSatellite) {
-            let t_calc, currentState, satBurn;
-            phiMain = phiMatrixWhole(windowOptions.time_delta);
-            calcSatellites = satCalc !== 'none' ? satellites : [cloneSatellite]
-            calcSatellites.forEach((sat, ii) => {
-                if (satCalc === 'all' || satCalc === ii || satCalc === 'none') {
-                    sat.shownTraj = [];
-                    t_calc = 0;
-                    currentState = [
-                        [sat.position.r],
-                        [sat.position.i],
-                        [sat.position.c],
-                        [sat.position.rd],
-                        [sat.position.id],
-                        [sat.position.cd]
-                    ];
-                    satBurn = sat.burns.length > 0 ? 0 : undefined;
-                    while (t_calc <= windowOptions.scenario_length * 3600) {
-                        sat.shownTraj.push({
-                            r: currentState[0][0],
-                            i: currentState[1][0],
-                            c: currentState[2][0]
-                        });
-                        if (satBurn !== undefined) {
-                            if ((sat.burns[satBurn].time - t_calc) <= windowOptions.time_delta && (sat.burns[
-                                        satBurn].time <= windowOptions.scenario_time_des || !windowOptions
-                                    .showFinite)) {
-                                if (windowOptions.showFinite) {
-                                    let t_burn = math.norm([sat.burns[satBurn].direction.r, sat.burns[satBurn]
-                                        .direction.i, sat.burns[satBurn].direction.c
-                                    ]) / sat.a;
-                                    let position_start = math.multiply(phiMatrixWhole(sat.burns[satBurn].time -
-                                        t_calc), currentState);
-                                    let position_finite;
-                                    let n = 2 * Math.PI / 86164;
-                                    let alpha = math.atan2(sat.burns[satBurn].direction.i, sat.burns[satBurn]
-                                        .direction.r);
-                                    let phi_angle = math.atan2(sat.burns[satBurn].direction.c, math.norm([sat
-                                        .burns[satBurn].direction.r, sat.burns[satBurn].direction.i
-                                    ]));
-                                    while ((sat.burns[satBurn].time + t_burn - t_calc) > windowOptions
-                                        .time_delta) {
-                                        t_calc += windowOptions.time_delta;
-                                        position_finite = {
-                                            r: radialPosClosed(position_start[0][0], position_start[3][0],
-                                                position_start[4][0], sat.a, alpha, phi_angle, t_calc -
-                                                sat.burns[satBurn].time, n),
-                                            i: intrackPosClosed(position_start[0][0], position_start[3][0],
-                                                position_start[1][0], position_start[4][0], sat.a,
-                                                alpha, phi_angle, t_calc - sat.burns[satBurn].time, n),
-                                            c: crosstrackPosClosed(position_start[2][0], position_start[5][
-                                                    0], sat.a, phi_angle, t_calc - sat.burns[satBurn]
-                                                .time, n)
-                                        }
-                                        sat.shownTraj.push(position_finite);
-                                    }
-                                    t_calc += windowOptions.time_delta;
-                                    currentState = [
-                                        [radialPosClosed(position_start[0][0], position_start[3][0],
-                                            position_start[4][0], sat.a, alpha, phi_angle, t_burn, n)],
-                                        [intrackPosClosed(position_start[0][0], position_start[3][0],
-                                            position_start[1][0], position_start[4][0], sat.a, alpha,
-                                            phi_angle, t_burn, n)],
-                                        [crosstrackPosClosed(position_start[2][0], position_start[5][0], sat
-                                            .a, phi_angle, t_burn, n)],
-                                        [radialVelClosed(position_start[0][0], position_start[3][0],
-                                            position_start[4][0], sat.a, alpha, phi_angle, t_burn, n)],
-                                        [intrackVelClosed(position_start[0][0], position_start[3][0],
-                                            position_start[4][0], sat.a, alpha, phi_angle, t_burn, n)],
-                                        [crosstrackVelClosed(position_start[2][0], position_start[5][0], sat
-                                            .a, phi_angle, t_burn, n)]
-                                    ];
-                                    // console.log(currentState);
-                                    currentState = math.multiply(phiMatrixWhole(t_calc - sat.burns[satBurn]
-                                        .time - t_burn), currentState);
-                                    // console.log(currentState);
-                                    satBurn = sat.burns.length === satBurn + 1 ? undefined : satBurn + 1;
-                                    continue;
-                                } else {
-                                    let phiI = phiMatrixWhole(sat.burns[satBurn].time - t_calc),
-                                        phiF = phiMatrixWhole(windowOptions.time_delta - (sat.burns[satBurn]
-                                            .time - t_calc));
-                                    currentState = math.multiply(phiI, currentState);
-                                    currentState[3][0] += sat.burns[satBurn].direction.r;
-                                    currentState[4][0] += sat.burns[satBurn].direction.i;
-                                    currentState[5][0] += sat.burns[satBurn].direction.c;
-                                    currentState = math.multiply(phiF, currentState);
-                                    satBurn = sat.burns.length === satBurn + 1 ? undefined : satBurn + 1;
-                                    t_calc += windowOptions.time_delta;
-                                    continue;
-                                }
-                            }
-                        }
-                        currentState = math.multiply(phiMain, currentState);
-                        t_calc += windowOptions.time_delta;
-                    }
-                }
-            })
-            return calcSatellites[0];
         }
 
         function drawCurve(ctx, points, options = {}) {
@@ -2066,17 +1958,18 @@
 
         function radialVelClosed(x0, xd0, yd0, a0, alpha, phi, t, n) {
             return (Math.pow(n, 2) * xd0 * Math.cos(n * t) + 2 * a0 * n * Math.cos(phi) * Math.sin(alpha) - 2 * a0 * n *
-                    Math.cos(phi) * Math.cos(n * t) * Math.sin(alpha) + 3 * Math.pow(n, 3) * x0 * Math.sin(n * t) + 2 *
-                    Math.pow(n, 2) * yd0 * Math.sin(n * t) + a0 * n * Math.cos(alpha) * Math.cos(phi) * Math.sin(n * t)
-                    ) / Math.pow(n, 2);
+                Math.cos(phi) * Math.cos(n * t) * Math.sin(alpha) + 3 * Math.pow(n, 3) * x0 * Math.sin(n * t) + 2 *
+                Math.pow(n, 2) * yd0 * Math.sin(n * t) + a0 * n * Math.cos(alpha) * Math.cos(phi) * Math.sin(n * t)
+            ) / Math.pow(n, 2);
         }
 
         function intrackVelClosed(x0, xd0, yd0, a0, alpha, phi, t, n) {
             return (-12 * Math.pow(n, 3) * x0 - 6 * Math.pow(n, 2) * yd0 - 4 * a0 * n * Math.cos(alpha) * Math.cos(
-                phi) + 12 * Math.pow(n, 3) * x0 * Math.cos(n * t) + 8 * Math.pow(n, 2) * yd0 * Math.cos(n * t) + 4 *
+                    phi) + 12 * Math.pow(n, 3) * x0 * Math.cos(n * t) + 8 * Math.pow(n, 2) * yd0 * Math.cos(n * t) +
+                4 *
                 a0 * n * Math.cos(alpha) * Math.cos(phi) * Math.cos(n * t) - 6 * a0 * Math.pow(n, 2) * t * Math.cos(
                     phi) * Math.sin(alpha) - 4 * Math.pow(n, 2) * xd0 * Math.sin(n * t) + 8 * a0 * n * Math.cos(
-                phi) * Math.sin(alpha) * Math.sin(n * t)) / (2 * Math.pow(n, 2));
+                    phi) * Math.sin(alpha) * Math.sin(n * t)) / (2 * Math.pow(n, 2));
         }
 
         function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
