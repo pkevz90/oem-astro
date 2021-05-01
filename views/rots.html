@@ -285,22 +285,29 @@
                         id: 0
                     },
                     color: `rgb(${math.random() * 155},${math.random() * 155},${math.random() * 155})`,
-                    shape: Math.random() < 0.33 ? 'square' : Math.random() < 0.5 ? 'triangle' : 'up-triangle'
+                    shape: Math.random() < 0.33 ? 'square' : Math.random() < 0.5 ? 'triangle' :
+                        'up-triangle'
                 }))
             }
             if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
                 if (e.shiftKey || e.ctrlKey) {
-                    windowOptions.scenario_time_des += (e.key === ',' || e.key === '<' ? -1 : (e.ctrlKey ? 5 : 6)) * (e.ctrlKey ? 60 : 300);
+                    windowOptions.scenario_time_des += (e.key === ',' || e.key === '<' ? -1 : (e.ctrlKey ? 5 :
+                        6)) * (e.ctrlKey ? 60 : 300);
                     windowOptions.scenario_time = windowOptions.scenario_time_des + 0;
                     return;
                 }
-                mouseWheelFunction({deltaY: e.key === ',' || e.key === '<' ? 1 : -1});
+                mouseWheelFunction({
+                    deltaY: e.key === ',' || e.key === '<' ? 1 : -1
+                });
             }
             if (windowOptions.burn_status) {
                 let currentLocation = getCurrentPosition(satellites[windowOptions.burn_status.object].position,
                     satellites[windowOptions.burn_status.object].burns.slice(0, windowOptions.burn_status
-                        .burn), {time: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
-                        .burn].time, a: satellites[windowOptions.burn_status.object].a});
+                        .burn), {
+                        time: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
+                            .burn].time,
+                        a: satellites[windowOptions.burn_status.object].a
+                    });
                 let n = 2 * Math.PI / 86164,
                     desVel, dV;
                 switch (e.key) {
@@ -311,7 +318,8 @@
                             [-3 * currentLocation.r * n / 2], currentLocation.cd
                         ];
                         dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation
-                        .cd]);
+                            .cd
+                        ]);
                         satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn]
                             .direction = {
                                 r: dV[0][0],
@@ -327,7 +335,8 @@
                             [-4 * currentLocation.r * n / 2], currentLocation.cd
                         ];
                         dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation
-                        .cd]);
+                            .cd
+                        ]);
                         satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn]
                             .direction = {
                                 r: dV[0][0],
@@ -348,7 +357,8 @@
                             [-4 * currentLocation.r * n / 2], currentLocation.cd
                         ];
                         dV = math.subtract(desVel, [currentLocation.rd, currentLocation.id, currentLocation
-                        .cd]);
+                            .cd
+                        ]);
                         satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status.burn]
                             .direction = {
                                 r: dV[0][0],
@@ -404,7 +414,9 @@
             }
             satellites.forEach((sat, ii) => {
                 windowOptions.mousePosition.object = checkClose(windowOptions.mousePosition.ric,
-                        getCurrentPosition(sat.position, sat.burns, {a: sat.a}),
+                        getCurrentPosition(sat.position, sat.burns, {
+                            a: sat.a
+                        }),
                         windowOptions.mousePosition.screen === 'ci') ? ii : windowOptions.mousePosition
                     .object === false ? false : windowOptions.mousePosition.object;
             });
@@ -414,7 +426,10 @@
             // check burns to see if clicked on ones
             satellites.forEach((sat, ii) => {
                 for (let jj = sat.burns.length - 1; jj >= 0; jj--) {
-                    let burnLocation = getCurrentPosition(sat.position, sat.burns, {time: sat.burns[jj].time, a: sat.a});
+                    let burnLocation = getCurrentPosition(sat.position, sat.burns, {
+                        time: sat.burns[jj].time,
+                        a: sat.a
+                    });
                     if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions
                             .mousePosition.screen === 'ci')) {
                         if (event.ctrlKey) {
@@ -435,7 +450,10 @@
                             windowOptions.scenario_time_des += 7200;
                         }
                         let burnLocation = getCurrentPosition(satellites[ii].position, satellites[ii]
-                            .burns, {time: satellites[ii].burns[jj].time, a: sat.a});
+                            .burns, {
+                                time: satellites[ii].burns[jj].time,
+                                a: sat.a
+                            });
                         windowOptions.burn_status = {
                             object: ii,
                             burn: jj,
@@ -474,8 +492,11 @@
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn =>
                         burn.time === windowOptions.scenario_time);
                     let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object]
-                        .position, satellites[windowOptions.mousePosition.object].burns, {time: satellites[
-                            windowOptions.mousePosition.object].burns[burnN].time, a: satellites[windowOptions.mousePosition.object].a});
+                        .position, satellites[windowOptions.mousePosition.object].burns, {
+                            time: satellites[
+                                windowOptions.mousePosition.object].burns[burnN].time,
+                            a: satellites[windowOptions.mousePosition.object].a
+                        });
                     let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions
                         .maneuver_type;
                     if (type === 'waypoint') {
@@ -581,9 +602,12 @@
             let timeStep = el.parentNode.parentNode.children.item(0).children[6].children[0].value;
             let fps = el.parentNode.parentNode.children.item(0).children[7].children[0].value;
             let repeat = el.parentNode.parentNode.children.item(0).children[8].children[0].checked;
-            windowOptions.draw_style = el.parentNode.parentNode.children.item(1).children[3].children[0].checked ? 'line' : 'points';
-            windowOptions.showFinite = el.parentNode.parentNode.children.item(1).children[4].children[0].checked;
-            windowOptions.finiteTarget = el.parentNode.parentNode.children.item(1).children[5].children[0].checked;
+            windowOptions.draw_style = el.parentNode.parentNode.children.item(1).children[3].children[0]
+                .checked ? 'line' : 'points';
+            windowOptions.showFinite = el.parentNode.parentNode.children.item(1).children[4].children[0]
+            .checked;
+            windowOptions.finiteTarget = el.parentNode.parentNode.children.item(1).children[5].children[0]
+                .checked;
             calcShownTrajectories();
             encoder.setRepeat(repeat ? 0 : 1);
             encoder.setDelay(1000 / fps);
@@ -632,7 +656,10 @@
             waypoints[0].t = 0;
             sat.burns.forEach((burn, ii) => {
                 if (burn.time !== 0) {
-                    wayPos = getCurrentPosition(sat.position, sat.burns, {time: burn.time, a: sat.a});
+                    wayPos = getCurrentPosition(sat.position, sat.burns, {
+                        time: burn.time,
+                        a: sat.a
+                    });
                     waypoints.push({
                         t: burn.time,
                         r: wayPos.r[0],
@@ -641,8 +668,11 @@
                     });
                 }
             })
-            wayPos = getCurrentPosition(sat.position, sat.burns, {time: sat.burns.length > 0 ? sat.burns[sat.burns
-                .length - 1].time + 7200 : 7200, a: sat.a});
+            wayPos = getCurrentPosition(sat.position, sat.burns, {
+                time: sat.burns.length > 0 ? sat.burns[sat.burns
+                    .length - 1].time + 7200 : 7200,
+                a: sat.a
+            });
             let identWay = waypoints.findIndex((way, ii) => Math.abs(way.t - t) < 900);
             console.log(identWay);
             if (identWay !== -1) {
@@ -691,7 +721,7 @@
                 .width_des * 1.1;
             windowOptions.closeLimit = 0.0125 * windowOptions.width_des;
         }
-        
+
         function getMousePosition(mouseX, mouseY) {
             let plot = mouseY > (windowOptions.screen.ci_center + windowOptions.screen.ri_center) / 2 ? 'ci' : 'ri';
             let pixel = [mouseX, mouseY];
@@ -710,11 +740,14 @@
             windowOptions.scenario_time += (windowOptions.scenario_time_des - windowOptions.scenario_time) * 0.2;
             // Transition frames
             let mode = windowOptions.screen.mode;
-            windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : mode === 'ci only' ? -cnvs.height / 2 : cnvs.height / 4) - windowOptions
+            windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : mode === 'ci only' ? -cnvs
+                    .height / 2 : cnvs.height / 4) - windowOptions
                 .screen.ri_center) * 0.1;
-            windowOptions.screen.ci_center += ((mode === 'ri only' ? 3 * cnvs.height / 2 : mode === 'ci only' ? cnvs.height / 2 : 3 * cnvs.height / 4) -
+            windowOptions.screen.ci_center += ((mode === 'ri only' ? 3 * cnvs.height / 2 : mode === 'ci only' ? cnvs
+                    .height / 2 : 3 * cnvs.height / 4) -
                 windowOptions.screen.ci_center) * 0.1;
-            windowOptions.screen.lineHeight += ((mode === 'ri only' || mode === 'ci only' ? cnvs.height : cnvs.height / 2) - windowOptions
+            windowOptions.screen.lineHeight += ((mode === 'ri only' || mode === 'ci only' ? cnvs.height : cnvs.height /
+                    2) - windowOptions
                 .screen.lineHeight) * 0.1;
             if (windowOptions.mouseState) {
                 windowOptions.mousePosition.fill += (1 - windowOptions.mousePosition.fill) * 0.08;
@@ -749,7 +782,7 @@
                 ctx.fillText((windowOptions.mousePosition.screen === 'ci' ? 'C: ' : 'R:') + windowOptions.mousePosition
                     .ric[windowOptions.mousePosition.screen === 'ci' ? 'c' : 'r'].toFixed(2) + ' km    I: ' +
                     windowOptions.mousePosition.ric.i.toFixed(2) + ' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45
-                    );
+                );
             }
 
             // Draw Sun
@@ -834,21 +867,30 @@
             ctx.lineWidth = windowOptions.lineWidth;
             satellites.forEach((satellite, ii) => {
                 ctx.strokeStyle = satellite.color;
-                currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, {a: satellite.a});
+                currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, {
+                    a: satellite.a
+                });
+                let isBurning = false;
                 satellite.burns.forEach((burn, jj) => {
                     if (burn.time < windowOptions.scenario_time) {
+                        let burnTime = math.norm([burn.direction.i, burn.direction.r, burn.direction
+                            .c]) / satellite.a;
+                        let constant = (windowOptions.scenario_time - burn.time) / burnTime;
+                        isBurning = isBurning ? isBurning : constant < 1 && constant > 0.05 ?
+                            windowOptions.showFinite ? {
+                                constant,
+                                burn: jj
+                            } : false : false;
                         drawBurnArrow(burn, {
                             cross: false,
                             object: ii,
-                            constant: (windowOptions.scenario_time - burn.time) / windowOptions
-                                .full_burn_vis_time,
+                            constant,
                             trans: true
                         })
                         drawBurnArrow(burn, {
                             cross: true,
                             object: ii,
-                            constant: (windowOptions.scenario_time - burn.time) / windowOptions
-                                .full_burn_vis_time,
+                            constant,
                             trans: true
                         })
                         if ((windowOptions.scenario_time - burn.time) < windowOptions.passiveDropoff
@@ -871,19 +913,34 @@
                     }
                 })
                 ctx.strokeStyle = satellite.color;
+                let drawnTraj;
+                if (isBurning) {
+                    // console.log(isBurning);
+                    let burns = JSON.parse(JSON.stringify(satellite.burns));
+                    burns = burns.slice(0, isBurning.burn + 1);
+                    burns[burns.length - 1].direction = {
+                        r: burns[burns.length - 1].direction.r * isBurning.constant,
+                        i: burns[burns.length - 1].direction.i * isBurning.constant,
+                        c: burns[burns.length - 1].direction.c * isBurning.constant
+                    };
+                    let cloneSat = JSON.parse(JSON.stringify(satellites[ii]));
+                    cloneSat.burns = burns;
+                    // console.log(burns, satellite.burns);
+                    cloneSat = calcShownTrajectories('none', cloneSat);
+                    satellite.shownTraj = cloneSat.shownTraj;
+                }
+                // drawnTraj = windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(
+                //     0, math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
+                //     currentLocatinon);
+                drawnTraj = satellite.shownTraj;
                 if (windowOptions.screen.mode !== 'ri only') {
                     if (windowOptions.draw_style === 'line') {
-                        drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(
-                            0, math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
-                            currentLocatinon), {
+                        drawCurve(ctx, drawnTraj, {
                             ric: true,
                             cross: true
                         });
-                    }
-                    else {
-                        drawCurvePoints(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(
-                            0, math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
-                            currentLocatinon), {
+                    } else {
+                        drawCurvePoints(ctx, drawnTraj, {
                             ric: true,
                             cross: true,
                             color: satellite.color
@@ -896,17 +953,13 @@
                 }
                 ctx.strokeStyle = satellite.color;
                 if (windowOptions.draw_style === 'line') {
-                    drawCurve(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,
-                        math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
-                        currentLocatinon), {
+                    drawCurve(ctx, drawnTraj, {
                         ric: true
                     });
-                }
-                else {
-                    drawCurvePoints(ctx, windowOptions.burn_status ? satellite.shownTraj : satellite.shownTraj.slice(0,
-                        math.floor(windowOptions.scenario_time / windowOptions.time_delta)).concat(
-                        currentLocatinon), {
-                        ric: true, color: satellite.color
+                } else {
+                    drawCurvePoints(ctx, drawnTraj, {
+                        ric: true,
+                        color: satellite.color
                     });
                 }
                 drawBurns(satellite);
@@ -1028,7 +1081,9 @@
                     i: 0
                 }, data = false
             } = satellite;
-            let pixelPosition = ricToPixel(getCurrentPosition(satellite.position, satellite.burns, {a: satellite.a}), {
+            let pixelPosition = ricToPixel(getCurrentPosition(satellite.position, satellite.burns, {
+                a: satellite.a
+            }), {
                 cross
             });
             if (data) {
@@ -1107,7 +1162,8 @@
             } = options;
             let pointOut;
             let plotW = cnvs.width;
-            let plotH = ((windowOptions.screen.mode === 'ci only' ? -1 : 1) * windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2;
+            let plotH = ((windowOptions.screen.mode === 'ci only' ? -1 : 1) * windowOptions.screen.ri_center +
+                windowOptions.screen.ci_center) / 2;
             let hwr = windowOptions.screen.ri_h_w_ratio;
             if (cross) {
                 pointOut = [plotW / 2 - (point.i - windowOptions.origin_it) / windowOptions.width * plotW / 2, -point
@@ -1129,7 +1185,8 @@
 
         function pixelToRic(point = [0, 0], cross = false) {
             let plotW = cnvs.width;
-            let plotH = ((windowOptions.screen.mode === 'ci only' ? -1 : 1) * windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2;
+            let plotH = ((windowOptions.screen.mode === 'ci only' ? -1 : 1) * windowOptions.screen.ri_center +
+                windowOptions.screen.ci_center) / 2;
             let hwr = windowOptions.screen.ri_h_w_ratio;
             if (cross) {
                 return {
@@ -1177,7 +1234,10 @@
             }
             constant = constant > 1 ? 1 : constant;
             if (location === undefined) {
-                location = getCurrentPosition(satellites[object].position, satellites[object].burns, {time: burn.time, a: satellites[object].a});
+                location = getCurrentPosition(satellites[object].position, satellites[object].burns, {
+                    time: burn.time,
+                    a: satellites[object].a
+                });
             }
             let burnMag = math.norm([!cross ? burn.direction.r : 0, burn.direction.i, cross ? burn.direction.c : 0]);
             let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c : burn.direction.r) * 180 / Math.PI;
@@ -1251,44 +1311,59 @@
             c: 0,
             cd: 0
         }, burns = [], options) {
-            let {a = 0.00002, time = windowOptions.scenario_time, log = false} = options;
+            let {
+                a = 0.00002, time = windowOptions.scenario_time, log = false
+            } = options;
             if (windowOptions.showFinite) {
-                let t_prop = 0, phi, t_burn, alpha, phi_angle, n = 2 * Math.PI / 86164;
-                position = [[position.r],
-                            [position.i],
-                            [position.c],
-                            [position.rd],
-                            [position.id],
-                            [position.cd]];
+                let t_prop = 0,
+                    phi, t_burn, alpha, phi_angle, n = 2 * Math.PI / 86164;
+                position = [
+                    [position.r],
+                    [position.i],
+                    [position.c],
+                    [position.rd],
+                    [position.id],
+                    [position.cd]
+                ];
                 for (let n_burn = 0; n_burn < burns.length; n_burn++) {
                     if (time <= burns[n_burn].time) break;
                     position = math.multiply(phiMatrixWhole(burns[n_burn].time - t_prop), position);
                     t_prop = burns[n_burn].time;
-                    t_burn = math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i, burns[n_burn].direction.c]) / a;
+                    t_burn = math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i, burns[n_burn].direction
+                        .c]) / a;
                     alpha = math.atan2(burns[n_burn].direction.i, burns[n_burn].direction.r);
-                    phi_angle = math.atan2(burns[n_burn].direction.c, math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i]));
+                    phi_angle = math.atan2(burns[n_burn].direction.c, math.norm([burns[n_burn].direction.r, burns[
+                        n_burn].direction.i]));
                     if (log) console.log(t_prop, t_burn, time);
                     if ((t_prop + t_burn) > time) {
                         t_burn = time - t_prop;
                         return {
-                            r: [radialPosClosed(position[0][0],position[3][0],position[4][0],a,alpha,phi_angle,t_burn,n)],
-                            i: [intrackPosClosed(position[0][0],position[3][0],position[1][0],position[4][0],a,alpha,phi_angle,t_burn,n)],
-                            c: [crosstrackPosClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)],
-                            rd: [radialVelClosed(position[0][0], position[3][0], position[4][0],a,alpha, phi_angle,t_burn,n)],
-                            id: [intrackVelClosed(position[0][0], position[3][0], position[4][0],a,alpha, phi_angle,t_burn,n)],
-                            cd: [crosstrackVelClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)]
+                            r: [radialPosClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                                t_burn, n)],
+                            i: [intrackPosClosed(position[0][0], position[3][0], position[1][0], position[4][0], a,
+                                alpha, phi_angle, t_burn, n)],
+                            c: [crosstrackPosClosed(position[2][0], position[5][0], a, phi_angle, t_burn, n)],
+                            rd: [radialVelClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                                t_burn, n)],
+                            id: [intrackVelClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                                t_burn, n)],
+                            cd: [crosstrackVelClosed(position[2][0], position[5][0], a, phi_angle, t_burn, n)]
                         }
                     }
                     if (log) {
                         console.log(position);
                     }
                     position = [
-                        [radialPosClosed(position[0][0],position[3][0],position[4][0],a,alpha,phi_angle,t_burn,n)],
-                        [intrackPosClosed(position[0][0],position[3][0],position[1][0],position[4][0],a,alpha,phi_angle,t_burn,n)],
-                        [crosstrackPosClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)],
-                        [radialVelClosed(position[0][0], position[3][0], position[4][0],a,alpha, phi_angle,t_burn,n)],
-                        [intrackVelClosed(position[0][0], position[3][0], position[4][0],a,alpha, phi_angle,t_burn,n)],
-                        [crosstrackVelClosed(position[2][0],position[5][0],a,phi_angle,t_burn,n)]
+                        [radialPosClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                            t_burn, n)],
+                        [intrackPosClosed(position[0][0], position[3][0], position[1][0], position[4][0], a, alpha,
+                            phi_angle, t_burn, n)],
+                        [crosstrackPosClosed(position[2][0], position[5][0], a, phi_angle, t_burn, n)],
+                        [radialVelClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                            t_burn, n)],
+                        [intrackVelClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                            t_burn, n)],
+                        [crosstrackVelClosed(position[2][0], position[5][0], a, phi_angle, t_burn, n)]
                     ];
                     if (log) {
                         console.log(position);
@@ -1297,7 +1372,14 @@
                 }
                 phi = phiMatrixWhole(time - t_prop);
                 position = math.multiply(phi, position);
-                return {r: position[0], i: position[1], c: position[2], rd: position[3], id: position[4], cd: position[5]};
+                return {
+                    r: position[0],
+                    i: position[1],
+                    c: position[2],
+                    rd: position[3],
+                    id: position[4],
+                    cd: position[5]
+                };
             }
             let r = [
                     [position.r],
@@ -1366,34 +1448,37 @@
                 ]
             };
         }
-        
+
         function phiMatrixWhole(t = 0, n = 2 * Math.PI / 86164) {
             let nt = n * t;
             let cnt = Math.cos(nt);
             let snt = Math.sin(nt);
             return [
-                    [4 - 3 * cnt, 0, 0, snt / n, 2 * (1 - cnt) / n, 0],
-                    [6 * (snt - nt), 1, 0, 2 * (cnt - 1) / n, (4 * snt - 3 * nt) / n, 0],
-                    [0, 0, cnt, 0, 0, snt / n],
-                    [3 * n * snt, 0, 0, cnt, 2 * snt, 0],
-                    [6 * n * (cnt - 1), 0, 0, -2 * snt, 4 * cnt - 3, 0],
-                    [0, 0, -n * snt, 0, 0, cnt]
-                ];
+                [4 - 3 * cnt, 0, 0, snt / n, 2 * (1 - cnt) / n, 0],
+                [6 * (snt - nt), 1, 0, 2 * (cnt - 1) / n, (4 * snt - 3 * nt) / n, 0],
+                [0, 0, cnt, 0, 0, snt / n],
+                [3 * n * snt, 0, 0, cnt, 2 * snt, 0],
+                [6 * n * (cnt - 1), 0, 0, -2 * snt, 4 * cnt - 3, 0],
+                [0, 0, -n * snt, 0, 0, cnt]
+            ];
         }
 
-        function calcShownTrajectories(satCalc = 'all') {
+        function calcShownTrajectories(satCalc = 'all', cloneSatellite) {
             let t_calc, currentState, satBurn;
-            phiMain = phiMatrixWhole(windowOptions.time_delta); 
-            satellites.forEach((sat, ii) => {
-                if (satCalc === 'all' || satCalc === ii) {
+            phiMain = phiMatrixWhole(windowOptions.time_delta);
+            calcSatellites = satCalc !== 'none' ? satellites : [cloneSatellite]
+            calcSatellites.forEach((sat, ii) => {
+                if (satCalc === 'all' || satCalc === ii || satCalc === 'none') {
                     sat.shownTraj = [];
                     t_calc = 0;
-                    currentState = [[sat.position.r],
-                                    [sat.position.i],
-                                    [sat.position.c],
-                                    [sat.position.rd],
-                                    [sat.position.id],
-                                    [sat.position.cd]];
+                    currentState = [
+                        [sat.position.r],
+                        [sat.position.i],
+                        [sat.position.c],
+                        [sat.position.rd],
+                        [sat.position.id],
+                        [sat.position.cd]
+                    ];
                     satBurn = sat.burns.length > 0 ? 0 : undefined;
                     while (t_calc <= windowOptions.scenario_length * 3600) {
                         sat.shownTraj.push({
@@ -1402,41 +1487,64 @@
                             c: currentState[2][0]
                         });
                         if (satBurn !== undefined) {
-                            if ((sat.burns[satBurn].time - t_calc) <= windowOptions.time_delta) {
+                            if ((sat.burns[satBurn].time - t_calc) <= windowOptions.time_delta && (sat.burns[
+                                        satBurn].time <= windowOptions.scenario_time_des || !windowOptions
+                                    .showFinite)) {
                                 if (windowOptions.showFinite) {
-                                    let t_burn = math.norm([sat.burns[satBurn].direction.r, sat.burns[satBurn].direction.i, sat.burns[satBurn].direction.c]) / sat.a;
-                                    let position_start = math.multiply(phiMatrixWhole(sat.burns[satBurn].time - t_calc), currentState);
+                                    let t_burn = math.norm([sat.burns[satBurn].direction.r, sat.burns[satBurn]
+                                        .direction.i, sat.burns[satBurn].direction.c
+                                    ]) / sat.a;
+                                    let position_start = math.multiply(phiMatrixWhole(sat.burns[satBurn].time -
+                                        t_calc), currentState);
                                     let position_finite;
                                     let n = 2 * Math.PI / 86164;
-                                    let alpha = math.atan2(sat.burns[satBurn].direction.i, sat.burns[satBurn].direction.r);
-                                    let phi_angle = math.atan2(sat.burns[satBurn].direction.c, math.norm([sat.burns[satBurn].direction.r, sat.burns[satBurn].direction.i]));
-                                    while ((sat.burns[satBurn].time + t_burn - t_calc) > windowOptions.time_delta) {
+                                    let alpha = math.atan2(sat.burns[satBurn].direction.i, sat.burns[satBurn]
+                                        .direction.r);
+                                    let phi_angle = math.atan2(sat.burns[satBurn].direction.c, math.norm([sat
+                                        .burns[satBurn].direction.r, sat.burns[satBurn].direction.i
+                                    ]));
+                                    while ((sat.burns[satBurn].time + t_burn - t_calc) > windowOptions
+                                        .time_delta) {
                                         t_calc += windowOptions.time_delta;
                                         position_finite = {
-                                            r: radialPosClosed(position_start[0][0],position_start[3][0],position_start[4][0],sat.a,alpha,phi_angle,t_calc - sat.burns[satBurn].time,n),
-                                            i: intrackPosClosed(position_start[0][0],position_start[3][0],position_start[1][0],position_start[4][0],sat.a,alpha,phi_angle,t_calc - sat.burns[satBurn].time,n),
-                                            c: crosstrackPosClosed(position_start[2][0],position_start[5][0],sat.a,phi_angle,t_calc - sat.burns[satBurn].time,n)
+                                            r: radialPosClosed(position_start[0][0], position_start[3][0],
+                                                position_start[4][0], sat.a, alpha, phi_angle, t_calc -
+                                                sat.burns[satBurn].time, n),
+                                            i: intrackPosClosed(position_start[0][0], position_start[3][0],
+                                                position_start[1][0], position_start[4][0], sat.a,
+                                                alpha, phi_angle, t_calc - sat.burns[satBurn].time, n),
+                                            c: crosstrackPosClosed(position_start[2][0], position_start[5][
+                                                    0], sat.a, phi_angle, t_calc - sat.burns[satBurn]
+                                                .time, n)
                                         }
                                         sat.shownTraj.push(position_finite);
                                     }
                                     t_calc += windowOptions.time_delta;
                                     currentState = [
-                                        [radialPosClosed(position_start[0][0],position_start[3][0],position_start[4][0],sat.a,alpha,phi_angle,t_burn,n)],
-                                        [intrackPosClosed(position_start[0][0],position_start[3][0],position_start[1][0],position_start[4][0],sat.a,alpha,phi_angle,t_burn,n)],
-                                        [crosstrackPosClosed(position_start[2][0],position_start[5][0],sat.a,phi_angle,t_burn,n)],
-                                        [radialVelClosed(position_start[0][0], position_start[3][0], position_start[4][0],sat.a,alpha, phi_angle,t_burn,n)],
-                                        [intrackVelClosed(position_start[0][0], position_start[3][0], position_start[4][0],sat.a,alpha, phi_angle,t_burn,n)],
-                                        [crosstrackVelClosed(position_start[2][0],position_start[5][0],sat.a,phi_angle,t_burn,n)]
+                                        [radialPosClosed(position_start[0][0], position_start[3][0],
+                                            position_start[4][0], sat.a, alpha, phi_angle, t_burn, n)],
+                                        [intrackPosClosed(position_start[0][0], position_start[3][0],
+                                            position_start[1][0], position_start[4][0], sat.a, alpha,
+                                            phi_angle, t_burn, n)],
+                                        [crosstrackPosClosed(position_start[2][0], position_start[5][0], sat
+                                            .a, phi_angle, t_burn, n)],
+                                        [radialVelClosed(position_start[0][0], position_start[3][0],
+                                            position_start[4][0], sat.a, alpha, phi_angle, t_burn, n)],
+                                        [intrackVelClosed(position_start[0][0], position_start[3][0],
+                                            position_start[4][0], sat.a, alpha, phi_angle, t_burn, n)],
+                                        [crosstrackVelClosed(position_start[2][0], position_start[5][0], sat
+                                            .a, phi_angle, t_burn, n)]
                                     ];
-                                     // console.log(currentState);
-                                    currentState = math.multiply(phiMatrixWhole(t_calc - sat.burns[satBurn].time - t_burn), currentState);
+                                    // console.log(currentState);
+                                    currentState = math.multiply(phiMatrixWhole(t_calc - sat.burns[satBurn]
+                                        .time - t_burn), currentState);
                                     // console.log(currentState);
                                     satBurn = sat.burns.length === satBurn + 1 ? undefined : satBurn + 1;
                                     continue;
-                                }
-                                else {
+                                } else {
                                     let phiI = phiMatrixWhole(sat.burns[satBurn].time - t_calc),
-                                        phiF = phiMatrixWhole(windowOptions.time_delta - (sat.burns[satBurn].time - t_calc));
+                                        phiF = phiMatrixWhole(windowOptions.time_delta - (sat.burns[satBurn]
+                                            .time - t_calc));
                                     currentState = math.multiply(phiI, currentState);
                                     currentState[3][0] += sat.burns[satBurn].direction.r;
                                     currentState[4][0] += sat.burns[satBurn].direction.i;
@@ -1453,7 +1561,7 @@
                     }
                 }
             })
-            
+            return calcSatellites[0];
         }
 
         function drawCurve(ctx, points, options = {}) {
@@ -1524,7 +1632,7 @@
             let {
                 ric = false, cross = false, color = 'red'
             } = options;
-            
+
             let limit = {
                 min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
                 max: cross ? cnvs.height : (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
@@ -1539,11 +1647,11 @@
                         // ctx.fillStyle = 'white';
                         // ctx.fillRect(draw_point.x-2.5, draw_point.y-2.5, 5, 5);
                         ctx.fillStyle = color;
-                        ctx.fillRect(draw_point.x-1.5, draw_point.y-1.5, 3, 3);
+                        ctx.fillRect(draw_point.x - 1.5, draw_point.y - 1.5, 3, 3);
                     }
                 }
             })
-            
+
         }
 
         function drawBurns(satellite, options = {}) {
@@ -1557,7 +1665,10 @@
             }
             satellite.burns.forEach(burn => {
                 if (burn.time < windowOptions.scenario_time) {
-                    position = getCurrentPosition(satellite.position, satellite.burns, {time: burn.time, a: satellite.a});
+                    position = getCurrentPosition(satellite.position, satellite.burns, {
+                        time: burn.time,
+                        a: satellite.a
+                    });
                     position = ricToPixel(position, {
                         cross
                     });
@@ -1592,7 +1703,7 @@
                     };
                     r2 = {
                         x: windowOptions.mousePosition.ric.r,
-                        y: windowOptions.mousePosition.ric.i, 
+                        y: windowOptions.mousePosition.ric.i,
                         z: 0,
                         xd: 0,
                         yd: 0,
@@ -1604,7 +1715,7 @@
                         sat.burns[burn.burn].direction.r = dir.r;
                         sat.burns[burn.burn].direction.i = dir.i;
                         calcShownTrajectories(burn.object);
-                        
+
                     }
                     return;
                 }
@@ -1667,7 +1778,10 @@
             }
             satellites[object].burns.forEach((burn, ii) => {
                 addedElement = document.createElement('tr');
-                position = getCurrentPosition(satellites[object].position, satellites[object].burns, {time: burn.time, a: satellites[object].a});
+                position = getCurrentPosition(satellites[object].position, satellites[object].burns, {
+                    time: burn.time,
+                    a: satellites[object].a
+                });
                 addedElement.innerHTML = `
                     <td>${(burn.time / 3600).toFixed(1)} hrs</td>
                     <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
@@ -1677,9 +1791,13 @@
                 `;
                 table.appendChild(addedElement);
             });
-            position = getCurrentPosition(satellites[object].position, satellites[object].burns, {time: satellites[object]
-                .burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length - 1].time +
-                7200, a: satellites[object].a});
+            position = getCurrentPosition(satellites[object].position, satellites[object].burns, {
+                time: satellites[object]
+                    .burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length - 1]
+                    .time +
+                    7200,
+                a: satellites[object].a
+            });
             addedElement = document.createElement('tr');
             addedElement.innerHTML = `
                 <td>${((satellites[object].burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length-1].time + 7200) / 3600).toFixed(1)} hrs</td>
@@ -1700,7 +1818,10 @@
                     waypoints[0].t = 0;
                     sat.burns.forEach((burn, ii) => {
                         if (burn.time !== 0) {
-                            wayPos = getCurrentPosition(sat.position, sat.burns, {time: burn.time, a: sat.a});
+                            wayPos = getCurrentPosition(sat.position, sat.burns, {
+                                time: burn.time,
+                                a: sat.a
+                            });
                             waypoints.push({
                                 t: burn.time,
                                 r: wayPos.r[0],
@@ -1709,8 +1830,11 @@
                             });
                         }
                     })
-                    wayPos = getCurrentPosition(sat.position, sat.burns, {time: sat.burns.length > 0 ? sat.burns[sat
-                        .burns.length - 1].time + 7200 : 7200, a: sat.a});
+                    wayPos = getCurrentPosition(sat.position, sat.burns, {
+                        time: sat.burns.length > 0 ? sat.burns[sat
+                            .burns.length - 1].time + 7200 : 7200,
+                        a: sat.a
+                    });
                     waypoints.push({
                         t: (sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200),
                         r: wayPos.r[0],
@@ -1748,11 +1872,14 @@
                         if (sat.burns.length === 0) {
                             generateTable(document.getElementById('satellite-way-select').value);
                             calcShownTrajectories(Number(document.getElementById('satellite-way-select')
-                            .value));
+                                .value));
                             return;
                         }
                         if (sat.burns[0].time !== 0) {
-                            wayPos = getCurrentPosition(sat.position, sat.burns, {time: sat.burns[0].time, a: sat.a});
+                            wayPos = getCurrentPosition(sat.position, sat.burns, {
+                                time: sat.burns[0].time,
+                                a: sat.a
+                            });
                             waypoints[1] = {
                                 t: sat.burns[0].time,
                                 r: wayPos.r[0],
@@ -1855,83 +1982,135 @@
 
             fileReader.readAsText(fileToLoad, "UTF-8");
         }
-    
-        function radialPosClosed(x0,xd0,yd0,a0,alpha,phi,t,n) {
+
+        function radialPosClosed(x0, xd0, yd0, a0, alpha, phi, t, n) {
             // alpha measured clockwise from +R
             // phi measured clockwise from -I
-            return (4*Math.pow(n,2)*x0+2*n*yd0-3*Math.pow(n,2)*x0*Math.cos(n*t)-2*n*yd0*Math.cos(n*t)-a0*Math.cos(alpha)*Math.cos(phi)*Math.cos(n*t)+a0*Math.cos(alpha)*Math.cos(phi)*Math.pow(Math.cos(n*t),2)+2*a0*n*t*Math.cos(phi)*Math.sin(alpha)+n*xd0*Math.sin(n*t)-2*a0*Math.cos(phi)*Math.sin(alpha)*Math.sin(n*t)+a0*Math.cos(alpha)*Math.cos(phi)*Math.pow(Math.sin(n*t),2))/Math.pow(n,2);
+            return (4 * Math.pow(n, 2) * x0 + 2 * n * yd0 - 3 * Math.pow(n, 2) * x0 * Math.cos(n * t) - 2 * n * yd0 *
+                Math.cos(n * t) - a0 * Math.cos(alpha) * Math.cos(phi) * Math.cos(n * t) + a0 * Math.cos(alpha) *
+                Math.cos(phi) * Math.pow(Math.cos(n * t), 2) + 2 * a0 * n * t * Math.cos(phi) * Math.sin(alpha) +
+                n * xd0 * Math.sin(n * t) - 2 * a0 * Math.cos(phi) * Math.sin(alpha) * Math.sin(n * t) + a0 * Math
+                .cos(alpha) * Math.cos(phi) * Math.pow(Math.sin(n * t), 2)) / Math.pow(n, 2);
         }
 
-        function intrackPosClosed(x0,xd0,y0,yd0,a0,alpha,phi,t,n) {
-            return (-12*Math.pow(n,3)*t*x0-4*n*xd0+2*Math.pow(n,2)*y0-6*Math.pow(n,2)*t*yd0-4*a0*n*t*Math.cos(alpha)*Math.cos(phi)+4*n*xd0*Math.cos(n*t)-3*a0*Math.pow(n,2)*Math.pow(t,2)*Math.cos(phi)*Math.sin(alpha)-8*a0*Math.cos(phi)*Math.cos(n*t)*Math.sin(alpha)+8*a0*Math.cos(phi)*Math.pow(Math.cos(n*t),2)*Math.sin(alpha)+12*Math.pow(n,2)*x0*Math.sin(n*t)+8*n*yd0*Math.sin(n*t)+4*a0*Math.cos(alpha)*Math.cos(phi)*Math.sin(n*t)+8*a0*Math.cos(phi)*Math.sin(alpha)*Math.pow(Math.sin(n*t),2))/(2*Math.pow(n,2));
+        function intrackPosClosed(x0, xd0, y0, yd0, a0, alpha, phi, t, n) {
+            return (-12 * Math.pow(n, 3) * t * x0 - 4 * n * xd0 + 2 * Math.pow(n, 2) * y0 - 6 * Math.pow(n, 2) * t *
+                yd0 - 4 * a0 * n * t * Math.cos(alpha) * Math.cos(phi) + 4 * n * xd0 * Math.cos(n * t) - 3 * a0 *
+                Math.pow(n, 2) * Math.pow(t, 2) * Math.cos(phi) * Math.sin(alpha) - 8 * a0 * Math.cos(phi) * Math
+                .cos(n * t) * Math.sin(alpha) + 8 * a0 * Math.cos(phi) * Math.pow(Math.cos(n * t), 2) * Math.sin(
+                    alpha) + 12 * Math.pow(n, 2) * x0 * Math.sin(n * t) + 8 * n * yd0 * Math.sin(n * t) + 4 * a0 *
+                Math.cos(alpha) * Math.cos(phi) * Math.sin(n * t) + 8 * a0 * Math.cos(phi) * Math.sin(alpha) * Math
+                .pow(Math.sin(n * t), 2)) / (2 * Math.pow(n, 2));
         }
 
-        function crosstrackPosClosed(z0,zd0,a0,phi,t,n) {
-            return (Math.pow(n,2)*z0*Math.cos(n*t)+a0*Math.sin(phi)-a0*Math.cos(n*t)*Math.sin(phi)+n*zd0*Math.sin(n*t))/Math.pow(n,2);
+        function crosstrackPosClosed(z0, zd0, a0, phi, t, n) {
+            return (Math.pow(n, 2) * z0 * Math.cos(n * t) + a0 * Math.sin(phi) - a0 * Math.cos(n * t) * Math.sin(phi) +
+                n * zd0 * Math.sin(n * t)) / Math.pow(n, 2);
         }
 
-        function radialVelClosed(x0,xd0,yd0,a0,alpha,phi,t,n) {
-            return (Math.pow(n,2)*xd0*Math.cos(n*t)+2*a0*n*Math.cos(phi)*Math.sin(alpha)-2*a0*n*Math.cos(phi)*Math.cos(n*t)*Math.sin(alpha)+3*Math.pow(n,3)*x0*Math.sin(n*t)+2*Math.pow(n,2)*yd0*Math.sin(n*t)+a0*n*Math.cos(alpha)*Math.cos(phi)*Math.sin(n*t))/Math.pow(n,2);
+        function radialVelClosed(x0, xd0, yd0, a0, alpha, phi, t, n) {
+            return (Math.pow(n, 2) * xd0 * Math.cos(n * t) + 2 * a0 * n * Math.cos(phi) * Math.sin(alpha) - 2 * a0 * n *
+                    Math.cos(phi) * Math.cos(n * t) * Math.sin(alpha) + 3 * Math.pow(n, 3) * x0 * Math.sin(n * t) + 2 *
+                    Math.pow(n, 2) * yd0 * Math.sin(n * t) + a0 * n * Math.cos(alpha) * Math.cos(phi) * Math.sin(n * t)
+                    ) / Math.pow(n, 2);
         }
 
-        function intrackVelClosed(x0,xd0,yd0,a0,alpha,phi,t,n) {
-            return (-12*Math.pow(n,3)*x0-6*Math.pow(n,2)*yd0-4*a0*n*Math.cos(alpha)*Math.cos(phi)+12*Math.pow(n,3)*x0*Math.cos(n*t)+8*Math.pow(n,2)*yd0*Math.cos(n*t)+4*a0*n*Math.cos(alpha)*Math.cos(phi)*Math.cos(n*t)-6*a0*Math.pow(n,2)*t*Math.cos(phi)*Math.sin(alpha)-4*Math.pow(n,2)*xd0*Math.sin(n*t)+8*a0*n*Math.cos(phi)*Math.sin(alpha)*Math.sin(n*t))/(2*Math.pow(n,2));
+        function intrackVelClosed(x0, xd0, yd0, a0, alpha, phi, t, n) {
+            return (-12 * Math.pow(n, 3) * x0 - 6 * Math.pow(n, 2) * yd0 - 4 * a0 * n * Math.cos(alpha) * Math.cos(
+                phi) + 12 * Math.pow(n, 3) * x0 * Math.cos(n * t) + 8 * Math.pow(n, 2) * yd0 * Math.cos(n * t) + 4 *
+                a0 * n * Math.cos(alpha) * Math.cos(phi) * Math.cos(n * t) - 6 * a0 * Math.pow(n, 2) * t * Math.cos(
+                    phi) * Math.sin(alpha) - 4 * Math.pow(n, 2) * xd0 * Math.sin(n * t) + 8 * a0 * n * Math.cos(
+                phi) * Math.sin(alpha) * Math.sin(n * t)) / (2 * Math.pow(n, 2));
         }
 
-        function crosstrackVelClosed(z0,zd0,a0,phi,t,n) {
-            return (Math.pow(n,2)*zd0*Math.cos(n*t)-Math.pow(n,3)*z0*Math.sin(n*t)+a0*n*Math.sin(phi)*Math.sin(n*t))/Math.pow(n,2);
+        function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
+            return (Math.pow(n, 2) * zd0 * Math.cos(n * t) - Math.pow(n, 3) * z0 * Math.sin(n * t) + a0 * n * Math.sin(
+                phi) * Math.sin(n * t)) / Math.pow(n, 2);
         }
-    
+
         function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 86164) {
-            state = [[stateInit.x],[stateInit.y],[stateInit.z],[stateInit.xd],[stateInit.yd],[stateInit.zd]];
-            stateFinal = [[stateFinal.x],[stateFinal.y],[stateFinal.z],[stateFinal.xd],[stateFinal.yd],[stateFinal.zd]];
-            let v = proxOpsTargeter(state.slice(0,3),stateFinal.slice(0,3),tf);
-            let v1 = v[0], yErr,S,dX = 1,F;
-            let dv1 = math.subtract(v1,state.slice(3,6));
+            state = [
+                [stateInit.x],
+                [stateInit.y],
+                [stateInit.z],
+                [stateInit.xd],
+                [stateInit.yd],
+                [stateInit.zd]
+            ];
+            stateFinal = [
+                [stateFinal.x],
+                [stateFinal.y],
+                [stateFinal.z],
+                [stateFinal.xd],
+                [stateFinal.yd],
+                [stateFinal.zd]
+            ];
+            let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
+            let v1 = v[0],
+                yErr, S, dX = 1,
+                F;
+            let dv1 = math.subtract(v1, state.slice(3, 6));
             // console.log(state, stateFinal, v1, dv1);
             // [alpha - in plane angle, phi - out of plane angle, tB - total burn time %]
-            let Xret = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf]];
+            let Xret = [
+                [Math.atan2(dv1[1][0], dv1[0][0])],
+                [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
+                [math.norm(math.squeeze(dv1)) / a0 / tf]
+            ];
             let X = Xret.slice();
             if (X[2] > 1) {
                 return false;
             }
             let errCount = 0;
-            while (math.norm(math.squeeze(dX)) > 1e-6){
-                F = oneBurnFiniteHcw (stateInit,X[0][0],X[1][0],X[2][0],tf,a0,n);
-                yErr = [[stateFinal[0][0]-F.x],[stateFinal[1][0]-F.y],[stateFinal[2][0]-F.z]];
-                S = proxOpsJacobianOneBurn(stateInit,a0,X[0][0],X[1][0],X[2][0],tf,n);
-                dX = math.multiply(math.inv(S),yErr);
+            while (math.norm(math.squeeze(dX)) > 1e-6) {
+                F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, a0, n);
+                yErr = [
+                    [stateFinal[0][0] - F.x],
+                    [stateFinal[1][0] - F.y],
+                    [stateFinal[2][0] - F.z]
+                ];
+                S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, n);
+                dX = math.multiply(math.inv(S), yErr);
                 // console.log(X,F)
-                X = math.add(X,dX)
+                X = math.add(X, dX)
                 if (errCount > 30) {
                     // console.log(X)
                     return false;
                 }
                 errCount++;
             }
-            return {r: a0 * X[2] * tf * Math.cos(X[0][0]) * Math.cos(X[1][0]), i: a0 * X[2] * tf * Math.sin(X[0][0]) * Math.cos(X[1][0]), c: a0 * X[2] * tf * Math.sin(X[1][0]), t: X[2]}
+            return {
+                r: a0 * X[2] * tf * Math.cos(X[0][0]) * Math.cos(X[1][0]),
+                i: a0 * X[2] * tf * Math.sin(X[0][0]) * Math.cos(X[1][0]),
+                c: a0 * X[2] * tf * Math.sin(X[1][0]),
+                t: X[2]
+            }
             // return [Xret,X];
         }
-        function oneBurnFiniteHcw (state,alpha,phi,tB,t,a0,n) {
+
+        function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0, n) {
             if (n === undefined) {
-                n = 2*Math.PI/86164;
+                n = 2 * Math.PI / 86164;
             }
-            x0 = state.x; xd0 = state.xd;
-            y0 = state.y; yd0 = state.yd;
-            z0 = state.z; zd0 = state.zd;
+            x0 = state.x;
+            xd0 = state.xd;
+            y0 = state.y;
+            yd0 = state.yd;
+            z0 = state.z;
+            zd0 = state.zd;
             // console.log(x0,y0,z0)
-            let xM = radialPosClosed(x0,xd0,yd0,a0,alpha,phi,tB*t,n);
-            let xdM = radialVelClosed(x0,xd0,yd0,a0,alpha,phi,tB*t,n);
-            let yM = intrackPosClosed(x0,xd0,y0,yd0,a0,alpha,phi,tB*t,n);
-            let ydM = intrackVelClosed(x0,xd0,yd0,a0,alpha,phi,tB*t,n);
-            let zM = crosstrackPosClosed(z0,zd0,a0,phi,tB*t,n);
-            let zdM = crosstrackVelClosed(z0,zd0,a0,phi,tB*t,n);
-            let xF = radialPosClosed(xM,xdM,ydM,0,0,0,t-tB*t,n);
-            let xdF = radialVelClosed(xM,xdM,ydM,0,0,0,t-tB*t,n);
-            let yF = intrackPosClosed(xM,xdM,yM,ydM,0,0,0,t-tB*t,n);
-            let ydF = intrackVelClosed(xM,xdM,ydM,0,0,0,t-tB*t,n);
-            let zF = crosstrackPosClosed(zM,zdM,0,0,t-tB*t,n);
-            let zdF = crosstrackVelClosed(zM,zdM,0,0,t-tB*t,n);
+            let xM = radialPosClosed(x0, xd0, yd0, a0, alpha, phi, tB * t, n);
+            let xdM = radialVelClosed(x0, xd0, yd0, a0, alpha, phi, tB * t, n);
+            let yM = intrackPosClosed(x0, xd0, y0, yd0, a0, alpha, phi, tB * t, n);
+            let ydM = intrackVelClosed(x0, xd0, yd0, a0, alpha, phi, tB * t, n);
+            let zM = crosstrackPosClosed(z0, zd0, a0, phi, tB * t, n);
+            let zdM = crosstrackVelClosed(z0, zd0, a0, phi, tB * t, n);
+            let xF = radialPosClosed(xM, xdM, ydM, 0, 0, 0, t - tB * t, n);
+            let xdF = radialVelClosed(xM, xdM, ydM, 0, 0, 0, t - tB * t, n);
+            let yF = intrackPosClosed(xM, xdM, yM, ydM, 0, 0, 0, t - tB * t, n);
+            let ydF = intrackVelClosed(xM, xdM, ydM, 0, 0, 0, t - tB * t, n);
+            let zF = crosstrackPosClosed(zM, zdM, 0, 0, t - tB * t, n);
+            let zdF = crosstrackVelClosed(zM, zdM, 0, 0, t - tB * t, n);
             return {
                 x: xF,
                 y: yF,
@@ -1942,79 +2121,110 @@
             };
 
         }
-        function proxOpsJacobianOneBurn(state,a,alpha,phi,tB,tF,n){
-            let m1,m2,mC,mFinal=[];
+
+        function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
+            let m1, m2, mC, mFinal = [];
             //alpha
-            m1 = oneBurnFiniteHcw (state,alpha,phi,tB,tF,a,n);
-            m1 = [[m1.x],
+            m1 = oneBurnFiniteHcw(state, alpha, phi, tB, tF, a, n);
+            m1 = [
+                [m1.x],
                 [m1.y],
-                [m1.z]];
-            m2 = oneBurnFiniteHcw (state,alpha+0.01,phi,tB,tF,a,n);
-            m2 = [[m2.x],
+                [m1.z]
+            ];
+            m2 = oneBurnFiniteHcw(state, alpha + 0.01, phi, tB, tF, a, n);
+            m2 = [
+                [m2.x],
                 [m2.y],
-                [m2.z]];
+                [m2.z]
+            ];
             // console.log(m1,m2)
-            mC = math.dotDivide(math.subtract(m2,m1),0.01);
+            mC = math.dotDivide(math.subtract(m2, m1), 0.01);
             mFinal = mC;
             //phi
-            m1 = oneBurnFiniteHcw (state,alpha,phi,tB,tF,a,n);
-            m1 = [[m1.x],
+            m1 = oneBurnFiniteHcw(state, alpha, phi, tB, tF, a, n);
+            m1 = [
+                [m1.x],
                 [m1.y],
-                [m1.z]];
-            m2 = oneBurnFiniteHcw (state,alpha,phi+0.01,tB,tF,a,n);
-            m2 = [[m2.x],
+                [m1.z]
+            ];
+            m2 = oneBurnFiniteHcw(state, alpha, phi + 0.01, tB, tF, a, n);
+            m2 = [
+                [m2.x],
                 [m2.y],
-                [m2.z]];
-            m = math.dotDivide(math.subtract(m2,m1),0.01);
-            mC = math.concat(mC,m);
+                [m2.z]
+            ];
+            m = math.dotDivide(math.subtract(m2, m1), 0.01);
+            mC = math.concat(mC, m);
             //tB
-            m1 = oneBurnFiniteHcw (state,alpha,phi,tB,tF,a,n);
-            m1 = [[m1.x],
+            m1 = oneBurnFiniteHcw(state, alpha, phi, tB, tF, a, n);
+            m1 = [
+                [m1.x],
                 [m1.y],
-                [m1.z]];
-            m2 = oneBurnFiniteHcw (state,alpha,phi,tB+0.01,tF,a,n);
-            m2 = [[m2.x],
+                [m1.z]
+            ];
+            m2 = oneBurnFiniteHcw(state, alpha, phi, tB + 0.01, tF, a, n);
+            m2 = [
+                [m2.x],
                 [m2.y],
-                [m2.z]];
-            m = math.dotDivide(math.subtract(m2,m1),0.01);
-            mC = math.concat(mC,m);
+                [m2.z]
+            ];
+            m = math.dotDivide(math.subtract(m2, m1), 0.01);
+            mC = math.concat(mC, m);
             return mC;
         }
-        function proxOpsTargeter(r1,r2,t) {   
-            v1 = math.multiply(math.inv(PhiRV3d(t)),math.subtract(r2,math.multiply(PhiRR3d(t),r1)));
-            v2 = math.add(math.multiply(PhiVR3d(t),r1),math.multiply(PhiVV3d(t),v1));
-            return [v1,v2];
-        }
-        function PhiRR3d(t,n){
-            if (n === undefined){
-                n = 2*Math.PI/86164;
-            }
-            let nt = n*t;
-            return [[4-3*Math.cos(nt),0,0],[6*(Math.sin(nt)-nt), 1,0],[0,0,Math.cos(nt)]];
+
+        function proxOpsTargeter(r1, r2, t) {
+            v1 = math.multiply(math.inv(PhiRV3d(t)), math.subtract(r2, math.multiply(PhiRR3d(t), r1)));
+            v2 = math.add(math.multiply(PhiVR3d(t), r1), math.multiply(PhiVV3d(t), v1));
+            return [v1, v2];
         }
 
-        function PhiRV3d(t,n){
-            if (n === undefined){
-                n = 2*Math.PI/86164;
+        function PhiRR3d(t, n) {
+            if (n === undefined) {
+                n = 2 * Math.PI / 86164;
             }
-            let nt = n*t;
-            return [[Math.sin(nt)/n, 2*(1-Math.cos(nt))/n,0],[(Math.cos(nt)-1)*2/n, (4*Math.sin(nt)-3*nt)/n,0],[0,0,Math.sin(nt)/n]];
+            let nt = n * t;
+            return [
+                [4 - 3 * Math.cos(nt), 0, 0],
+                [6 * (Math.sin(nt) - nt), 1, 0],
+                [0, 0, Math.cos(nt)]
+            ];
         }
 
-        function PhiVR3d(t,n){
-            if (n === undefined){
-                n = 2*Math.PI/86164;
+        function PhiRV3d(t, n) {
+            if (n === undefined) {
+                n = 2 * Math.PI / 86164;
             }
-            let nt = n*t;
-            return [[3*n*Math.sin(nt), 0, 0],[6*n*(Math.cos(nt)-1), 0, 0],[0,0,-n*Math.sin(nt)]];
+            let nt = n * t;
+            return [
+                [Math.sin(nt) / n, 2 * (1 - Math.cos(nt)) / n, 0],
+                [(Math.cos(nt) - 1) * 2 / n, (4 * Math.sin(nt) - 3 * nt) / n, 0],
+                [0, 0, Math.sin(nt) / n]
+            ];
         }
 
-        function PhiVV3d(t,n){
-            if (n === undefined){
-                n = 2*Math.PI/86164;
+        function PhiVR3d(t, n) {
+            if (n === undefined) {
+                n = 2 * Math.PI / 86164;
             }
-            let nt = n*t;
-            return [[Math.cos(nt), 2*Math.sin(nt), 0],[-2*Math.sin(nt), 4*Math.cos(nt)-3, 0],[0,0,Math.cos(nt)]];
+            let nt = n * t;
+            return [
+                [3 * n * Math.sin(nt), 0, 0],
+                [6 * n * (Math.cos(nt) - 1), 0, 0],
+                [0, 0, -n * Math.sin(nt)]
+            ];
+        }
+
+        function PhiVV3d(t, n) {
+            if (n === undefined) {
+                n = 2 * Math.PI / 86164;
+            }
+            let nt = n * t;
+            return [
+                [Math.cos(nt), 2 * Math.sin(nt), 0],
+                [-2 * Math.sin(nt), 4 * Math.cos(nt) - 3, 0],
+                [0, 0, Math.cos(nt)]
+            ];
         }
     </script>
 </body>
