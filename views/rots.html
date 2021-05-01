@@ -374,7 +374,7 @@
                         windowOptions.screen.mode = 'ri ci';
                         break;
                     case 'ri ci':
-                        windowOptions.screen.mode = 'ri only';
+                        windowOptions.screen.mode = 'ci only';
                         break;
                     case 'ci only':
                         windowOptions.screen.mode = 'ri only';
@@ -710,11 +710,11 @@
             windowOptions.scenario_time += (windowOptions.scenario_time_des - windowOptions.scenario_time) * 0.2;
             // Transition frames
             let mode = windowOptions.screen.mode;
-            windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : cnvs.height / 4) - windowOptions
+            windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : mode === 'ci only' ? -cnvs.height / 2 : cnvs.height / 4) - windowOptions
                 .screen.ri_center) * 0.1;
-            windowOptions.screen.ci_center += ((mode === 'ri only' ? 3 * cnvs.height / 2 : 3 * cnvs.height / 4) -
+            windowOptions.screen.ci_center += ((mode === 'ri only' ? 3 * cnvs.height / 2 : mode === 'ci only' ? cnvs.height / 2 : 3 * cnvs.height / 4) -
                 windowOptions.screen.ci_center) * 0.1;
-            windowOptions.screen.lineHeight += ((mode === 'ri only' ? cnvs.height : cnvs.height / 2) - windowOptions
+            windowOptions.screen.lineHeight += ((mode === 'ri only' || mode === 'ci only' ? cnvs.height : cnvs.height / 2) - windowOptions
                 .screen.lineHeight) * 0.1;
             if (windowOptions.mouseState) {
                 windowOptions.mousePosition.fill += (1 - windowOptions.mousePosition.fill) * 0.08;
@@ -1107,7 +1107,7 @@
             } = options;
             let pointOut;
             let plotW = cnvs.width;
-            let plotH = (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2;
+            let plotH = ((windowOptions.screen.mode === 'ci only' ? -1 : 1) * windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2;
             let hwr = windowOptions.screen.ri_h_w_ratio;
             if (cross) {
                 pointOut = [plotW / 2 - (point.i - windowOptions.origin_it) / windowOptions.width * plotW / 2, -point
@@ -1129,7 +1129,7 @@
 
         function pixelToRic(point = [0, 0], cross = false) {
             let plotW = cnvs.width;
-            let plotH = (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2;
+            let plotH = ((windowOptions.screen.mode === 'ci only' ? -1 : 1) * windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2;
             let hwr = windowOptions.screen.ri_h_w_ratio;
             if (cross) {
                 return {
