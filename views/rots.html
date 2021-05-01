@@ -278,12 +278,14 @@
                 satellites.push(newSatellite({
                     position: {
                         r: 0,
-                        i: 25,
+                        i: Math.random() * 100 - 50,
                         c: 10,
                         cd: 0,
                         rd: 0,
                         id: 0
-                    }
+                    },
+                    color: `rgb(${math.random() * 155},${math.random() * 155},${math.random() * 155})`,
+                    shape: Math.random() < 0.33 ? 'square' : Math.random() < 0.5 ? 'triangle' : 'up-triangle'
                 }))
             }
             if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
@@ -363,6 +365,7 @@
                 calcShownTrajectories(windowOptions.burn_status.object)
                 windowOptions.burn_status = false;
                 windowOptions.mouseState = false;
+                windowOptions.frame_move = false;
                 return;
             }
             if (e.key === ' ') {
@@ -1533,8 +1536,8 @@
                         cross
                     });
                     if (draw_point.y < limit.max && draw_point.y > limit.min) {
-                        ctx.fillStyle = 'white';
-                        ctx.fillRect(draw_point.x-2.5, draw_point.y-2.5, 5, 5);
+                        // ctx.fillStyle = 'white';
+                        // ctx.fillRect(draw_point.x-2.5, draw_point.y-2.5, 5, 5);
                         ctx.fillStyle = color;
                         ctx.fillRect(draw_point.x-1.5, draw_point.y-1.5, 3, 3);
                     }
