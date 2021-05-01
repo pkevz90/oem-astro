@@ -274,6 +274,18 @@
         animation();
         window.addEventListener("resize", formatCanvas)
         window.addEventListener("keydown", e => {
+            if (e.shiftKey && e.ctrlKey && e.key === 'S') {
+                satellites.push(newSatellite({
+                    position: {
+                        r: 0,
+                        i: 25,
+                        c: 10,
+                        cd: 0,
+                        rd: 0,
+                        id: 0
+                    }
+                }))
+            }
             if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
                 if (e.shiftKey || e.ctrlKey) {
                     windowOptions.scenario_time_des += (e.key === ',' || e.key === '<' ? -1 : (e.ctrlKey ? 5 : 6)) * (e.ctrlKey ? 60 : 300);
@@ -1585,12 +1597,13 @@
                     };
                     let dir = hcwFiniteBurnOneBurn(r1, r2, windowOptions.burn_status.time, sat.a);
                     // console.log(dir);
-                    if (dir && (dir.t > 0 || dir.t < 1)) {
+                    if (dir && dir.t > 0 && dir.t < 1) {
                         sat.burns[burn.burn].direction.r = dir.r;
                         sat.burns[burn.burn].direction.i = dir.i;
                         calcShownTrajectories(burn.object);
-                        return;
+                        
                     }
+                    return;
                 }
                 r1 = [windowOptions.burn_status.burnLocation.r, windowOptions.burn_status.burnLocation.i, [0]],
                     r1_2 = r1;
