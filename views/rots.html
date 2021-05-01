@@ -18,7 +18,7 @@
         <canvas id="main-plot"></canvas>
     </div>
     <div id="time-slider">
-        <input id="time-slider-range" type="range" min=0.1 max=86164 step=0.1 value=0>
+        <input id="time-slider-range" type="range" min=0 max=86164 step=0.1 value=0>
     </div>
     <div id="add-satellite" class="noselect hoverable" title="Add Satellite">
         +
@@ -268,7 +268,8 @@
                 shownTraj,
                 a,
                 completedBurn: false,
-                calcTraj: calcSatShownTrajectories
+                calcTraj: calcSatShownTrajectories,
+                burnsDrawn: 0
             };
         }
         satellites = [];
@@ -873,16 +874,16 @@
                 });
                 let isBurning = false;
                 satellite.burns.forEach((burn, jj) => {
-                    if (burn.time < windowOptions.scenario_time) {
+                    if (burn.time <= windowOptions.scenario_time_des) {
                         let burnTime = math.norm([burn.direction.i, burn.direction.r, burn.direction
                             .c
                         ]) / satellite.a;
-                        let constant = (windowOptions.scenario_time - burn.time) / burnTime;
-                        isBurning = isBurning ? isBurning : constant < 1 && constant > 0.05 ? {
+                        let constant = (windowOptions.scenario_time_des - burn.time) / burnTime;
+                        isBurning = isBurning ? isBurning : constant < 1 && constant >= -1e-6 ? {
                             constant,
                             burn: jj
                         } : false;
-                        satellite.completedBurn = isBurning == true;
+                        satellite.completedBurn = isBurning !== false;
                         drawBurnArrow(burn, {
                             cross: false,
                             object: ii,
@@ -919,7 +920,7 @@
                     satellite.calcTraj();
                     satellite.completedBurn = false;
                 }
-                if (satellite.completedBurn) satellite.calcTraj();
+                else if (satellite.burns.filter(burn => burn.time < (windowOptions.scenario_time_des)).length !== satellite.burnsDrawn) satellite.calcTraj();
                 if (windowOptions.screen.mode !== 'ri only') {
                     if (windowOptions.draw_style === 'line') {
                         drawCurve(ctx, satellite.shownTraj, {
@@ -968,7 +969,6 @@
             if (windowOptions.burn_status) {
                 calcBurns(windowOptions.burn_status, windowOptions.mousePosition.screen === 'ci')
             }
-            // Demarcate between the two plots if both are present
             if (windowOptions.screen.mode === 'ri ci') {
                 ctx.fillStyle = 'white';
                 ctx.fillRect(0, windowOptions.screen.lineHeight - cnvs.height * 0.01, cnvs.width, cnvs.height * 0.02)
@@ -1419,7 +1419,7 @@
             ];
         }
 
-        function calcSatShownTrajectories() {
+        function calcSatShownTrajectories(whole = false) {
             let t_calc, currentState, satBurn;
             phiMain = phiMatrixWhole(windowOptions.time_delta);
             this.shownTraj = [];
@@ -1433,6 +1433,7 @@
                 [this.position.cd]
             ];
             satBurn = this.burns.length > 0 ? 0 : undefined;
+            this.burnsDrawn = 0;
             while (t_calc <= windowOptions.scenario_length * 3600) {
                 this.shownTraj.push({
                     r: currentState[0][0],
@@ -1446,6 +1447,12 @@
                             let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
                                 .direction.i, this.burns[satBurn].direction.c
                             ]) / this.a;
+                            if (this.completedBurn && !windowOptions.burn_status) {
+                                t_burn = t_burn < (windowOptions.scenario_time_des - this.burns[satBurn].time) ? t_burn : windowOptions.scenario_time_des - this.burns[satBurn].time;
+                            }
+                            else {
+                                this.burnsDrawn++;
+                            }
                             let position_start = math.multiply(phiMatrixWhole(this.burns[satBurn].time -
                                 t_calc), currentState);
                             let position_finite;
@@ -1493,6 +1500,7 @@
                             satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
                             continue;
                         } else {
+                            this.burnsDrawn++;
                             let phiI = phiMatrixWhole(this.burns[satBurn].time - t_calc),
                                 phiF = phiMatrixWhole(windowOptions.time_delta - (this.burns[satBurn]
                                     .time - t_calc));
@@ -1658,11 +1666,10 @@
                         zd: 0
                     };
                     let dir = hcwFiniteBurnOneBurn(r1, r2, windowOptions.burn_status.time, sat.a);
-                    // console.log(dir);
                     if (dir && dir.t > 0 && dir.t < 1) {
                         sat.burns[burn.burn].direction.r = dir.r;
                         sat.burns[burn.burn].direction.i = dir.i;
-                        satellitse[burn.object].calcTraj();
+                        satellites[burn.object].calcTraj(true);
 
                     }
                     return;
@@ -1679,7 +1686,7 @@
                 let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
                 sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
                 sat.burns[burn.burn].direction.i = v1[1][0] - v0[1][0];
-                satellits[burn.object].calcTraj();
+                satellites[burn.object].calcTraj(true);
                 return;
             }
             sat.burns[burn.burn].direction = {
@@ -1694,7 +1701,7 @@
                 location: windowOptions.burn_status.burnLocation,
                 object: burn.object
             });
-            satellites[burn.object].calcTraj();
+            satellites[burn.object].calcTraj(true);
         }
 
         function generateTable(object = 0) {
