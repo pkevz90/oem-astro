@@ -290,6 +290,7 @@
                     shape: Math.random() < 0.33 ? 'square' : Math.random() < 0.5 ? 'triangle' :
                         'up-triangle'
                 }))
+                satellites[satellites.length - 1].calcTraj();
             }
             if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
                 if (e.shiftKey || e.ctrlKey) {
@@ -879,11 +880,10 @@
                             .c
                         ]) / satellite.a;
                         let constant = (windowOptions.scenario_time_des - burn.time) / burnTime;
-                        isBurning = isBurning ? isBurning : constant < 1 && constant >= -1e-6 ? {
+                        satellite.completedBurn = satellite.completedBurn ? satellite.completedBurn : constant < 1 && constant >= -1e-6 ? {
                             constant,
                             burn: jj
                         } : false;
-                        satellite.completedBurn = isBurning !== false;
                         drawBurnArrow(burn, {
                             cross: false,
                             object: ii,
@@ -916,11 +916,9 @@
                     }
                 })
                 ctx.strokeStyle = satellite.color;
-                if (isBurning) {
-                    satellite.calcTraj();
-                    satellite.completedBurn = false;
-                }
-                else if (satellite.burns.filter(burn => burn.time < (windowOptions.scenario_time_des)).length !== satellite.burnsDrawn) satellite.calcTraj();
+
+                if (satellite.completedBurn || satellite.burns.filter(burn => burn.time < (windowOptions.scenario_time_des)).length !== satellite.burnsDrawn) satellite.calcTraj();
+                
                 if (windowOptions.screen.mode !== 'ri only') {
                     if (windowOptions.draw_style === 'line') {
                         drawCurve(ctx, satellite.shownTraj, {
@@ -1819,7 +1817,7 @@
                             c: zm * Math.sin(m * Math.PI / 180),
                             rd: a * n / 2 * Math.sin(b * Math.PI / 180),
                             id: a * n * Math.cos(b * Math.PI / 180) - 1.5 * n * xd,
-                            cd: zm * n * Math.cos(b * Math.PI / 180)
+                            cd: zm * n * Math.cos(m * Math.PI / 180)
                         };
                         sat.position = {
                             ...waypoints[0]
