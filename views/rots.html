@@ -664,7 +664,32 @@
         })
         document.getElementById('add-waypoint-button').addEventListener('click', event => {
             let divTarget = event.target.parentNode.children;
-            
+            let tableTrs = document.getElementById('waypoint-table').children[1].children, waypoints = [];
+            for (let tr = 0; tr < tableTrs.length; tr++) {
+                 waypoints.push({
+                     time: Date.parse(tableTrs[tr].children[0].innerText),
+                     r: Number(tableTrs[tr].children[1].children[0].innerText),
+                     i: Number(tableTrs[tr].children[2].children[0].innerText),
+                     c: Number(tableTrs[tr].children[3].children[0].innerText),
+                     tranTime: Number(tableTrs[tr].children[4].innerText)
+                 })
+            }
+            let newWaypoint = {
+                time: Date.parse(divTarget[0].value),
+                r: Number(divTarget[1].value),
+                i: Number(divTarget[2].value),
+                c: Number(divTarget[3].value),
+                tranTime: Number(divTarget[4].value) === 0 ? 120 : Number(divTarget[4].value)
+            }
+            let filterLimit = 15 * 60 * 1000; // Reject burns closer than 15 minutes to other burns 
+            console.log(waypoints.filter(point => Math.abs(point.time - newWaypoint.time) < filterLimit));
+            if (waypoints.filter(point => Math.abs(point.time - newWaypoint.time) < filterLimit).length > 0) {
+                return;
+            }
+            waypoints.push(newWaypoint);
+            waypoints.sort((a,b) => a.time - b.time);
+            waypoints2table(waypoints);
+            table2burns(0);
         })
         let closeButtons = document.getElementsByClassName('close-button');
         for (let ii = 0; ii < closeButtons.length; ii++) {
@@ -1732,7 +1757,7 @@
                     oldValue = tdList[td].children[0].children[0].value;
                     tdList[td].children[0].innerText = oldValue;
                 }
-                waypoints2burns(0);
+                table2burns(0);
                 return;
             }
             event.target.innerText = 'Confirm';
@@ -1742,7 +1767,28 @@
             }
         }
 
-        function waypoints2burns(object) {
+        function waypoints2table(waypoints) {
+            let table = document.getElementById('waypoint-table').children[1];
+            while (table.firstChild) {
+                table.removeChild(table.firstChild);
+            }
+            let addedElement;
+            waypoints.forEach(point => {
+                addedElement = document.createElement('tr');
+                addedElement.innerHTML = `
+                    <td>${new Date(point.time).toString()
+                .split(' GMT')[0].substring(4)}</td>
+                    <td><span>${(point.r).toFixed(1)}</span> km</td>
+                    <td><span>${(point.i).toFixed(1)}</span> km</td>
+                    <td><span>${(point.c).toFixed(1)}</span> km</td>
+                    <td><span>${(point.tranTime).toFixed(1)}</span></td>
+                    <td class="edit-button">Edit</td>
+                `;
+                table.appendChild(addedElement);
+            });
+        }
+        
+        function table2burns(object) {
             let tableTrs = document.getElementById('waypoint-table').children[1].children, time, tranTime, r1, r2, v1, v, startTime = windowOptions.start_date.getTime(), burns = [];
             for (let tr = 0; tr < tableTrs.length; tr++) {
                 time = (Date.parse(tableTrs[tr].children[0].innerText) - startTime) / 1000;
