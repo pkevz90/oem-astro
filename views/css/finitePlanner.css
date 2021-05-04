@@ -27,6 +27,9 @@ canvas {
     width:100%;
     cursor: pointer;
 }
+.center {
+    text-align: center;
+}
 #time-slider input {
     width: 100%;
     cursor: pointer;
