@@ -580,11 +580,28 @@
             document.getElementById('instructions-panel').classList.toggle("hidden")
         })
         document.getElementById('burns-button').addEventListener('click', () => {
-            generateBurnTable(0);
+            if (satellites.length === 0) {
+                return;
+            }
+            let selectEl = document.getElementById('satellite-way-select');
+            let chosenSat = Number(selectEl.value);
+            generateBurnTable(chosenSat);
+            while (selectEl.firstChild) {
+                selectEl.removeChild(selectEl.firstChild);
+            }
+            satellites.forEach((sat, ii) => {
+                addedElement = document.createElement('option');
+                addedElement.value = ii;
+                addedElement.textContent = sat.shape;
+                addedElement.style.color = sat.color;
+                selectEl.appendChild(addedElement);
+            })
+            selectEl.selectedIndex = chosenSat;
+            selectEl.style.color = satellites[chosenSat].color;
             document.getElementById('burns-panel').classList.toggle("hidden")
         })
         document.getElementById('satellite-way-select').addEventListener('change', event => {
-            generateTable(event.target.value)
+            generateBurnTable(event.target.value)
             event.target.style.color = satellites[event.target.value].color;
         })
         document.getElementById('add-satellite-button').addEventListener('click', (click) => {
@@ -689,7 +706,8 @@
             waypoints.push(newWaypoint);
             waypoints.sort((a,b) => a.time - b.time);
             waypoints2table(waypoints);
-            table2burns(0);
+            let chosenSat = Number(document.getElementById('satellite-way-select').value);
+            table2burns(chosenSat);
         })
         let closeButtons = document.getElementsByClassName('close-button');
         for (let ii = 0; ii < closeButtons.length; ii++) {
