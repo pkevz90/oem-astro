@@ -64,7 +64,7 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
-#waypoints-button {
+#burns-button {
     position: fixed;
     height: auto;
     width: auto;
@@ -164,7 +164,7 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
-#add-satellite-panel, #options-panel, #instructions-panel {
+#add-satellite-panel, #options-panel, #instructions-panel, #data-panel {
     position: fixed;
     display: flex;
     z-index: 4;
@@ -179,14 +179,14 @@ canvas {
     transform: translate(-50%, -50%);
     justify-content: space-around;
 }
-#waypoints-panel {
+#burns-panel {
     position: fixed;
     display: flex;
     z-index: 4;
     background-color: white;
     border: 10px solid black;
     border-radius: 30px;
-    width: 50%;
+    width: 75%;
     height: auto;
     padding: 1%;
     top: 50%;
@@ -197,7 +197,7 @@ canvas {
 #add-satellite-panel div, #options-panel div {
     text-align: center;
 }
-#waypoints-panel div {
+#burns-panel div {
     width: 100%;
     text-align: center;
 }

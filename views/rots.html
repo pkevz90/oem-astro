@@ -26,8 +26,8 @@
     <div id="option-button" class="noselect hoverable" title="Add Satellite">
         Options
     </div>
-    <div id="waypoints-button" class="noselect hoverable" title="Add Satellite">
-        Waypoints
+    <div id="burns-button" class="noselect hoverable" title="Add Satellite">
+        Burns
     </div>
     <div id="maneuver-type-slider">
         <span>Manual</span>
@@ -36,19 +36,12 @@
             <span class="slider"></span>
         </label>
     </div>
-    <!-- <div id="kinematic-slider">
-        <span>Kinematic</span>
-        <label class="switch">
-            <input id="maneuver-type-input" type="checkbox">
-            <span class="slider"></span>
-        </label>
-    </div> -->
     <div id="instructions-button" class="noselect hoverable" title="Add Satellite">
         Instructions
     </div>
-    <div id="waypoints-panel" class="hidden">
+    <div id="burns-panel" class="hidden panel">
         <div>
-            <div style="font-size:2em; margin: 4%; font-weight: bold">View/Edit Waypoints</div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">View/Edit Burns</div>
             <select id="satellite-way-select" style="font-size: 2em">
                 <option value="0">Blue Triangle</option>
                 <option value="1">Red Circle</option>
@@ -56,10 +49,11 @@
             <table id="waypoint-table" style="width: 100%;">
                 <thead>
                     <tr>
-                        <th>Time</th>
-                        <th>Radial</th>
-                        <th>In-Track</th>
-                        <th>Cross-Track</th>
+                        <th>Start Time</th>
+                        <th>Target Radial</th>
+                        <th>Target In-Track</th>
+                        <th>Target Cross-Track</th>
+                        <th>Transfer Time</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -76,10 +70,10 @@
             </div>
 
 
-            <div style="width: 50%" id="close-waypoints-button" class="panel-button hoverable noselect">Close</div>
+            <div style="width: 50%"class="close-button panel-button hoverable noselect">Close</div>
         </div>
     </div>
-    <div id="instructions-panel" class="hidden">
+    <div id="instructions-panel" class="hidden panel">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Instructions</div>
             <ul>
@@ -112,10 +106,10 @@
                     </ul>
                 </li>
             </ul>
-            <div id="close-instructions-button" class="panel-button hoverable noselect">Close</div>
+            <div class="close-button panel-button hoverable noselect">Close</div>
         </div>
     </div>
-    <div id="add-satellite-panel" class="hidden">
+    <div id="add-satellite-panel" class="hidden panel">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Initial State</div>
             <div>A<sub>e</sub><input value="0" type="Number"> km</div>
@@ -139,10 +133,10 @@
             <div>Cooldown</sub><input value="0" type="Number"> mins</div>
             <div>Color</sub><input value="#ff0000" type="color"> mins</div>
             <div id="add-satellite-button" class="panel-button hoverable noselect">Insert</div>
-            <div id="cancel-satellite-button" class="panel-button hoverable noselect">Cancel</div>
+            <div class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
     </div>
-    <div id="options-panel" class="hidden">
+    <div id="options-panel" class="hidden panel">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Time & Location</div>
             <div>Start Date <input style="width: 75%" type="datetime-local" id="start-time" name="meeting-time"
@@ -164,8 +158,31 @@
             <div>Finite Targeting<input type="checkbox"></div>
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
             <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
+            <div id="data-button" class="panel-button hoverable noselect">Data</div>
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
-            <div id="cancel-option-button" class="panel-button hoverable noselect">Cancel</div>
+            <div class="close-button panel-button hoverable noselect">Cancel</div>
+        </div>
+    </div>
+    <div id="data-panel" class="hidden panel">
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Origin</div>
+            <select id="satellite-way-select" style="font-size: 2em">
+                <option value="0">Blue Triangle</option>
+                <option value="1">Red Circle</option>
+            </select>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Target</div>
+            <select id="satellite-way-select" style="font-size: 2em">
+                <option value="0">Blue Triangle</option>
+                <option value="1" selected>Red Circle</option>
+            </select>
+        </div>
+        <div>
+            <div><input type="checkbox">Range</div>
+            <div><input type="checkbox">Range Rate</div>
+            <div><input type="checkbox">Tangential Rate</div>
+            <div><input type="checkbox">POCA</div>
+            <div><input type="checkbox">CATS</div>
+            <div class="close-button panel-button hoverable noselect">Close</div>
         </div>
     </div>
     <script>
@@ -235,7 +252,43 @@
                 constant: 0.0003
             },
             showFinite: false,
-            finiteTarget: false
+            finiteTarget: false,
+            relativeData: {
+                origin: 0,
+                target: 1,
+                data: {
+                    range: {
+                        exist: true,
+                        units: 'km',
+                        name: 'R'
+                    },
+                    rangeRate: {
+                        exist: true,
+                        units: 'm/s',
+                        name: 'RR'
+                    },
+                    sunAngle: {
+                        exist: true,
+                        units: 'deg',
+                        name: 'CATS'
+                    },
+                    poca: {
+                        exist: true,
+                        units: 'km',
+                        name: 'POCA'
+                    },
+                    toca: {
+                        exist: true,
+                        units: 'hrs',
+                        name: 'TOCA'
+                    },
+                    tanRate: {
+                        exist: false,
+                        units: 'm/s',
+                        name: 'R'
+                    }
+                }
+            }
         }
         formatCanvas();
         windowOptions.screen = {
@@ -249,15 +302,16 @@
 
         function newSatellite(options) {
             let {
-                color = 'red', shape = "square", size = 0.035, position, currentPosition = {
-                    r: 0,
-                    i: 25,
-                    c: 0,
-                    rd: 0,
-                    id: 0,
-                    cd: 0
-                }, burns = [], shownTraj = [], a = 0.00001
+                color = 'red', shape = "square", size = 0.035, position, burns = [], shownTraj = [], a = 0.00001
             } = options;
+            currentPosition = {
+                r: [position.r],
+                i: [position.i],
+                c: [position.c],
+                rd: [position.rd],
+                id: [position.id],
+                cd: [position.cd],
+            }
             return {
                 color,
                 shape,
@@ -269,7 +323,14 @@
                 a,
                 completedBurn: false,
                 calcTraj: calcSatShownTrajectories,
-                burnsDrawn: 0
+                burnsDrawn: 0,
+                getPositionArray: function() {
+                    return [this.currentPosition.r, this.currentPosition.i, this.currentPosition.c];
+                },
+                getVelocityArray: function() {
+                    return [this.currentPosition.rd, this.currentPosition.id, this.currentPosition.cd];
+                },
+                getCurrentState: getSatCurrentPosition
             };
         }
         satellites = [];
@@ -304,13 +365,9 @@
                 });
             }
             if (windowOptions.burn_status) {
-                let currentLocation = getCurrentPosition(satellites[windowOptions.burn_status.object].position,
-                    satellites[windowOptions.burn_status.object].burns.slice(0, windowOptions.burn_status
-                        .burn), {
-                        time: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
-                            .burn].time,
-                        a: satellites[windowOptions.burn_status.object].a
-                    });
+                let currentLocation = satellites[windowOptions.burn_status.object].getCurrentState({burnStop: windowOptions.burn_status
+                        .burn, time: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
+                            .burn].time});
                 let n = 2 * Math.PI / 86164,
                     desVel, dV;
                 switch (e.key) {
@@ -417,9 +474,7 @@
             }
             satellites.forEach((sat, ii) => {
                 windowOptions.mousePosition.object = checkClose(windowOptions.mousePosition.ric,
-                        getCurrentPosition(sat.position, sat.burns, {
-                            a: sat.a
-                        }),
+                        sat.currentPosition,
                         windowOptions.mousePosition.screen === 'ci') ? ii : windowOptions.mousePosition
                     .object === false ? false : windowOptions.mousePosition.object;
             });
@@ -429,10 +484,7 @@
             // check burns to see if clicked on ones
             satellites.forEach((sat, ii) => {
                 for (let jj = sat.burns.length - 1; jj >= 0; jj--) {
-                    let burnLocation = getCurrentPosition(sat.position, sat.burns, {
-                        time: sat.burns[jj].time,
-                        a: sat.a
-                    });
+                    let burnLocation = sat.getCurrentState({time: sat.burns[jj].time});
                     if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions
                             .mousePosition.screen === 'ci')) {
                         if (event.ctrlKey) {
@@ -452,11 +504,7 @@
                         if (type === 'waypoint') {
                             windowOptions.scenario_time_des += 7200;
                         }
-                        let burnLocation = getCurrentPosition(satellites[ii].position, satellites[ii]
-                            .burns, {
-                                time: satellites[ii].burns[jj].time,
-                                a: sat.a
-                            });
+                        let burnLocation = sat.getCurrentState({time: satellites[ii].burns[jj].time});
                         windowOptions.burn_status = {
                             object: ii,
                             burn: jj,
@@ -494,12 +542,8 @@
                     })
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn =>
                         burn.time === windowOptions.scenario_time);
-                    let burnLocation = getCurrentPosition(satellites[windowOptions.mousePosition.object]
-                        .position, satellites[windowOptions.mousePosition.object].burns, {
-                            time: satellites[
-                                windowOptions.mousePosition.object].burns[burnN].time,
-                            a: satellites[windowOptions.mousePosition.object].a
-                        });
+                    let burnLocation = satellites[windowOptions.mousePosition.object].getCurrentState({time: satellites[
+                                windowOptions.mousePosition.object].burns[burnN].time});
                     let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions
                         .maneuver_type;
                     if (type === 'waypoint') {
@@ -534,33 +578,12 @@
         document.getElementById('instructions-button').addEventListener('click', () => {
             document.getElementById('instructions-panel').classList.toggle("hidden")
         })
-        document.getElementById('waypoints-button').addEventListener('click', () => {
-            if (satellites.length === 0) {
-                return;
-            }
-            let selectEl = document.getElementById('satellite-way-select');
-            let chosenSat = Number(selectEl.value);
-            generateTable(chosenSat);
-            while (selectEl.firstChild) {
-                selectEl.removeChild(selectEl.firstChild);
-            }
-            satellites.forEach((sat, ii) => {
-                addedElement = document.createElement('option');
-                addedElement.value = ii;
-                addedElement.textContent = sat.shape;
-                addedElement.style.color = sat.color;
-                selectEl.appendChild(addedElement);
-            })
-            selectEl.selectedIndex = chosenSat;
-            selectEl.style.color = satellites[chosenSat].color;
-            document.getElementById('waypoints-panel').classList.toggle("hidden")
+        document.getElementById('burns-button').addEventListener('click', () => {
+            document.getElementById('burns-panel').classList.toggle("hidden")
         })
         document.getElementById('satellite-way-select').addEventListener('change', event => {
             generateTable(event.target.value)
             event.target.style.color = satellites[event.target.value].color;
-        })
-        document.getElementById('close-waypoints-button').addEventListener('click', () => {
-            document.getElementById('waypoints-panel').classList.toggle("hidden")
         })
         document.getElementById('add-satellite-button').addEventListener('click', (click) => {
             let el = click.target,
@@ -595,8 +618,9 @@
             satellites[satellites.length - 1].calcTraj();
             document.getElementById('add-satellite-panel').classList.toggle("hidden")
         })
-        document.getElementById('cancel-satellite-button').addEventListener('click', (click) => {
-            document.getElementById('add-satellite-panel').classList.toggle("hidden")
+        document.getElementById('data-button').addEventListener('click', (click) => {
+            document.getElementById('options-panel').classList.toggle("hidden")
+            document.getElementById('data-panel').classList.toggle("hidden")
         })
         document.getElementById('confirm-option-button').addEventListener('click', (click) => {
             let el = click.target;
@@ -619,12 +643,6 @@
             windowOptions.sunInit = sun;
             windowOptions.start_date = new Date(date);
             document.getElementById('options-panel').classList.toggle("hidden")
-        })
-        document.getElementById('cancel-option-button').addEventListener('click', (click) => {
-            document.getElementById('options-panel').classList.toggle("hidden")
-        })
-        document.getElementById('close-instructions-button').addEventListener('click', (click) => {
-            document.getElementById('instructions-panel').classList.toggle("hidden")
         })
         document.getElementById('maneuver-type-input').addEventListener('change', (click) => {
             el = click.target;
@@ -659,10 +677,7 @@
             waypoints[0].t = 0;
             sat.burns.forEach((burn, ii) => {
                 if (burn.time !== 0) {
-                    wayPos = getCurrentPosition(sat.position, sat.burns, {
-                        time: burn.time,
-                        a: sat.a
-                    });
+                    wayPos = sat.getCurrentState({time: burn.time});
                     waypoints.push({
                         t: burn.time,
                         r: wayPos.r[0],
@@ -671,11 +686,8 @@
                     });
                 }
             })
-            wayPos = getCurrentPosition(sat.position, sat.burns, {
-                time: sat.burns.length > 0 ? sat.burns[sat.burns
-                    .length - 1].time + 7200 : 7200,
-                a: sat.a
-            });
+             wayPos = sat.getCurrentState({time: sat.burns.length > 0 ? sat.burns[sat.burns
+                    .length - 1].time + 7200 : 7200});
             let identWay = waypoints.findIndex((way, ii) => Math.abs(way.t - t) < 900);
             console.log(identWay);
             if (identWay !== -1) {
@@ -713,6 +725,16 @@
             satellites[Number(document.getElementById('satellite-way-select').value)].calcTraj();
             generateTable(document.getElementById('satellite-way-select').value);
         })
+        let closeButtons = document.getElementsByClassName('close-button');
+        for (let ii = 0; ii < closeButtons.length; ii++) {
+            closeButtons[ii].addEventListener('click', event => {
+                let buttons = document.getElementsByClassName('panel');
+                for (let jj = 0; jj < buttons.length; jj++) {
+                    buttons[jj].classList.add('hidden');
+                }
+            })
+        }
+
 
         function mouseWheelFunction(event) {
             if (windowOptions.burn_status) {
@@ -847,7 +869,19 @@
             ctx.fillStyle = 'black';
             ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
                 .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
-            // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
+            ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
+            ctx.font = '15px Arial';
+            if (satellites.length > 1) {
+                // console.log(satellites[windowOptions.relativeData.origin], satellites[windowOptions.relativeData.target]);
+                let relDataIn = getRelativeData(windowOptions.relativeData.origin, windowOptions.relativeData.target);
+                let y_location = cnvs.height * 0.1;
+                for (relData in windowOptions.relativeData.data) {
+                    if (windowOptions.relativeData.data[relData].exist) {
+                        ctx.fillText(windowOptions.relativeData.data[relData].name + ': ' + relDataIn[relData].toFixed(1) + ' ' + windowOptions.relativeData.data[relData].units, cnvs.width * 0.01, y_location);
+                        y_location += 30;
+                    }
+                }
+            }
 
             // Draw Scale
             ctx.strokeStyle = 'RGB(0,0,0,0.5)';
@@ -866,13 +900,11 @@
             ctx.strokeText(scaleLength + ' km', 4 * cnvs.width / 5, cnvs.height * 0.12);
             ctx.stroke();
 
-            let drawnTraj, currentLocation, passiveBurns;
+            let drawnTraj, passiveBurns;
             ctx.lineWidth = windowOptions.lineWidth;
             satellites.forEach((satellite, ii) => {
                 ctx.strokeStyle = satellite.color;
-                currentLocatinon = getCurrentPosition(satellite.position, satellite.burns, {
-                    a: satellite.a
-                });
+                satellite.currentPosition = satellite.getCurrentState();
                 let isBurning = false;
                 satellite.burns.forEach((burn, jj) => {
                     if (burn.time <= windowOptions.scenario_time_des) {
@@ -1066,14 +1098,10 @@
                     i: 0
                 }, data = false
             } = satellite;
-            let pixelPosition = ricToPixel(getCurrentPosition(satellite.position, satellite.burns, {
-                a: satellite.a
-            }), {
+            let pixelPosition = ricToPixel(getSatCurrentPosition({position: satellite.position, burns: satellite.burns,
+                a: satellite.a}), {
                 cross
             });
-            if (data) {
-                console.log(getCurrentPosition(satellite.position, satellite.burns, windowOptions.scenario_time))
-            }
             // console.log(pixelPosition, satellite.position, satellite.burns)
             let limit = {
                 min: cross ? (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2 : 0,
@@ -1219,10 +1247,7 @@
             }
             constant = constant > 1 ? 1 : constant;
             if (location === undefined) {
-                location = getCurrentPosition(satellites[object].position, satellites[object].burns, {
-                    time: burn.time,
-                    a: satellites[object].a
-                });
+                location = satellites[object].getCurrentState({time: burn.time});
             }
             let burnMag = math.norm([!cross ? burn.direction.r : 0, burn.direction.i, cross ? burn.direction.c : 0]);
             let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c : burn.direction.r) * 180 / Math.PI;
@@ -1256,21 +1281,13 @@
             ]);
         }
 
-        function getCurrentPosition(position = {
-            r: 0,
-            i: 0,
-            rd: 0.001,
-            id: 0,
-            c: 0,
-            cd: 0
-        }, burns = [], options) {
-            let {
-                a = 0.00002, time = windowOptions.scenario_time, log = false
-            } = options;
+        function getSatCurrentPosition(options = {}) {
+            let {time = windowOptions.scenario_time, burnStop, position = this.position, burns = this.burns, a = this.a} = options
+            if (burnStop === undefined) burnStop = burns.length;
             if (windowOptions.showFinite) {
                 let t_prop = 0,
                     phi, t_burn, alpha, phi_angle, n = 2 * Math.PI / 86164;
-                position = [
+                let pos = [
                     [position.r],
                     [position.i],
                     [position.c],
@@ -1280,59 +1297,52 @@
                 ];
                 for (let n_burn = 0; n_burn < burns.length; n_burn++) {
                     if (time <= burns[n_burn].time) break;
-                    position = math.multiply(phiMatrixWhole(burns[n_burn].time - t_prop), position);
+                    pos = math.multiply(phiMatrixWhole(burns[n_burn].time - t_prop), pos);
                     t_prop = burns[n_burn].time;
-                    t_burn = math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i, burns[n_burn].direction
+                    t_burn = burnStop <= n_burn ? 0 : math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i, burns[n_burn].direction
                         .c
                     ]) / a;
                     alpha = math.atan2(burns[n_burn].direction.i, burns[n_burn].direction.r);
                     phi_angle = math.atan2(burns[n_burn].direction.c, math.norm([burns[n_burn].direction.r, burns[
                         n_burn].direction.i]));
-                    if (log) console.log(t_prop, t_burn, time);
                     if ((t_prop + t_burn) > time) {
                         t_burn = time - t_prop;
                         return {
-                            r: [radialPosClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                            r: [radialPosClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
                                 t_burn, n)],
-                            i: [intrackPosClosed(position[0][0], position[3][0], position[1][0], position[4][0], a,
+                            i: [intrackPosClosed(pos[0][0], pos[3][0], pos[1][0], pos[4][0], a,
                                 alpha, phi_angle, t_burn, n)],
-                            c: [crosstrackPosClosed(position[2][0], position[5][0], a, phi_angle, t_burn, n)],
-                            rd: [radialVelClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                            c: [crosstrackPosClosed(pos[2][0], pos[5][0], a, phi_angle, t_burn, n)],
+                            rd: [radialVelClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
                                 t_burn, n)],
-                            id: [intrackVelClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                            id: [intrackVelClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
                                 t_burn, n)],
-                            cd: [crosstrackVelClosed(position[2][0], position[5][0], a, phi_angle, t_burn, n)]
+                            cd: [crosstrackVelClosed(pos[2][0], pos[5][0], a, phi_angle, t_burn, n)]
                         }
                     }
-                    if (log) {
-                        console.log(position);
-                    }
-                    position = [
-                        [radialPosClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                    pos = [
+                        [radialPosClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
                             t_burn, n)],
-                        [intrackPosClosed(position[0][0], position[3][0], position[1][0], position[4][0], a, alpha,
+                        [intrackPosClosed(pos[0][0], pos[3][0], pos[1][0], pos[4][0], a, alpha,
                             phi_angle, t_burn, n)],
-                        [crosstrackPosClosed(position[2][0], position[5][0], a, phi_angle, t_burn, n)],
-                        [radialVelClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                        [crosstrackPosClosed(pos[2][0], pos[5][0], a, phi_angle, t_burn, n)],
+                        [radialVelClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
                             t_burn, n)],
-                        [intrackVelClosed(position[0][0], position[3][0], position[4][0], a, alpha, phi_angle,
+                        [intrackVelClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
                             t_burn, n)],
-                        [crosstrackVelClosed(position[2][0], position[5][0], a, phi_angle, t_burn, n)]
+                        [crosstrackVelClosed(pos[2][0], pos[5][0], a, phi_angle, t_burn, n)]
                     ];
-                    if (log) {
-                        console.log(position);
-                    }
                     t_prop += t_burn;
                 }
                 phi = phiMatrixWhole(time - t_prop);
-                position = math.multiply(phi, position);
+                pos = math.multiply(phi, pos);
                 return {
-                    r: position[0],
-                    i: position[1],
-                    c: position[2],
-                    rd: position[3],
-                    id: position[4],
-                    cd: position[5]
+                    r: pos[0],
+                    i: pos[1],
+                    c: pos[2],
+                    rd: pos[3],
+                    id: pos[4],
+                    cd: pos[5]
                 };
             }
             let r = [
@@ -1353,9 +1363,9 @@
                     r1 = math.add(math.multiply(phi.rr, r), math.multiply(phi.rv, v));
                     v = math.add(math.multiply(phi.vr, r), math.multiply(phi.vv, v));
                     r = r1;
-                    v[0][0] += burns[ii].direction.r;
-                    v[1][0] += burns[ii].direction.i;
-                    v[2][0] += burns[ii].direction.c;
+                    v[0][0] += burnStop <= ii ? 0 : burnStop <= ii ? 0 : burns[ii].direction.r;
+                    v[1][0] += burnStop <= ii ? 0 : burns[ii].direction.i;
+                    v[2][0] += burnStop <= ii ? 0 : burns[ii].direction.c;
                     timeProp = burns[ii].time;
                 } else {
                     break;
@@ -1619,10 +1629,7 @@
             }
             satellite.burns.forEach(burn => {
                 if (burn.time < windowOptions.scenario_time) {
-                    position = getCurrentPosition(satellite.position, satellite.burns, {
-                        time: burn.time,
-                        a: satellite.a
-                    });
+                    position = satellite.getCurrentState({time: burn.time});
                     position = ricToPixel(position, {
                         cross
                     });
@@ -1702,6 +1709,38 @@
             satellites[burn.object].calcTraj(true);
         }
 
+        function getRelativeData(n_target, n_origin) {
+            let sunAngle, rangeRate, range, poca, toca, tanRate;
+            let relPos = math.squeeze(math.subtract(satellites[n_origin].getPositionArray(), satellites[n_target].getPositionArray()));
+            let relVel = math.squeeze(math.subtract(satellites[n_origin].getVelocityArray(), satellites[n_target].getVelocityArray()));
+            range = math.norm(relPos);
+            sunAngle = 2 * Math.PI * (windowOptions.scenario_time + windowOptions.sunInit) / 86164
+            sunAngle = [-math.cos(sunAngle), math.sin(sunAngle), 0];
+            sunAngle = math.acos(math.dot(relPos, sunAngle) / range) * 180 / Math.PI;
+
+            rangeRate = math.dot(relVel, relPos) * 1000 / range;
+            tanRate = Math.sqrt(Math.pow(math.norm(relVel),2) - Math.pow(rangeRate, 2)) * 1000;
+            let relPosHis = findMinDistance(satellites[n_origin].shownTraj, satellites[n_target].shownTraj);
+            poca = math.min(findMinDistance(satellites[n_origin].shownTraj, satellites[n_target].shownTraj));
+            toca = relPosHis.findIndex(element => element === poca) * windowOptions.time_delta / 3600;
+            return {
+                sunAngle,
+                rangeRate,
+                range,
+                poca,
+                toca,
+                tanRate
+            } 
+        }
+        
+        function findMinDistance(vector1, vector2) {
+            let outVec = [];
+            for (let jj = 0; jj < vector1.length; jj++) {
+                outVec.push(math.norm([vector1[jj].r - vector2[jj].r, vector1[jj].i - vector2[jj].i, vector1[jj].c - vector2[jj].c]));
+            }
+            return outVec
+        }
+        
         function generateTable(object = 0) {
             let table = document.getElementById('waypoint-table').children[1];
             while (table.firstChild) {
@@ -1731,10 +1770,7 @@
             }
             satellites[object].burns.forEach((burn, ii) => {
                 addedElement = document.createElement('tr');
-                position = getCurrentPosition(satellites[object].position, satellites[object].burns, {
-                    time: burn.time,
-                    a: satellites[object].a
-                });
+                position = satellites[object].currentPosition;
                 addedElement.innerHTML = `
                     <td>${(burn.time / 3600).toFixed(1)} hrs</td>
                     <td><span class="position-element" contentEditable="true">${(position.r[0]).toFixed(1)}</span> km</td>
@@ -1744,13 +1780,10 @@
                 `;
                 table.appendChild(addedElement);
             });
-            position = getCurrentPosition(satellites[object].position, satellites[object].burns, {
-                time: satellites[object]
+            position = satellites[object].getCurrentState({time: satellites[object]
                     .burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length - 1]
                     .time +
-                    7200,
-                a: satellites[object].a
-            });
+                    7200});
             addedElement = document.createElement('tr');
             addedElement.innerHTML = `
                 <td>${((satellites[object].burns.length === 0 ? 7200 : satellites[object].burns[satellites[object].burns.length-1].time + 7200) / 3600).toFixed(1)} hrs</td>
@@ -1771,10 +1804,7 @@
                     waypoints[0].t = 0;
                     sat.burns.forEach((burn, ii) => {
                         if (burn.time !== 0) {
-                            wayPos = getCurrentPosition(sat.position, sat.burns, {
-                                time: burn.time,
-                                a: sat.a
-                            });
+                            wayPos = sat.getCurrentState({time: burn.time});
                             waypoints.push({
                                 t: burn.time,
                                 r: wayPos.r[0],
@@ -1783,11 +1813,8 @@
                             });
                         }
                     })
-                    wayPos = getCurrentPosition(sat.position, sat.burns, {
-                        time: sat.burns.length > 0 ? sat.burns[sat
-                            .burns.length - 1].time + 7200 : 7200,
-                        a: sat.a
-                    });
+                    wayPos = sat.getCurrentState({time: sat.burns.length > 0 ? sat.burns[sat
+                            .burns.length - 1].time + 7200 : 7200});
                     waypoints.push({
                         t: (sat.burns.length > 0 ? sat.burns[sat.burns.length - 1].time + 7200 : 7200),
                         r: wayPos.r[0],
@@ -1829,10 +1856,7 @@
                             return;
                         }
                         if (sat.burns[0].time !== 0) {
-                            wayPos = getCurrentPosition(sat.position, sat.burns, {
-                                time: sat.burns[0].time,
-                                a: sat.a
-                            });
+                            wayPos = sat.getCurrentState({time: sat.burns[0].time});
                             waypoints[1] = {
                                 t: sat.burns[0].time,
                                 r: wayPos.r[0],
@@ -1841,7 +1865,6 @@
                             };
                         }
                         waypoints[0].t = 0;
-                        console.log(waypoints);
                     } else if (id[0] === 'burn') {
                         let wayN = sat.burns[0].time === 0 ? Number(id[2]) : Number(id[2]) + 1;
                         wayN = id[2] === 'end' ? waypoints.length - 1 : wayN;
@@ -1864,6 +1887,66 @@
                     satellites[Number(document.getElementById('satellite-way-select').value)].calcTraj();
                     generateTable(document.getElementById('satellite-way-select').value);
                 })
+            }
+        }
+
+        function generateBurnTable(object = 0) {
+            let table = document.getElementById('waypoint-table').children[1];
+            while (table.firstChild) {
+                table.removeChild(table.firstChild);
+            }
+            if (satellites[object].burns.length === 0) return;
+            let r1, r2, v, addedElement;
+            for (let burn = 0; burn < satellites[object].burns.length - 1; burn++) {
+                r1 = satellites[object].getCurrentState({time: satellites[object].burns[burn].time});
+                r2 = satellites[object].getCurrentState({time: satellites[object].burns[burn+1].time});
+                t = satellites[object].burns[burn+1].time - satellites[object].burns[burn].time;
+                addedElement = document.createElement('tr');
+                addedElement.innerHTML = `
+                    <td>${new Date(windowOptions.start_date.getTime() + satellites[object].burns[burn].time * 1000).toString()
+                .split(' GMT')[0].substring(4)}</td>
+                    <td><span>${(r2.r[0]).toFixed(1)}</span> km</td>
+                    <td><span>${(r2.i[0]).toFixed(1)}</span> km</td>
+                    <td><span>${(r2.c[0]).toFixed(1)}</span> km</td>
+                    <td><span>${(t / 60).toFixed(1)}</span></td>
+                    <td class="edit-button">Edit</td>
+                `;
+                table.appendChild(addedElement);
+            }
+            r2 = satellites[object].getCurrentState({time: satellites[object].burns[satellites[object].burns.length - 1].time + 7200});
+            console.log(r2, satellites[object].burns[satellites[object].burns.length - 1].time + 7200);
+            t = 7200;
+            addedElement = document.createElement('tr');
+            addedElement.innerHTML = `
+                <td>${new Date(windowOptions.start_date.getTime() + satellites[object].burns[satellites[object].burns.length - 1].time * 1000).toString()
+            .split(' GMT')[0].substring(4)}</td>
+                <td><span>${(r2.r[0]).toFixed(1)}</span> km</td>
+                <td><span>${(r2.i[0]).toFixed(1)}</span> km</td>
+                <td><span>${(r2.c[0]).toFixed(1)}</span> km</td>
+                <td><span>${(t / 60).toFixed(1)}</span></td>
+                <td class="edit-button">Edit</td>
+            `;
+            table.appendChild(addedElement);
+            let editButtons = document.getElementsByClassName('edit-button');
+            for (let button = 0; button < editButtons.length; button++) {
+                editButtons[button].addEventListener('click', editButtonFunction);
+            }
+        }
+
+        function editButtonFunction(event) {
+            let tdList = event.target.parentElement.children, oldValue;
+            if (event.target.innerText === 'Confirm') {
+                event.target.innerText = 'Edit';
+                for (let td = 1; td < 4; td++) {
+                    oldValue = tdList[td].children[0].children[0].value;
+                    tdList[td].children[0].innerText = oldValue;
+                }
+                return;
+            }
+            event.target.innerText = 'Confirm';
+            for (let td = 1; td < 4; td++) {
+                oldValue = tdList[td].children[0].innerText;
+                tdList[td].children[0].innerHTML = `<input style="width: 40%" type="number" value="${oldValue}"/>`;
             }
         }
 
@@ -1921,6 +2004,7 @@
                 pom.click();
             }
         }
+        
         document.getElementById('upload-options-button').addEventListener('change', event => {
             loadFileAsText(event.path[0].files[0])
         })
@@ -2131,6 +2215,8 @@
             v2 = math.add(math.multiply(phi.vr, r1), math.multiply(phi.vv, v1));
             return [v1, v2];
         }
+    
+        
     </script>
 </body>
 
