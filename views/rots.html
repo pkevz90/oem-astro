@@ -217,7 +217,6 @@
             start_date: new Date(document.getElementById('confirm-option-button').parentNode.parentNode.children
                 .item(0).children[1].children[0].value),
             time_delta: 86164 / 200,
-            time_vector: math.range(0, 86164, 86164 / 200, true)._data,
             scenario_time: 0,
             scenario_time_des: 0,
             animate_step: 240,
@@ -245,7 +244,6 @@
                 stop: false
             },
             maneuver_type: 'manual',
-            full_burn_vis_time: 86164 * 0.1,
             refresh_time: 0,
             arrowColor: 'rgb(100,100,100)',
             passiveDropoff: {
@@ -904,17 +902,18 @@
                             cross: false,
                             object: ii,
                             constant,
-                            trans: true
+                            trans: true,
+                            length: cnvs.height * 0.075
                         })
                         drawBurnArrow(burn, {
                             cross: true,
                             object: ii,
                             constant,
-                            trans: true
+                            trans: true,
+                            length: cnvs.height * 0.075
                         })
                         if ((windowOptions.scenario_time - burn.time) < windowOptions.passiveDropoff
                             .time) {
-                            // console.log(jj);
                             passiveBurns = satellite.burns.slice(0, jj);
                             ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * (
                                 windowOptions.scenario_time - burn.time));
@@ -1224,18 +1223,15 @@
         function drawBurnArrow(burn, options) {
             let {
                 location = undefined, constant = 1, object = undefined, cross = windowOptions.mousePosition.screen ===
-                    'ci', trans = false
+                    'ci', trans = false, length
             } = options;
-            if (trans) {
-                ctx.globalAlpha = 0.5;
-            }
             constant = constant > 1 ? 1 : constant;
             if (location === undefined) {
                 location = satellites[object].getCurrentState({time: burn.time});
             }
-            let burnMag = math.norm([!cross ? burn.direction.r : 0, burn.direction.i, cross ? burn.direction.c : 0]);
+            let burnMag = math.norm([burn.direction.r , burn.direction.i, burn.direction.c]);
             let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c : burn.direction.r) * 180 / Math.PI;
-            let height = burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width /
+            let height = length ? length : burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width /
                 2;
             let origin = ricToPixel(location, {
                 cross
@@ -1244,15 +1240,25 @@
             ctx.textAlign = 'center';
             ctx.font = '25px Arial';
             ctx.fillStyle = color;
-            // ctx.strokeStyle = color;
-            ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 30)
+            if (trans) {
+                if (windowOptions.scenario_time_des === burn.time) ctx.globalAlpha = 0;
+                else ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * 0.5 * (
+                    windowOptions.scenario_time - burn.time));
+            }
+            ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + (burn.direction[cross ? 'c' : 'r'] < 0 ? -25 : 35))
+            if (trans) {
+                ctx.globalAlpha = 0.4
+            }
             drawArrow({
                 angle,
                 origin,
                 color,
                 cnvs,
                 ctx,
-                height
+                height,
+                lineWidth: length ? 5 : 10,
+                arrowWidth: length ? 10 : 20,
+                arrowHeight: length ? 10 : 20
             })
             ctx.globalAlpha = 1;
             // ctx.strokeText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + 55)
@@ -1509,6 +1515,9 @@
                 }
                 currentState = math.multiply(phiMain, currentState);
                 t_calc += windowOptions.time_delta;
+            }
+            if (this === satellites[windowOptions.relativeData.origin] === this === satellites[windowOptions.relativeData.target]) {
+                console.log('hey');
             }
         }
 
