@@ -675,7 +675,7 @@
             }
         })
         document.getElementById('export-option-button').addEventListener('click', () => {
-            downloadFile('test.sas', JSON.stringify(satellites));
+            downloadFile('test.sas', JSON.stringify({windowOptions, satellites}));
         })
         document.getElementById('add-waypoint-button').addEventListener('click', event => {
             let divTarget = event.target.parentNode.children;
@@ -898,20 +898,22 @@
                             constant,
                             burn: jj
                         } : false;
-                        drawBurnArrow(burn, {
-                            cross: false,
-                            object: ii,
-                            constant,
-                            trans: true,
-                            length: cnvs.height * 0.075
-                        })
-                        drawBurnArrow(burn, {
-                            cross: true,
-                            object: ii,
-                            constant,
-                            trans: true,
-                            length: cnvs.height * 0.075
-                        })
+                        if (windowOptions.burn_status.object !== ii || windowOptions.burn_status.burn !== jj) {
+                            drawBurnArrow(burn, {
+                                cross: false,
+                                object: ii,
+                                constant,
+                                trans: true,
+                                length: cnvs.height * 0.075
+                            })
+                            drawBurnArrow(burn, {
+                                cross: true,
+                                object: ii,
+                                constant,
+                                trans: true,
+                                length: cnvs.height * 0.075
+                            })
+                        }
                         if ((windowOptions.scenario_time - burn.time) < windowOptions.passiveDropoff
                             .time) {
                             passiveBurns = satellite.burns.slice(0, jj);
@@ -1231,7 +1233,7 @@
             }
             let burnMag = math.norm([burn.direction.r , burn.direction.i, burn.direction.c]);
             let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c : burn.direction.r) * 180 / Math.PI;
-            let height = length ? length : burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width /
+            let height = length ? length * constant: burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width /
                 2;
             let origin = ricToPixel(location, {
                 cross
@@ -1245,7 +1247,7 @@
                 else ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * 0.5 * (
                     windowOptions.scenario_time - burn.time));
             }
-            ctx.fillText((burnMag * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + (burn.direction[cross ? 'c' : 'r'] < 0 ? -25 : 35))
+            ctx.fillText((burnMag * constant *  1000).toFixed(2) + ' m/s', origin[0], origin[1] + (burn.direction[cross ? 'c' : 'r'] < 0 ? -25 : 35))
             if (trans) {
                 ctx.globalAlpha = 0.4
             }
@@ -1865,9 +1867,21 @@
             var fileReader = new FileReader();
             fileReader.onload = function (fileLoadedEvent) {
                 var textFromFileLoaded = fileLoadedEvent.target.result;
-                satellites = JSON.parse(textFromFileLoaded);
+                textFromFileLoaded = JSON.parse(textFromFileLoaded);
+                satellites = textFromFileLoaded.satellites;
+                windowOptions = textFromFileLoaded.windowOptions;
+                windowOptions.start_date = new Date(windowOptions.start_date);
+                let options;
+                for (let ii = 0; ii < satellites.length; ii++) {
+                    // Have to create new satellites as methods don't transfer with JSON.parse
+                    options = {};
+                    for (element in satellites[ii]) {
+                        options[element] = satellites[ii][element];
+                    }
+                    satellites[ii] = newSatellite(options);
+                }
             };
-
+            
             fileReader.readAsText(fileToLoad, "UTF-8");
         }
 
