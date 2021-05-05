@@ -64,14 +64,15 @@
             </table>
             <div style="margin-top:2%; border: 1px solid black; border-radius: 20px; padding: 2% 0%">
                 <input style="width: 20%" type="datetime-local" id="start-time" name="meeting-time"
-                value="2021-04-01T00:00" class="center"> R: <input class="center" type="Number" value="0"
-                    style="width: 4%"> km I: <input class="center" type="Number" value="0" style="width: 4%"> km C: <input class="center"
-                    type="Number" value="0" style="width: 4%"> km Transfer Time: <input class="center" type="Number" value="0" style="width: 4%"> min
+                    value="2021-04-01T00:00" class="center"> R: <input class="center" type="Number" value="0"
+                    style="width: 4%"> km I: <input class="center" type="Number" value="0" style="width: 4%"> km C:
+                <input class="center" type="Number" value="0" style="width: 4%"> km Transfer Time: <input class="center"
+                    type="Number" value="0" style="width: 4%"> min
                 <span id="add-waypoint-button">Add</span>
             </div>
 
 
-            <div style="width: 50%"class="close-button panel-button hoverable noselect">Close</div>
+            <div style="width: 50%" class="close-button panel-button hoverable noselect">Close</div>
         </div>
     </div>
     <div id="instructions-panel" class="hidden panel">
@@ -156,7 +157,7 @@
             <div>Line Width<input value="3" type="Number" min="1" max="10"> px</div>
             <div>Line Trajectory<input type="checkbox"></div>
             <div>Finite Burns<input type="checkbox"></div>
-            <div>Finite Targeting<input type="checkbox"></div>
+            <div>Finite Targeting<input type="checkbox" checked></div>
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
             <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
             <div id="data-button" class="panel-button hoverable noselect">Data</div>
@@ -243,7 +244,7 @@
                 start: false,
                 stop: false
             },
-            maneuver_type: 'manual',
+            maneuver_type: 'waypoint',
             refresh_time: 0,
             arrowColor: 'rgb(100,100,100)',
             passiveDropoff: {
@@ -323,10 +324,10 @@
                 completedBurn: false,
                 calcTraj: calcSatShownTrajectories,
                 burnsDrawn: 0,
-                getPositionArray: function() {
+                getPositionArray: function () {
                     return [this.currentPosition.r, this.currentPosition.i, this.currentPosition.c];
                 },
-                getVelocityArray: function() {
+                getVelocityArray: function () {
                     return [this.currentPosition.rd, this.currentPosition.id, this.currentPosition.cd];
                 },
                 getCurrentState: getSatCurrentPosition
@@ -364,9 +365,12 @@
                 });
             }
             if (windowOptions.burn_status) {
-                let currentLocation = satellites[windowOptions.burn_status.object].getCurrentState({burnStop: windowOptions.burn_status
-                        .burn, time: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
-                            .burn].time});
+                let currentLocation = satellites[windowOptions.burn_status.object].getCurrentState({
+                    burnStop: windowOptions.burn_status
+                        .burn,
+                    time: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
+                        .burn].time
+                });
                 let n = 2 * Math.PI / 86164,
                     desVel, dV;
                 switch (e.key) {
@@ -483,7 +487,9 @@
             // check burns to see if clicked on ones
             satellites.forEach((sat, ii) => {
                 for (let jj = sat.burns.length - 1; jj >= 0; jj--) {
-                    let burnLocation = sat.getCurrentState({time: sat.burns[jj].time});
+                    let burnLocation = sat.getCurrentState({
+                        time: sat.burns[jj].time
+                    });
                     if (checkClose(burnLocation, windowOptions.mousePosition.ric, windowOptions
                             .mousePosition.screen === 'ci')) {
                         if (event.ctrlKey) {
@@ -503,7 +509,9 @@
                         if (type === 'waypoint') {
                             windowOptions.scenario_time_des += 7200;
                         }
-                        let burnLocation = sat.getCurrentState({time: satellites[ii].burns[jj].time});
+                        let burnLocation = sat.getCurrentState({
+                            time: satellites[ii].burns[jj].time
+                        });
                         windowOptions.burn_status = {
                             object: ii,
                             burn: jj,
@@ -534,15 +542,24 @@
                             i: 0,
                             c: 0
                         },
-                        magnitude: 0,
+                        waypoint: {
+                            tranTime: 120,
+                            target: {
+                                r: 0,
+                                i: 0,
+                                c: 0
+                            }
+                        }
                     })
                     satellites[windowOptions.mousePosition.object].burns.sort((a, b) => {
                         return a.time - b.time;
                     })
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn =>
                         burn.time === windowOptions.scenario_time);
-                    let burnLocation = satellites[windowOptions.mousePosition.object].getCurrentState({time: satellites[
-                                windowOptions.mousePosition.object].burns[burnN].time});
+                    let burnLocation = satellites[windowOptions.mousePosition.object].getCurrentState({
+                        time: satellites[
+                            windowOptions.mousePosition.object].burns[burnN].time
+                    });
                     let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' : windowOptions
                         .maneuver_type;
                     if (type === 'waypoint') {
@@ -675,19 +692,23 @@
             }
         })
         document.getElementById('export-option-button').addEventListener('click', () => {
-            downloadFile('test.sas', JSON.stringify({windowOptions, satellites}));
+            downloadFile('test.sas', JSON.stringify({
+                windowOptions,
+                satellites
+            }));
         })
         document.getElementById('add-waypoint-button').addEventListener('click', event => {
             let divTarget = event.target.parentNode.children;
-            let tableTrs = document.getElementById('waypoint-table').children[1].children, waypoints = [];
+            let tableTrs = document.getElementById('waypoint-table').children[1].children,
+                waypoints = [];
             for (let tr = 0; tr < tableTrs.length; tr++) {
-                 waypoints.push({
-                     time: Date.parse(tableTrs[tr].children[0].innerText),
-                     r: Number(tableTrs[tr].children[1].children[0].innerText),
-                     i: Number(tableTrs[tr].children[2].children[0].innerText),
-                     c: Number(tableTrs[tr].children[3].children[0].innerText),
-                     tranTime: Number(tableTrs[tr].children[4].innerText)
-                 })
+                waypoints.push({
+                    time: Date.parse(tableTrs[tr].children[0].innerText),
+                    r: Number(tableTrs[tr].children[1].children[0].innerText),
+                    i: Number(tableTrs[tr].children[2].children[0].innerText),
+                    c: Number(tableTrs[tr].children[3].children[0].innerText),
+                    tranTime: Number(tableTrs[tr].children[4].innerText)
+                })
             }
             let newWaypoint = {
                 time: Date.parse(divTarget[0].value),
@@ -702,7 +723,7 @@
                 return;
             }
             waypoints.push(newWaypoint);
-            waypoints.sort((a,b) => a.time - b.time);
+            waypoints.sort((a, b) => a.time - b.time);
             waypoints2table(waypoints);
             let chosenSat = Number(document.getElementById('satellite-way-select').value);
             table2burns(chosenSat);
@@ -859,7 +880,9 @@
                 let y_location = cnvs.height * 0.1;
                 for (relData in windowOptions.relativeData.data) {
                     if (windowOptions.relativeData.data[relData].exist) {
-                        ctx.fillText(windowOptions.relativeData.data[relData].name + ': ' + relDataIn[relData].toFixed(1) + ' ' + windowOptions.relativeData.data[relData].units, cnvs.width * 0.01, y_location);
+                        ctx.fillText(windowOptions.relativeData.data[relData].name + ': ' + relDataIn[relData].toFixed(
+                                1) + ' ' + windowOptions.relativeData.data[relData].units, cnvs.width * 0.01,
+                            y_location);
                         y_location += 30;
                     }
                 }
@@ -894,11 +917,13 @@
                             .c
                         ]) / satellite.a;
                         let constant = (windowOptions.scenario_time_des - burn.time) / burnTime;
-                        satellite.completedBurn = satellite.completedBurn ? satellite.completedBurn : constant < 1 && constant >= -1e-6 ? {
-                            constant,
-                            burn: jj
-                        } : false;
-                        if (windowOptions.burn_status.object !== ii || windowOptions.burn_status.burn !== jj) {
+                        satellite.completedBurn = satellite.completedBurn ? satellite.completedBurn :
+                            constant < 1 && constant >= -1e-6 ? {
+                                constant,
+                                burn: jj
+                            } : false;
+                        if (windowOptions.burn_status.object !== ii || windowOptions.burn_status
+                            .burn !== jj) {
                             drawBurnArrow(burn, {
                                 cross: false,
                                 object: ii,
@@ -934,8 +959,9 @@
                 })
                 ctx.strokeStyle = satellite.color;
 
-                if (satellite.completedBurn || satellite.burns.filter(burn => burn.time < (windowOptions.scenario_time_des)).length !== satellite.burnsDrawn) satellite.calcTraj();
-                
+                if (satellite.completedBurn || satellite.burns.filter(burn => burn.time < (windowOptions
+                        .scenario_time_des)).length !== satellite.burnsDrawn) satellite.calcTraj();
+
                 if (windowOptions.screen.mode !== 'ri only') {
                     if (windowOptions.draw_style === 'line') {
                         drawCurve(ctx, satellite.shownTraj, {
@@ -1083,8 +1109,11 @@
                     i: 0
                 }, data = false
             } = satellite;
-            let pixelPosition = ricToPixel(getSatCurrentPosition({position: satellite.position, burns: satellite.burns,
-                a: satellite.a}), {
+            let pixelPosition = ricToPixel(getSatCurrentPosition({
+                position: satellite.position,
+                burns: satellite.burns,
+                a: satellite.a
+            }), {
                 cross
             });
             // console.log(pixelPosition, satellite.position, satellite.burns)
@@ -1229,11 +1258,14 @@
             } = options;
             constant = constant > 1 ? 1 : constant;
             if (location === undefined) {
-                location = satellites[object].getCurrentState({time: burn.time});
+                location = satellites[object].getCurrentState({
+                    time: burn.time
+                });
             }
-            let burnMag = math.norm([burn.direction.r , burn.direction.i, burn.direction.c]);
+            let burnMag = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]);
             let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c : burn.direction.r) * 180 / Math.PI;
-            let height = length ? length * constant: burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs.width / windowOptions.width /
+            let height = length ? length * constant : burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs
+                .width / windowOptions.width /
                 2;
             let origin = ricToPixel(location, {
                 cross
@@ -1247,7 +1279,8 @@
                 else ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * 0.5 * (
                     windowOptions.scenario_time - burn.time));
             }
-            ctx.fillText((burnMag * constant *  1000).toFixed(2) + ' m/s', origin[0], origin[1] + (burn.direction[cross ? 'c' : 'r'] < 0 ? -25 : 35))
+            ctx.fillText((burnMag * constant * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + (burn.direction[cross ?
+                'c' : 'r'] < 0 ? -25 : 35))
             if (trans) {
                 ctx.globalAlpha = 0.4
             }
@@ -1274,7 +1307,9 @@
         }
 
         function getSatCurrentPosition(options = {}) {
-            let {time = windowOptions.scenario_time, burnStop, position = this.position, burns = this.burns, a = this.a} = options
+            let {
+                time = windowOptions.scenario_time, burnStop, position = this.position, burns = this.burns, a = this.a
+            } = options
             if (burnStop === undefined) burnStop = burns.length;
             if (windowOptions.showFinite) {
                 let t_prop = 0,
@@ -1291,7 +1326,8 @@
                     if (time <= burns[n_burn].time) break;
                     pos = math.multiply(phiMatrixWhole(burns[n_burn].time - t_prop), pos);
                     t_prop = burns[n_burn].time;
-                    t_burn = burnStop <= n_burn ? 0 : math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i, burns[n_burn].direction
+                    t_burn = burnStop <= n_burn ? 0 : math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i,
+                        burns[n_burn].direction
                         .c
                     ]) / a;
                     alpha = math.atan2(burns[n_burn].direction.i, burns[n_burn].direction.r);
@@ -1419,7 +1455,7 @@
             ];
         }
 
-        function calcSatShownTrajectories(whole = false) {
+        function calcSatShownTrajectories(whole = false, allBurns = false) {
             let t_calc, currentState, satBurn;
             phiMain = phiMatrixWhole(windowOptions.time_delta);
             this.shownTraj = [];
@@ -1441,16 +1477,16 @@
                     c: currentState[2][0]
                 });
                 if (satBurn !== undefined) {
-                    if ((this.burns[satBurn].time - t_calc) <= windowOptions.time_delta && (this.burns[satBurn].time <=
-                            (windowOptions.scenario_time_des + 0.5))) {
+                    if (((this.burns[satBurn].time - t_calc) <= windowOptions.time_delta && (this.burns[satBurn].time <=
+                            (windowOptions.scenario_time_des + 0.5))) || allBurns) {
                         if (windowOptions.showFinite) {
                             let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
                                 .direction.i, this.burns[satBurn].direction.c
                             ]) / this.a;
                             if (this.completedBurn && !windowOptions.burn_status) {
-                                t_burn = t_burn < (windowOptions.scenario_time_des - this.burns[satBurn].time) ? t_burn : windowOptions.scenario_time_des - this.burns[satBurn].time;
-                            }
-                            else {
+                                t_burn = t_burn < (windowOptions.scenario_time_des - this.burns[satBurn].time) ?
+                                    t_burn : windowOptions.scenario_time_des - this.burns[satBurn].time;
+                            } else {
                                 this.burnsDrawn++;
                             }
                             let position_start = math.multiply(phiMatrixWhole(this.burns[satBurn].time -
@@ -1517,9 +1553,6 @@
                 }
                 currentState = math.multiply(phiMain, currentState);
                 t_calc += windowOptions.time_delta;
-            }
-            if (this === satellites[windowOptions.relativeData.origin] === this === satellites[windowOptions.relativeData.target]) {
-                console.log('hey');
             }
         }
 
@@ -1624,7 +1657,9 @@
             }
             satellite.burns.forEach(burn => {
                 if (burn.time < windowOptions.scenario_time) {
-                    position = satellite.getCurrentState({time: burn.time});
+                    position = satellite.getCurrentState({
+                        time: burn.time
+                    });
                     position = ricToPixel(position, {
                         cross
                     });
@@ -1648,73 +1683,116 @@
             let sat = satellites[burn.object];
             if (windowOptions.burn_status.type === 'waypoint') {
                 let r1, r2;
+                if (burn.type2) {
+                    burn.burnLocation = sat.getCurrentState({
+                        time: sat.burns[burn.burn].time,
+                        burnStop: burn.burn
+                    })
+                } else {
+                    sat.burns[burn.burn].waypoint.tranTime = burn.time;
+                    sat.burns[burn.burn].waypoint.target = {
+                        r: windowOptions.mousePosition.ric.r,
+                        i: windowOptions.mousePosition.ric.i,
+                        c: 0
+                    }
+                }
                 if (windowOptions.showFinite && windowOptions.finiteTarget) {
                     r1 = {
-                        x: windowOptions.burn_status.burnLocation.r[0],
-                        y: windowOptions.burn_status.burnLocation.i[0],
-                        z: windowOptions.burn_status.burnLocation.c[0],
-                        xd: windowOptions.burn_status.burnLocation.rd[0],
-                        yd: windowOptions.burn_status.burnLocation.id[0],
-                        zd: windowOptions.burn_status.burnLocation.cd[0]
+                        x: burn.burnLocation.r[0],
+                        y: burn.burnLocation.i[0],
+                        z: burn.burnLocation.c[0],
+                        xd: burn.burnLocation.rd[0],
+                        yd: burn.burnLocation.id[0],
+                        zd: burn.burnLocation.cd[0]
                     };
                     r2 = {
-                        x: windowOptions.mousePosition.ric.r,
-                        y: windowOptions.mousePosition.ric.i,
+                        x: burn.type2 ? sat.burns[burn.burn].waypoint.target.r : windowOptions.mousePosition.ric.r,
+                        y: burn.type2 ? sat.burns[burn.burn].waypoint.target.i : windowOptions.mousePosition.ric.i,
                         z: 0,
                         xd: 0,
                         yd: 0,
                         zd: 0
                     };
-                    let dir = hcwFiniteBurnOneBurn(r1, r2, windowOptions.burn_status.time, sat.a);
+                    if (burn.type2) console.log(r1, r2);
+                    let dir = hcwFiniteBurnOneBurn(r1, r2, burn.type2 ? sat.burns[burn.burn].waypoint.tranTime : burn
+                        .time, sat.a);
                     if (dir && dir.t > 0 && dir.t < 1) {
                         sat.burns[burn.burn].direction.r = dir.r;
                         sat.burns[burn.burn].direction.i = dir.i;
                         satellites[burn.object].calcTraj(true);
-
+                        return;
                     }
-                    return;
+                } else {
+                    r1 = [burn.burnLocation.r, burn.burnLocation.i, [0]]
+                    let v0 = [burn.burnLocation.rd, burn.burnLocation.id, [0]];
+                    r2 = [
+                        [burn.type2 ? sat.burns[burn.burn].waypoint.target.r : windowOptions.mousePosition.ric.r],
+                        [burn.type2 ? sat.burns[burn.burn].waypoint.target.i : windowOptions.mousePosition.ric.i],
+                        [0]
+                    ];
+                    let phi = phiMatrix(burn.type2 ? sat.burns[burn.burn].waypoint.tranTime : burn.time);
+                    let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
+                    sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
+                    sat.burns[burn.burn].direction.i = v1[1][0] - v0[1][0];
                 }
-                r1 = [windowOptions.burn_status.burnLocation.r, windowOptions.burn_status.burnLocation.i, [0]],
-                    r1_2 = r1;
-                let v0 = [windowOptions.burn_status.burnLocation.rd, windowOptions.burn_status.burnLocation.id, [0]];
-                r2 = [
-                    [windowOptions.mousePosition.ric.r],
-                    [windowOptions.mousePosition.ric.i],
-                    [0]
-                ];
-                let phi = phiMatrix(windowOptions.burn_status.time);
-                let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
-                sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
-                sat.burns[burn.burn].direction.i = v1[1][0] - v0[1][0];
-                satellites[burn.object].calcTraj(true);
-                return;
-            }
-            sat.burns[burn.burn].direction = {
-                r: cross ? sat.burns[burn.burn].direction.r : (windowOptions.mousePosition.ric.r - windowOptions
-                    .burn_status.burnLocation.r[0]) * windowOptions.burn_sensitivity / 1000,
-                i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions
-                    .burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
-                c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) *
-                    windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
+            } else {
+                sat.burns[burn.burn].direction = {
+                    r: cross ? sat.burns[burn.burn].direction.r : (windowOptions.mousePosition.ric.r - windowOptions
+                        .burn_status.burnLocation.r[0]) * windowOptions.burn_sensitivity / 1000,
+                    i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions
+                        .burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
+                    c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) *
+                        windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
+                }
+                let targetState = sat.getCurrentState({
+                    time: sat.burns[burn.burn].time + 7200
+                });
+                sat.burns[burn.burn].waypoint.tranTime = 7200;
+                sat.burns[burn.burn].waypoint.target = {
+                    r: targetState.r[0],
+                    i: targetState.i[0],
+                    c: targetState.c[0]
+                }
             }
             drawBurnArrow(sat.burns[burn.burn], {
-                location: windowOptions.burn_status.burnLocation,
+                location: burn.burnLocation,
                 object: burn.object
             });
+            if (burn.burn < sat.burns.length - 1) {
+                if (!burn.type2) {
+                    burn.oldType = burn.type + '';
+                    burn.type = 'waypoint';
+                    burn.oldType = burn.type;
+                    burn.oldLocation = burn.burnLocation;
+                    burn.type2 = true;
+                    burn.orig = burn.burn;
+                    windowOptions.scenario_time_des = sat.burns[sat.burns.length - 1].time;
+                }
+                burn.burn++;
+                calcBurns(burn, cross);
+                return;
+            } else if (burn.type2) {
+                burn.type2 = false;
+                burn.burn = burn.orig;
+                burn.type = burn.oldType;
+                burn.burnLocation = burn.oldLocation;
+            }
             satellites[burn.object].calcTraj(true);
         }
 
         function getRelativeData(n_target, n_origin) {
             let sunAngle, rangeRate, range, poca, toca, tanRate;
-            let relPos = math.squeeze(math.subtract(satellites[n_origin].getPositionArray(), satellites[n_target].getPositionArray()));
-            let relVel = math.squeeze(math.subtract(satellites[n_origin].getVelocityArray(), satellites[n_target].getVelocityArray()));
+            let relPos = math.squeeze(math.subtract(satellites[n_origin].getPositionArray(), satellites[n_target]
+                .getPositionArray()));
+            let relVel = math.squeeze(math.subtract(satellites[n_origin].getVelocityArray(), satellites[n_target]
+                .getVelocityArray()));
             range = math.norm(relPos);
             sunAngle = 2 * Math.PI * (windowOptions.scenario_time + windowOptions.sunInit) / 86164
             sunAngle = [-math.cos(sunAngle), math.sin(sunAngle), 0];
             sunAngle = math.acos(math.dot(relPos, sunAngle) / range) * 180 / Math.PI;
 
             rangeRate = math.dot(relVel, relPos) * 1000 / range;
-            tanRate = Math.sqrt(Math.pow(math.norm(relVel),2) - Math.pow(rangeRate, 2)) * 1000;
+            tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
             let relPosHis = findMinDistance(satellites[n_origin].shownTraj, satellites[n_target].shownTraj);
             poca = math.min(findMinDistance(satellites[n_origin].shownTraj, satellites[n_target].shownTraj));
             toca = relPosHis.findIndex(element => element === poca) * windowOptions.time_delta / 3600;
@@ -1725,13 +1803,15 @@
                 poca,
                 toca,
                 tanRate
-            } 
+            }
         }
-        
+
         function findMinDistance(vector1, vector2) {
             let outVec = [];
             for (let jj = 0; jj < vector1.length; jj++) {
-                outVec.push(math.norm([vector1[jj].r - vector2[jj].r, vector1[jj].i - vector2[jj].i, vector1[jj].c - vector2[jj].c]));
+                outVec.push(math.norm([vector1[jj].r - vector2[jj].r, vector1[jj].i - vector2[jj].i, vector1[jj].c -
+                    vector2[jj].c
+                ]));
             }
             return outVec
         }
@@ -1744,9 +1824,13 @@
             if (satellites[object].burns.length === 0) return;
             let r1, r2, v, addedElement;
             for (let burn = 0; burn < satellites[object].burns.length - 1; burn++) {
-                r1 = satellites[object].getCurrentState({time: satellites[object].burns[burn].time});
-                r2 = satellites[object].getCurrentState({time: satellites[object].burns[burn+1].time});
-                t = satellites[object].burns[burn+1].time - satellites[object].burns[burn].time;
+                r1 = satellites[object].getCurrentState({
+                    time: satellites[object].burns[burn].time
+                });
+                r2 = satellites[object].getCurrentState({
+                    time: satellites[object].burns[burn + 1].time
+                });
+                t = satellites[object].burns[burn + 1].time - satellites[object].burns[burn].time;
                 addedElement = document.createElement('tr');
                 addedElement.innerHTML = `
                     <td>${new Date(windowOptions.start_date.getTime() + satellites[object].burns[burn].time * 1000).toString()
@@ -1759,7 +1843,9 @@
                 `;
                 table.appendChild(addedElement);
             }
-            r2 = satellites[object].getCurrentState({time: satellites[object].burns[satellites[object].burns.length - 1].time + 7200});
+            r2 = satellites[object].getCurrentState({
+                time: satellites[object].burns[satellites[object].burns.length - 1].time + 7200
+            });
             t = 7200;
             addedElement = document.createElement('tr');
             addedElement.innerHTML = `
@@ -1779,7 +1865,8 @@
         }
 
         function editButtonFunction(event) {
-            let tdList = event.target.parentElement.children, oldValue;
+            let tdList = event.target.parentElement.children,
+                oldValue;
             if (event.target.innerText === 'Confirm') {
                 event.target.innerText = 'Edit';
                 for (let td = 1; td < 4; td++) {
@@ -1816,17 +1903,24 @@
                 table.appendChild(addedElement);
             });
         }
-        
+
         function table2burns(object) {
-            let tableTrs = document.getElementById('waypoint-table').children[1].children, time, tranTime, r1, r2, v1, v, startTime = windowOptions.start_date.getTime(), burns = [];
+            let tableTrs = document.getElementById('waypoint-table').children[1].children,
+                time, tranTime, r1, r2, v1, v, startTime = windowOptions.start_date.getTime(),
+                burns = [];
             for (let tr = 0; tr < tableTrs.length; tr++) {
                 time = (Date.parse(tableTrs[tr].children[0].innerText) - startTime) / 1000;
-                r1 = satellites[object].getCurrentState({time, burns});
+                r1 = satellites[object].getCurrentState({
+                    time,
+                    burns
+                });
                 v1 = [r1.rd, r1.id, r1.cd];
                 r1 = [r1.r, r1.i, r1.c];
-                r2 = [[Number(tableTrs[tr].children[1].children[0].innerText)],
-                      [Number(tableTrs[tr].children[2].children[0].innerText)],
-                      [Number(tableTrs[tr].children[3].children[0].innerText)]];
+                r2 = [
+                    [Number(tableTrs[tr].children[1].children[0].innerText)],
+                    [Number(tableTrs[tr].children[2].children[0].innerText)],
+                    [Number(tableTrs[tr].children[3].children[0].innerText)]
+                ];
                 tranTime = Number(tableTrs[tr].children[4].innerText) * 60;
                 v = proxOpsTargeter(r1, r2, tranTime);
                 v1 = math.squeeze(math.subtract(v[0], v1));
@@ -1857,7 +1951,7 @@
                 pom.click();
             }
         }
-        
+
         document.getElementById('upload-options-button').addEventListener('change', event => {
             loadFileAsText(event.path[0].files[0])
         })
@@ -1881,7 +1975,7 @@
                     satellites[ii] = newSatellite(options);
                 }
             };
-            
+
             fileReader.readAsText(fileToLoad, "UTF-8");
         }
 
@@ -2080,8 +2174,6 @@
             v2 = math.add(math.multiply(phi.vr, r1), math.multiply(phi.vv, v1));
             return [v1, v2];
         }
-    
-        
     </script>
 </body>
 
