@@ -871,7 +871,7 @@
             ctx.fillStyle = 'black';
             ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
                 .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
-            ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
+            // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
             ctx.font = '15px Arial';
             if (satellites.length > 1) {
                 // console.log(satellites[windowOptions.relativeData.origin], satellites[windowOptions.relativeData.target]);
