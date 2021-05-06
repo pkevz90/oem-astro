@@ -718,7 +718,6 @@
                 tranTime: Number(divTarget[4].value) === 0 ? 120 : Number(divTarget[4].value)
             }
             let filterLimit = 15 * 60 * 1000; // Reject burns closer than 15 minutes to other burns 
-            console.log(waypoints.filter(point => Math.abs(point.time - newWaypoint.time) < filterLimit));
             if (waypoints.filter(point => Math.abs(point.time - newWaypoint.time) < filterLimit).length > 0) {
                 return;
             }
@@ -1683,17 +1682,23 @@
             let sat = satellites[burn.object];
             if (windowOptions.burn_status.type === 'waypoint') {
                 let r1, r2;
+                let crossState;
                 if (burn.type2) {
                     burn.burnLocation = sat.getCurrentState({
                         time: sat.burns[burn.burn].time,
                         burnStop: burn.burn
                     })
                 } else {
+                    crossState = sat.getCurrentState({
+                        time: sat.burns[burn.burn].time + burn.time,
+                        burnStop: burn.burn
+                    })
+                    console.log(crossState);
                     sat.burns[burn.burn].waypoint.tranTime = burn.time;
                     sat.burns[burn.burn].waypoint.target = {
-                        r: windowOptions.mousePosition.ric.r,
-                        i: windowOptions.mousePosition.ric.i,
-                        c: 0
+                        r: cross ? crossState.r[0] : windowOptions.mousePosition.ric.r,
+                        i: cross ? crossState.i[0] : windowOptions.mousePosition.ric.i,
+                        c: crossState.c[0]
                     }
                 }
                 if (windowOptions.showFinite && windowOptions.finiteTarget) {
@@ -1708,7 +1713,7 @@
                     r2 = {
                         x: burn.type2 ? sat.burns[burn.burn].waypoint.target.r : windowOptions.mousePosition.ric.r,
                         y: burn.type2 ? sat.burns[burn.burn].waypoint.target.i : windowOptions.mousePosition.ric.i,
-                        z: 0,
+                        z: burn.type2 ? sat.burns[burn.burn].waypoint.target.c : crossState.c[0],
                         xd: 0,
                         yd: 0,
                         zd: 0
@@ -1719,21 +1724,22 @@
                     if (dir && dir.t > 0 && dir.t < 1) {
                         sat.burns[burn.burn].direction.r = dir.r;
                         sat.burns[burn.burn].direction.i = dir.i;
+                        sat.burns[burn.burn].direction.c = dir.c;
                         satellites[burn.object].calcTraj(true);
-                        return;
                     }
                 } else {
-                    r1 = [burn.burnLocation.r, burn.burnLocation.i, [0]]
-                    let v0 = [burn.burnLocation.rd, burn.burnLocation.id, [0]];
+                    r1 = [burn.burnLocation.r, burn.burnLocation.i, burn.burnLocation.c]
+                    let v0 = [burn.burnLocation.rd, burn.burnLocation.id, burn.burnLocation.cd];
                     r2 = [
                         [burn.type2 ? sat.burns[burn.burn].waypoint.target.r : windowOptions.mousePosition.ric.r],
                         [burn.type2 ? sat.burns[burn.burn].waypoint.target.i : windowOptions.mousePosition.ric.i],
-                        [0]
+                        [burn.type2 ? sat.burns[burn.burn].waypoint.target.c : crossState.c[0]]
                     ];
                     let phi = phiMatrix(burn.type2 ? sat.burns[burn.burn].waypoint.tranTime : burn.time);
                     let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
                     sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
                     sat.burns[burn.burn].direction.i = v1[1][0] - v0[1][0];
+                    sat.burns[burn.burn].direction.c = v1[2][0] - v0[2][0];
                 }
             } else {
                 sat.burns[burn.burn].direction = {
@@ -1749,8 +1755,8 @@
                 });
                 sat.burns[burn.burn].waypoint.tranTime = 7200;
                 sat.burns[burn.burn].waypoint.target = {
-                    r: targetState.r[0],
-                    i: targetState.i[0],
+                    r: cross ? sat.burns[burn.burn].waypoint.target.r : targetState.r[0],
+                    i: cross ? sat.burns[burn.burn].waypoint.target.i : targetState.i[0],
                     c: targetState.c[0]
                 }
             }
@@ -1762,16 +1768,16 @@
                 if (!burn.type2) {
                     burn.oldType = burn.type + '';
                     burn.type = 'waypoint';
-                    burn.oldType = burn.type;
                     burn.oldLocation = burn.burnLocation;
-                    burn.type2 = true;
                     burn.orig = burn.burn;
                     windowOptions.scenario_time_des = sat.burns[sat.burns.length - 1].time;
                 }
+                burn.type2 = true;
                 burn.burn++;
                 calcBurns(burn, cross);
                 return;
-            } else if (burn.type2) {
+            } 
+            else if (burn.type2) {
                 burn.type2 = false;
                 burn.burn = burn.orig;
                 burn.type = burn.oldType;
@@ -1823,41 +1829,19 @@
             }
             if (satellites[object].burns.length === 0) return;
             let r1, r2, v, addedElement;
-            for (let burn = 0; burn < satellites[object].burns.length - 1; burn++) {
-                r1 = satellites[object].getCurrentState({
-                    time: satellites[object].burns[burn].time
-                });
-                r2 = satellites[object].getCurrentState({
-                    time: satellites[object].burns[burn + 1].time
-                });
-                t = satellites[object].burns[burn + 1].time - satellites[object].burns[burn].time;
+            for (let burn = 0; burn < satellites[object].burns.length; burn++) {
                 addedElement = document.createElement('tr');
                 addedElement.innerHTML = `
                     <td>${new Date(windowOptions.start_date.getTime() + satellites[object].burns[burn].time * 1000).toString()
                 .split(' GMT')[0].substring(4)}</td>
-                    <td><span>${(r2.r[0]).toFixed(1)}</span> km</td>
-                    <td><span>${(r2.i[0]).toFixed(1)}</span> km</td>
-                    <td><span>${(r2.c[0]).toFixed(1)}</span> km</td>
-                    <td><span>${(t / 60).toFixed(1)}</span></td>
+                    <td><span>${(satellites[object].burns[burn].waypoint.target.r).toFixed(1)}</span> km</td>
+                    <td><span>${(satellites[object].burns[burn].waypoint.target.i).toFixed(1)}</span> km</td>
+                    <td><span>${(satellites[object].burns[burn].waypoint.target.c).toFixed(1)}</span> km</td>
+                    <td><span>${(satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
                     <td class="edit-button">Edit</td>
                 `;
                 table.appendChild(addedElement);
             }
-            r2 = satellites[object].getCurrentState({
-                time: satellites[object].burns[satellites[object].burns.length - 1].time + 7200
-            });
-            t = 7200;
-            addedElement = document.createElement('tr');
-            addedElement.innerHTML = `
-                <td>${new Date(windowOptions.start_date.getTime() + satellites[object].burns[satellites[object].burns.length - 1].time * 1000).toString()
-            .split(' GMT')[0].substring(4)}</td>
-                <td><span>${(r2.r[0]).toFixed(1)}</span> km</td>
-                <td><span>${(r2.i[0]).toFixed(1)}</span> km</td>
-                <td><span>${(r2.c[0]).toFixed(1)}</span> km</td>
-                <td><span>${(t / 60).toFixed(1)}</span></td>
-                <td class="edit-button">Edit</td>
-            `;
-            table.appendChild(addedElement);
             let editButtons = document.getElementsByClassName('edit-button');
             for (let button = 0; button < editButtons.length; button++) {
                 editButtons[button].addEventListener('click', editButtonFunction);
@@ -1869,7 +1853,7 @@
                 oldValue;
             if (event.target.innerText === 'Confirm') {
                 event.target.innerText = 'Edit';
-                for (let td = 1; td < 4; td++) {
+                for (let td = 1; td < 5; td++) {
                     oldValue = tdList[td].children[0].children[0].value;
                     tdList[td].children[0].innerText = oldValue;
                 }
@@ -1877,7 +1861,7 @@
                 return;
             }
             event.target.innerText = 'Confirm';
-            for (let td = 1; td < 4; td++) {
+            for (let td = 1; td < 5; td++) {
                 oldValue = tdList[td].children[0].innerText;
                 tdList[td].children[0].innerHTML = `<input style="width: 20%" type="number" value="${oldValue}"/>`;
             }
@@ -1906,36 +1890,42 @@
 
         function table2burns(object) {
             let tableTrs = document.getElementById('waypoint-table').children[1].children,
-                time, tranTime, r1, r2, v1, v, startTime = windowOptions.start_date.getTime(),
+                time, tranTime, startTime = windowOptions.start_date.getTime(),
                 burns = [];
             for (let tr = 0; tr < tableTrs.length; tr++) {
                 time = (Date.parse(tableTrs[tr].children[0].innerText) - startTime) / 1000;
-                r1 = satellites[object].getCurrentState({
-                    time,
-                    burns
-                });
-                v1 = [r1.rd, r1.id, r1.cd];
-                r1 = [r1.r, r1.i, r1.c];
-                r2 = [
-                    [Number(tableTrs[tr].children[1].children[0].innerText)],
-                    [Number(tableTrs[tr].children[2].children[0].innerText)],
-                    [Number(tableTrs[tr].children[3].children[0].innerText)]
-                ];
                 tranTime = Number(tableTrs[tr].children[4].innerText) * 60;
-                v = proxOpsTargeter(r1, r2, tranTime);
-                v1 = math.squeeze(math.subtract(v[0], v1));
                 burns.push({
                     time,
                     direction: {
-                        r: v1[0],
-                        i: v1[1],
-                        c: v1[2],
+                        r: 0,
+                        i: 0,
+                        c: 0
                     },
-                    magnitude: 0
-                })
+                    waypoint: {
+                        tranTime,
+                        target: {
+                            r: Number(tableTrs[tr].children[1].children[0].innerText),
+                            i: Number(tableTrs[tr].children[2].children[0].innerText),
+                            c: Number(tableTrs[tr].children[3].children[0].innerText)
+                        }
+                    }
+                });
+            }
+            windowOptions.burn_status = {
+                burn: 0,
+                burnLocation: undefined,
+                object,
+                oldLocation: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
+                oldType: 'waypoint',
+                orig: 0,
+                time: 7200,
+                type: 'waypoint',
+                type2: true
             }
             satellites[object].burns = [...burns];
-            satellites[object].calcTraj();
+            calcBurns(windowOptions.burn_status);
+            windowOptions.burn_status = false;
         }
 
         function downloadFile(filename, text) {
