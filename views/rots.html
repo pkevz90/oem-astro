@@ -168,14 +168,10 @@
     <div id="data-panel" class="hidden panel">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Origin</div>
-            <select id="satellite-way-select" style="font-size: 2em">
-                <option value="0">Blue Triangle</option>
-                <option value="1">Red Circle</option>
+            <select id="origin-select" style="font-size: 2em">
             </select>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Target</div>
-            <select id="satellite-way-select" style="font-size: 2em">
-                <option value="0">Blue Triangle</option>
-                <option value="1" selected>Red Circle</option>
+            <select id="target-select" style="font-size: 2em">
             </select>
         </div>
         <div>
@@ -184,7 +180,7 @@
             <div><input type="checkbox">Tangential Rate</div>
             <div><input type="checkbox">POCA</div>
             <div><input type="checkbox">CATS</div>
-            <div class="close-button panel-button hoverable noselect">Close</div>
+            <div id="confirm-data-button" class="panel-button hoverable noselect">Confirm</div>
         </div>
     </div>
     <script>
@@ -254,31 +250,31 @@
             showFinite: false,
             finiteTarget: false,
             relativeData: {
-                origin: 0,
-                target: 1,
+                origin: undefined,
+                target: undefined,
                 data: {
                     range: {
-                        exist: true,
+                        exist: false,
                         units: 'km',
                         name: 'R'
                     },
                     rangeRate: {
-                        exist: true,
+                        exist: false,
                         units: 'm/s',
                         name: 'RR'
                     },
                     sunAngle: {
-                        exist: true,
+                        exist: false,
                         units: 'deg',
                         name: 'CATS'
                     },
                     poca: {
-                        exist: true,
+                        exist: false,
                         units: 'km',
                         name: 'POCA'
                     },
                     toca: {
-                        exist: true,
+                        exist: false,
                         units: 'hrs',
                         name: 'TOCA'
                     },
@@ -556,7 +552,7 @@
                         return a.time - b.time;
                     })
                     let burnN = satellites[windowOptions.mousePosition.object].burns.findIndex(burn =>
-                        burn.time === windowOptions.scenario_time);
+                        burn.time === windowOptions.scenario_time_des);
                     let burnLocation = satellites[windowOptions.mousePosition.object].getCurrentState({
                         time: satellites[
                             windowOptions.mousePosition.object].burns[burnN].time
@@ -621,6 +617,12 @@
             generateBurnTable(event.target.value)
             event.target.style.color = satellites[event.target.value].color;
         })
+        document.getElementById('target-select').addEventListener('change', event => {
+            event.target.style.color = satellites[event.target.value].color;
+        })
+        document.getElementById('origin-select').addEventListener('change', event => {
+            event.target.style.color = satellites[event.target.value].color;
+        })
         document.getElementById('add-satellite-button').addEventListener('click', (click) => {
             let el = click.target,
                 n = 2 * Math.PI / 86164;
@@ -655,7 +657,35 @@
             document.getElementById('add-satellite-panel').classList.toggle("hidden")
         })
         document.getElementById('data-button').addEventListener('click', (click) => {
+            if (satellites.length === 0) {
+                return;
+            }
             document.getElementById('options-panel').classList.toggle("hidden")
+            let originSel = document.getElementById('origin-select');
+            let targetSel = document.getElementById('target-select');
+            while (originSel.firstChild) {
+                originSel.removeChild(originSel.firstChild);
+            }
+            while (targetSel.firstChild) {
+                targetSel.removeChild(targetSel.firstChild);
+            }
+            satellites.forEach((sat, ii) => {
+                addedElement = document.createElement('option');
+                addedElement.value = ii;
+                addedElement.textContent = sat.shape;
+                addedElement.style.color = sat.color;
+                originSel.appendChild(addedElement);
+                addedElement = document.createElement('option');
+                addedElement.value = ii;
+                addedElement.textContent = sat.shape;
+                addedElement.style.color = sat.color;
+                targetSel.appendChild(addedElement);
+            })
+            targetSel.value = windowOptions.relativeData.target !== undefined ? windowOptions.relativeData.target : 1;
+            targetSel.style.color = windowOptions.relativeData.target !== undefined ? satellites[windowOptions.relativeData.target].color : satellites[1].color;
+            originSel.value = windowOptions.relativeData.origin !== undefined ? windowOptions.relativeData.origin : 0;
+            originSel.style.color = windowOptions.relativeData.origin !== undefined ? satellites[windowOptions.relativeData.origin].color : satellites[0].color;
+
             document.getElementById('data-panel').classList.toggle("hidden")
         })
         document.getElementById('confirm-option-button').addEventListener('click', (click) => {
@@ -679,6 +709,17 @@
             windowOptions.sunInit = sun;
             windowOptions.start_date = new Date(date);
             document.getElementById('options-panel').classList.toggle("hidden")
+        })
+        document.getElementById('confirm-data-button').addEventListener('click', (click) => {
+            let el = click.target;
+            windowOptions.relativeData.data.range.exist = el.parentNode.children[0].children[0].checked;
+            windowOptions.relativeData.data.rangeRate.exist = el.parentNode.children[1].children[0].checked;
+            windowOptions.relativeData.data.tanRate.exist = el.parentNode.children[2].children[0].checked;
+            windowOptions.relativeData.data.poca.exist = el.parentNode.children[3].children[0].checked;
+            windowOptions.relativeData.data.sunAngle.exist = el.parentNode.children[4].children[0].checked;
+            windowOptions.relativeData.origin = el.parentNode.parentNode.children[0].children[1].value;
+            windowOptions.relativeData.target = el.parentNode.parentNode.children[0].children[3].value;
+            document.getElementById('data-panel').classList.toggle("hidden")
         })
         document.getElementById('maneuver-type-input').addEventListener('change', (click) => {
             el = click.target;
@@ -875,7 +916,7 @@
                 .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
             // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
             ctx.font = '15px Arial';
-            if (satellites.length > 1) {
+            if (windowOptions.relativeData.origin !== undefined && windowOptions.relativeData.target !== undefined && windowOptions.relativeData.origin !== windowOptions.relativeData.target) {
                 // console.log(satellites[windowOptions.relativeData.origin], satellites[windowOptions.relativeData.target]);
                 let relDataIn = getRelativeData(windowOptions.relativeData.origin, windowOptions.relativeData.target);
                 let y_location = cnvs.height * 0.1;
