@@ -244,7 +244,7 @@
                 start: false,
                 stop: false
             },
-            maneuver_type: 'waypoint',
+            maneuver_type: 'manual',
             refresh_time: 0,
             arrowColor: 'rgb(100,100,100)',
             passiveDropoff: {
@@ -507,7 +507,7 @@
                         let type = windowOptions.mousePosition.screen === 'ci' ? 'manual' :
                             windowOptions.maneuver_type;
                         if (type === 'waypoint') {
-                            windowOptions.scenario_time_des += 7200;
+                            windowOptions.scenario_time_des = sat.burns[jj].time + 7200;
                         }
                         let burnLocation = sat.getCurrentState({
                             time: satellites[ii].burns[jj].time
@@ -517,7 +517,8 @@
                             burn: jj,
                             type,
                             time: 7200,
-                            burnLocation
+                            burnLocation,
+                            origScreen: windowOptions.mousePosition.screen
                         };
                         return;
                     }
@@ -536,7 +537,7 @@
             setTimeout(() => {
                 if (windowOptions.mouseState && windowOptions.mousePosition.object !== false) {
                     satellites[windowOptions.mousePosition.object].burns.push({
-                        time: windowOptions.scenario_time,
+                        time: windowOptions.scenario_time_des,
                         direction: {
                             r: 0,
                             i: 0,
@@ -570,7 +571,8 @@
                         burn: burnN,
                         type,
                         time: 7200,
-                        burnLocation
+                        burnLocation,
+                        origScreen: windowOptions.mousePosition.screen
                     };
                 }
             }, windowOptions.mouse_hold)
@@ -1007,7 +1009,12 @@
                 }
             }
             if (windowOptions.burn_status) {
-                calcBurns(windowOptions.burn_status, windowOptions.mousePosition.screen === 'ci')
+                if (windowOptions.mousePosition.screen === windowOptions.burn_status.origScreen) {
+                    calcBurns(windowOptions.burn_status, windowOptions.mousePosition.screen === 'ci')
+                }
+                else {
+                    windowOptions.burn_status = false;
+                }
             }
             if (windowOptions.screen.mode === 'ri ci') {
                 ctx.fillStyle = 'white';
@@ -1693,7 +1700,6 @@
                         time: sat.burns[burn.burn].time + burn.time,
                         burnStop: burn.burn
                     })
-                    console.log(crossState);
                     sat.burns[burn.burn].waypoint.tranTime = burn.time;
                     sat.burns[burn.burn].waypoint.target = {
                         r: cross ? crossState.r[0] : windowOptions.mousePosition.ric.r,
@@ -1718,7 +1724,6 @@
                         yd: 0,
                         zd: 0
                     };
-                    if (burn.type2) console.log(r1, r2);
                     let dir = hcwFiniteBurnOneBurn(r1, r2, burn.type2 ? sat.burns[burn.burn].waypoint.tranTime : burn
                         .time, sat.a);
                     if (dir && dir.t > 0 && dir.t < 1) {
@@ -1762,7 +1767,8 @@
             }
             drawBurnArrow(sat.burns[burn.burn], {
                 location: burn.burnLocation,
-                object: burn.object
+                object: burn.object,
+                length: burn.type2 ? cnvs.height * 0.075 : undefined
             });
             if (burn.burn < sat.burns.length - 1) {
                 if (!burn.type2) {
@@ -1857,7 +1863,7 @@
                     oldValue = tdList[td].children[0].children[0].value;
                     tdList[td].children[0].innerText = oldValue;
                 }
-                table2burns(0);
+                table2burns(Number(document.getElementById('satellite-way-select').value));
                 return;
             }
             event.target.innerText = 'Confirm';
