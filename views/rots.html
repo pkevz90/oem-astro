@@ -273,17 +273,12 @@
                         units: 'km',
                         name: 'POCA'
                     },
-                    toca: {
-                        exist: false,
-                        units: 'hrs',
-                        name: 'TOCA'
-                    },
                     tanRate: {
                         exist: false,
                         units: 'm/s',
                         name: 'R'
                     }
-                }
+                },
             }
         }
         formatCanvas();
@@ -917,7 +912,6 @@
             // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
             ctx.font = '15px Arial';
             if (windowOptions.relativeData.origin !== undefined && windowOptions.relativeData.target !== undefined && windowOptions.relativeData.origin !== windowOptions.relativeData.target) {
-                // console.log(satellites[windowOptions.relativeData.origin], satellites[windowOptions.relativeData.target]);
                 let relDataIn = getRelativeData(windowOptions.relativeData.origin, windowOptions.relativeData.target);
                 let y_location = cnvs.height * 0.1;
                 for (relData in windowOptions.relativeData.data) {
@@ -927,6 +921,20 @@
                             y_location);
                         y_location += 30;
                     }
+                }
+                if (windowOptions.relativeData.data.poca.exist) {
+                    let {poca, toca} = relDataIn;
+                    let position1 = satellites[windowOptions.relativeData.origin].shownTraj[toca];
+                    let position2 = satellites[windowOptions.relativeData.target].shownTraj[toca];
+                    
+                    position1 = ricToPixel(position1);
+                    position2 = ricToPixel(position2);
+                    
+                    ctx.beginPath();
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(position1[0], position1[1]);
+                    ctx.lineTo(position2[0], position2[1]);
+                    ctx.stroke();
                 }
             }
 
@@ -1848,7 +1856,7 @@
             tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
             let relPosHis = findMinDistance(satellites[n_origin].shownTraj, satellites[n_target].shownTraj);
             poca = math.min(findMinDistance(satellites[n_origin].shownTraj, satellites[n_target].shownTraj));
-            toca = relPosHis.findIndex(element => element === poca) * windowOptions.time_delta / 3600;
+            toca = relPosHis.findIndex(element => element === poca);
             return {
                 sunAngle,
                 rangeRate,
