@@ -979,14 +979,22 @@
                                 object: ii,
                                 constant,
                                 trans: true,
-                                length: cnvs.height * 0.075
+                                length: cnvs.height * 0.075,
+                                limit: {
+                                    min: 0,
+                                    max: (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2
+                                }
                             })
                             drawBurnArrow(burn, {
                                 cross: true,
                                 object: ii,
                                 constant,
                                 trans: true,
-                                length: cnvs.height * 0.075
+                                length: cnvs.height * 0.075,
+                                limit: {
+                                    min: (windowOptions.screen.ri_center + windowOptions.screen.ci_center) / 2,
+                                    max: cnvs.height
+                                }
                             })
                         }
                         if ((windowOptions.scenario_time - burn.time) < windowOptions.passiveDropoff
@@ -1013,6 +1021,7 @@
                         .scenario_time_des)).length !== satellite.burnsDrawn) satellite.calcTraj();
 
                 if (windowOptions.screen.mode !== 'ri only') {
+                        
                     if (windowOptions.draw_style === 'line') {
                         drawCurve(ctx, satellite.shownTraj, {
                             ric: true,
@@ -1309,7 +1318,7 @@
         function drawBurnArrow(burn, options) {
             let {
                 location = undefined, constant = 1, object = undefined, cross = windowOptions.mousePosition.screen ===
-                    'ci', trans = false, length
+                    'ci', trans = false, length, limit
             } = options;
             constant = constant > 1 ? 1 : constant;
             if (location === undefined) {
@@ -1325,6 +1334,9 @@
             let origin = ricToPixel(location, {
                 cross
             });
+            if (limit) {
+                if (origin[1] < limit.min || origin[1] > limit.max) return;
+            }
             let color = satellites[object].color || 'black';
             ctx.textAlign = 'center';
             ctx.font = '25px Arial';
@@ -1768,7 +1780,7 @@
                     r2 = {
                         x: burn.type2 ? sat.burns[burn.burn].waypoint.target.r : windowOptions.mousePosition.ric.r,
                         y: burn.type2 ? sat.burns[burn.burn].waypoint.target.i : windowOptions.mousePosition.ric.i,
-                        z: burn.type2 ? sat.burns[burn.burn].waypoint.target.c : crossState.c[0],
+                        z: burn.type2 || !cross ? sat.burns[burn.burn].waypoint.target.c : crossState.c[0],
                         xd: 0,
                         yd: 0,
                         zd: 0
@@ -1819,7 +1831,7 @@
                 object: burn.object,
                 length: burn.type2 ? cnvs.height * 0.075 : undefined
             });
-            if (burn.burn < sat.burns.length - 1) {
+            if (burn.burn < sat.burns.length - 1 && !cross) {
                 if (!burn.type2) {
                     burn.oldType = burn.type + '';
                     burn.type = 'waypoint';
