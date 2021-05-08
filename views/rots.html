@@ -1328,7 +1328,7 @@
             }
             let burnMag = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]);
             let angle = math.atan2(-burn.direction.i, cross ? burn.direction.c : burn.direction.r) * 180 / Math.PI;
-            let height = length ? length * constant : burnMag * 1000 / windowOptions.burn_sensitivity * constant * cnvs
+            let height = length ? length * constant : math.norm([burn.direction[cross ? 'c' : 'r'], burn.direction.i]) * 1000 / windowOptions.burn_sensitivity * constant * cnvs
                 .width / windowOptions.width /
                 2;
             let origin = ricToPixel(location, {
@@ -1805,7 +1805,7 @@
                     let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
                     sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
                     sat.burns[burn.burn].direction.i = v1[1][0] - v0[1][0];
-                    sat.burns[burn.burn].direction.c = v1[2][0] - v0[2][0];
+                    // sat.burns[burn.burn].direction.c = v1[2][0] - v0[2][0];
                 }
             } else {
                 sat.burns[burn.burn].direction = {
