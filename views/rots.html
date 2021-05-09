@@ -1397,6 +1397,10 @@
                         burns[n_burn].direction
                         .c
                     ]) / a;
+                    
+                    if (n_burn !== burns.length - 1) {
+                        t_burn = t_burn > (burns[n_burn + 1].time - burns[n_burn].time) ? burns[n_burn + 1].time - burns[n_burn].time : t_burn;
+                    }
                     alpha = math.atan2(burns[n_burn].direction.i, burns[n_burn].direction.r);
                     phi_angle = math.atan2(burns[n_burn].direction.c, math.norm([burns[n_burn].direction.r, burns[
                         n_burn].direction.i]));
@@ -1550,6 +1554,9 @@
                             let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
                                 .direction.i, this.burns[satBurn].direction.c
                             ]) / this.a;
+                            if (satBurn !== this.burns.length - 1) {
+                                t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
+                            }
                             if (this.completedBurn && !windowOptions.burn_status) {
                                 t_burn = t_burn < (windowOptions.scenario_time_des - this.burns[satBurn].time) ?
                                     t_burn : windowOptions.scenario_time_des - this.burns[satBurn].time;
@@ -1758,8 +1765,7 @@
                     })
                 } else {
                     crossState = sat.getCurrentState({
-                        time: sat.burns[burn.burn].time + burn.time,
-                        burnStop: burn.burn
+                        time: sat.burns[burn.burn].time + burn.time
                     })
                     sat.burns[burn.burn].waypoint.tranTime = burn.time;
                     sat.burns[burn.burn].waypoint.target = {
