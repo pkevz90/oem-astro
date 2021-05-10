@@ -1926,6 +1926,9 @@
                 oldValue;
             if (event.target.innerText === 'Confirm') {
                 event.target.innerText = 'Edit';
+                oldValue = new Date(tdList[0].children[0].value).toString()
+                    .split(' GMT')[0].substring(4);
+                tdList[0].innerText = oldValue;
                 for (let td = 1; td < 5; td++) {
                     oldValue = tdList[td].children[0].children[0].value;
                     tdList[td].children[0].innerText = oldValue;
@@ -1934,6 +1937,11 @@
                 return;
             }
             event.target.innerText = 'Confirm';
+            // nextValue = new Date(new Date(event.target.parentElement.nextSibling.children[0].innerText + 'Z') - 15 * 60 * 1000);
+            
+            oldValue = tdList[0].innerText + 'Z';
+            tdList[0].innerHTML = `<input type="datetime-local" id="edit-date" style="width: 100%" value="${new Date(oldValue).toISOString().substr(0,19)}"/>`;
+            // tdList[0].children[0].value = '2014-02-09';
             for (let td = 1; td < 5; td++) {
                 oldValue = tdList[td].children[0].innerText;
                 tdList[td].children[0].innerHTML = `<input style="width: 20%" type="number" value="${oldValue}"/>`;
