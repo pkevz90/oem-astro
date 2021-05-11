@@ -1646,6 +1646,13 @@
                         this.burns[ii].direction.r = dir.r;
                         this.burns[ii].direction.i = dir.i;
                         this.burns[ii].direction.c = dir.c;
+                        if (ii === drawnBurn) {     
+                            drawBurnArrow(this.burns[ii], {
+                                location: {r: r1[0][0], i: r1[1][0], c: r1[2][0]},
+                                object: windowOptions.burn_status.object,
+                                length: undefined
+                            });
+                        } 
                         continue;
                     }
                     
