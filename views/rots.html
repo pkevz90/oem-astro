@@ -321,7 +321,8 @@
                 getVelocityArray: function () {
                     return [this.currentPosition.rd, this.currentPosition.id, this.currentPosition.cd];
                 },
-                getCurrentState: getSatCurrentPosition
+                getCurrentState: getSatCurrentPosition,
+                generateBurns
             };
         }
         satellites = [];
@@ -571,8 +572,8 @@
         document.getElementById('canvas-div').addEventListener('mouseup', event => {
             windowOptions.mouseState = false;
             if (windowOptions.burn_status) {
-                windowOptions.scenario_time_des = satellites[windowOptions.burn_status.object].burns[
-                    windowOptions.burn_status.burn].time;
+                windowOptions.scenario_time_des = windowOptions.maneuver_type === 'waypoint' && windowOptions.mousePosition.screen === 'ri' ? satellites[windowOptions.burn_status.object].burns[
+                    windowOptions.burn_status.burn].time : windowOptions.scenario_time_des;
             }
             windowOptions.burn_status = false;
             windowOptions.frame_move = false;
@@ -909,7 +910,7 @@
             ctx.fillStyle = 'black';
             ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
                 .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
-            // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
+            ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
             ctx.font = '15px Arial';
             if (windowOptions.relativeData.origin !== undefined && windowOptions.relativeData.target !== undefined && windowOptions.relativeData.origin !== windowOptions.relativeData.target) {
                 let relDataIn = getRelativeData(windowOptions.relativeData.origin, windowOptions.relativeData.target);
@@ -1347,7 +1348,7 @@
                     windowOptions.scenario_time - burn.time));
             }
             ctx.fillText((burnMag * constant * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + (burn.direction[cross ?
-                'c' : 'r'] < 0 ? -25 : 35))
+                'c' : 'r'] < 0.001 ? -25 : 35))
             if (trans) {
                 ctx.globalAlpha = 0.4
             }
@@ -1630,6 +1631,42 @@
             }
         }
 
+        function generateBurns(options = {}) {
+            let {drawnBurn} = options;
+            let startPosition = this.position;
+            let r1, r2, v10, v1f, phi;
+            for (let ii = 0; ii < this.burns.length; ii++) {
+                r1 = this.getCurrentState({time: this.burns[ii].time, burnStop: ii});
+                v10 = [r1.rd, r1.id, r1.cd];
+                r1 = [r1.r, r1.i, r1.c]
+                r2 = [[this.burns[ii].waypoint.target.r], [this.burns[ii].waypoint.target.i], [this.burns[ii].waypoint.target.c]];
+                if (windowOptions.showFinite && windowOptions.finiteTarget) {
+                    let dir = hcwFiniteBurnOneBurn({x: r1[0][0], y: r1[1][0], z: r1[2][0], xd: v10[0][0], yd: v10[1][0], zd: v10[2][0]}, {x: r2[0][0], y: r2[1][0], z: r2[2][0], xd: 0, yd: 0, zd: 0}, this.burns[ii].waypoint.tranTime, this.a);
+                    if (dir && dir.t > 0 && dir.t < 1) {
+                        this.burns[ii].direction.r = dir.r;
+                        this.burns[ii].direction.i = dir.i;
+                        this.burns[ii].direction.c = dir.c;
+                        continue;
+                    }
+                    
+                }
+                phi = phiMatrix(this.burns[ii].waypoint.tranTime);
+                let v1f = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
+                this.burns[ii].direction.r = v1f[0][0] - v10[0][0];
+                this.burns[ii].direction.i = v1f[1][0] - v10[1][0];
+                this.burns[ii].direction.c = v1f[2][0] - v10[2][0];
+                if (ii === drawnBurn) {     
+                    drawBurnArrow(this.burns[ii], {
+                        location: {r: r1[0][0], i: r1[1][0], c: r1[2][0]},
+                        object: windowOptions.burn_status.object,
+                        length: undefined
+                    });
+                }   
+            }
+
+            this.calcTraj(true);
+        }
+        
         function drawCurve(ctx, points, options = {}) {
             let {
                 tension = 1, type = 'stroke', ric = false, cross = false
@@ -1755,63 +1792,15 @@
 
         function calcBurns(burn, cross = false) {
             let sat = satellites[burn.object];
+            let crossState = sat.getCurrentState({
+                time: sat.burns[burn.burn].time + burn.time
+            })
             if (windowOptions.burn_status.type === 'waypoint') {
-                let r1, r2;
-                let crossState;
-                if (burn.type2) {
-                    burn.burnLocation = sat.getCurrentState({
-                        time: sat.burns[burn.burn].time,
-                        burnStop: burn.burn
-                    })
-                } else {
-                    crossState = sat.getCurrentState({
-                        time: sat.burns[burn.burn].time + burn.time
-                    })
-                    sat.burns[burn.burn].waypoint.tranTime = burn.time;
-                    sat.burns[burn.burn].waypoint.target = {
-                        r: cross ? crossState.r[0] : windowOptions.mousePosition.ric.r,
-                        i: cross ? crossState.i[0] : windowOptions.mousePosition.ric.i,
-                        c: crossState.c[0]
-                    }
-                }
-                if (windowOptions.showFinite && windowOptions.finiteTarget) {
-                    r1 = {
-                        x: burn.burnLocation.r[0],
-                        y: burn.burnLocation.i[0],
-                        z: burn.burnLocation.c[0],
-                        xd: burn.burnLocation.rd[0],
-                        yd: burn.burnLocation.id[0],
-                        zd: burn.burnLocation.cd[0]
-                    };
-                    r2 = {
-                        x: burn.type2 ? sat.burns[burn.burn].waypoint.target.r : windowOptions.mousePosition.ric.r,
-                        y: burn.type2 ? sat.burns[burn.burn].waypoint.target.i : windowOptions.mousePosition.ric.i,
-                        z: burn.type2 || !cross ? sat.burns[burn.burn].waypoint.target.c : crossState.c[0],
-                        xd: 0,
-                        yd: 0,
-                        zd: 0
-                    };
-                    let dir = hcwFiniteBurnOneBurn(r1, r2, burn.type2 ? sat.burns[burn.burn].waypoint.tranTime : burn
-                        .time, sat.a);
-                    if (dir && dir.t > 0 && dir.t < 1) {
-                        sat.burns[burn.burn].direction.r = dir.r;
-                        sat.burns[burn.burn].direction.i = dir.i;
-                        sat.burns[burn.burn].direction.c = dir.c;
-                        satellites[burn.object].calcTraj(true);
-                    }
-                } else {
-                    r1 = [burn.burnLocation.r, burn.burnLocation.i, burn.burnLocation.c]
-                    let v0 = [burn.burnLocation.rd, burn.burnLocation.id, burn.burnLocation.cd];
-                    r2 = [
-                        [burn.type2 ? sat.burns[burn.burn].waypoint.target.r : windowOptions.mousePosition.ric.r],
-                        [burn.type2 ? sat.burns[burn.burn].waypoint.target.i : windowOptions.mousePosition.ric.i],
-                        [burn.type2 ? sat.burns[burn.burn].waypoint.target.c : crossState.c[0]]
-                    ];
-                    let phi = phiMatrix(burn.type2 ? sat.burns[burn.burn].waypoint.tranTime : burn.time);
-                    let v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
-                    sat.burns[burn.burn].direction.r = v1[0][0] - v0[0][0];
-                    sat.burns[burn.burn].direction.i = v1[1][0] - v0[1][0];
-                    // sat.burns[burn.burn].direction.c = v1[2][0] - v0[2][0];
+                sat.burns[burn.burn].waypoint.tranTime = burn.time;
+                sat.burns[burn.burn].waypoint.target = {
+                    r: cross ? crossState.r[0] : windowOptions.mousePosition.ric.r,
+                    i: cross ? crossState.i[0] : windowOptions.mousePosition.ric.i,
+                    c: crossState.c[0]
                 }
             } else {
                 sat.burns[burn.burn].direction = {
@@ -1822,41 +1811,28 @@
                     c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) *
                         windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
                 }
+                let tranTime = burn.burn === sat.burns.length - 1 ? 7200 : sat.burns[burn.burn + 1].time - sat.burns[burn.burn].time;
                 let targetState = sat.getCurrentState({
-                    time: sat.burns[burn.burn].time + 7200
+                    time: sat.burns[burn.burn].time + tranTime
                 });
-                sat.burns[burn.burn].waypoint.tranTime = 7200;
+                sat.burns[burn.burn].waypoint.tranTime = tranTime;
                 sat.burns[burn.burn].waypoint.target = {
                     r: cross ? sat.burns[burn.burn].waypoint.target.r : targetState.r[0],
                     i: cross ? sat.burns[burn.burn].waypoint.target.i : targetState.i[0],
                     c: targetState.c[0]
                 }
-            }
-            drawBurnArrow(sat.burns[burn.burn], {
-                location: burn.burnLocation,
-                object: burn.object,
-                length: burn.type2 ? cnvs.height * 0.075 : undefined
-            });
-            if (burn.burn < sat.burns.length - 1 && !cross) {
-                if (!burn.type2) {
-                    burn.oldType = burn.type + '';
-                    burn.type = 'waypoint';
-                    burn.oldLocation = burn.burnLocation;
-                    burn.orig = burn.burn;
-                    windowOptions.scenario_time_des = sat.burns[sat.burns.length - 1].time;
+                if (true) {
+                    // Reset cross-track waypoint values in future to natural motion
+                    for (let hh = burn.burn + 1; hh < sat.burns.length; hh++) {
+                        targetState = sat.getCurrentState({
+                            time: sat.burns[hh].time + sat.burns[hh].waypoint.tranTime,
+                            burnStop: burn.burn + 1
+                        });
+                        sat.burns[hh].waypoint.target.c = targetState.c[0];
+                    }
                 }
-                burn.type2 = true;
-                burn.burn++;
-                calcBurns(burn, cross);
-                return;
-            } 
-            else if (burn.type2) {
-                burn.type2 = false;
-                burn.burn = burn.orig;
-                burn.type = burn.oldType;
-                burn.burnLocation = burn.oldLocation;
             }
-            satellites[burn.object].calcTraj(true);
+            sat.generateBurns({drawnBurn: burn.burn});
         }
 
         function getRelativeData(n_target, n_origin) {
@@ -1993,20 +1969,8 @@
                     }
                 });
             }
-            windowOptions.burn_status = {
-                burn: 0,
-                burnLocation: undefined,
-                object,
-                oldLocation: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
-                oldType: 'waypoint',
-                orig: 0,
-                time: 7200,
-                type: 'waypoint',
-                type2: true
-            }
             satellites[object].burns = [...burns];
-            calcBurns(windowOptions.burn_status);
-            windowOptions.burn_status = false;
+            satellites[object].generateBurns();
         }
 
         function downloadFile(filename, text) {
