@@ -1349,9 +1349,9 @@
             }
             ctx.fillText((burnMag * constant * 1000).toFixed(2) + ' m/s', origin[0], origin[1] + (burn.direction[cross ?
                 'c' : 'r'] < 0.001 ? -25 : 35))
-            if (trans) {
-                ctx.globalAlpha = 0.4
-            }
+            // if (trans) {
+            //     ctx.globalAlpha = 0.4
+            // }
             drawArrow({
                 angle,
                 origin,
