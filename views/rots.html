@@ -63,11 +63,11 @@
                 </tbody>
             </table>
             <div style="margin-top:2%; border: 1px solid black; border-radius: 20px; padding: 2% 0%">
-                <input style="width: 20%" type="datetime-local" id="start-time" name="meeting-time"
+                <input style="width: 20%" type="datetime-local" id="add-start-time" name="meeting-time"
                     value="2021-04-01T00:00" class="center"> R: <input class="center" type="Number" value="0"
                     style="width: 4%"> km I: <input class="center" type="Number" value="0" style="width: 4%"> km C:
-                <input class="center" type="Number" value="0" style="width: 4%"> km Transfer Time: <input class="center"
-                    type="Number" value="0" style="width: 4%"> min
+                <input class="center" id="add-cross" type="Number" value="0" style="width: 4%"> km Transfer Time: <input class="center"
+                    type="Number" id="add-tran-time" value="120" style="width: 4%"> min
                 <span id="add-waypoint-button">Add</span>
             </div>
 
@@ -765,6 +765,18 @@
             waypoints2table(waypoints);
             let chosenSat = Number(document.getElementById('satellite-way-select').value);
             table2burns(chosenSat);
+        })
+        document.getElementById('add-start-time').addEventListener('input', event => {
+            let startTime = new Date(event.target.value).getTime();
+            let dt = startTime - windowOptions.start_date.getTime() + Number(document.getElementById('add-tran-time').value) * 60000;
+            let crossState = satellites[document.getElementById('satellite-way-select').value].getCurrentState({time: dt / 1000});
+            document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
+        })
+        document.getElementById('add-tran-time').addEventListener('input', event => {
+            let startTime = new Date(document.getElementById('add-start-time').value).getTime();
+            let dt = startTime - windowOptions.start_date.getTime() + Number(document.getElementById('add-tran-time').value) * 60000;
+            let crossState = satellites[document.getElementById('satellite-way-select').value].getCurrentState({time: dt / 1000});
+            document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
         })
         let closeButtons = document.getElementsByClassName('close-button');
         for (let ii = 0; ii < closeButtons.length; ii++) {
@@ -1883,6 +1895,14 @@
             while (table.firstChild) {
                 table.removeChild(table.firstChild);
             }
+            let addStartTime = document.getElementById('add-start-time');
+
+            let endTime = satellites[object].burns.length === 0 ? windowOptions.start_date : Date(windowOptions.start_date.getTime() + satellites[object].burns[satellites[object].burns.length - 1].time * 1000 + satellites[object].burns[satellites[object].burns.length - 1].waypoint.tranTime * 1000);
+            let dt = (endTime.getTime() - windowOptions.start_date.getTime() + 7200000) / 1000;
+            let crossState = satellites[object].getCurrentState({time: dt});
+            document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
+            addStartTime.value = new Date(new Date(endTime).toString().split(' GMT')[0].substring(4) + 'Z').toISOString().substr(0,19);
+        
             if (satellites[object].burns.length === 0) return;
             let r1, r2, v, addedElement;
             for (let burn = 0; burn < satellites[object].burns.length; burn++) {
@@ -1902,7 +1922,7 @@
             for (let button = 0; button < editButtons.length; button++) {
                 editButtons[button].addEventListener('click', editButtonFunction);
             }
-        }
+            }
 
         function editButtonFunction(event) {
             let tdList = event.target.parentElement.children,
@@ -1927,7 +1947,7 @@
             // tdList[0].children[0].value = '2014-02-09';
             for (let td = 1; td < 5; td++) {
                 oldValue = tdList[td].children[0].innerText;
-                tdList[td].children[0].innerHTML = `<input style="width: 20%" type="number" value="${oldValue}"/>`;
+                tdList[td].children[0].innerHTML = `<input style="width: 30%" type="number" value="${oldValue}"/>`;
             }
         }
 
