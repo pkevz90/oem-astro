@@ -536,7 +536,7 @@
                             c: 0
                         },
                         waypoint: {
-                            tranTime: 120,
+                            tranTime: 7200,
                             target: {
                                 r: 0,
                                 i: 0,
@@ -1832,7 +1832,7 @@
                     c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) *
                         windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
                 }
-                let tranTime = burn.burn === sat.burns.length - 1 ? 7200 : sat.burns[burn.burn + 1].time - sat.burns[burn.burn].time;
+                let tranTime = sat.burns[burn.burn].waypoint.tranTime;
                 let targetState = sat.getCurrentState({
                     time: sat.burns[burn.burn].time + tranTime
                 });
