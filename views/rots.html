@@ -72,7 +72,8 @@
             </div>
 
 
-            <div style="width: 50%" class="close-button panel-button hoverable noselect">Close</div>
+            <div style="width: 50%; margin-bottom: 1%; margin-top: 3%;" class="close-button panel-button hoverable noselect">Close</div>
+            <div style="width: 50%; margin-top: 1%" id="export-burns" class="panel-button hoverable noselect">Export Burn List</div>
         </div>
     </div>
     <div id="instructions-panel" class="hidden panel">
@@ -608,6 +609,16 @@
             selectEl.selectedIndex = chosenSat;
             selectEl.style.color = satellites[chosenSat].color;
             document.getElementById('burns-panel').classList.toggle("hidden")
+        })
+        document.getElementById('export-burns').addEventListener('click', () => {
+            let selectEl = document.getElementById('satellite-way-select').value;
+            let outString = '';
+            satellites[selectEl].burns.forEach(burn => {
+                outString += 'time: ' + burn.time + ' ';
+                outString += 'Direction: ' + JSON.stringify(burn.direction) + '\n';
+            })
+            // downloadFile('burns.txt', JSON.stringify(satellites[selectEl].burns));
+            downloadFile('burns.txt', outString);
         })
         document.getElementById('satellite-way-select').addEventListener('change', event => {
             generateBurnTable(event.target.value)
@@ -1669,7 +1680,6 @@
                         } 
                         continue;
                     }
-                    
                 }
                 phi = phiMatrix(this.burns[ii].waypoint.tranTime);
                 let v1f = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
