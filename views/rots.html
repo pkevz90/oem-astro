@@ -613,9 +613,15 @@
         document.getElementById('export-burns').addEventListener('click', () => {
             let selectEl = document.getElementById('satellite-way-select').value;
             let outString = '';
+            outString += `Position  r: ${satellites[selectEl].position.r} km  i: ${satellites[selectEl].position.i} km c: ${satellites[selectEl].position.c} km \n`;
+            outString += `Velocity  r: ${satellites[selectEl].position.rd * 1000} m/s  i: ${satellites[selectEl].position.id * 1000} m/s c: ${satellites[selectEl].position.cd * 1000} m/s \n\n`;
+            outString += `Engine Acceleration  ${satellites[selectEl].a} km/s2\n\n`;
             satellites[selectEl].burns.forEach(burn => {
-                outString += 'time: ' + burn.time + ' ';
-                outString += 'Direction: ' + JSON.stringify(burn.direction) + '\n';
+                outString += `Burn Time ${new Date(windowOptions.start_date.getTime() + burn.time * 1000)} \n`
+                outString += `Waypoint  r: ${burn.waypoint.target.r.toFixed(1)} km  i: ${burn.waypoint.target.i.toFixed(1)} km  c: ${burn.waypoint.target.c.toFixed(1)} km\n`;
+                outString += `Transfer Time ${(burn.waypoint.tranTime.toFixed(1) / 3600)} hrs\n`;
+                outString += `Direction  r: ${burn.direction.r.toFixed(6)}  i: ${burn.direction.i.toFixed(6)}  c: ${burn.direction.c.toFixed(6)}\n`;
+                outString += `Duration ${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / satellites[selectEl].a).toFixed(0)} seconds\n\n`;
             })
             // downloadFile('burns.txt', JSON.stringify(satellites[selectEl].burns));
             downloadFile('burns.txt', outString);
