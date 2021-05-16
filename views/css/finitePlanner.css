@@ -167,7 +167,7 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
-#add-satellite-panel, #options-panel, #instructions-panel, #data-panel {
+#add-satellite-panel, #options-panel, #instructions-panel, #data-panel, #optimize-panel {
     position: fixed;
     display: flex;
     z-index: 4;

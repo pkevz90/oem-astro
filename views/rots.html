@@ -162,6 +162,7 @@
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
             <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
             <div id="data-button" class="panel-button hoverable noselect">Data</div>
+            <div id="optimize-button" class="panel-button hoverable noselect">Optimizer</div>
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
@@ -182,6 +183,16 @@
             <div><input type="checkbox">POCA</div>
             <div><input type="checkbox">CATS</div>
             <div id="confirm-data-button" class="panel-button hoverable noselect">Confirm</div>
+        </div>
+    </div>
+    <div id="optimize-panel" class="hidden panel">
+        <div>
+            <div>Number of Waypoints <input type="number" min="1" value="2" style="width: 3em"></div>
+            <div>Target Destination [km] R: <input type="number" min="1" value="0" style="width: 5em"> I: <input type="number" min="1" value="0" style="width: 5em"> C: <input type="number" min="1" value="0" style="width: 5em"></div>
+            <div>Constraints</div>
+            <div></div>
+            <div id="compute-pso-button" class="panel-button hoverable noselect">Compute</div>
+            <div class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
     </div>
     <script>
@@ -621,7 +632,7 @@
                 outString += `Waypoint  r: ${burn.waypoint.target.r.toFixed(1)} km  i: ${burn.waypoint.target.i.toFixed(1)} km  c: ${burn.waypoint.target.c.toFixed(1)} km\n`;
                 outString += `Transfer Time ${(burn.waypoint.tranTime.toFixed(1) / 3600)} hrs\n`;
                 outString += `Direction  r: ${burn.direction.r.toFixed(6)}  i: ${burn.direction.i.toFixed(6)}  c: ${burn.direction.c.toFixed(6)}\n`;
-                outString += `Duration ${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / satellites[selectEl].a).toFixed(0)} seconds\n\n`;
+                outString += `Burn Duration ${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / satellites[selectEl].a).toFixed(1)} seconds\n\n`;
             })
             // downloadFile('burns.txt', JSON.stringify(satellites[selectEl].burns));
             downloadFile('burns.txt', outString);
@@ -700,6 +711,10 @@
             originSel.style.color = windowOptions.relativeData.origin !== undefined ? satellites[windowOptions.relativeData.origin].color : satellites[0].color;
 
             document.getElementById('data-panel').classList.toggle("hidden")
+        })
+        document.getElementById('optimize-button').addEventListener('click', () => {
+            document.getElementById('options-panel').classList.toggle("hidden")
+            document.getElementById('optimize-panel').classList.toggle("hidden")
         })
         document.getElementById('confirm-option-button').addEventListener('click', (click) => {
             let el = click.target;
