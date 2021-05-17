@@ -187,10 +187,17 @@
     </div>
     <div id="optimize-panel" class="hidden panel">
         <div>
-            <div>Number of Waypoints <input type="number" min="1" value="2" style="width: 3em"></div>
-            <div>Target Destination [km] R: <input type="number" min="1" value="0" style="width: 5em"> I: <input type="number" min="1" value="0" style="width: 5em"> C: <input type="number" min="1" value="0" style="width: 5em"></div>
-            <div>Constraints</div>
-            <div></div>
+            <div style="margin: 1%">Satellite <select id=""></select></div>
+            <div style="margin: 1%">Start Time <input style="width: 75%" type="datetime-local" id="start-time" name="meeting-time"
+                value="2021-04-01T00:00"></div>
+            <div style="margin: 1%">End Time <input style="width: 75%" type="datetime-local" id="start-time" name="meeting-time"
+                value="2021-04-02T00:00"></div>
+            <div style="margin: 1%">Number of Waypoints <input type="number" min="1" value="2" style="width: 3em"></div>
+            <div style="margin: 1%">Target Destination [km] R: <input type="number" min="1" value="0" style="width: 5em"> I: <input type="number" min="1" value="0" style="width: 5em"> C: <input type="number" min="1" value="0" style="width: 5em"></div>
+            <div style="margin: 1%">Constraints Target <select name="" id=""></select> Min Distance<input type="number" min="1" value="20" style="width: 3em"> km <span style="border: 1px solid black; padding: 3px; border-radius: 10px;">Add</span></div>
+            <div><ul>
+                
+            </ul></div>
             <div id="compute-pso-button" class="panel-button hoverable noselect">Compute</div>
             <div class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
@@ -291,6 +298,23 @@
                         name: 'R'
                     }
                 },
+            },
+            psoVar: {
+                object: 0,
+                nWay: 2,
+                startTime: new Date(),
+                endTime: new Date(),
+                targetWay: {
+                    r: 0,
+                    i: 0,
+                    c: 0
+                },
+                constraints: [{
+                    object: 1,
+                    minDist: 20
+                }]
+
+
             }
         }
         formatCanvas();
