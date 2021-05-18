@@ -93,24 +93,6 @@ let cnvs = document.getElementById("main-plot");
                         name: 'R'
                     }
                 },
-            },
-            psoVar: {
-                object: 0,
-                nWay: 2,
-                startTime: new Date(),
-                endTime: new Date(),
-                targetWay: {
-                    r: 0,
-                    i: 0,
-                    c: 0
-                },
-                constraints: [{
-                    object: 1,
-                    minDist: 20
-                }],
-                psoSatellite: undefined
-
-
             }
         }
         formatCanvas();
@@ -122,8 +104,6 @@ let cnvs = document.getElementById("main-plot");
             ci_h_w_ratio: 0,
             lineHeight: cnvs.height
         };
-        let optimizer = new pso.Optimizer();
-        optimizer.setObjectiveFunction(psoObjectiveFunction);
         function newSatellite(options) {
             let {
                 color = 'red', shape = "square", size = 0.035, position, burns = [], shownTraj = [], a = 0.00001
@@ -533,10 +513,6 @@ let cnvs = document.getElementById("main-plot");
 
             document.getElementById('data-panel').classList.toggle("hidden")
         })
-        document.getElementById('optimize-button').addEventListener('click', () => {
-            document.getElementById('options-panel').classList.toggle("hidden")
-            document.getElementById('optimize-panel').classList.toggle("hidden")
-        })
         document.getElementById('confirm-option-button').addEventListener('click', (click) => {
             let el = click.target;
             let date = el.parentNode.parentNode.children.item(0).children[1].children[0].value;
@@ -632,52 +608,6 @@ let cnvs = document.getElementById("main-plot");
             let dt = startTime - windowOptions.start_date.getTime() + Number(document.getElementById('add-tran-time').value) * 60000;
             let crossState = satellites[document.getElementById('satellite-way-select').value].getCurrentState({time: dt / 1000});
             document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
-        })
-        document.getElementById('compute-pso-button').addEventListener('click', async () => {
-            windowOptions.psoVar.psoSatellite = newSatellite({
-                position: {...satellites[windowOptions.psoVar.object].position},
-                a: satellites[windowOptions.psoVar.object].a
-            })
-            optimizer.init(250, [{ start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }]);
-            document.getElementById('pso-total').innerText = 100;
-            let countId = document.getElementById('pso-count');
-            let bestId = document.getElementById('pso-best');
-            let count = 0;
-            (function asyncLoop() {
-                runOptimizer();
-                countId.innerText = count++;
-                bestId.innerText = (-optimizer.getBestFitness() * 1000).toFixed(2);
-                if (count < 100) {
-                    setTimeout(asyncLoop, 25);
-                }
-                else {
-                    let x = optimizer.getBestPosition();
-                    console.log(optimizer.getBestFitness());
-                    psoFinishFunction(x);
-                    satellites[windowOptions.psoVar.object].burns = [];
-                    for (let ii = 0; ii < windowOptions.psoVar.nWay; ii++) {
-                        satellites[windowOptions.psoVar.object].burns.push({
-                            direction: {r: 0, i: 0, c: 0},
-                            time: ii * 10800 / (windowOptions.psoVar.nWay + 1),
-                            waypoint: {
-                                tranTime: 10800 / (windowOptions.psoVar.nWay + 1),
-                                target: {r: x[ii*3], i: x[ii*3 + 1], c: x[ii*3+2]}
-                            }
-                        })
-                    }
-                    satellites[windowOptions.psoVar.object].burns.push({
-                        direction: {r: 0, i: 0, c: 0},
-                        time: 10800 - 10800/ (windowOptions.psoVar.nWay + 1),
-                        waypoint: {
-                            tranTime: 10800 / (windowOptions.psoVar.nWay + 1),
-                            target: {r:0, i: 0, c: 0}
-                        }
-                    })
-                    satellites[windowOptions.psoVar.object].generateBurns();
-                    satellites[windowOptions.psoVar.object].calcTraj();
-                }
-            })()
-            
         })
         let closeButtons = document.getElementsByClassName('close-button');
         for (let ii = 0; ii < closeButtons.length; ii++) {
@@ -1289,7 +1219,7 @@ let cnvs = document.getElementById("main-plot");
 
         function getSatCurrentPosition(options = {}) {
             let {
-                time = windowOptions.scenario_time, burnStop, position = this.position, burns = this.burns, a = this.a
+                time = windowOptions.scenario_time, burnStop, position = this.position, burns = this.burns, a = this.a, log = false
             } = options
             if (burnStop === undefined) burnStop = burns.length;
             if (windowOptions.showFinite) {
@@ -1559,6 +1489,7 @@ let cnvs = document.getElementById("main-plot");
                         this.burns[ii].direction.r = dir.r;
                         this.burns[ii].direction.i = dir.i;
                         this.burns[ii].direction.c = dir.c;
+                        
                         if (ii === drawnBurn) {     
                             drawBurnArrow(this.burns[ii], {
                                 location: {r: r1[0][0], i: r1[1][0], c: r1[2][0]},
@@ -1732,7 +1663,8 @@ let cnvs = document.getElementById("main-plot");
                 }
                 let tranTime = sat.burns[burn.burn].waypoint.tranTime;
                 let targetState = sat.getCurrentState({
-                    time: sat.burns[burn.burn].time + tranTime
+                    time: sat.burns[burn.burn].time + tranTime,
+                    burnStop: burn.burn + 1
                 });
                 sat.burns[burn.burn].waypoint.tranTime = tranTime;
                 sat.burns[burn.burn].waypoint.target = {
@@ -2137,89 +2069,4 @@ let cnvs = document.getElementById("main-plot");
             return [v1, v2];
         }
 
-        function sigmoid(x) {
-            return 1 / (1 + Math.exp(-x*20));
-        }
-
-        function runOptimizer() {
-            optimizer.step();
-            // console.log(optimizer.getBestFitness());
-        }
-
-        function psoObjectiveFunction(x, log = false) {
-            let obj = 0;
-            let maxDv = 0, dV;
-            let tTotal = 10800; // Replace with variable when known
-            let r1 = satellites[windowOptions.psoVar.object].position;
-            let v1 = [[r1.rd], [r1.id], [r1.cd]];
-            r1 = [[r1.r], [r1.i], [r1.c]];
-            let r2, v1f, tTar = tTotal / (windowOptions.psoVar.nWay + 1);
-            windowOptions.psoVar.psoSatellite.burns = [];
-            let phi = phiMatrix(tTar);
-            for (let ii = 0; ii < windowOptions.psoVar.nWay; ii++) {
-                r2 = [[x[ii*3]], [x[ii*3 + 1]], [x[ii*3 + 2]]];
-                windowOptions.psoVar.psoSatellite.burns.push({
-                    direction: {r: 0, i: 0, c: 0},
-                    time: ii * tTar,
-                    waypoint: {
-                        tranTime: tTar,
-                        target: {r: r2[0][0], i: r2[1][0], c: r2[2][0]}
-                    }
-                })
-                v1f = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
-                dV = math.norm(math.squeeze(math.subtract(v1f, v1)));
-                maxDv = dV > maxDv ? dV : maxDv;
-                obj += dV;
-                if (log) console.log(obj, math.norm(math.squeeze(math.subtract(v1f, v1))), r1, r2);
-                v1 = math.add(math.multiply(phi.vr, r1), math.multiply(phi.vv, v1f));
-                r1 = [...r2];
-            }
-            r2 = [[0],[0],[0]];
-            v1f = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
-            dV = math.norm(math.squeeze(math.subtract(v1f, v1)));
-            maxDv = dV > maxDv ? dV : maxDv;
-            obj += dV;
-            if (log) console.log(obj, math.norm(math.squeeze(math.subtract(v1f, v1))));
-            windowOptions.psoVar.psoSatellite.burns.push({
-                direction: {r: 0, i: 0, c: 0},
-                time: windowOptions.psoVar.nWay * tTar,
-                waypoint: {
-                    tranTime: tTar,
-                    target: {r: r2[0][0], i: r2[1][0], c: r2[2][0]}
-                }
-            })
-            // windowOptions.psoVar.psoSatellite.generateBurns();
-            // windowOptions.psoVar.psoSatellite.calcTraj();
-
-            // let traj = calcShownTrajectories({
-            //     burns,
-            //     r_init: {
-            //         r: r0[0][0],
-            //         i: r0[1][0],
-            //         c: r0[2][0]
-            //     },
-            //     v_init: {
-            //         r: v0[0][0],
-            //         i: v0[1][0],
-            //         c: v0[2][0]
-            //     }
-            // })
-            // traj = math.min(vectorNorm(math.subtract(traj, adv_traj)))
-            // console.log(traj);
-            // return -dVtotal - 25 * sigmoid(50 - traj);
-            return -obj - sigmoid(-0.050 + maxDv);
-        }
-
-        function psoFinishFunction(x, alpha = 0.01, log = false) {
-            let dX = [...x], xTemp;
-            for (let ii = 0; ii < 1000; ii++) {
-                for (let jj = 0; jj < dX.length; jj++) {
-                    xTemp = [...x];
-                    xTemp[jj] += 0.1;
-                    dX[jj] = (psoObjectiveFunction(xTemp) - psoObjectiveFunction(x)) / 0.1;
-                }
-                x = math.subtract(x, math.dotMultiply(alpha, dX));
-            }
-            console.log(psoObjectiveFunction(x))
-            return x;
-        }
+    

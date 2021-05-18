@@ -10,7 +10,6 @@
     <script src="../SupportLibraries/LZWEncoder.js"></script>
     <script src="../SupportLibraries/NeuQuant.js"></script>
     <script src="../SupportLibraries/GIFEncoder.js"></script>
-    <script src="../SupportLibraries/pso.js"></script>
     <link rel="stylesheet" href="./css/rots.css">
 </head>
 
@@ -163,7 +162,6 @@
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
             <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
             <div id="data-button" class="panel-button hoverable noselect">Data</div>
-            <div id="optimize-button" class="panel-button hoverable noselect">Optimizer</div>
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
@@ -184,25 +182,6 @@
             <div><input type="checkbox">POCA</div>
             <div><input type="checkbox">CATS</div>
             <div id="confirm-data-button" class="panel-button hoverable noselect">Confirm</div>
-        </div>
-    </div>
-    <div id="optimize-panel" class="hidden panel">
-        <div>
-            <div style="margin: 1%">Satellite <select id=""></select></div>
-            <div style="margin: 1%">Start Time <input style="width: 75%" type="datetime-local" id="start-time" name="meeting-time"
-                value="2021-04-01T00:00"></div>
-            <div style="margin: 1%">End Time <input style="width: 75%" type="datetime-local" id="start-time" name="meeting-time"
-                value="2021-04-02T00:00"></div>
-            <div style="margin: 1%">Number of Waypoints <input type="number" min="1" value="2" style="width: 3em"></div>
-            <div style="margin: 1%">Target Destination [km] R: <input type="number" min="1" value="0" style="width: 5em"> I: <input type="number" min="1" value="0" style="width: 5em"> C: <input type="number" min="1" value="0" style="width: 5em"></div>
-            <div style="margin: 1%">Constraints Target <select name="" id=""></select> Min Distance<input type="number" min="1" value="20" style="width: 3em"> km <span style="border: 1px solid black; padding: 3px; border-radius: 10px;">Add</span></div>
-            <div><ul>
-                
-            </ul></div>
-            <div><span id="pso-count">X</span>/<span id="pso-total">X</span></div>
-            <div><span id="pso-best">X.XX</span> m/s</div>
-            <div id="compute-pso-button" class="panel-button hoverable noselect">Compute</div>
-            <div class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
     </div>
     <script src="./js/rots.js"></script>
