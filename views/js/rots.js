@@ -638,8 +638,8 @@ let cnvs = document.getElementById("main-plot");
                 position: {...satellites[windowOptions.psoVar.object].position},
                 a: satellites[windowOptions.psoVar.object].a
             })
-            optimizer.init(500, [{ start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }]);
-            document.getElementById('pso-total').innerText = 60;
+            optimizer.init(250, [{ start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }, { start: -50, end: 50 }]);
+            document.getElementById('pso-total').innerText = 100;
             let countId = document.getElementById('pso-count');
             let bestId = document.getElementById('pso-best');
             let count = 0;
@@ -647,13 +647,13 @@ let cnvs = document.getElementById("main-plot");
                 runOptimizer();
                 countId.innerText = count++;
                 bestId.innerText = (-optimizer.getBestFitness() * 1000).toFixed(2);
-                if (count < 60) {
+                if (count < 100) {
                     setTimeout(asyncLoop, 25);
                 }
                 else {
                     let x = optimizer.getBestPosition();
                     console.log(optimizer.getBestFitness());
-                    console.log(optimizer.getBestPosition());
+                    psoFinishFunction(x);
                     satellites[windowOptions.psoVar.object].burns = [];
                     for (let ii = 0; ii < windowOptions.psoVar.nWay; ii++) {
                         satellites[windowOptions.psoVar.object].burns.push({
@@ -2143,11 +2143,12 @@ let cnvs = document.getElementById("main-plot");
 
         function runOptimizer() {
             optimizer.step();
-            console.log(optimizer.getBestFitness());
+            // console.log(optimizer.getBestFitness());
         }
 
         function psoObjectiveFunction(x, log = false) {
             let obj = 0;
+            let maxDv = 0, dV;
             let tTotal = 10800; // Replace with variable when known
             let r1 = satellites[windowOptions.psoVar.object].position;
             let v1 = [[r1.rd], [r1.id], [r1.cd]];
@@ -2166,14 +2167,18 @@ let cnvs = document.getElementById("main-plot");
                     }
                 })
                 v1f = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
-                obj += math.norm(math.squeeze(math.subtract(v1f, v1)));
+                dV = math.norm(math.squeeze(math.subtract(v1f, v1)));
+                maxDv = dV > maxDv ? dV : maxDv;
+                obj += dV;
                 if (log) console.log(obj, math.norm(math.squeeze(math.subtract(v1f, v1))), r1, r2);
                 v1 = math.add(math.multiply(phi.vr, r1), math.multiply(phi.vv, v1f));
                 r1 = [...r2];
             }
             r2 = [[0],[0],[0]];
             v1f = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
-            obj += math.norm(math.squeeze(math.subtract(v1f, v1)));
+            dV = math.norm(math.squeeze(math.subtract(v1f, v1)));
+            maxDv = dV > maxDv ? dV : maxDv;
+            obj += dV;
             if (log) console.log(obj, math.norm(math.squeeze(math.subtract(v1f, v1))));
             windowOptions.psoVar.psoSatellite.burns.push({
                 direction: {r: 0, i: 0, c: 0},
@@ -2202,5 +2207,19 @@ let cnvs = document.getElementById("main-plot");
             // traj = math.min(vectorNorm(math.subtract(traj, adv_traj)))
             // console.log(traj);
             // return -dVtotal - 25 * sigmoid(50 - traj);
-            return -obj;
+            return -obj - sigmoid(-0.050 + maxDv);
+        }
+
+        function psoFinishFunction(x, alpha = 0.01, log = false) {
+            let dX = [...x], xTemp;
+            for (let ii = 0; ii < 1000; ii++) {
+                for (let jj = 0; jj < dX.length; jj++) {
+                    xTemp = [...x];
+                    xTemp[jj] += 0.1;
+                    dX[jj] = (psoObjectiveFunction(xTemp) - psoObjectiveFunction(x)) / 0.1;
+                }
+                x = math.subtract(x, math.dotMultiply(alpha, dX));
+            }
+            console.log(psoObjectiveFunction(x))
+            return x;
         }
