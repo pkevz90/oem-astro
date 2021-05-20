@@ -128,6 +128,7 @@ let cnvs = document.getElementById("main-plot");
                 completedBurn: false,
                 calcTraj: calcSatShownTrajectories,
                 burnsDrawn: 0,
+                burnSeparation: 1800, // Burns no closer than 30 minutes
                 getPositionArray: function () {
                     return [this.currentPosition.r, this.currentPosition.i, this.currentPosition.c];
                 },
@@ -340,6 +341,7 @@ let cnvs = document.getElementById("main-plot");
                 return;
             }
             setTimeout(() => {
+                if (satellites[windowOptions.mousePosition.object].burns.find(burn => math.abs(burn.time - windowOptions.scenario_time_des) < satellites[windowOptions.mousePosition.object].burnSeparation)) return;
                 if (windowOptions.mouseState && windowOptions.mousePosition.object !== false) {
                     satellites[windowOptions.mousePosition.object].burns.push({
                         time: windowOptions.scenario_time_des,
@@ -528,7 +530,10 @@ let cnvs = document.getElementById("main-plot");
                 .checked;
             windowOptions.finiteTarget = el.parentNode.parentNode.children.item(1).children[5].children[0]
                 .checked;
-            satellites.forEach(sat => sat.calcTraj());
+            satellites.forEach(sat => {
+                sat.generateBurns();
+                sat.calcTraj()
+            });
             encoder.setRepeat(repeat ? 0 : 1);
             encoder.setDelay(1000 / fps);
             windowOptions.animate_step = timeStep * 60;
