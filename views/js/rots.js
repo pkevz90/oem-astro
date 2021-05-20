@@ -1868,6 +1868,7 @@ let cnvs = document.getElementById("main-plot");
                     }
                     satellites[ii] = newSatellite(options);
                 }
+                document.getElementById('options-panel').classList.toggle("hidden")
             };
 
             fileReader.readAsText(fileToLoad, "UTF-8");
