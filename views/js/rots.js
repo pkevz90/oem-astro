@@ -93,6 +93,14 @@ let windowOptions = {
                 name: 'R'
             }
         },
+    },
+    options3d: {
+        rotation: {
+            x: 45,
+            y: 45,
+            z: 45
+        },
+        focalLength: 200
     }
 }
 formatCanvas();
@@ -256,7 +264,13 @@ window.addEventListener("keydown", e => {
                 windowOptions.screen.mode = 'ci only';
                 break;
             case 'ci only':
+                windowOptions.screen.mode = '3d';
+                cnvs.style.cursor = 'pointer';
+                break;
+            case '3d':
                 windowOptions.screen.mode = 'ri only';
+                windowOptions.mousePosition = {screen: "ri", pixel: windowOptions.mousePosition, ric: {r: 0, i: 0}, object: false, fill: 0}
+                cnvs.style.cursor = '';
                 break;
 
         }
@@ -274,6 +288,14 @@ timeSlider.addEventListener("input", e => {
     windowOptions.scenario_time_des = Number(e.target.value);
 })
 document.getElementById('canvas-div').addEventListener('mousemove', event => {
+    if (windowOptions.screen.mode === '3d') {
+        if (windowOptions.mouseState) {
+            windowOptions.options3d.rotation.x += (event.clientX - windowOptions.mousePosition[0]) * 0.2;
+            windowOptions.options3d.rotation.z += (event.clientY - windowOptions.mousePosition[1]) * 0.2;
+        }
+        windowOptions.mousePosition = [event.clientX, event.clientY];
+        return;
+    }
     windowOptions.mousePosition = getMousePosition(event.clientX, event.clientY);
     windowOptions.mousePosition.object = false;
     if (windowOptions.frame_move && !windowOptions.burn_status) {
@@ -290,6 +312,7 @@ document.getElementById('canvas-div').addEventListener('mousemove', event => {
 })
 document.getElementById('canvas-div').addEventListener('mousedown', event => {
     windowOptions.mouseState = true;
+    if (windowOptions.screen.mode === '3d') return;
     // check burns to see if clicked on ones
     satellites.forEach((sat, ii) => {
         for (let jj = sat.burns.length - 1; jj >= 0; jj--) {
@@ -654,13 +677,13 @@ function animation(time) {
     windowOptions.scenario_time += (windowOptions.scenario_time_des - windowOptions.scenario_time) * 0.2;
     // Transition frames
     let mode = windowOptions.screen.mode;
-    windowOptions.screen.ri_center += ((mode === 'ri only' ? cnvs.height / 2 : mode === 'ci only' ? -cnvs
+    windowOptions.screen.ri_center += ((mode === 'ri only' || mode === '3d' ? cnvs.height / 2 : mode === 'ci only' ? -cnvs
             .height / 2 : cnvs.height / 4) - windowOptions
         .screen.ri_center) * 0.1;
-    windowOptions.screen.ci_center += ((mode === 'ri only' ? 3 * cnvs.height / 2 : mode === 'ci only' ? cnvs
+    windowOptions.screen.ci_center += ((mode === 'ri only' || mode === '3d'  ? 3 * cnvs.height / 2 : mode === 'ci only' ? cnvs
             .height / 2 : 3 * cnvs.height / 4) -
         windowOptions.screen.ci_center) * 0.1;
-    windowOptions.screen.lineHeight += ((mode === 'ri only' || mode === 'ci only' ? cnvs.height : cnvs.height /
+    windowOptions.screen.lineHeight += ((mode === 'ri only' || mode === 'ci only' || mode === '3d'  ? cnvs.height : cnvs.height /
             2) - windowOptions
         .screen.lineHeight) * 0.1;
     if (windowOptions.mouseState) {
@@ -694,7 +717,6 @@ function animation(time) {
     else {
         draw3dScene();
     }
-    
     if (windowOptions.makeGif.start) {
         windowOptions.scenario_time_des += windowOptions.animate_step;
         windowOptions.scenario_time += windowOptions.animate_step;
@@ -714,13 +736,102 @@ function animation(time) {
 }
 
 function draw3dScene() {
-
+    let pointsToDraw = [];
+    let arrowsEnd = [[30, 0, 0], [0, 30, 0], [0, 0, 30]];
+    let arrowsOrigin = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    let labels = [{
+        text: 'R',
+        location: [[35], [0], [0]]
+    },{
+        text: 'I',
+        location: [[0], [35], [0]]
+    },{
+        text: 'C',
+        location: [[0], [0], [35]]
+    }]
+    let rot = math.multiply(math.multiply(rotationMatrices(windowOptions.options3d.rotation.x, 1,), rotationMatrices((windowOptions.options3d.rotation.y, 2))), rotationMatrices(windowOptions.options3d.rotation.z,3));
+    arrowsEnd = math.transpose(math.multiply(rot, arrowsEnd));
+    arrowsOrigin = math.transpose(math.multiply(rot, arrowsOrigin));
+    arrowsEnd.forEach((endPoint, ii) => {
+        let jj = 0;
+        while (jj <= 1) {
+            pointsToDraw.push({
+                r: arrowsOrigin[ii][0] + (endPoint[0] - arrowsOrigin[ii][0]) * jj,
+                i: arrowsOrigin[ii][1] + (endPoint[1] - arrowsOrigin[ii][1]) * jj,
+                c: arrowsOrigin[ii][2] + (endPoint[2] - arrowsOrigin[ii][2]) * jj,
+                color: 'black',
+                thick: 2,
+                type: 'dot'
+            })
+            jj += 0.01;
+        }
+    }) 
+    labels.forEach(label => {
+        let loc = math.multiply(rot, label.location);
+        pointsToDraw.push({
+            r: loc[0][0],
+            i: loc[1][0],
+            c: loc[2][0],
+            color: 'black',
+            thick: 2,
+            type: 'text',
+            text: label.text
+        })
+    })
+    satellites.forEach(sat => {
+        sat.currentPosition = sat.getCurrentState();
+        sat.shownTraj.forEach(point => {
+            let loc = math.multiply(rot, [[point.r],[point.i], [point.c]]);
+            pointsToDraw.push({
+                r: loc[0][0],
+                i: loc[1][0],
+                c: loc[2][0],
+                color: sat.color,
+                thick: 2,
+            })
+        })
+        let loc = math.multiply(rot, [sat.currentPosition.r,sat.currentPosition.i, sat.currentPosition.c]);
+        pointsToDraw.push({
+            r: loc[0][0],
+            i: loc[1][0],
+            c: loc[2][0],
+            color: sat.color,
+            thick: 10,
+            type: 'object'
+        })
+    })
+    pointsToDraw.sort((a, b) => a.c - b.c)
+    // Draw pointsToDraw
+    pointsToDraw.forEach((point) => {
+        if (point.type === 'text') {
+            let pixPoint = ricToPixel(point);
+            // pixPoint = math.dotMultiply(windowOptions.options3d.focalLength / (-point.c + windowOptions.options3d.focalLength), pixPoint)
+            ctx.textAlign = 'center';
+            ctx.font = '30px Arial';
+            ctx.fillStyle = 'black';
+            ctx.fillText(point.text, pixPoint[0], pixPoint[1] + 15)
+        }
+        else if (point.type === 'object') {
+            let pixPoint = ricToPixel(point);
+            ctx.fillStyle = point.color;
+            ctx.beginPath()
+            ctx.arc(pixPoint[0], pixPoint[1], 10, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        else {
+            let pixPoint = ricToPixel(point);
+            ctx.fillStyle = point.color;
+            ctx.beginPath()
+            ctx.arc(pixPoint[0], pixPoint[1], 2, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+    })
 }
 
 function formatCanvas() {
     cnvs.width = document.documentElement.clientWidth;
     cnvs.height = document.documentElement.clientHeight;
-    windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode !== 'ri only' ? 2 : 1) / cnvs
+    windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode === 'ri ci' || windowOptions.screen.mode === 'ci only' ? 2 : 1) / cnvs
         .width;
 }
 
@@ -1033,6 +1144,21 @@ function rotMatrix(options = {}) {
     ];
 }
 
+function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
+  	angle *= Math.PI/180;
+	let rotMat;
+	if (axis === 1) {
+        rotMat = [[1, 0, 0],[0,Math.cos(angle), -Math.sin(angle)], [0, Math.sin(angle), Math.cos(angle)]];
+    }
+    else if (axis === 2) {
+        rotMat = [[Math.cos(angle), 0, Math.sin(angle)], [0,1,0], [-Math.sin(angle), 0, Math.cos(angle)]];
+    }
+    else {
+        rotMat = [[Math.cos(angle), -Math.sin(angle), 0],[Math.sin(angle), Math.cos(angle), 0], [0, 0, 1]]
+    }
+  return rotMat;
+}
+
 function drawSatellite(satellite, cross = false) {
     let {
         color = 'blue', shape = 'triangle', size = 0.1, position = {
@@ -1120,7 +1246,7 @@ function ricToPixel(point = {
     } = options;
     let pointOut;
     let plotW = cnvs.width;
-    let plotH = ((windowOptions.screen.mode === 'ci only' ? -1 : 1) * windowOptions.screen.ri_center +
+    let plotH = ((windowOptions.screen.mode === 'ci only' || windowOptions.screen.mode === '3da' ? -1 : 1) * windowOptions.screen.ri_center +
         windowOptions.screen.ci_center) / 2;
     let hwr = windowOptions.screen.ri_h_w_ratio;
     if (cross) {
