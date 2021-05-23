@@ -270,7 +270,7 @@ window.addEventListener("keydown", e => {
                 break;
             case 'ci only':
                 windowOptions.screen.mode = '3d';
-                cnvs.style.cursor = 'pointer';
+                cnvs.style.cursor = 'all-scroll';
                 windowOptions.options3d.rotation = {x: 0, y: 90, z: 0}
                 windowOptions.options3d.rotation_des = {x: 0, y: 90, z: 0}
                 setTimeout(() => {
@@ -300,8 +300,8 @@ timeSlider.addEventListener("input", e => {
 document.getElementById('canvas-div').addEventListener('mousemove', event => {
     if (windowOptions.screen.mode === '3d') {
         if (windowOptions.mouseState) {
-            windowOptions.options3d.rotation_des.x += (event.clientX - windowOptions.mousePosition[0]) * 0.2;
-            windowOptions.options3d.rotation_des.y -= (event.clientY - windowOptions.mousePosition[1]) * 0.2;
+            windowOptions.options3d.rotation_des.x += (event.clientX - windowOptions.mousePosition[0]) * 0.5;
+            windowOptions.options3d.rotation_des.y -= (event.clientY - windowOptions.mousePosition[1]) * 0.5;
         }
         windowOptions.mousePosition = [event.clientX, event.clientY];
         return;
@@ -816,11 +816,34 @@ function draw3dScene() {
             type: 'object'
         })
     })
+    sunAngle = 180 - 360 * (windowOptions.scenario_time + windowOptions.sunInit) / 86164;
+    let sun0 = [[0],[0],[0]]
+    let sunF = [[arrowLen*Math.cos(sunAngle * Math.PI / 180) * Math.cos(10 * Math.PI / 180)], [arrowLen*Math.sin(sunAngle * Math.PI / 180) * Math.cos(30 * Math.PI / 180)], [arrowLen * Math.sin(10 * Math.PI / 180)]];
+    sun0 = math.multiply(rot, sun0);
+    sunF = math.multiply(rot, sunF);
+    let jj = 0.02;
+    while (jj <= 1) {
+        pointsToDraw.push({
+            r: sun0[0][0] + (sunF[0][0] - sun0[0][0]) * jj,
+            i: sun0[1][0] + (sunF[1][0] - sun0[1][0]) * jj,
+            c: sun0[2][0] + (sunF[2][0] - sun0[2][0]) * jj,
+            color: 'orange',
+            thick: 2,
+            type: 'dot'
+        })
+        jj += 0.01;
+    }
+    
     pointsToDraw.sort((a, b) => a.c - b.c)
     // Draw pointsToDraw
     pointsToDraw.forEach((point) => {
+        point.r = windowOptions.options3d.focalLength/ (-point.c + windowOptions.options3d.focalLength) * point.r;
+        point.i = windowOptions.options3d.focalLength/ (-point.c + windowOptions.options3d.focalLength) * point.i;
+            
+        let pixPoint = ricToPixel(point);
+        // pixPoint = math.dotMultiply(windowOptions.options3d.focalLength / (point.c + windowOptions.options3d.focalLength), pixPoint)
+            
         if (point.type === 'text') {
-            let pixPoint = ricToPixel(point);
             // pixPoint = math.dotMultiply(windowOptions.options3d.focalLength / (-point.c + windowOptions.options3d.focalLength), pixPoint)
             ctx.textAlign = 'center';
             ctx.font = '30px Arial';
@@ -828,14 +851,12 @@ function draw3dScene() {
             ctx.fillText(point.text, pixPoint[0], pixPoint[1] + 15)
         }
         else if (point.type === 'object') {
-            let pixPoint = ricToPixel(point);
             ctx.fillStyle = point.color;
             ctx.beginPath()
             ctx.arc(pixPoint[0], pixPoint[1], 10, 0, 2 * Math.PI);
             ctx.fill();
         }
         else {
-            let pixPoint = ricToPixel(point);
             ctx.fillStyle = point.color;
             ctx.beginPath()
             ctx.arc(pixPoint[0], pixPoint[1], 2, 0, 2 * Math.PI);
