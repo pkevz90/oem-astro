@@ -96,9 +96,14 @@ let windowOptions = {
     },
     options3d: {
         rotation: {
-            x: 45,
-            y: 45,
-            z: 45
+            x: 0,
+            y: 0,
+            z: 0
+        },
+        rotation_des: {
+            x: 0,
+            y: 0,
+            z: 0
         },
         focalLength: 200
     }
@@ -266,6 +271,11 @@ window.addEventListener("keydown", e => {
             case 'ci only':
                 windowOptions.screen.mode = '3d';
                 cnvs.style.cursor = 'pointer';
+                windowOptions.options3d.rotation = {x: 0, y: 90, z: 0}
+                windowOptions.options3d.rotation_des = {x: 0, y: 90, z: 0}
+                setTimeout(() => {
+                    windowOptions.options3d.rotation_des = {x: 45, y: 45, z: 0}
+                }, 350)
                 break;
             case '3d':
                 windowOptions.screen.mode = 'ri only';
@@ -290,8 +300,8 @@ timeSlider.addEventListener("input", e => {
 document.getElementById('canvas-div').addEventListener('mousemove', event => {
     if (windowOptions.screen.mode === '3d') {
         if (windowOptions.mouseState) {
-            windowOptions.options3d.rotation.x += (event.clientX - windowOptions.mousePosition[0]) * 0.2;
-            windowOptions.options3d.rotation.z += (event.clientY - windowOptions.mousePosition[1]) * 0.2;
+            windowOptions.options3d.rotation_des.x += (event.clientX - windowOptions.mousePosition[0]) * 0.2;
+            windowOptions.options3d.rotation_des.y -= (event.clientY - windowOptions.mousePosition[1]) * 0.2;
         }
         windowOptions.mousePosition = [event.clientX, event.clientY];
         return;
@@ -694,9 +704,9 @@ function animation(time) {
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, cnvs.width, cnvs.height);
 
+    drawScreenText();
     if (windowOptions.screen.mode !== '3d') {
         drawScreenArrows();
-        drawScreenText();
         drawSats();
         if (windowOptions.burn_status) {
             if (windowOptions.mousePosition.screen === windowOptions.burn_status.origScreen) {
@@ -736,20 +746,26 @@ function animation(time) {
 }
 
 function draw3dScene() {
+    let constRot = 0.1;
+    windowOptions.options3d.rotation.x += (windowOptions.options3d.rotation_des.x - windowOptions.options3d.rotation.x) * constRot;
+    windowOptions.options3d.rotation.y += (windowOptions.options3d.rotation_des.y - windowOptions.options3d.rotation.y) * constRot;
+    windowOptions.options3d.rotation.z += (windowOptions.options3d.rotation_des.z - windowOptions.options3d.rotation.z) * constRot;
+
     let pointsToDraw = [];
-    let arrowsEnd = [[30, 0, 0], [0, 30, 0], [0, 0, 30]];
+    let arrowLen = windowOptions.width_des * 0.2;
+    let arrowsEnd = [[arrowLen, 0, 0], [0, arrowLen, 0], [0, 0, arrowLen]];
     let arrowsOrigin = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
     let labels = [{
         text: 'R',
-        location: [[35], [0], [0]]
+        location: [[arrowLen*1.2], [0], [0]]
     },{
         text: 'I',
-        location: [[0], [35], [0]]
+        location: [[0], [arrowLen*1.2], [0]]
     },{
         text: 'C',
-        location: [[0], [0], [35]]
+        location: [[0], [0], [arrowLen*1.2]]
     }]
-    let rot = math.multiply(math.multiply(rotationMatrices(windowOptions.options3d.rotation.x, 1,), rotationMatrices((windowOptions.options3d.rotation.y, 2))), rotationMatrices(windowOptions.options3d.rotation.z,3));
+    let rot = math.multiply(math.multiply(rotationMatrices(windowOptions.options3d.rotation.x, 1,), rotationMatrices(windowOptions.options3d.rotation.y, 2)), rotationMatrices(windowOptions.options3d.rotation.z,3));
     arrowsEnd = math.transpose(math.multiply(rot, arrowsEnd));
     arrowsOrigin = math.transpose(math.multiply(rot, arrowsOrigin));
     arrowsEnd.forEach((endPoint, ii) => {
@@ -790,7 +806,7 @@ function draw3dScene() {
                 thick: 2,
             })
         })
-        let loc = math.multiply(rot, [sat.currentPosition.r,sat.currentPosition.i, sat.currentPosition.c]);
+        let loc = math.multiply(rot, [sat.currentPosition.r,sat.currentPosition.i, [sat.currentPosition.c[0]]]);
         pointsToDraw.push({
             r: loc[0][0],
             i: loc[1][0],
@@ -840,7 +856,7 @@ function drawScreenText() {
     ctx.font = '30px Arial';
     ctx.fillStyle = 'black';
     // Draw mouse positon on the active axis
-    if (!windowOptions.makeGif.start) {
+    if (!windowOptions.makeGif.start && windowOptions.screen.mode !== '3d') {
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.strokeStyle = windowOptions.mousePosition.object === false ? 'black' : satellites[windowOptions
@@ -862,21 +878,24 @@ function drawScreenText() {
             windowOptions.mousePosition.ric.i.toFixed(2) + ' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45
         );
     }
+    if (windowOptions.screen.mode !== '3d') {
+        ctx.strokeStyle = 'RGB(0,0,0,0.5)';
+        // Write current mouse position
+        ctx.textAlign = 'center';
+        ctx.font = '30px Arial';
+        ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
+            windowOptions.screen.ri_center + 10);
+        ctx.fillText('R', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+            windowOptions.screen.ri_center - 157.5);
+        ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
+            windowOptions.screen.ci_center + 10);
+        ctx.fillText('C', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
+            windowOptions.screen.ci_center - 157.5);
+    }
 
-    ctx.strokeStyle = 'RGB(0,0,0,0.5)';
-    // Write current mouse position
-    ctx.textAlign = 'center';
-    ctx.font = '30px Arial';
-    ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
-        windowOptions.screen.ri_center + 10);
-    ctx.fillText('R', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
-        windowOptions.screen.ri_center - 157.5);
-    ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
-        windowOptions.screen.ci_center + 10);
-    ctx.fillText('C', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
-        windowOptions.screen.ci_center - 157.5);
     ctx.textAlign = 'start';
     ctx.fillStyle = 'black';
+
     ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
         .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
     // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
