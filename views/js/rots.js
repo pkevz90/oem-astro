@@ -105,7 +105,7 @@ let windowOptions = {
             y: 0,
             z: 0
         },
-        focalLength: 200
+        focalLength: 10000
     }
 }
 formatCanvas();
@@ -376,6 +376,9 @@ document.getElementById('canvas-div').addEventListener('mousedown', event => {
     setTimeout(() => {
         if (satellites[windowOptions.mousePosition.object].burns.find(burn => math.abs(burn.time - windowOptions.scenario_time_des) < satellites[windowOptions.mousePosition.object].burnSeparation)) return;
         if (windowOptions.mouseState && windowOptions.mousePosition.object !== false) {
+            let targetState = satellites[windowOptions.mousePosition.object].getCurrentState({
+                time: windowOptions.scenario_time_des + 7200
+            });
             satellites[windowOptions.mousePosition.object].burns.push({
                 time: windowOptions.scenario_time_des,
                 direction: {
@@ -386,9 +389,9 @@ document.getElementById('canvas-div').addEventListener('mousedown', event => {
                 waypoint: {
                     tranTime: 7200,
                     target: {
-                        r: 0,
-                        i: 0,
-                        c: 0
+                        r: targetState.r[0],
+                        i: targetState.i[0],
+                        c: targetState.c[0]
                     }
                 }
             })
