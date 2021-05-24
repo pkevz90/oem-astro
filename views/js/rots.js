@@ -1985,12 +1985,24 @@ function editButtonFunction(event) {
     // nextValue = new Date(new Date(event.target.parentElement.nextSibling.children[0].innerText + 'Z') - 15 * 60 * 1000);
     
     oldValue = tdList[0].innerText + 'Z';
-    tdList[0].innerHTML = `<input type="datetime-local" id="edit-date" style="width: 100%" value="${new Date(oldValue).toISOString().substr(0,19)}"/>`;
+    tdList[0].innerHTML = `<input type="datetime-local" oninput="editChanged(this)" id="edit-date" style="width: 100%" value="${new Date(oldValue).toISOString().substr(0,19)}"/>`;
     // tdList[0].children[0].value = '2014-02-09';
     for (let td = 1; td < 5; td++) {
         oldValue = tdList[td].children[0].innerText;
-        tdList[td].children[0].innerHTML = `<input style="width: 30%" type="number" value="${oldValue}"/>`;
+        tdList[td].children[0].innerHTML = `<input ${td === 4 ?'oninput="editChanged(this)"' : ''} style="width: 30%" type="number" value="${oldValue}"/>`;
     }
+}
+
+function editChanged(el) {
+    let sat = document.getElementById('satellite-way-select').value;
+    let parent = el.type === 'number' ? el.parentNode.parentNode.parentNode : el.parentNode.parentNode;
+    let tranTime = Number(parent.children[4].children[0].children[0].value) * 60;
+    let time = new Date(parent.children[0].children[0].value).getTime() - new Date(windowOptions.start_date).getTime();
+    time /= 1000;
+    let targetState = satellites[sat].getCurrentState({
+        time: time + tranTime
+    });
+    parent.children[3].children[0].children[0].value = targetState.c[0].toFixed(1);
 }
 
 function waypoints2table(waypoints) {
