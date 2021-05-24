@@ -806,7 +806,7 @@ function draw3dScene() {
                 i: loc[1][0],
                 c: loc[2][0],
                 color: sat.color,
-                thick: 1,
+                thick: 2,
             })
         })
         let loc = math.multiply(rot, [sat.currentPosition.r,sat.currentPosition.i, [sat.currentPosition.c[0]]]);
