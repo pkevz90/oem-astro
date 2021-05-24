@@ -778,8 +778,8 @@ function draw3dScene() {
                 r: arrowsOrigin[ii][0] + (endPoint[0] - arrowsOrigin[ii][0]) * jj,
                 i: arrowsOrigin[ii][1] + (endPoint[1] - arrowsOrigin[ii][1]) * jj,
                 c: arrowsOrigin[ii][2] + (endPoint[2] - arrowsOrigin[ii][2]) * jj,
-                color: 'black',
-                thick: 2,
+                color: windowOptions.arrowColor,
+                thick: 4,
                 type: 'dot'
             })
             jj += 0.01;
@@ -806,7 +806,7 @@ function draw3dScene() {
                 i: loc[1][0],
                 c: loc[2][0],
                 color: sat.color,
-                thick: 2,
+                thick: 1,
             })
         })
         let loc = math.multiply(rot, [sat.currentPosition.r,sat.currentPosition.i, [sat.currentPosition.c[0]]]);
@@ -837,6 +837,24 @@ function draw3dScene() {
         jj += 0.01;
     }
     
+    // Draw in-plane concentric circles
+    jj = 0;
+    while (jj <= 2 * Math.PI) {
+        let loc, ang = [[Math.cos(jj)], [Math.sin(jj)], [0]];
+        for (ii = 0.1; ii <= 0.31; ii += 0.1) {
+            loc = math.multiply(rot, math.dotMultiply(ii * windowOptions.width, ang));
+            pointsToDraw.push({
+                r: loc[0][0],
+                i: loc[1][0],
+                c: loc[2][0],
+                color: 'black',
+                thick: 0.25,
+                type: 'dot'
+            })
+        }
+        jj += 2 * Math.PI / 200;
+    }
+
     pointsToDraw.sort((a, b) => a.c - b.c)
     // Draw pointsToDraw
     pointsToDraw.forEach((point) => {
@@ -862,7 +880,7 @@ function draw3dScene() {
         else {
             ctx.fillStyle = point.color;
             ctx.beginPath()
-            ctx.arc(pixPoint[0], pixPoint[1], 2, 0, 2 * Math.PI);
+            ctx.arc(pixPoint[0], pixPoint[1], point.thick, 0, 2 * Math.PI);
             ctx.fill();
         }
     })
