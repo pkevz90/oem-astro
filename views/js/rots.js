@@ -105,7 +105,14 @@ let windowOptions = {
             y: 0,
             z: 0
         },
-        focalLength: 10000
+        focalLength: 10000,
+        circleTrig: (() => {
+            out = [];
+            for (let ii = 0; ii < 2 * Math.PI; ii += Math.PI / 100){
+                out.push([Math.cos(ii), Math.sin(ii), 0])
+            }
+            return math.transpose(out);
+        })()
     }
 }
 formatCanvas();
@@ -838,22 +845,26 @@ function draw3dScene() {
     }
     
     // Draw in-plane concentric circles
-    jj = 0;
-    while (jj <= 2 * Math.PI) {
-        let loc, ang = [[Math.cos(jj)], [Math.sin(jj)], [0]];
-        for (ii = 0.1; ii <= 0.31; ii += 0.1) {
-            loc = math.multiply(rot, math.dotMultiply(ii * windowOptions.width, ang));
-            pointsToDraw.push({
-                r: loc[0][0],
-                i: loc[1][0],
-                c: loc[2][0],
-                color: 'black',
-                thick: 0.25,
-                type: 'dot'
-            })
-        }
-        jj += 2 * Math.PI / 200;
-    }
+    let loc = math.transpose(math.multiply(rot, windowOptions.options3d.circleTrig));
+    loc.forEach(l => {
+        pointsToDraw.push({
+            r: l[0] * windowOptions.width / 3,
+            i: l[1] * windowOptions.width / 3,
+            c: l[2] * windowOptions.width / 3,
+            color: 'black',
+            thick: 0.5,
+            type: 'dot'
+        });
+        pointsToDraw.push({
+            r: l[0] * windowOptions.width / 6,
+            i: l[1] * windowOptions.width / 6,
+            c: l[2] * windowOptions.width / 6,
+            color: 'black',
+            thick: 0.25,
+            type: 'dot'
+        })
+    })
+
 
     pointsToDraw.sort((a, b) => a.c - b.c)
     // Draw pointsToDraw
