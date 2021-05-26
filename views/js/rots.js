@@ -1949,9 +1949,10 @@ function generateBurnTable(object = 0) {
         table.removeChild(table.firstChild);
     }
     let addStartTime = document.getElementById('add-start-time');
-
+    let tranTime = Number(document.getElementById('add-tran-time').value);
+    console.log(tranTime * 60000);
     let endTime = satellites[object].burns.length === 0 ? windowOptions.start_date : new Date(windowOptions.start_date.getTime() + satellites[object].burns[satellites[object].burns.length - 1].time * 1000 + satellites[object].burns[satellites[object].burns.length - 1].waypoint.tranTime * 1000);
-    let dt = (endTime.getTime() - windowOptions.start_date.getTime() + 7200000) / 1000;
+    let dt = (endTime.getTime() - windowOptions.start_date.getTime() + tranTime * 60000) / 1000;
     let crossState = satellites[object].getCurrentState({time: dt});
     document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
     addStartTime.value = new Date(new Date(endTime).toString().split(' GMT')[0].substring(4) + 'Z').toISOString().substr(0,19);
