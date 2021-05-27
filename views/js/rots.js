@@ -61,8 +61,8 @@ let windowOptions = {
         time: 10800,
         constant: 0.0003
     },
-    showFinite: false,
-    finiteTarget: false,
+    showFinite: true,
+    finiteTarget: true,
     relativeData: {
         origin: undefined,
         target: undefined,
@@ -2211,6 +2211,100 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 8
     // return [Xret,X];
 }
 
+function hcwFiniteBurnTwoBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 86164) {
+    state = [[stateInit.x],[stateInit.y],[stateInit.z],[stateInit.xd],[stateInit.yd],[stateInit.zd]];
+    stateFinal = [[stateFinal.x],[stateFinal.y],[stateFinal.z],[stateFinal.xd],[stateFinal.yd],[stateFinal.zd]];
+    let v = proxOpsTargeter(state.slice(0,3),stateFinal.slice(0,3),tf);
+    let v1 = v[0], v2 =v[1], yErr,S,dX = 1,F, invS, invSSt, ii = 0;
+    let dv1 = math.subtract(v1,state.slice(3,6));
+    let dv2 = math.subtract(state.slice(3,6),v2);
+    // [alpha - in plane angle, phi - out of plane angle, tB - total burn time %]
+    let X = [[Math.atan2(dv1[1][0],dv1[0][0])],[Math.atan2(dv1[2],math.norm([dv1[0][0], dv1[1][0]]))],[math.norm(math.squeeze(dv1))/a0/tf],
+             [Math.atan2(dv2[1][0],dv2[0][0])],[Math.atan2(dv2[2],math.norm([dv2[0][0], dv2[1][0]]))],[math.norm(math.squeeze(dv2))/a0/tf]];
+    while (math.norm(math.squeeze(dX)) > 1e-6){
+        F = twoBurnFiniteHcw (stateInit,X[0][0],X[1][0],X[3][0],X[4][0],X[2][0],X[5][0],tf,a0,n);
+        yErr = [[stateFinal[0][0]-F.x],[stateFinal[1][0]-F.y],[stateFinal[2][0]-F.z],
+                [stateFinal[3][0]-F.xd],[stateFinal[4][0]-F.yd],[stateFinal[5][0]-F.zd]];
+        S = proxOpsJacobianTwoBurn(stateInit,a0,X[0][0],X[1][0],X[2][0],X[3][0],X[4][0],X[5][0],tf,n);
+        invSSt = math.inv(math.multiply(S,math.transpose(S)));
+        invS = math.multiply(math.transpose(S),invSSt);
+        // console.log(multiplyMatrix(math.transpose(S),invSSt))
+        dX = math.multiply(invS,yErr);
+        // console.log(yErr);
+        // console.log(F)
+        X = math.add(X,dX)
+        ii++
+        if (ii >50){break;} 
+    }
+    
+    return {
+        burn1: {
+            r: a0 * X[2] * tf * Math.cos(X[0][0]) * Math.cos(X[1][0]),
+            i: a0 * X[2] * tf * Math.sin(X[0][0]) * Math.cos(X[1][0]),
+            c: a0 * X[2] * tf * Math.sin(X[1][0]),
+            t: X[2][0] * tf
+        },
+        burn2: {
+            r: a0 * X[5] * tf * Math.cos(X[3][0]) * Math.cos(X[4][0]),
+            i: a0 * X[5] * tf * Math.sin(X[3][0]) * Math.cos(X[4][0]),
+            c: a0 * X[5] * tf * Math.sin(X[4][0]),
+            t: X[5][0] * tf
+        }
+    }
+    // return X;
+}
+
+function testTwoBurn() {
+    // let stateF = {x: 0, y: 0, z: 0, xd: 0.00, yd: 0, zd: 0}; stateI = {x: 0, y: -200, z: 100, xd: 0, yd: 0, zd: 0}; tf = 7200 * 2, a= 0.00001;
+    let stateF = {x: 0, y: 0, z: 20, xd: 0.002, yd: 0, zd: 0}; stateI = {x: -40, y: -260, z: 0, xd: 0, yd: 40 * 2 * Math.PI / 86164  *3/2, zd: 0}; tf = 7200 * 1.5, a= 0.00001;
+    let X = hcwFiniteBurnTwoBurn(stateI, stateF, tf, a);
+    console.log(X);
+    let alpha = math.atan2(X.burn1.i, X.burn1.r);
+    let phi = math.atan2(X.burn1.c, math.norm([X.burn1.r, X.burn1.i]));
+    let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf , tf, a, 2 * Math.PI / 86164);
+    satellites.push(newSatellite({
+        position: {
+            r: stateI.x,
+            i: stateI.y,
+            c: stateI.z,
+            rd: stateI.xd,
+            id: stateI.yd,
+            cd: stateI.zd
+        }
+    }))
+    satellites[0].burns.push({
+        time: 0,
+        direction: {r: 0, i: 0, z: 0},
+        waypoint: {
+            tranTime: tf,
+            target: {
+                r: res.x,
+                i: res.y,
+                c: res.z
+            }
+        }
+    })
+    res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / (tf - X.burn2.t) , tf - X.burn2.t, a, 2 * Math.PI / 86164);
+    alpha = math.atan2(X.burn2.i, X.burn2.r);
+    phi = math.atan2(X.burn2.c, math.norm([X.burn2.r, X.burn2.i]));
+    res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a, 2 * Math.PI / 86164);
+    console.log(res);
+    satellites[0].burns.push({
+        time: tf - X.burn2.t,
+        direction: {r: 0, i: 0, z: 0},
+        waypoint: {
+            tranTime: X.burn2.t * 2,
+            target: {
+                r: res.x,
+                i: res.y,
+                c: res.z
+            }
+        }
+    })
+    satellites[0].generateBurns();
+    satellites[0].calcTraj();
+}
+
 function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0, n) {
     if (n === undefined) {
         n = 2 * Math.PI / 86164;
@@ -2294,6 +2388,150 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
     m = math.dotDivide(math.subtract(m2, m1), 0.01);
     mC = math.concat(mC, m);
     return mC;
+}
+
+function proxOpsJacobianTwoBurn(state,a,alpha1,phi1,tB1,alpha2, phi2,tB2,tF,n){
+    let m1,m2,mC,mFinal=[];
+    //alpha1
+    m1 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tF,a,n);
+    m1 = [[m1.x],
+          [m1.y],
+          [m1.z],
+          [m1.xd],
+          [m1.yd],
+          [m1.zd]];
+    m2 = twoBurnFiniteHcw (state,alpha1+0.0001,phi1,alpha2,phi2,tB1,tB2,tF,a,n);
+    m2 = [[m2.x],
+          [m2.y],
+          [m2.z],
+          [m2.xd],
+          [m2.yd],
+          [m2.zd]];
+    mC = math.dotDivide(math.subtract(m2,m1),0.0001);
+    mFinal = mC;
+    //phi1
+    m1 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tF,a,n);
+    m1 = [[m1.x],
+          [m1.y],
+          [m1.z],
+          [m1.xd],
+          [m1.yd],
+          [m1.zd]];
+    m2 = twoBurnFiniteHcw (state,alpha1,phi1+0.0001,alpha2,phi2,tB1,tB2,tF,a,n);
+    m2 = [[m2.x],
+          [m2.y],
+          [m2.z],
+          [m2.xd],
+          [m2.yd],
+          [m2.zd]];
+    mC = math.dotDivide(math.subtract(m2,m1),0.0001);
+    mFinal = math.concat(mFinal,mC);
+    //tB1
+    m1 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tF,a,n);
+    m1 = [[m1.x],
+          [m1.y],
+          [m1.z],
+          [m1.xd],
+          [m1.yd],
+          [m1.zd]];
+    m2 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1+0.0001,tB2,tF,a,n);
+    m2 = [[m2.x],
+          [m2.y],
+          [m2.z],
+          [m2.xd],
+          [m2.yd],
+          [m2.zd]];
+    mC = math.dotDivide(math.subtract(m2,m1),0.0001);
+    mFinal = math.concat(mFinal,mC);
+    //alpha2
+    m1 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tF,a,n);
+    m1 = [[m1.x],
+          [m1.y],
+          [m1.z],
+          [m1.xd],
+          [m1.yd],
+          [m1.zd]];
+    m2 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2+0.0001,phi2,tB1,tB2,tF,a,n);
+    m2 = [[m2.x],
+          [m2.y],
+          [m2.z],
+          [m2.xd],
+          [m2.yd],
+          [m2.zd]];
+    mC = math.dotDivide(math.subtract(m2,m1),0.0001);
+    mFinal = math.concat(mFinal,mC);
+    //phi2
+    m1 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tF,a,n);
+    m1 = [[m1.x],
+          [m1.y],
+          [m1.z],
+          [m1.xd],
+          [m1.yd],
+          [m1.zd]];
+    m2 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2+0.0001,tB1,tB2,tF,a,n);
+    m2 = [[m2.x],
+          [m2.y],
+          [m2.z],
+          [m2.xd],
+          [m2.yd],
+          [m2.zd]];
+    mC = math.dotDivide(math.subtract(m2,m1),0.0001);
+    mFinal = math.concat(mFinal,mC);
+    //tB2
+    m1 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tF,a,n);
+    m1 = [[m1.x],
+          [m1.y],
+          [m1.z],
+          [m1.xd],
+          [m1.yd],
+          [m1.zd]];
+    m2 = twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2+0.0001,tF,a,n);
+    m2 = [[m2.x],
+          [m2.y],
+          [m2.z],
+          [m2.xd],
+          [m2.yd],
+          [m2.zd]];
+    mC = math.dotDivide(math.subtract(m2,m1),0.0001);
+    mFinal = math.concat(mFinal,mC);
+    return mFinal;
+}
+
+function twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tf,a0,n) {
+    if (n === undefined) {
+        n = 2*Math.PI/86164;
+    }
+    x0 = state.x; xd0 = state.xd;
+    y0 = state.y; yd0 = state.yd;
+    z0 = state.z; zd0 = state.zd;
+    let t1 = tB1*tf, t2 = tf-tB1*tf-tB2*tf, t3 = tB2*tf;
+    let xM1 = radialPosClosed(x0,xd0,yd0,a0,alpha1,phi1,t1,n);
+    let xdM1 = radialVelClosed(x0,xd0,yd0,a0,alpha1,phi1,t1,n);
+    let yM1 = intrackPosClosed(x0,xd0,y0,yd0,a0,alpha1,phi1,t1,n);
+    let ydM1 = intrackVelClosed(x0,xd0,yd0,a0,alpha1,phi1,t1,n);
+    let zM1 = crosstrackPosClosed(z0,zd0,a0,phi1,t1,n);
+    let zdM1 = crosstrackVelClosed(z0,zd0,a0,phi1,t1,n);
+    let xM2 = radialPosClosed(xM1,xdM1,ydM1,0,0,0,t2,n);
+    let xdM2 = radialVelClosed(xM1,xdM1,ydM1,0,0,0,t2,n);
+    let yM2 = intrackPosClosed(xM1,xdM1,yM1,ydM1,0,0,0,t2,n);
+    let ydM2 = intrackVelClosed(xM1,xdM1,ydM1,0,0,0,t2,n);
+    let zM2 = crosstrackPosClosed(zM1,zdM1,0,0,t2,n);
+    let zdM2 = crosstrackVelClosed(zM1,zdM1,0,0,t2,n);
+    let xF = radialPosClosed(xM2,xdM2,ydM2,a0,alpha2,phi2,t3,n);
+    let xdF = radialVelClosed(xM2,xdM2,ydM2,a0,alpha2,phi2,t3,n);
+    let yF = intrackPosClosed(xM2,xdM2,yM2,ydM2,a0,alpha2,phi2,t3,n);
+    let ydF = intrackVelClosed(xM2,xdM2,ydM2,a0,alpha2,phi2,t3,n);
+    let zF = crosstrackPosClosed(zM2,zdM2,a0,phi2,t3,n);
+    let zdF = crosstrackVelClosed(zM2,zdM2,a0,phi2,t3,n);
+    return {
+        x: xF,
+        y: yF,
+        z: zF,
+        xd: xdF,
+        yd: ydF,
+        zd: zdF
+    };
+
 }
 
 function proxOpsTargeter(r1, r2, t) {

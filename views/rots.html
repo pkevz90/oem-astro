@@ -69,6 +69,8 @@
                 <input class="center" id="add-cross" type="Number" value="0" style="width: 4%"> km Transfer Time: <input class="center"
                     type="Number" id="add-tran-time" value="120" style="width: 4%"> min
                 <span id="add-waypoint-button">Add</span>
+                
+                <div>Zero Velocity at Target<input type="checkbox"></div>
             </div>
 
 
@@ -157,7 +159,7 @@
             <div>Data Points<input value="200" type="Number" min="100" max="500"></div>
             <div>Line Width<input value="3" type="Number" min="1" max="10"> px</div>
             <div>Line Trajectory<input type="checkbox"></div>
-            <div>Finite Burns<input type="checkbox"></div>
+            <div>Finite Burns<input type="checkbox" checked></div>
             <div>Finite Targeting<input type="checkbox" checked></div>
             <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
             <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
