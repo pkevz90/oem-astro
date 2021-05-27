@@ -616,6 +616,7 @@ document.getElementById('export-option-button').addEventListener('click', () => 
     }));
 })
 document.getElementById('add-waypoint-button').addEventListener('click', event => {
+    let chosenSat = Number(document.getElementById('satellite-way-select').value);
     let divTarget = event.target.parentNode.children;
     let tableTrs = document.getElementById('waypoint-table').children[1].children,
         waypoints = [];
@@ -628,21 +629,54 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
             tranTime: Number(tableTrs[tr].children[4].innerText)
         })
     }
-    let newWaypoint = {
-        time: Date.parse(divTarget[0].value),
-        r: Number(divTarget[1].value),
-        i: Number(divTarget[2].value),
-        c: Number(divTarget[3].value),
-        tranTime: Number(divTarget[4].value) === 0 ? 120 : Number(divTarget[4].value)
+    if (divTarget[6].children[0].checked) {
+        // Switch to 2-burn calculation, delete all burns after
+        let startTime = Date.parse(divTarget[0].value);
+        waypoints = waypoints.filter(point => point.time < startTime);
+        let curPos = satellites[chosenSat].getCurrentState({time: startTime / 1000 - Date.parse(windowOptions.start_date) / 1000})
+        console.log(curPos, Number(divTarget[4].value) === 0 ? 7200 : 120 * Number(divTarget[4].value));
+        let newPoints = calcTwoBurn({
+            stateI: {x: curPos.r[0], y: curPos.i[0], z: curPos.c[0], xd: curPos.rd[0], yd: curPos.id[0], zd: curPos.cd[0]},
+            stateF: {x: Number(divTarget[1].value), y: Number(divTarget[2].value), z: Number(divTarget[3].value), xd: 0, yd: 0, zd: 0},
+            a: satellites[chosenSat].a,
+            startTime: startTime / 1000 - Date.parse(windowOptions.start_date) / 1000,
+            tf: Number(divTarget[4].value) === 0 ? 7200 : 60 * Number(divTarget[4].value)
+        })
+        if (!newPoints) {
+            alert("No solution found, increase transfer time or move target point closer to origin");
+            return;
+        }
+        waypoints.push({
+            time: newPoints[0].time * 1000 + Date.parse(windowOptions.start_date),
+            r: newPoints[0].waypoint.target.r,
+            i: newPoints[0].waypoint.target.i,
+            c: newPoints[0].waypoint.target.c,
+            tranTime: newPoints[0].waypoint.tranTime / 60,
+        },{
+            time: newPoints[1].time * 1000 + Date.parse(windowOptions.start_date),
+            r: newPoints[1].waypoint.target.r,
+            i: newPoints[1].waypoint.target.i,
+            c: newPoints[1].waypoint.target.c,
+            tranTime: newPoints[1].waypoint.tranTime / 60,
+        })
     }
-    let filterLimit = 15 * 60 * 1000; // Reject burns closer than 15 minutes to other burns 
-    if (waypoints.filter(point => Math.abs(point.time - newWaypoint.time) < filterLimit).length > 0) {
-        return;
+    else {
+        let newWaypoint = {
+            time: Date.parse(divTarget[0].value),
+            r: Number(divTarget[1].value),
+            i: Number(divTarget[2].value),
+            c: Number(divTarget[3].value),
+            tranTime: Number(divTarget[4].value) === 0 ? 120 : Number(divTarget[4].value)
+        }
+        
+        let filterLimit = 15 * 60 * 1000; // Reject burns closer than 15 minutes to other burns 
+        if (waypoints.filter(point => Math.abs(point.time - newWaypoint.time) < filterLimit).length > 0) {
+            return;
+        }
+        waypoints.push(newWaypoint);
+        waypoints.sort((a, b) => a.time - b.time);
     }
-    waypoints.push(newWaypoint);
-    waypoints.sort((a, b) => a.time - b.time);
     waypoints2table(waypoints);
-    let chosenSat = Number(document.getElementById('satellite-way-select').value);
     table2burns(chosenSat);
 })
 document.getElementById('add-start-time').addEventListener('input', event => {
@@ -1963,10 +1997,10 @@ function generateBurnTable(object = 0) {
         addedElement.innerHTML = `
             <td>${new Date(windowOptions.start_date.getTime() + satellites[object].burns[burn].time * 1000).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td><span>${(satellites[object].burns[burn].waypoint.target.r).toFixed(1)}</span> km</td>
-            <td><span>${(satellites[object].burns[burn].waypoint.target.i).toFixed(1)}</span> km</td>
-            <td><span>${(satellites[object].burns[burn].waypoint.target.c).toFixed(1)}</span> km</td>
-            <td><span>${(satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
+            <td><span>${(satellites[object].burns[burn].waypoint.target.r).toFixed(3)}</span> km</td>
+            <td><span>${(satellites[object].burns[burn].waypoint.target.i).toFixed(3)}</span> km</td>
+            <td><span>${(satellites[object].burns[burn].waypoint.target.c).toFixed(3)}</span> km</td>
+            <td><span>${(satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(3)}</span></td>
             <td class="edit-button">Edit</td>
         `;
         table.appendChild(addedElement);
@@ -2027,10 +2061,10 @@ function waypoints2table(waypoints) {
         addedElement.innerHTML = `
             <td>${new Date(point.time).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td><span>${(point.r).toFixed(1)}</span> km</td>
-            <td><span>${(point.i).toFixed(1)}</span> km</td>
-            <td><span>${(point.c).toFixed(1)}</span> km</td>
-            <td><span>${(point.tranTime).toFixed(1)}</span></td>
+            <td><span>${(point.r).toFixed(3)}</span> km</td>
+            <td><span>${(point.i).toFixed(3)}</span> km</td>
+            <td><span>${(point.c).toFixed(3)}</span> km</td>
+            <td><span>${(point.tranTime).toFixed(3)}</span></td>
             <td class="edit-button">Edit</td>
         `;
         table.appendChild(addedElement);
@@ -2236,7 +2270,6 @@ function hcwFiniteBurnTwoBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 8
         ii++
         if (ii >50){break;} 
     }
-    
     return {
         burn1: {
             r: a0 * X[2] * tf * Math.cos(X[0][0]) * Math.cos(X[1][0]),
@@ -2254,26 +2287,70 @@ function hcwFiniteBurnTwoBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 8
     // return X;
 }
 
-function testTwoBurn() {
-    // let stateF = {x: 0, y: 0, z: 0, xd: 0.00, yd: 0, zd: 0}; stateI = {x: 0, y: -200, z: 100, xd: 0, yd: 0, zd: 0}; tf = 7200 * 2, a= 0.00001;
-    let stateF = {x: 0, y: 0, z: 20, xd: 0.002, yd: 0, zd: 0}; stateI = {x: -40, y: -260, z: 0, xd: 0, yd: 40 * 2 * Math.PI / 86164  *3/2, zd: 0}; tf = 7200 * 1.5, a= 0.00001;
+function calcTwoBurn(options = {}) {
+    let {stateF,
+        stateI,
+        a = 0.00001,
+        tf = 7200 * 1.5,
+        startTime} = options;
+    outBurns = [];
     let X = hcwFiniteBurnTwoBurn(stateI, stateF, tf, a);
-    console.log(X);
+    if (X.burn1.t < 0 || X.burn2.t < 0 || (X.burn1.t + X.burn2.t) > tf) return false;
     let alpha = math.atan2(X.burn1.i, X.burn1.r);
     let phi = math.atan2(X.burn1.c, math.norm([X.burn1.r, X.burn1.i]));
     let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf , tf, a, 2 * Math.PI / 86164);
-    satellites.push(newSatellite({
-        position: {
-            r: stateI.x,
-            i: stateI.y,
-            c: stateI.z,
-            rd: stateI.xd,
-            id: stateI.yd,
-            cd: stateI.zd
+    outBurns.push({
+        time: startTime,
+        direction: {r: 0, i: 0, z: 0},
+        waypoint: {
+            tranTime: tf,
+            target: {
+                r: res.x,
+                i: res.y,
+                c: res.z
+            }
         }
-    }))
+    })
+    res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / (tf - X.burn2.t) , tf - X.burn2.t, a, 2 * Math.PI / 86164);
+    alpha = math.atan2(X.burn2.i, X.burn2.r);
+    phi = math.atan2(X.burn2.c, math.norm([X.burn2.r, X.burn2.i]));
+    res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a, 2 * Math.PI / 86164);
+    console.log(res);
+    outBurns.push({
+        time: startTime + tf - X.burn2.t,
+        direction: {r: 0, i: 0, z: 0},
+        waypoint: {
+            tranTime: X.burn2.t * 2,
+            target: {
+                r: res.x,
+                i: res.y,
+                c: res.z
+            }
+        }
+    })
+    console.log(X);
+    return outBurns;
+}
+
+function testTwoBurn(options = {}) {
+    let tf = 7200 * 2;
+    let a = 0.00001;
+
+    let stateF = {x: 0, y: 0, z: 0, xd: 0, yd: 0, zd: 0};
+    let stateI = {x: satellites[0].currentPosition.r[0], 
+                  y: satellites[0].currentPosition.i[0], 
+                  z: satellites[0].currentPosition.c[0], 
+                  xd: satellites[0].currentPosition.rd[0], 
+                  yd: satellites[0].currentPosition.id[0], 
+                  zd: satellites[0].currentPosition.cd[0]};
+    console.log(stateF, stateI, a, tf);
+    let X = hcwFiniteBurnTwoBurn(stateI, stateF, tf, a);
+    if (X.burn1.t < 0 || X.burn2.t < 0) return false;
+    let alpha = math.atan2(X.burn1.i, X.burn1.r);
+    let phi = math.atan2(X.burn1.c, math.norm([X.burn1.r, X.burn1.i]));
+    let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf , tf, a, 2 * Math.PI / 86164);
     satellites[0].burns.push({
-        time: 0,
+        time: windowOptions.scenario_time_des,
         direction: {r: 0, i: 0, z: 0},
         waypoint: {
             tranTime: tf,
@@ -2290,7 +2367,7 @@ function testTwoBurn() {
     res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a, 2 * Math.PI / 86164);
     console.log(res);
     satellites[0].burns.push({
-        time: tf - X.burn2.t,
+        time: windowOptions.scenario_time_des + tf - X.burn2.t,
         direction: {r: 0, i: 0, z: 0},
         waypoint: {
             tranTime: X.burn2.t * 2,
@@ -2303,6 +2380,7 @@ function testTwoBurn() {
     })
     satellites[0].generateBurns();
     satellites[0].calcTraj();
+    console.log(X);
 }
 
 function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0, n) {
