@@ -2295,7 +2295,32 @@ function calcTwoBurn(options = {}) {
         startTime} = options;
     outBurns = [];
     let X = hcwFiniteBurnTwoBurn(stateI, stateF, tf, a);
-    if (X.burn1.t < 0 || X.burn2.t < 0 || (X.burn1.t + X.burn2.t) > tf) return false;
+    if (X.burn1.t < 0 || X.burn2.t < 0 || (X.burn1.t + X.burn2.t) > tf) {
+        // Find transfer time that works if original returns no solution
+        let ii = tf;
+        let tryList = [];
+        while (ii >= 1800) {
+            tryList.push(ii);
+            ii -= 900;
+        }
+        ii = tf;
+        while (ii < 8 * 3600) {
+            tryList.push(ii);
+            ii += 900;
+        }
+        let returnBool = true;
+        for (let kk = 0; kk < tryList.length; kk++) {
+            let Xtry = hcwFiniteBurnTwoBurn(stateI, stateF, tryList[kk], a);
+            if (Xtry.burn1.t > 0 && Xtry.burn2.t > 0 && (Xtry.burn1.t + Xtry.burn2.t) < tryList[kk]) {
+                returnBool = false;
+                X = Xtry;
+                tf = tryList[kk];
+                alert(`Solution found with tranfer time of ${tryList[kk] / 60} mins`);
+                break;
+            }
+        }
+        if (returnBool) return false;
+    };
     let alpha = math.atan2(X.burn1.i, X.burn1.r);
     let phi = math.atan2(X.burn1.c, math.norm([X.burn1.r, X.burn1.i]));
     let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf , tf, a, 2 * Math.PI / 86164);
@@ -2315,7 +2340,6 @@ function calcTwoBurn(options = {}) {
     alpha = math.atan2(X.burn2.i, X.burn2.r);
     phi = math.atan2(X.burn2.c, math.norm([X.burn2.r, X.burn2.i]));
     res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a, 2 * Math.PI / 86164);
-    console.log(res);
     outBurns.push({
         time: startTime + tf - X.burn2.t,
         direction: {r: 0, i: 0, z: 0},
@@ -2365,7 +2389,6 @@ function testTwoBurn(options = {}) {
     alpha = math.atan2(X.burn2.i, X.burn2.r);
     phi = math.atan2(X.burn2.c, math.norm([X.burn2.r, X.burn2.i]));
     res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a, 2 * Math.PI / 86164);
-    console.log(res);
     satellites[0].burns.push({
         time: windowOptions.scenario_time_des + tf - X.burn2.t,
         direction: {r: 0, i: 0, z: 0},
@@ -2380,7 +2403,6 @@ function testTwoBurn(options = {}) {
     })
     satellites[0].generateBurns();
     satellites[0].calcTraj();
-    console.log(X);
 }
 
 function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0, n) {
