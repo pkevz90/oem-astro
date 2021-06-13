@@ -50,7 +50,7 @@ canvas {
     font-weight: 900;
     font-size: 4vw;
 }
-#option-button {
+#options {
     position: fixed;
     height: auto;
     width: auto;
@@ -67,7 +67,7 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
-#burns-button {
+#burns {
     position: fixed;
     height: auto;
     width: auto;
@@ -116,7 +116,7 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
-#instructions-button {
+#instructions {
     position: fixed;
     height: auto;
     width: auto;

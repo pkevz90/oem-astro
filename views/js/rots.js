@@ -437,36 +437,7 @@ document.getElementById('canvas-div').addEventListener('mouseup', event => {
     windowOptions.frame_move = false;
 })
 document.getElementById('canvas-div').addEventListener('wheel', mouseWheelFunction)
-document.getElementById('add-satellite').addEventListener('click', () => {
-    document.getElementById('add-satellite-panel').classList.toggle("hidden")
-})
-document.getElementById('option-button').addEventListener('click', () => {
-    document.getElementById('options-panel').classList.toggle("hidden")
-})
-document.getElementById('instructions-button').addEventListener('click', () => {
-    document.getElementById('instructions-panel').classList.toggle("hidden")
-})
-document.getElementById('burns-button').addEventListener('click', () => {
-    if (satellites.length === 0) {
-        return;
-    }
-    let selectEl = document.getElementById('satellite-way-select');
-    let chosenSat = Number(selectEl.value);
-    generateBurnTable(chosenSat);
-    while (selectEl.firstChild) {
-        selectEl.removeChild(selectEl.firstChild);
-    }
-    satellites.forEach((sat, ii) => {
-        addedElement = document.createElement('option');
-        addedElement.value = ii;
-        addedElement.textContent = sat.shape;
-        addedElement.style.color = sat.color;
-        selectEl.appendChild(addedElement);
-    })
-    selectEl.selectedIndex = chosenSat;
-    selectEl.style.color = satellites[chosenSat].color;
-    document.getElementById('burns-panel').classList.toggle("hidden")
-})
+
 document.getElementById('export-burns').addEventListener('click', () => {
     let selectEl = document.getElementById('satellite-way-select').value;
     let outString = '';
@@ -691,6 +662,30 @@ document.getElementById('add-tran-time').addEventListener('input', event => {
     let crossState = satellites[document.getElementById('satellite-way-select').value].getCurrentState({time: dt / 1000});
     document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
 })
+
+function openPanel(button) {
+    if (button.id === 'burns') {
+        if (satellites.length === 0) {
+            return;
+        }
+        let selectEl = document.getElementById('satellite-way-select');
+        let chosenSat = Number(selectEl.value);
+        generateBurnTable(chosenSat);
+        while (selectEl.firstChild) {
+            selectEl.removeChild(selectEl.firstChild);
+        }
+        satellites.forEach((sat, ii) => {
+            addedElement = document.createElement('option');
+            addedElement.value = ii;
+            addedElement.textContent = sat.shape;
+            addedElement.style.color = sat.color;
+            selectEl.appendChild(addedElement);
+        })
+        selectEl.selectedIndex = chosenSat;
+        selectEl.style.color = satellites[chosenSat].color;
+    }
+    document.getElementById(button.id+'-panel').classList.toggle("hidden")
+}
 
 function closeAll() {
     let buttons = document.getElementsByClassName('panel');
