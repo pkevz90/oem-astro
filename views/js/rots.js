@@ -691,16 +691,13 @@ document.getElementById('add-tran-time').addEventListener('input', event => {
     let crossState = satellites[document.getElementById('satellite-way-select').value].getCurrentState({time: dt / 1000});
     document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
 })
-let closeButtons = document.getElementsByClassName('close-button');
-for (let ii = 0; ii < closeButtons.length; ii++) {
-    closeButtons[ii].addEventListener('click', event => {
-        let buttons = document.getElementsByClassName('panel');
-        for (let jj = 0; jj < buttons.length; jj++) {
-            buttons[jj].classList.add('hidden');
-        }
-    })
-}
 
+function closeAll() {
+    let buttons = document.getElementsByClassName('panel');
+    for (let jj = 0; jj < buttons.length; jj++) {
+        buttons[jj].classList.add('hidden');
+    }
+}
 
 function mouseWheelFunction(event) {
     if (windowOptions.burn_status) {
