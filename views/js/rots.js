@@ -5,10 +5,12 @@ let encoder = new GIFEncoder();
 encoder.setRepeat(1);
 encoder.setDelay(33);
 let windowOptions = {
+    mm: 2 * Math.PI / 86164,
     center: [0, 0],
     width: 120,
     width_des: 120,
     sunInit: 0,
+    initSun: [-1, 0, 0], // [R, I, C]
     w_h_ratio: cnvs.width / cnvs.height,
     mousePosition: {
         pixel: [0, 0],
@@ -197,7 +199,7 @@ window.addEventListener("keydown", e => {
             time: satellites[windowOptions.burn_status.object].burns[windowOptions.burn_status
                 .burn].time
         });
-        let n = 2 * Math.PI / 86164,
+        let n = windowOptions.mm,
             desVel, dV;
         switch (e.key) {
             case '1':
@@ -466,7 +468,7 @@ document.getElementById('origin-select').addEventListener('change', event => {
 })
 document.getElementById('add-satellite-button').addEventListener('click', (click) => {
     let el = click.target,
-        n = 2 * Math.PI / 86164;
+        n = windowOptions.mm;
     let state = {
         a: Number(el.parentNode.parentNode.children.item(0).children[1].children[1].value),
         x: Number(el.parentNode.parentNode.children.item(0).children[2].children[1].value),
@@ -533,11 +535,13 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let el = click.target;
     let date = el.parentNode.parentNode.children.item(0).children[1].children[0].value;
     let sun = el.parentNode.parentNode.children.item(0).children[4].children[0].value;
+    windowOptions.mm = Math.sqrt(398600.4418 / Math.pow(Number(el.parentNode.parentNode.children.item(0).children[3].children[0].value), 3));
     windowOptions.scenario_length = Number(el.parentNode.parentNode.children.item(0).children[2].children[0].value);
     timeSlider.max = windowOptions.scenario_length * 3600;
-    let timeStep = el.parentNode.parentNode.children.item(0).children[6].children[0].value;
-    let fps = el.parentNode.parentNode.children.item(0).children[7].children[0].value;
-    let repeat = el.parentNode.parentNode.children.item(0).children[8].children[0].checked;
+    let timeStep = el.parentNode.parentNode.children.item(0).children[7].children[0].value;
+    let fps = el.parentNode.parentNode.children.item(0).children[8].children[0].value;
+    let repeat = el.parentNode.parentNode.children.item(0).children[9].children[0].checked;
+    windowOptions.time_delta = windowOptions.scenario_length * 3600 / Number(el.parentNode.parentNode.children.item(1).children[1].children[0].value);
     windowOptions.draw_style = el.parentNode.parentNode.children.item(1).children[3].children[0]
         .checked ? 'line' : 'points';
     windowOptions.showFinite = el.parentNode.parentNode.children.item(1).children[4].children[0]
@@ -551,8 +555,11 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     encoder.setRepeat(repeat ? 0 : 1);
     encoder.setDelay(1000 / fps);
     windowOptions.animate_step = timeStep * 60;
-    sun = Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4));
+    sunIR = Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
+    sunC = Number(el.parentNode.parentNode.children.item(0).children[5].children[0].value) * Math.PI / 180;
+    //sunconsole.log(sun / 86400 * 360);
     windowOptions.sunInit = sun;
+    windowOptions.initSun = [-Math.cos(sunIR)*Math.cos(sunC), Math.sin(sunIR)*Math.cos(sunC), Math.sin(sunC)];
     windowOptions.start_date = new Date(date);
     document.getElementById('options-panel').classList.toggle("hidden")
 })
@@ -852,9 +859,10 @@ function draw3dScene() {
             type: 'object'
         })
     })
-    sunAngle = 180 - 360 * (windowOptions.scenario_time + windowOptions.sunInit) / 86164;
+    let sunAngle = math.squeeze(math.multiply(rotationMatrices(-windowOptions.scenario_time * windowOptions.mm * 180 / Math.PI, 3), math.transpose([windowOptions.initSun])));
+
     let sun0 = [[0],[0],[0]]
-    let sunF = [[arrowLen*Math.cos(sunAngle * Math.PI / 180) * Math.cos(10 * Math.PI / 180)], [arrowLen*Math.sin(sunAngle * Math.PI / 180) * Math.cos(30 * Math.PI / 180)], [arrowLen * Math.sin(10 * Math.PI / 180)]];
+    let sunF = math.dotMultiply(arrowLen, math.transpose([sunAngle]));
     sun0 = math.multiply(rot, sun0);
     sunF = math.multiply(rot, sunF);
     let jj = 0.02;
@@ -1025,17 +1033,7 @@ function drawScreenText() {
 }
 
 function drawScreenArrows() {
-    // Draw Sun
-    drawArrow({
-        origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
-            windowOptions.screen.ri_center
-        ],
-        color: 'rgb(255,128,0)',
-        lineWidth: 20,
-        arrowWidth: 40,
-        arrowHeight: 40,
-        angle: +180 + 360 * (windowOptions.scenario_time + windowOptions.sunInit) / 86164
-    });
+    
     // Draw axis arrows on each graph, RI Frame
     drawArrow({
         origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
@@ -1066,6 +1064,14 @@ function drawScreenArrows() {
         ],
         color: windowOptions.arrowColor
     });
+    // Draw Sun
+    let sunAngle = math.squeeze(math.multiply(rotationMatrices(-windowOptions.scenario_time * windowOptions.mm * 180 / Math.PI, 3), math.transpose([windowOptions.initSun])));
+    let startRic = {r: 0, i: 0, c: 0};
+    let stopRic = {r: 40 * sunAngle[0], i: 40 * sunAngle[1], c: 40 * sunAngle[2]}
+    let angle = math.atan2(-stopRic.i, stopRic.r) * 180 / Math.PI;
+    drawRicArrow({startRic, stopRic, angle, color: 'rgb(255,128,0)'})
+    angle = math.atan2(-stopRic.i, stopRic.c) * 180 / Math.PI;
+    drawRicArrow({startRic, stopRic, angle, color: 'rgb(255,128,0)', cross: true})
 }
 
 function drawSats() {
@@ -1178,7 +1184,7 @@ function drawRicArrow(options) {
         arrowHeight = 20,
         color = 'black',
         cross = false,
-        angle = 0
+        angle = 45
     } = options;
     let height = math.norm([startRic[cross ? 'c' : 'r'] - stopRic[cross ? 'c' : 'r'], startRic.i - stopRic.i]);
     height = height / windowOptions.width / 2 * cnvs.width;
@@ -1471,7 +1477,7 @@ function getSatCurrentPosition(options = {}) {
     if (burnStop === undefined) burnStop = burns.length;
     if (windowOptions.showFinite) {
         let t_prop = 0,
-            phi, t_burn, alpha, phi_angle, n = 2 * Math.PI / 86164;
+            phi, t_burn, alpha, phi_angle, n = windowOptions.mm;
         let pos = [
             [position.r],
             [position.i],
@@ -1575,7 +1581,7 @@ function getSatCurrentPosition(options = {}) {
     };
 }
 
-function phiMatrix(t = 0, n = 2 * Math.PI / 86164) {
+function phiMatrix(t = 0, n = windowOptions.mm) {
     let nt = n * t;
     let cnt = Math.cos(nt);
     let snt = Math.sin(nt);
@@ -1603,7 +1609,7 @@ function phiMatrix(t = 0, n = 2 * Math.PI / 86164) {
     };
 }
 
-function phiMatrixWhole(t = 0, n = 2 * Math.PI / 86164) {
+function phiMatrixWhole(t = 0, n = windowOptions.mm) {
     let nt = n * t;
     let cnt = Math.cos(nt);
     let snt = Math.sin(nt);
@@ -1657,7 +1663,7 @@ function calcSatShownTrajectories(whole = false, allBurns = false) {
                     let position_start = math.multiply(phiMatrixWhole(this.burns[satBurn].time -
                         t_calc), currentState);
                     let position_finite;
-                    let n = 2 * Math.PI / 86164;
+                    let n = windowOptions.mm;
                     let alpha = math.atan2(this.burns[satBurn].direction.i, this.burns[satBurn]
                         .direction.r);
                     let phi_angle = math.atan2(this.burns[satBurn].direction.c, math.norm([this
@@ -1940,7 +1946,7 @@ function getRelativeData(n_target, n_origin) {
     let relVel = math.squeeze(math.subtract(satellites[n_origin].getVelocityArray(), satellites[n_target]
         .getVelocityArray()));
     range = math.norm(relPos);
-    sunAngle = 2 * Math.PI * (windowOptions.scenario_time + windowOptions.sunInit) / 86164
+    sunAngle = 2 * Math.PI * (windowOptions.scenario_time + windowOptions.sunInit) / (2 * Math.PI / windowOptions.mm)
     sunAngle = [-math.cos(sunAngle), math.sin(sunAngle), 0];
     sunAngle = math.acos(math.dot(relPos, sunAngle) / range) * 180 / Math.PI;
 
@@ -2179,7 +2185,7 @@ function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
         phi) * Math.sin(n * t)) / Math.pow(n, 2);
 }
 
-function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 86164) {
+function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = windowOptions.mm) {
     state = [
         [stateInit.x],
         [stateInit.y],
@@ -2237,7 +2243,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 8
     // return [Xret,X];
 }
 
-function hcwFiniteBurnTwoBurn(stateInit, stateFinal, tf, a0, n = 2 * Math.PI / 86164) {
+function hcwFiniteBurnTwoBurn(stateInit, stateFinal, tf, a0, n = windowOptions.mm) {
     state = [[stateInit.x],[stateInit.y],[stateInit.z],[stateInit.xd],[stateInit.yd],[stateInit.zd]];
     stateFinal = [[stateFinal.x],[stateFinal.y],[stateFinal.z],[stateFinal.xd],[stateFinal.yd],[stateFinal.zd]];
     let v = proxOpsTargeter(state.slice(0,3),stateFinal.slice(0,3),tf);
@@ -2315,7 +2321,7 @@ function calcTwoBurn(options = {}) {
     };
     let alpha = math.atan2(X.burn1.i, X.burn1.r);
     let phi = math.atan2(X.burn1.c, math.norm([X.burn1.r, X.burn1.i]));
-    let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf , tf, a, 2 * Math.PI / 86164);
+    let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf , tf, a,windowOptions.mm);
     outBurns.push({
         time: startTime,
         direction: {r: 0, i: 0, z: 0},
@@ -2328,10 +2334,10 @@ function calcTwoBurn(options = {}) {
             }
         }
     })
-    res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / (tf - X.burn2.t) , tf - X.burn2.t, a, 2 * Math.PI / 86164);
+    res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / (tf - X.burn2.t) , tf - X.burn2.t, a,windowOptions.mm);
     alpha = math.atan2(X.burn2.i, X.burn2.r);
     phi = math.atan2(X.burn2.c, math.norm([X.burn2.r, X.burn2.i]));
-    res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a, 2 * Math.PI / 86164);
+    res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a,windowOptions.mm);
     outBurns.push({
         time: startTime + tf - X.burn2.t,
         direction: {r: 0, i: 0, z: 0},
@@ -2364,7 +2370,7 @@ function testTwoBurn(options = {}) {
     if (X.burn1.t < 0 || X.burn2.t < 0) return false;
     let alpha = math.atan2(X.burn1.i, X.burn1.r);
     let phi = math.atan2(X.burn1.c, math.norm([X.burn1.r, X.burn1.i]));
-    let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf , tf, a, 2 * Math.PI / 86164);
+    let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf , tf, a,windowOptions.mm);
     satellites[0].burns.push({
         time: windowOptions.scenario_time_des,
         direction: {r: 0, i: 0, z: 0},
@@ -2377,10 +2383,10 @@ function testTwoBurn(options = {}) {
             }
         }
     })
-    res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / (tf - X.burn2.t) , tf - X.burn2.t, a, 2 * Math.PI / 86164);
+    res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / (tf - X.burn2.t) , tf - X.burn2.t, a,windowOptions.mm);
     alpha = math.atan2(X.burn2.i, X.burn2.r);
     phi = math.atan2(X.burn2.c, math.norm([X.burn2.r, X.burn2.i]));
-    res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a, 2 * Math.PI / 86164);
+    res = oneBurnFiniteHcw(res, alpha, phi, 0.5 , X.burn2.t * 2, a,windowOptions.mm);
     satellites[0].burns.push({
         time: windowOptions.scenario_time_des + tf - X.burn2.t,
         direction: {r: 0, i: 0, z: 0},
@@ -2397,10 +2403,7 @@ function testTwoBurn(options = {}) {
     satellites[0].calcTraj();
 }
 
-function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0, n) {
-    if (n === undefined) {
-        n = 2 * Math.PI / 86164;
-    }
+function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0, n = windowOptions.mm) {
     x0 = state.x;
     xd0 = state.xd;
     y0 = state.y;
@@ -2589,10 +2592,7 @@ function proxOpsJacobianTwoBurn(state,a,alpha1,phi1,tB1,alpha2, phi2,tB2,tF,n){
     return mFinal;
 }
 
-function twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tf,a0,n) {
-    if (n === undefined) {
-        n = 2*Math.PI/86164;
-    }
+function twoBurnFiniteHcw (state,alpha1,phi1,alpha2,phi2,tB1,tB2,tf,a0,n = windowOptions.mm) {
     x0 = state.x; xd0 = state.xd;
     y0 = state.y; yd0 = state.yd;
     z0 = state.z; zd0 = state.zd;
