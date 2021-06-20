@@ -576,7 +576,7 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     encoder.setRepeat(repeat ? 0 : 1);
     encoder.setDelay(1000 / fps);
     windowOptions.animate_step = timeStep * 60;
-    sunIR = Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
+    sunIR = -Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
     sunC = Number(el.parentNode.parentNode.children.item(0).children[5].children[0].value) * Math.PI / 180;
     //sunconsole.log(sun / 86400 * 360);
     windowOptions.sunInit = sun;
