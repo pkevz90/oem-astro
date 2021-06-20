@@ -578,8 +578,6 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     windowOptions.animate_step = timeStep * 60;
     sunIR = -Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
     sunC = Number(el.parentNode.parentNode.children.item(0).children[5].children[0].value) * Math.PI / 180;
-    //sunconsole.log(sun / 86400 * 360);
-    windowOptions.sunInit = sun;
     windowOptions.initSun = [-Math.cos(sunIR) * Math.cos(sunC), Math.sin(sunIR) * Math.cos(sunC), Math.sin(sunC)];
     windowOptions.start_date = new Date(date);
     document.getElementById('options-panel').classList.toggle("hidden")
@@ -2075,10 +2073,9 @@ function getRelativeData(n_target, n_origin) {
     let relVel = math.squeeze(math.subtract(satellites[n_origin].getVelocityArray(), satellites[n_target]
         .getVelocityArray()));
     range = math.norm(relPos);
-    sunAngle = 2 * Math.PI * (windowOptions.scenario_time + windowOptions.sunInit) / (2 * Math.PI / windowOptions.mm)
-    sunAngle = [-math.cos(sunAngle), math.sin(sunAngle), 0];
+    sunAngle = math.squeeze(math.multiply(rotationMatrices(-windowOptions.scenario_time * windowOptions.mm * 180 / Math.PI, 3), math.transpose([windowOptions.initSun])));
     sunAngle = math.acos(math.dot(relPos, sunAngle) / range) * 180 / Math.PI;
-
+    sunAngle = 180 - sunAngle; // Appropriate for USSF
     rangeRate = math.dot(relVel, relPos) * 1000 / range;
     tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
     let relPosHis = findMinDistance(satellites[n_origin].shownTraj, satellites[n_target].shownTraj);
