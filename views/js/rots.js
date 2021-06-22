@@ -2847,3 +2847,52 @@ function proxOpsTargeter(r1, r2, t) {
     v2 = math.add(math.multiply(phi.vr, r1), math.multiply(phi.vv, v1));
     return [v1, v2];
 }
+
+function initStateFunction(el) {
+    let nodes; // Set nodes to top div under initial state to grab inputs
+    if (el.classList.contains('rmoe')) {
+        nodes = el.parentNode.parentNode.children;
+        let rmoes = {
+            ae: Number(nodes[1].children[1].value),
+            x: Number(nodes[2].children[1].value),
+            y: Number(nodes[3].children[1].value),
+            b: Number(nodes[4].children[1].value),
+            z: Number(nodes[6].children[1].value),
+            m: Number(nodes[5].children[1].value)
+        }
+        nodes[1].children[2].children[0].value = (-rmoes.ae / 2 * Math.cos(rmoes.b * Math.PI / 180) + rmoes.x).toFixed(3);
+        nodes[2].children[2].children[0].value = (rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) + rmoes.y).toFixed(3);
+        nodes[3].children[2].children[0].value = (rmoes.z * Math.sin(rmoes.m * Math.PI / 180)).toFixed(3);
+        nodes[4].children[3].children[1].value = (1000 * rmoes.ae * windowOptions.mm / 2 * Math.sin(rmoes.b * Math.PI / 180)).toFixed(3);
+        nodes[5].children[3].children[1].value = (1000 * rmoes.ae * windowOptions.mm * Math.cos(rmoes.b * Math.PI / 180) - 1500 * rmoes.x * windowOptions.mm).toFixed(3);
+        nodes[6].children[2].children[1].value = (1000 * rmoes.z * windowOptions.mm * Math.cos(rmoes.m * Math.PI / 180)).toFixed(3);
+    }
+    else {
+        if (el.classList.contains('panel-button')) {
+            nodes = el.parentNode.parentNode.children;
+        }
+        else {
+            nodes = el.parentNode.parentNode.parentNode.children;
+        }
+        let state = {
+            r: Number(nodes[1].children[2].children[0].value),
+            i: Number(nodes[2].children[2].children[0].value),
+            c: Number(nodes[3].children[2].children[0].value),
+            rd: Number(nodes[4].children[3].children[1].value) / 1000,
+            id: Number(nodes[5].children[3].children[1].value) / 1000,
+            cd: Number(nodes[6].children[2].children[1].value) / 1000
+        };
+        if (el.classList.contains('panel-button')) {
+            let a = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3);
+            state.r += (a - a * Math.cos(state.i / a ));
+            nodes[1].children[2].children[0].value = state.r;
+        }
+        nodes[2].children[1].value = (4 * state.r + 2 * state.id / windowOptions.mm).toFixed(3);
+        nodes[3].children[1].value = (state.i - 2 * state.rd / windowOptions.mm).toFixed(3);
+        nodes[1].children[1].value = (2 * Math.sqrt(Math.pow(3 * state.r + 2 * state.id / windowOptions.mm, 2) + Math.pow(state.rd / windowOptions.mm, 2))).toFixed(3);
+        nodes[4].children[1].value = (Math.atan2(state.rd, 3 * windowOptions.mm * state.r + 2 * state.id)).toFixed(3);
+        nodes[5].children[1].value = (Math.atan2(state.c, state.cd / windowOptions.mm)).toFixed(3);
+        nodes[6].children[1].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / windowOptions.mm, 2))).toFixed(3);
+    }
+    
+}
