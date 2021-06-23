@@ -2884,8 +2884,14 @@ function initStateFunction(el) {
         };
         if (el.classList.contains('panel-button')) {
             let a = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3);
-            state.r += (a - a * Math.cos(state.i / a ));
+            let ang = state.i / a * 180 / Math.PI;
+            state.r += (a - a * Math.cos(ang * Math.PI / 180 ));
+            let rotState = math.squeeze(math.multiply(rotationMatrices(-ang, 3), [[state.rd], [state.id], [state.cd]]));
+            state.rd = rotState[0];
+            state.id = rotState[1];
             nodes[1].children[2].children[0].value = state.r;
+            nodes[4].children[3].children[1].value = (state.rd * 1000).toFixed(3);
+            nodes[5].children[3].children[1].value = (state.id * 1000).toFixed(3);
         }
         nodes[2].children[1].value = (4 * state.r + 2 * state.id / windowOptions.mm).toFixed(3);
         nodes[3].children[1].value = (state.i - 2 * state.rd / windowOptions.mm).toFixed(3);
