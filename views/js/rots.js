@@ -2890,9 +2890,9 @@ function initStateFunction(el) {
         nodes[2].children[1].value = (4 * state.r + 2 * state.id / windowOptions.mm).toFixed(3);
         nodes[3].children[1].value = (state.i - 2 * state.rd / windowOptions.mm).toFixed(3);
         nodes[1].children[1].value = (2 * Math.sqrt(Math.pow(3 * state.r + 2 * state.id / windowOptions.mm, 2) + Math.pow(state.rd / windowOptions.mm, 2))).toFixed(3);
-        nodes[4].children[1].value = (Math.atan2(state.rd, 3 * windowOptions.mm * state.r + 2 * state.id)).toFixed(3);
+        nodes[4].children[1].value = (Math.atan2(state.rd, 3 * windowOptions.mm * state.r + 2 * state.id) * 180 / Math.PI).toFixed(3);
         nodes[5].children[1].value = (Math.atan2(state.c, state.cd / windowOptions.mm)).toFixed(3);
-        nodes[6].children[1].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / windowOptions.mm, 2))).toFixed(3);
+        nodes[6].children[1].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / windowOptions.mm, 2)) * 180 / Math.PI).toFixed(3);
     }
     
 }
