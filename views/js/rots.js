@@ -2889,7 +2889,9 @@ function initStateFunction(el) {
             let rotState = math.squeeze(math.multiply(rotationMatrices(-ang, 3), [[state.rd], [state.id], [state.cd]]));
             state.rd = rotState[0];
             state.id = rotState[1];
-            nodes[1].children[2].children[0].value = state.r;
+            rotState = math.squeeze(math.multiply(rotationMatrices(-ang, 3), [[state.r], [0], [0]]));
+            nodes[1].children[2].children[0].value = (rotState[0]).toFixed(3);
+            nodes[2].children[2].children[0].value = (state.i + rotState[1]).toFixed(3);
             nodes[4].children[3].children[1].value = (state.rd * 1000).toFixed(3);
             nodes[5].children[3].children[1].value = (state.id * 1000).toFixed(3);
         }
