@@ -62,7 +62,7 @@
         
         </div>
     </div>
-    <div class="full-page-menu panel" id="options-panel">
+    <div class="full-page-menu panel hidden" id="options-panel">
         <div class="title-text" style="width: 100%; text-align: center; height: auto; font-weight: 900;">Options</div>
         <div>
             <div class="title-text">Time & Location</div>
@@ -85,11 +85,11 @@
             <div style="margin: 20px 5px">Line Trajectory<input type="checkbox"></div>
             <div style="margin: 20px 5px">Finite Burns<input type="checkbox" checked></div>
             <div style="margin: 20px 5px">Finite Targeting<input type="checkbox" checked></div>
-            <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
+            <div style="font-size: 1.5em; padding: 14px 4px;" id="export-option-button" class="panel-button hoverable noselect">Export</div>
             <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
-            <div id="data-button" class="panel-button hoverable noselect">Data</div>
-            <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
-            <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
+            <div style="font-size: 1.5em; padding: 14px 4px;"  id="data-button" class="panel-button hoverable noselect">Data</div>
+            <div style="font-size: 1.5em; padding: 14px 4px;"  id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
+            <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
     </div>
     <div onclick=openPanel(this) id="add-satellite" class="noselect hoverable" title="Add Satellite">
