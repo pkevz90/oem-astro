@@ -22,7 +22,7 @@ canvas {
 }
 #time-slider {
     position: fixed;
-    top: 0%;
+    top: 1.25%;
     left: 0%;
     width:100%;
     cursor: pointer;
@@ -36,53 +36,52 @@ canvas {
 }
 #add-satellite {
     position: fixed;
-    height: 4vw;
-    width: 4vw;
+    height: 5vh;
+    width: 5vh;
     border: 1px solid black;
     z-index: 3;
     bottom: 2.5%;
     right: 2.5%;
     border-radius: 50%;
     text-align: center;
-    line-height: 4vw;
+    line-height: 5vh;
     cursor: pointer;
     transition: 0.2s;
     font-weight: 900;
-    font-size: 4vw;
+    font-size: 5vh;
 }
 #options {
     position: fixed;
     height: auto;
     width: auto;
-    padding: 0.5% 1%;
     border: 1px solid black;
     z-index: 3;
-    bottom: 12.5%;
+    bottom: 10%;
     right: 2.5%;
-    border-radius: 2vw;
     text-align: center;
-    line-height: 2vw;
     cursor: pointer;
     transition: 0.2s;
     font-weight: 900;
-    font-size: 1.5vw;
 }
+.side-button {
+    padding: 1vh 2vh;
+    border-radius: 20px;
+    line-height: 2vh;
+    font-size: 3vh;
+}
+
 #burns {
     position: fixed;
     height: auto;
     width: auto;
-    padding: 0.5% 1%;
     border: 1px solid black;
     z-index: 3;
-    bottom: 32.5%;
+    bottom: 20%;
     right: 2.5%;
-    border-radius: 2vw;
     text-align: center;
-    line-height: 2vw;
     cursor: pointer;
     transition: 0.2s;
     font-weight: 900;
-    font-size: 1.5vw;
 }
 #maneuver-type-slider {
     position: fixed;
@@ -90,15 +89,15 @@ canvas {
     width: auto;
     padding: 0.5% 1%;
     z-index: 3;
-    bottom: 42.5%;
+    bottom: 25%;
     right: 2.5%;
     border-radius: 2vw;
     text-align: center;
-    line-height: 2vw;
+    line-height: 2vh;
     cursor: pointer;
     transition: 0.2s;
     font-weight: 900;
-    font-size: 1.5vw;
+    font-size: 2vh;
 }
 #kinematic-slider {
     position: fixed;
@@ -120,18 +119,14 @@ canvas {
     position: fixed;
     height: auto;
     width: auto;
-    padding: 0.5% 1%;
     border: 1px solid black;
     z-index: 3;
-    bottom: 22.5%;
+    bottom: 15%;
     right: 2.5%;
-    border-radius: 2vw;
     text-align: center;
-    line-height: 2vw;
     cursor: pointer;
     transition: 0.2s;
     font-weight: 900;
-    font-size: 1.5vw;
 }
 .hoverable:hover {
     background-color: black;
@@ -223,8 +218,8 @@ canvas {
 .switch {
     position: relative;
     display: inline-block;
-    width: 60px;
-    height: 34px;
+    width: 50px;
+    height: 2vh;
   }
   
   .switch input { 
@@ -248,10 +243,10 @@ canvas {
   .slider:before {
     position: absolute;
     content: "";
-    height: 26px;
-    width: 26px;
+    height: 1.25vh;
+    width: 20px;
     left: 4px;
-    bottom: 4px;
+    bottom: 0.35vh;
     background-color: white;
     -webkit-transition: .4s;
     transition: .4s;
@@ -266,9 +261,9 @@ canvas {
   }
   
   input:checked + .slider:before {
-    -webkit-transform: translateX(26px);
-    -ms-transform: translateX(26px);
-    transform: translateX(26px);
+    -webkit-transform: translateX(20px);
+    -ms-transform: translateX(20px);
+    transform: translateX(20px);
   }
   
   /* Rounded sliders */

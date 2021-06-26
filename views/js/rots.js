@@ -1001,8 +1001,10 @@ function formatCanvas() {
 }
 
 function drawScreenText() {
+    let fontSize = cnvs.height / 30;
+    fontSize = fontSize < cnvs.width / 20 ? fontSize : cnvs.width / 20;
     ctx.textAlign = 'start';
-    ctx.font = '30px Arial';
+    ctx.font = fontSize + 'px Arial';
     ctx.fillStyle = 'black';
     // Draw mouse positon on the active axis
     if (!windowOptions.makeGif.start && windowOptions.screen.mode !== '3d') {
@@ -1024,14 +1026,13 @@ function drawScreenText() {
         ctx.stroke();
         ctx.fillText((windowOptions.mousePosition.screen === 'ci' ? 'C: ' : 'R:') + windowOptions.mousePosition
             .ric[windowOptions.mousePosition.screen === 'ci' ? 'c' : 'r'].toFixed(2) + ' km    I: ' +
-            windowOptions.mousePosition.ric.i.toFixed(2) + ' km', cnvs.width * 0.01, cnvs.height * 0.97 - 45
+            windowOptions.mousePosition.ric.i.toFixed(2) + ' km', cnvs.width * 0.01, cnvs.height - 20 - fontSize*1.5
         );
     }
     if (windowOptions.screen.mode !== '3d') {
         ctx.strokeStyle = 'RGB(0,0,0,0.5)';
         // Write current mouse position
         ctx.textAlign = 'center';
-        ctx.font = '30px Arial';
         ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
             windowOptions.screen.ri_center + 10);
         ctx.fillText('R', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
@@ -1046,7 +1047,7 @@ function drawScreenText() {
     ctx.fillStyle = 'black';
 
     ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
-        .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height * 0.97);
+        .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height - 20);
     // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
     ctx.font = '15px Arial';
     if (windowOptions.relativeData.origin !== undefined && windowOptions.relativeData.target !== undefined && windowOptions.relativeData.origin !== windowOptions.relativeData.target) {
