@@ -62,6 +62,36 @@
         
         </div>
     </div>
+    <div class="full-page-menu panel" id="options-panel">
+        <div class="title-text" style="width: 100%; text-align: center; height: auto; font-weight: 900;">Options</div>
+        <div>
+            <div class="title-text">Time & Location</div>
+            <div style="margin: 20px 5px">Start Date <input style="width: 60%" type="datetime-local" id="start-time" name="meeting-time"
+                    value="2021-04-01T00:00"></div>
+            <div style="margin: 20px 5px">Scenario Length <input value="24" type="Number" min="0" max="360" step="1"> hrs</div>
+            <div style="margin: 20px 5px">Reference SMA <input value="42164" type="Number" min="6700" max="50000" step="1"> km</div>
+            <div style="margin: 20px 5px">Sun Time <input value="0000" type="Text" maxLength="4" style="width: 4em"></div>
+            <div style="margin: 20px 5px">Sun Cross Angle <input style="width: 3em" value="0" type="Number" min="-90" max="90"><sup>o</sup></div>
+            <div style="margin: 20px 5px" class="title-text">Recording</div>
+            <div style="margin: 20px 5px">Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
+            <div style="margin: 20px 5px">FPS <input value="30" type="Number" min="15" max="60" step="1"></div>
+            <div style="margin: 20px 5px">Repeat <input type="checkbox"></div>
+            <div style="margin: 20px;"><span style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Record</span></div>
+        
+        </div>
+        <div>
+            <div class="title-text">Visualization</div>
+            <div style="margin: 20px 5px">Data Points <input style="width: 4em;" value="200" type="Number"></div>
+            <div style="margin: 20px 5px">Line Trajectory<input type="checkbox"></div>
+            <div style="margin: 20px 5px">Finite Burns<input type="checkbox" checked></div>
+            <div style="margin: 20px 5px">Finite Targeting<input type="checkbox" checked></div>
+            <div id="export-option-button" class="panel-button hoverable noselect">Export</div>
+            <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
+            <div id="data-button" class="panel-button hoverable noselect">Data</div>
+            <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
+            <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
+        </div>
+    </div>
     <div onclick=openPanel(this) id="add-satellite" class="noselect hoverable" title="Add Satellite">
         +
     </div>
@@ -184,7 +214,7 @@
             <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
     </div> -->
-    <div id="options-panel" class="hidden panel">
+    <!-- <div id="options-panel" class="hidden panel">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Time & Location</div>
             <div>Start Date <input style="width: 75%" type="datetime-local" id="start-time" name="meeting-time"
@@ -211,7 +241,7 @@
             <div id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
-    </div>
+    </div> -->
     <div id="data-panel" class="hidden panel">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Origin</div>

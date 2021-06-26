@@ -164,7 +164,7 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
-#options-panel, #instructions-panel, #data-panel, #optimize-panel {
+#instructions-panel, #data-panel, #optimize-panel {
     position: fixed;
     display: flex;
     z-index: 4;
@@ -194,18 +194,12 @@ canvas {
     transform: translate(-50%, -50%);
     justify-content: space-around;
 }
-#options-panel div {
-    text-align: center;
-}
+
 #burns-panel div {
     width: 100%;
     text-align: center;
 }
-#options-panel div input{
-    text-align: center;
-    margin: 2%;
-    width: 25%;
-}
+
 .m-fadeIn {
     visibility: visible;
     opacity: 1;
