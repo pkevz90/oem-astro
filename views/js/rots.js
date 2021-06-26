@@ -490,19 +490,20 @@ document.getElementById('origin-select').addEventListener('change', event => {
 document.getElementById('add-satellite-button').addEventListener('click', (click) => {
     let el = click.target,
         n = windowOptions.mm;
+    el = el.parentNode.parentNode.parentNode;
     let state = {
-        a: Number(el.parentNode.parentNode.children.item(0).children[1].children[1].value),
-        x: Number(el.parentNode.parentNode.children.item(0).children[2].children[1].value),
-        y: Number(el.parentNode.parentNode.children.item(0).children[3].children[1].value),
-        b: Number(el.parentNode.parentNode.children.item(0).children[4].children[1].value) * Math
+        a: Number(el.children[1].children[1].children[0].children[0].getElementsByTagName('input')[0].value),
+        x: Number(el.children[1].children[1].children[0].children[1].getElementsByTagName('input')[0].value),
+        y: Number(el.children[1].children[1].children[0].children[2].getElementsByTagName('input')[0].value),
+        b: Number(el.children[1].children[1].children[0].children[3].getElementsByTagName('input')[0].value) * Math
             .PI / 180,
-        m: Number(el.parentNode.parentNode.children.item(0).children[5].children[1].value) * Math
+        m: Number(el.children[1].children[1].children[0].children[5].getElementsByTagName('input')[0].value) * Math
             .PI / 180,
-        z: Number(el.parentNode.parentNode.children.item(0).children[6].children[1].value)
+        z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
     };
-    let color = el.parentNode.parentNode.children.item(1).children[5].children[0].value;
-    let shape = el.parentNode.parentNode.children.item(1).children[1].children[0].value;
-    let a = el.parentNode.parentNode.children.item(1).children[2].children[0].value / 1e6;
+    let color = el.children[2].children[3].getElementsByTagName('input')[0].value;
+    let shape = el.children[2].children[1].getElementsByTagName('select')[0].value;
+    let a = Number(el.children[2].children[2].getElementsByTagName('input')[0].value) / 1e6;
     state = {
         r: -state.a / 2 * Math.cos(state.b) + state.x,
         i: state.a * Math.sin(state.b) + state.y,
@@ -2851,38 +2852,36 @@ function proxOpsTargeter(r1, r2, t) {
 
 function initStateFunction(el) {
     let nodes; // Set nodes to top div under initial state to grab inputs
+    nodes = el.parentNode.parentNode.parentNode;
     if (el.classList.contains('rmoe')) {
-        nodes = el.parentNode.parentNode.children;
         let rmoes = {
-            ae: Number(nodes[1].children[1].value),
-            x: Number(nodes[2].children[1].value),
-            y: Number(nodes[3].children[1].value),
-            b: Number(nodes[4].children[1].value),
-            z: Number(nodes[6].children[1].value),
-            m: Number(nodes[5].children[1].value)
+            ae: Number(nodes.children[0].children[0].getElementsByTagName('input')[0].value),
+            x:  Number(nodes.children[0].children[1].getElementsByTagName('input')[0].value),
+            y:  Number(nodes.children[0].children[2].getElementsByTagName('input')[0].value),
+            b:  Number(nodes.children[0].children[3].getElementsByTagName('input')[0].value),
+            z:  Number(nodes.children[0].children[4].getElementsByTagName('input')[0].value),
+            m:  Number(nodes.children[0].children[5].getElementsByTagName('input')[0].value)
         }
-        nodes[1].children[2].children[0].value = (-rmoes.ae / 2 * Math.cos(rmoes.b * Math.PI / 180) + rmoes.x).toFixed(3);
-        nodes[2].children[2].children[0].value = (rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) + rmoes.y).toFixed(3);
-        nodes[3].children[2].children[0].value = (rmoes.z * Math.sin(rmoes.m * Math.PI / 180)).toFixed(3);
-        nodes[4].children[3].children[1].value = (1000 * rmoes.ae * windowOptions.mm / 2 * Math.sin(rmoes.b * Math.PI / 180)).toFixed(3);
-        nodes[5].children[3].children[1].value = (1000 * rmoes.ae * windowOptions.mm * Math.cos(rmoes.b * Math.PI / 180) - 1500 * rmoes.x * windowOptions.mm).toFixed(3);
-        nodes[6].children[2].children[1].value = (1000 * rmoes.z * windowOptions.mm * Math.cos(rmoes.m * Math.PI / 180)).toFixed(3);
+        nodes.children[1].children[0].getElementsByTagName('input')[0].value = (-rmoes.ae / 2 * Math.cos(rmoes.b * Math.PI / 180) + rmoes.x).toFixed(3);
+        nodes.children[1].children[1].getElementsByTagName('input')[0].value = (rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) + rmoes.y).toFixed(3);
+        nodes.children[1].children[2].getElementsByTagName('input')[0].value = (rmoes.z * Math.sin(rmoes.m * Math.PI / 180)).toFixed(3);
+        nodes.children[1].children[3].getElementsByTagName('input')[0].value = (1000 * rmoes.ae * windowOptions.mm / 2 * Math.sin(rmoes.b * Math.PI / 180)).toFixed(3);
+        nodes.children[1].children[4].getElementsByTagName('input')[0].value = (1000 * rmoes.ae * windowOptions.mm * Math.cos(rmoes.b * Math.PI / 180) - 1500 * rmoes.x * windowOptions.mm).toFixed(3);
+        nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000 * rmoes.z * windowOptions.mm * Math.cos(rmoes.m * Math.PI / 180)).toFixed(3);
     }
     else {
         if (el.classList.contains('panel-button')) {
-            nodes = el.parentNode.parentNode.children;
-        }
-        else {
-            nodes = el.parentNode.parentNode.parentNode.children;
+            nodes = el.parentNode.parentNode.children[1];
         }
         let state = {
-            r: Number(nodes[1].children[2].children[0].value),
-            i: Number(nodes[2].children[2].children[0].value),
-            c: Number(nodes[3].children[2].children[0].value),
-            rd: Number(nodes[4].children[3].children[1].value) / 1000,
-            id: Number(nodes[5].children[3].children[1].value) / 1000,
-            cd: Number(nodes[6].children[2].children[1].value) / 1000
+            r: Number(nodes.children[1].children[0].getElementsByTagName('input')[0].value),
+            i: Number(nodes.children[1].children[1].getElementsByTagName('input')[0].value),
+            c: Number(nodes.children[1].children[2].getElementsByTagName('input')[0].value),
+            rd: Number(nodes.children[1].children[3].getElementsByTagName('input')[0].value) / 1000,
+            id: Number(nodes.children[1].children[4].getElementsByTagName('input')[0].value) / 1000,
+            cd: Number(nodes.children[1].children[5].getElementsByTagName('input')[0].value) / 1000
         };
+        console.log(state);
         if (el.classList.contains('panel-button')) {
             let a = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3);
             let ang = state.i / a * 180 / Math.PI;
@@ -2891,17 +2890,17 @@ function initStateFunction(el) {
             state.rd = rotState[0];
             state.id = rotState[1];
             rotState = math.squeeze(math.multiply(rotationMatrices(-ang, 3), [[state.r], [0], [0]]));
-            nodes[1].children[2].children[0].value = (rotState[0]).toFixed(3);
-            nodes[2].children[2].children[0].value = (state.i + rotState[1]).toFixed(3);
-            nodes[4].children[3].children[1].value = (state.rd * 1000).toFixed(3);
-            nodes[5].children[3].children[1].value = (state.id * 1000).toFixed(3);
+            nodes.children[1].children[0].getElementsByTagName('input')[0].value = (rotState[0]).toFixed(3);
+            nodes.children[1].children[1].getElementsByTagName('input')[0].value = (state.i + rotState[1]).toFixed(3);
+            nodes.children[1].children[3].getElementsByTagName('input')[0].value = (state.rd * 1000).toFixed(3);
+            nodes.children[1].children[4].getElementsByTagName('input')[0].value = (state.id * 1000).toFixed(3);
         }
-        nodes[2].children[1].value = (4 * state.r + 2 * state.id / windowOptions.mm).toFixed(3);
-        nodes[3].children[1].value = (state.i - 2 * state.rd / windowOptions.mm).toFixed(3);
-        nodes[1].children[1].value = (2 * Math.sqrt(Math.pow(3 * state.r + 2 * state.id / windowOptions.mm, 2) + Math.pow(state.rd / windowOptions.mm, 2))).toFixed(3);
-        nodes[4].children[1].value = (Math.atan2(state.rd, 3 * windowOptions.mm * state.r + 2 * state.id) * 180 / Math.PI).toFixed(3);
-        nodes[5].children[1].value = (Math.atan2(state.c, state.cd / windowOptions.mm)).toFixed(3);
-        nodes[6].children[1].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / windowOptions.mm, 2)) * 180 / Math.PI).toFixed(3);
+        nodes.children[0].children[1].getElementsByTagName('input')[0].value = (4 * state.r + 2 * state.id / windowOptions.mm).toFixed(3);
+        nodes.children[0].children[2].getElementsByTagName('input')[0].value = (state.i - 2 * state.rd / windowOptions.mm).toFixed(3);
+        nodes.children[0].children[0].getElementsByTagName('input')[0].value = (2 * Math.sqrt(Math.pow(3 * state.r + 2 * state.id / windowOptions.mm, 2) + Math.pow(state.rd / windowOptions.mm, 2))).toFixed(3);
+        nodes.children[0].children[3].getElementsByTagName('input')[0].value = (Math.atan2(state.rd, 3 * windowOptions.mm * state.r + 2 * state.id) * 180 / Math.PI).toFixed(3);
+        nodes.children[0].children[5].getElementsByTagName('input')[0].value = (Math.atan2(state.c, state.cd / windowOptions.mm) * 180 / Math.PI).toFixed(3);
+        nodes.children[0].children[4].getElementsByTagName('input')[0].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / windowOptions.mm, 2))).toFixed(3);
     }
     
 }

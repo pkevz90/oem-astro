@@ -20,6 +20,48 @@
     <div id="time-slider">
         <input id="time-slider-range" type="range" min=0 max=86164 step=0.1 value=0>
     </div>
+    <div class="full-page-menu hidden panel" id="add-satellite-panel">
+        <div class="title-text" style="width: 100%; text-align: center; height: auto; font-weight: 900;">Add Satellite</div>
+        <div>
+            <div class="title-text">Initial State</div>
+            <div style="display: flex; justify-content: space-evenly; align-items: center;">
+                <div>
+                    <div style="margin: 20px 5px">A<sub>e</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">R<sub>c</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">I<sub>c</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">B<sub>o</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> deg</div>
+                    <div style="margin: 20px 5px">Z<sub>max</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">M<sub>o</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> deg</div>
+                </div>
+                <div>
+                    <div style="margin: 20px 5px">R <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">I <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">C <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">V<sub>x</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
+                    <div style="margin: 20px 5px">V<sub>y</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
+                    <div style="margin: 20px 5px">V<sub>z</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
+                </div>
+                
+            </div>
+            <div style="margin: 20px;"><span onclick=initStateFunction(this) style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">To Curvilinear</span></div>
+        
+        </div>
+        <div>
+            <div class="title-text">Satellite Details</div>
+            <div style="margin: 20px 5px">Shape
+                <select name="" id="">
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="up-triangle">Reverse Triangle</option>
+                </select>
+            </div>
+            <div style="margin: 20px 5px">Acceleration <input style="width: 4em;" value="10" type="Number"> mm/s<sup>2</sup></div>
+            <div style="margin: 20px 5px">Color</sub> <input style="width: 4em;" value="#ff0000" type="color"></div>
+            <div style="margin-top: 40px;"><span id="add-satellite-button" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Add Satellite</span></div>
+            <div style="margin-top: 40px;"><span onclick="closeAll()" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Cancel</span></div>
+        
+        </div>
+    </div>
     <div onclick=openPanel(this) id="add-satellite" class="noselect hoverable" title="Add Satellite">
         +
     </div>
@@ -114,7 +156,7 @@
             <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Close</div>
         </div>
     </div>
-    <div id="add-satellite-panel" class="hidden panel">
+    <!-- <div id="add-satellite-panel" class="hidden panel">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Initial State</div>
             <div>A<sub>e</sub><input class="rmoe" oninput=initStateFunction(this) value="0" type="Number"> km <span style="margin-left: 20px;">R<input oninput=initStateFunction(this) value="0" type="Number"> km</span></div>
@@ -141,7 +183,7 @@
             <div id="add-satellite-button" class="panel-button hoverable noselect">Insert</div>
             <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
         </div>
-    </div>
+    </div> -->
     <div id="options-panel" class="hidden panel">
         <div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Time & Location</div>

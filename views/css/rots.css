@@ -31,8 +31,9 @@ canvas {
     text-align: center;
 }
 #time-slider input {
-    width: 100%;
+    width: 90%;
     cursor: pointer;
+    margin-left: 5%;
 }
 #add-satellite {
     position: fixed;
@@ -155,6 +156,7 @@ canvas {
     bottom: 22.5%;
     right: 2.5%;
     border-radius: 2vw;
+    background: white;
     text-align: center;
     line-height: 2vw;
     cursor: pointer;
@@ -162,7 +164,7 @@ canvas {
     font-weight: 900;
     font-size: 1.5vw;
 }
-#add-satellite-panel, #options-panel, #instructions-panel, #data-panel, #optimize-panel {
+#options-panel, #instructions-panel, #data-panel, #optimize-panel {
     position: fixed;
     display: flex;
     z-index: 4;
@@ -192,14 +194,14 @@ canvas {
     transform: translate(-50%, -50%);
     justify-content: space-around;
 }
-#add-satellite-panel div, #options-panel div {
+#options-panel div {
     text-align: center;
 }
 #burns-panel div {
     width: 100%;
     text-align: center;
 }
-#add-satellite-panel div input, #add-satellite-panel div select, #options-panel div input{
+#options-panel div input{
     text-align: center;
     margin: 2%;
     width: 25%;
@@ -287,4 +289,22 @@ canvas {
   #add-waypoint-button {
       padding: 0.5% 2%;
       margin-left: 7%;
+  }
+
+  .full-page-menu {
+    position: fixed;
+    top: 0%;
+    left: 0%;
+    height: 100%;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    z-index: 4;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    overflow-y: scroll;
+  }
+
+  .title-text {
+      font-size: 3em;
   }
