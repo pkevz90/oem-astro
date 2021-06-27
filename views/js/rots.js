@@ -1009,6 +1009,8 @@ function drawScreenText() {
     ctx.textAlign = 'start';
     ctx.font = fontSize + 'px Arial';
     ctx.fillStyle = 'black';
+    
+    let height = windowOptions.screen.mode === 'ri ci' ? cnvs.height / 8 : cnvs.height / 6;
     // Draw mouse positon on the active axis
     if (!windowOptions.makeGif.start && windowOptions.screen.mode !== '3d') {
         ctx.lineWidth = 2;
@@ -1036,14 +1038,14 @@ function drawScreenText() {
         ctx.strokeStyle = 'RGB(0,0,0,0.5)';
         // Write current mouse position
         ctx.textAlign = 'center';
-        ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
-            windowOptions.screen.ri_center + 10);
+        ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - height * 1.1,
+            windowOptions.screen.ri_center + fontSize / 3);
         ctx.fillText('R', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
-            windowOptions.screen.ri_center - 157.5);
-        ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - 160,
-            windowOptions.screen.ci_center + 10);
+            windowOptions.screen.ri_center - height * 1.1);
+        ctx.fillText('I', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width - height * 1.1,
+            windowOptions.screen.ci_center + fontSize / 3);
         ctx.fillText('C', cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
-            windowOptions.screen.ci_center - 157.5);
+            windowOptions.screen.ci_center - height * 1.1);
     }
 
     ctx.textAlign = 'start';
@@ -1102,12 +1104,13 @@ function drawScreenText() {
 }
 
 function drawScreenArrows() {
-
+    let height = windowOptions.screen.mode === 'ri ci' ? cnvs.height / 8 : cnvs.height / 6;
     // Draw axis arrows on each graph, RI Frame
     drawArrow({
         origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
             windowOptions.screen.ri_center
         ],
+        height,
         color: windowOptions.arrowColor
     });
     drawArrow({
@@ -1116,6 +1119,7 @@ function drawScreenArrows() {
         origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
             windowOptions.screen.ri_center
         ],
+        height,
         color: windowOptions.arrowColor
     });
     // CI Frame
@@ -1123,6 +1127,7 @@ function drawScreenArrows() {
         origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
             windowOptions.screen.ci_center
         ],
+        height,
         color: windowOptions.arrowColor
     });
     drawArrow({
@@ -1131,6 +1136,7 @@ function drawScreenArrows() {
         origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
             windowOptions.screen.ci_center
         ],
+        height,
         color: windowOptions.arrowColor
     });
     // Draw Sun
