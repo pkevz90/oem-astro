@@ -23,6 +23,7 @@ document.getElementById('canvas-div').addEventListener('touchstart', event => {
 })
 document.getElementById('canvas-div').addEventListener('touchmove', event => {
     windowOptions.origin_it_des += (event.changedTouches[0].clientX - windowOptions.touchHandler.start.x) * 2 / cnvs.width * windowOptions.width;
+    windowOptions.width_des *= (event.changedTouches[0].clientY - windowOptions.touchHandler.start.y) > 0 ? 1.01 : 0.9900990099009;
     windowOptions.touchHandler.start = {
         x: event.changedTouches[0].clientX,
         y: event.changedTouches[0].clientY
