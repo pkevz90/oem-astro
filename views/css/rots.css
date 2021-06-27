@@ -179,26 +179,6 @@ canvas {
     transform: translate(-50%, -50%);
     justify-content: space-around;
 }
-#burns-panel {
-    position: fixed;
-    display: flex;
-    z-index: 4;
-    background-color: white;
-    border: 10px solid black;
-    border-radius: 30px;
-    width: 75%;
-    height: auto;
-    padding: 1%;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    justify-content: space-around;
-}
-
-#burns-panel div {
-    width: 100%;
-    text-align: center;
-}
 
 .m-fadeIn {
     visibility: visible;
@@ -302,3 +282,28 @@ canvas {
   .title-text {
       font-size: 3em;
   }
+  
+   table {
+       text-align: center;
+   }
+
+   .add-value {
+       flex-basis: 300px;
+       margin-top: 20px;
+       font-size: 1em;
+    }
+    .add-value input {
+        font-size: 1em;
+    }
+
+    @media (min-width: 1100px) {
+        .add-value, .add-value input {
+            font-size: 1.5em;
+        }
+    }
+   td {
+       font-size: 2.5vw;
+    } 
+   th {
+    font-size: 3vw;
+    }

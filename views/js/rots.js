@@ -476,7 +476,7 @@ document.getElementById('export-burns').addEventListener('click', () => {
     // downloadFile('burns.txt', JSON.stringify(satellites[selectEl].burns));
     downloadFile('burns.txt', outString);
 })
-document.getElementById('satellite-way-select').addEventListener('change', event => {
+document.getElementById('satellite-way-select').addEventListener('input', event => {
     generateBurnTable(event.target.value)
     event.target.style.color = satellites[event.target.value].color;
 })
@@ -521,7 +521,7 @@ document.getElementById('add-satellite-button').addEventListener('click', (click
     document.getElementById('add-satellite-panel').classList.toggle("hidden")
 })
 document.getElementById('data-button').addEventListener('click', (click) => {
-    if (satellites.length === 0) {
+    if (satellites.length < 2) {
         return;
     }
     document.getElementById('options-panel').classList.toggle("hidden")
@@ -612,26 +612,27 @@ document.getElementById('export-option-button').addEventListener('click', () => 
 })
 document.getElementById('add-waypoint-button').addEventListener('click', event => {
     let chosenSat = Number(document.getElementById('satellite-way-select').value);
-    let divTarget = event.target.parentNode.children;
+    let divTarget = event.target.parentNode.parentNode.parentNode.children;
     let tableTrs = document.getElementById('waypoint-table').children[1].children,
-        waypoints = [];
+        waypoints = [], target;
     for (let tr = 0; tr < tableTrs.length; tr++) {
+        target = tableTrs[tr].children[1].children[0].innerText.substr(1, tableTrs[tr].children[1].children[0].innerText.length - 2).split(',');
         waypoints.push({
             time: Date.parse(tableTrs[tr].children[0].innerText),
-            r: Number(tableTrs[tr].children[1].children[0].innerText),
-            i: Number(tableTrs[tr].children[2].children[0].innerText),
-            c: Number(tableTrs[tr].children[3].children[0].innerText),
-            tranTime: Number(tableTrs[tr].children[4].innerText)
+            r: Number(target[0]),
+            i: Number(target[1]),
+            c: Number(target[2]),
+            tranTime: Number(tableTrs[tr].children[2].innerText)
         })
     }
-    if (divTarget[6].children[0].checked) {
+    if (divTarget[3].children[1].children[0].checked) {
         // Switch to 2-burn calculation, delete all burns after
-        let startTime = Date.parse(divTarget[0].value);
+        divTarget = divTarget[2].children;
+        let startTime = Date.parse(divTarget[0].getElementsByTagName('input')[0].value);
         waypoints = waypoints.filter(point => point.time < startTime);
         let curPos = satellites[chosenSat].getCurrentState({
             time: startTime / 1000 - Date.parse(windowOptions.start_date) / 1000
         })
-        console.log(curPos, Number(divTarget[4].value) === 0 ? 7200 : 120 * Number(divTarget[4].value));
         let newPoints = calcTwoBurn({
             stateI: {
                 x: curPos.r[0],
@@ -642,16 +643,16 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
                 zd: curPos.cd[0]
             },
             stateF: {
-                x: Number(divTarget[1].value),
-                y: Number(divTarget[2].value),
-                z: Number(divTarget[3].value),
+                x: Number(divTarget[1].getElementsByTagName('input')[0].value),
+                y: Number(divTarget[2].getElementsByTagName('input')[0].value),
+                z: Number(divTarget[3].getElementsByTagName('input')[0].value),
                 xd: 0,
                 yd: 0,
                 zd: 0
             },
             a: satellites[chosenSat].a,
             startTime: startTime / 1000 - Date.parse(windowOptions.start_date) / 1000,
-            tf: Number(divTarget[4].value) === 0 ? 7200 : 60 * Number(divTarget[4].value)
+            tf: Number(divTarget[4].getElementsByTagName('input')[0].value) === 0 ? 7200 : 60 * Number(divTarget[4].getElementsByTagName('input')[0].value)
         })
         if (!newPoints) {
             alert("No solution found, increase transfer time or move target point closer to origin");
@@ -671,12 +672,13 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
             tranTime: newPoints[1].waypoint.tranTime / 60,
         })
     } else {
+        divTarget = divTarget[2].children;
         let newWaypoint = {
-            time: Date.parse(divTarget[0].value),
-            r: Number(divTarget[1].value),
-            i: Number(divTarget[2].value),
-            c: Number(divTarget[3].value),
-            tranTime: Number(divTarget[4].value) === 0 ? 120 : Number(divTarget[4].value)
+            time: Date.parse(divTarget[0].getElementsByTagName('input')[0].value),
+            r: Number(divTarget[1].getElementsByTagName('input')[0].value),
+            i: Number(divTarget[2].getElementsByTagName('input')[0].value),
+            c: Number(divTarget[3].getElementsByTagName('input')[0].value),
+            tranTime: Number(divTarget[4].getElementsByTagName('input')[0].value) === 0 ? 120 : Number(divTarget[4].getElementsByTagName('input')[0].value)
         }
 
         let filterLimit = 15 * 60 * 1000; // Reject burns closer than 15 minutes to other burns 
@@ -2122,10 +2124,8 @@ function generateBurnTable(object = 0) {
         addedElement.innerHTML = `
             <td>${new Date(windowOptions.start_date.getTime() + satellites[object].burns[burn].time * 1000).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td><span>${(satellites[object].burns[burn].waypoint.target.r).toFixed(3)}</span> km</td>
-            <td><span>${(satellites[object].burns[burn].waypoint.target.i).toFixed(3)}</span> km</td>
-            <td><span>${(satellites[object].burns[burn].waypoint.target.c).toFixed(3)}</span> km</td>
-            <td><span>${(satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(3)}</span></td>
+            <td><span>(${(satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span> km</td>
+            <td><span>${(satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
             <td class="edit-button">Edit</td>
         `;
         table.appendChild(addedElement);
@@ -2144,35 +2144,34 @@ function editButtonFunction(event) {
         oldValue = new Date(tdList[0].children[0].value).toString()
             .split(' GMT')[0].substring(4);
         tdList[0].innerText = oldValue;
-        for (let td = 1; td < 5; td++) {
-            oldValue = tdList[td].children[0].children[0].value;
-            tdList[td].children[0].innerText = oldValue;
-        }
+        let tarList = tdList[1].children[0].getElementsByTagName('input');
+        tdList[1].children[0].innerText = `(${tarList[0].value}, ${tarList[1].value}, ${tarList[2].value})`
+        tdList[2].children[0].innerText = tdList[2].children[0].getElementsByTagName('input')[0].value;
         table2burns(Number(document.getElementById('satellite-way-select').value));
         return;
     }
     event.target.innerText = 'Confirm';
     // nextValue = new Date(new Date(event.target.parentElement.nextSibling.children[0].innerText + 'Z') - 15 * 60 * 1000);
-
+    let tarList = tdList[1].children[0].innerText.substr(1, tdList[1].children[0].innerText.length - 2).split(',');
     oldValue = tdList[0].innerText + 'Z';
-    tdList[0].innerHTML = `<input type="datetime-local" oninput="editChanged(this)" id="edit-date" style="width: 100%" value="${new Date(oldValue).toISOString().substr(0,19)}"/>`;
+    tdList[0].innerHTML = `<input type="datetime-local" oninput="editChanged(this)" id="edit-date" style="width: 12vw" value="${new Date(oldValue).toISOString().substr(0,19)}"/>`;
     // tdList[0].children[0].value = '2014-02-09';
-    for (let td = 1; td < 5; td++) {
-        oldValue = tdList[td].children[0].innerText;
-        tdList[td].children[0].innerHTML = `<input ${td === 4 ?'oninput="editChanged(this)"' : ''} style="width: 30%" type="number" value="${oldValue}"/>`;
-    }
+    tdList[1].children[0].innerHTML = `(<input style="width: 9vw; font-size: 2.25vw;" type="number" value="${Number(tarList[0])}"/>, <input style="width: 8vw; font-size: 2.25vw;" type="number" value="${Number(tarList[1])}"/>, <input style="width: 8vw; font-size: 2.25vw;" type="number" value="${Number(tarList[2])}"/>)`;
+    tdList[2].children[0].innerHTML = `<input style="width: 9vw; font-size: 2.25vw;" type="number" value="${tdList[2].children[0].innerText}"/>`;
+    
 }
 
 function editChanged(el) {
     let sat = document.getElementById('satellite-way-select').value;
     let parent = el.type === 'number' ? el.parentNode.parentNode.parentNode : el.parentNode.parentNode;
-    let tranTime = Number(parent.children[4].children[0].children[0].value) * 60;
+    let tranTime = Number(parent.children[2].children[0].children[0].value) * 60;
     let time = new Date(parent.children[0].children[0].value).getTime() - new Date(windowOptions.start_date).getTime();
     time /= 1000;
     let targetState = satellites[sat].getCurrentState({
         time: time + tranTime
     });
-    parent.children[3].children[0].children[0].value = targetState.c[0].toFixed(1);
+    let tarList = parent.children[1].getElementsByTagName('input');
+    tarList[2].value = targetState.c[0].toFixed(1);
 }
 
 function waypoints2table(waypoints) {
@@ -2186,9 +2185,7 @@ function waypoints2table(waypoints) {
         addedElement.innerHTML = `
             <td>${new Date(point.time).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td><span>${(point.r).toFixed(3)}</span> km</td>
-            <td><span>${(point.i).toFixed(3)}</span> km</td>
-            <td><span>${(point.c).toFixed(3)}</span> km</td>
+            <td><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span> km</td>
             <td><span>${(point.tranTime).toFixed(3)}</span></td>
             <td class="edit-button">Edit</td>
         `;
@@ -2199,10 +2196,11 @@ function waypoints2table(waypoints) {
 function table2burns(object) {
     let tableTrs = document.getElementById('waypoint-table').children[1].children,
         time, tranTime, startTime = windowOptions.start_date.getTime(),
-        burns = [];
+        burns = [], target;
     for (let tr = 0; tr < tableTrs.length; tr++) {
         time = (Date.parse(tableTrs[tr].children[0].innerText) - startTime) / 1000;
-        tranTime = Number(tableTrs[tr].children[4].innerText) * 60;
+        tranTime = Number(tableTrs[tr].children[2].innerText) * 60;
+        target = tableTrs[tr].children[1].children[0].innerText.substr(1, tableTrs[tr].children[1].children[0].innerText.length - 2).split(',');
         burns.push({
             time,
             direction: {
@@ -2213,9 +2211,9 @@ function table2burns(object) {
             waypoint: {
                 tranTime,
                 target: {
-                    r: Number(tableTrs[tr].children[1].children[0].innerText),
-                    i: Number(tableTrs[tr].children[2].children[0].innerText),
-                    c: Number(tableTrs[tr].children[3].children[0].innerText)
+                    r: Number(target[0]),
+                    i: Number(target[1]),
+                    c: Number(target[2])
                 }
             }
         });
