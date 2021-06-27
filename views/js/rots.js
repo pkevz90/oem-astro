@@ -164,7 +164,9 @@ function newSatellite(options) {
 satellites = [];
 animation();
 window.addEventListener("resize", formatCanvas)
-window.addEventListener("keydown", e => {
+window.addEventListener("keydown", keydownFunction);
+
+function keydownFunction(e) {
     if (e.shiftKey && e.ctrlKey && e.key === 'S') {
         satellites.push(newSatellite({
             position: {
@@ -322,7 +324,8 @@ window.addEventListener("keydown", e => {
         encoder.start();
         windowOptions.makeGif.start = true;
     }
-})
+}
+
 timeSlider.addEventListener("input", e => {
     windowOptions.scenario_time_des = Number(e.target.value);
 })
