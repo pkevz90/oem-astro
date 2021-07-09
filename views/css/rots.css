@@ -288,17 +288,18 @@ canvas {
    }
 
    .add-value {
-       flex-basis: 300px;
+       flex-basis: auto;
        margin-top: 20px;
-       font-size: 1em;
+       font-size: 1.5vw;
+       padding: 20px;
     }
     .add-value input {
         font-size: 1em;
     }
 
-    @media (min-width: 1100px) {
+    @media (max-width: 1100px) {
         .add-value, .add-value input {
-            font-size: 1.5em;
+            font-size: 1em;
         }
     }
    td {
