@@ -1159,9 +1159,9 @@ function drawScreenArrows() {
         c: 0
     };
     let stopRic = {
-        r: windowOptions.width * 0.2 * sunAngle[0],
-        i: windowOptions.width * 0.2 * sunAngle[1],
-        c: windowOptions.width * 0.2 * sunAngle[2]
+        r: height * 0.9 *windowOptions.width * 2 / cnvs.width * sunAngle[0],
+        i: height * 0.9 *windowOptions.width * 2 / cnvs.width * sunAngle[1],
+        c: height * 0.9 *windowOptions.width * 2 / cnvs.width * sunAngle[2]
     }
     let angle = math.atan2(-stopRic.i, stopRic.r) * 180 / Math.PI;
     drawRicArrow({
