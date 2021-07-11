@@ -60,7 +60,6 @@ let windowOptions = {
             // {
             //     time: 4 * 3600,
             //     complete: false,
-            //     view: 'ri ci',
             //     width: 200,
             //     center: 0
             // }
@@ -855,11 +854,11 @@ function animation(time) {
         }
         windowOptions.makeGif.keyFrames.forEach(key => {
             if (windowOptions.scenario_time_des > key.time && !key.complete) {
-                windowOptions.screen.mode = key.view;
+                // windowOptions.screen.mode = key.view;
                 windowOptions.width_des = key.width;
                 windowOptions.origin_it_des = key.center;
                 key.complete = true;
-                formatCanvas();
+                // formatCanvas();
             }
         })
         if (windowOptions.scenario_time_des > windowOptions.makeGif.stopEpoch) {windowOptions.makeGif.stop = true;}
