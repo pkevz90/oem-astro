@@ -126,10 +126,13 @@
             <div style="margin: 20px 5px">Sun Time <input value="0000" type="Text" maxLength="4" style="width: 4em"></div>
             <div style="margin: 20px 5px">Sun Cross Angle <input style="width: 3em" value="0" type="Number" min="-90" max="90"><sup>o</sup></div>
             <div style="margin: 20px 5px" class="title-text">Recording</div>
+            <div style="margin: 20px 5px">Start Epoch <input value="0" type="Number" min="0" max="10000" step="1"> minutes</div>
+            <div style="margin: 20px 5px">End Epoch <input value="1440" type="Number" min="0" max="10000" step="1"> minutes</div>
             <div style="margin: 20px 5px">Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
             <div style="margin: 20px 5px">FPS <input value="30" type="Number" min="15" max="60" step="1"></div>
             <div style="margin: 20px 5px">Repeat <input type="checkbox"></div>
-            <div style="margin: 20px;"><span style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Record</span></div>
+            <div style="margin: 20px;"><span onclick="recordFunction(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Record</span></div>
+            <div style="margin: 20px;"><span style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Key Frame</span></div>
         
         </div>
         <div>

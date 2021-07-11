@@ -53,7 +53,18 @@ let windowOptions = {
     draw_style: 'points',
     makeGif: {
         start: false,
-        stop: false
+        stop: false,
+        step: 5,
+        stopEpoch: 1440,
+        keyFrames: [
+            // {
+            //     time: 4 * 3600,
+            //     complete: false,
+            //     view: 'ri ci',
+            //     width: 200,
+            //     center: 0
+            // }
+        ]
     },
     maneuver_type: 'manual',
     refresh_time: 0,
@@ -754,6 +765,17 @@ function closeAll() {
     }
 }
 
+function recordFunction(button) {
+    closeAll();
+    let inputs = button.parentNode.parentNode.getElementsByTagName('input');
+    windowOptions.makeGif.stopEpoch = Number(inputs[6].value) * 60;
+    windowOptions.scenario_time_des = Number(inputs[5].value) * 60;
+    windowOptions.scenario_time = Number(inputs[5].value) * 60;
+    windowOptions.makeGif.start = true;
+    windowOptions.makeGif.step = Number(inputs[7].value);
+    encoder.start();
+}
+
 function mouseWheelFunction(event) {
     if (windowOptions.burn_status) {
         windowOptions.burn_status.time += event.deltaY < 0 ? 600 : -60;
@@ -785,13 +807,13 @@ function animation(time) {
     let mode = windowOptions.screen.mode;
     windowOptions.screen.ri_center += ((mode === 'ri only' || mode === '3d' ? cnvs.height / 2 : mode === 'ci only' ? -cnvs
             .height / 2 : cnvs.height / 4) - windowOptions
-        .screen.ri_center) * 0.1;
+        .screen.ri_center) * 0.05;
     windowOptions.screen.ci_center += ((mode === 'ri only' || mode === '3d' ? 3 * cnvs.height / 2 : mode === 'ci only' ? cnvs
             .height / 2 : 3 * cnvs.height / 4) -
-        windowOptions.screen.ci_center) * 0.1;
+        windowOptions.screen.ci_center) * 0.05;
     windowOptions.screen.lineHeight += ((mode === 'ri only' || mode === 'ci only' || mode === '3d' ? cnvs.height : cnvs.height /
             2) - windowOptions
-        .screen.lineHeight) * 0.1;
+        .screen.lineHeight) * 0.05;
     if (windowOptions.mouseState) {
         windowOptions.mousePosition.fill += (1 - windowOptions.mousePosition.fill) * 0.08;
     } else {
@@ -822,17 +844,25 @@ function animation(time) {
         draw3dScene();
     }
     if (windowOptions.makeGif.start) {
-        windowOptions.scenario_time_des += windowOptions.animate_step;
-        windowOptions.scenario_time += windowOptions.animate_step;
         encoder.addFrame(ctx);
+        windowOptions.scenario_time_des += windowOptions.makeGif.step * 60;
+        windowOptions.scenario_time += windowOptions.makeGif.step * 60;
         if (windowOptions.makeGif.stop) {
-            windowOptions.makeGif = {
-                start: false,
-                stop: false
-            }
+            windowOptions.makeGif.start = false;
+            windowOptions.makeGif.stop = false;
             encoder.finish();
             encoder.download("download.gif");
         }
+        windowOptions.makeGif.keyFrames.forEach(key => {
+            if (windowOptions.scenario_time_des > key.time && !key.complete) {
+                windowOptions.screen.mode = key.view;
+                windowOptions.width_des = key.width;
+                windowOptions.origin_it_des = key.center;
+                key.complete = true;
+                formatCanvas();
+            }
+        })
+        if (windowOptions.scenario_time_des > windowOptions.makeGif.stopEpoch) {windowOptions.makeGif.stop = true;}
     }
     // console.log(performance.now() - a);
     windowOptions.refresh_time += (performance.now() - a - windowOptions.refresh_time) * 0.01;
@@ -1246,7 +1276,7 @@ function drawSats() {
         if (satellite.completedBurn || satellite.burns.filter(burn => burn.time < (windowOptions
                 .scenario_time_des)).length !== satellite.burnsDrawn) satellite.calcTraj();
 
-        if (windowOptions.screen.mode !== 'ri only') {
+        if (true) {
 
             if (windowOptions.draw_style === 'line') {
                 drawCurve(ctx, satellite.shownTraj, {
