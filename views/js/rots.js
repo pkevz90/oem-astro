@@ -772,6 +772,8 @@ function recordFunction(button) {
     windowOptions.scenario_time = Number(inputs[5].value) * 60;
     windowOptions.makeGif.start = true;
     windowOptions.makeGif.step = Number(inputs[7].value);
+    encoder.setRepeat(inputs[9].checked ? 0 : 1);
+    encoder.setDelay(1000 / Number(inputs[8].value));
     encoder.start();
 }
 
