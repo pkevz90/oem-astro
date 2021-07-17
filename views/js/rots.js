@@ -331,8 +331,6 @@ function keydownFunction(e) {
             windowOptions.makeGif.stop = true;
             return
         }
-        encoder.start();
-        windowOptions.makeGif.start = true;
     }
 }
 
@@ -854,6 +852,7 @@ function animation(time) {
             encoder.finish();
             encoder.download("download.gif");
         }
+        else if (windowOptions.scenario_time_des >= windowOptions.makeGif.stopEpoch) {windowOptions.makeGif.stop = true;}
         windowOptions.makeGif.keyFrames.forEach(key => {
             if (windowOptions.scenario_time_des > key.time && !key.complete) {
                 // windowOptions.screen.mode = key.view;
@@ -863,7 +862,6 @@ function animation(time) {
                 // formatCanvas();
             }
         })
-        if (windowOptions.scenario_time_des > windowOptions.makeGif.stopEpoch) {windowOptions.makeGif.stop = true;}
     }
     // console.log(performance.now() - a);
     windowOptions.refresh_time += (performance.now() - a - windowOptions.refresh_time) * 0.01;
