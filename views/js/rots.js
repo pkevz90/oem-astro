@@ -2135,7 +2135,20 @@ function calcBurns(burn, cross = false) {
             c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) *
                 windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
         }
-        let tranTime = sat.burns[burn.burn].waypoint.tranTime;
+        let tranTime = 1.5*math.norm([sat.burns[burn.burn].direction.r, sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c]) / sat.a;
+        // If burn time is longer than 6 hrs (times 1.5), limit burn
+        if (tranTime > 32400) {
+            tranTime = 32400;
+            let dir = [sat.burns[burn.burn].direction.r, sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c];
+            dir = math.dotDivide(dir, math.norm(dir));
+            dir = math.dotMultiply(dir, (tranTime/1.5) * sat.a);
+            sat.burns[burn.burn].direction = {
+                r: dir[0],
+                i: dir[1],
+                c: dir[2],
+            }
+        }
+        sat.burns[burn.burn].waypoint.tranTime = tranTime;
         let targetState = sat.getCurrentState({
             time: sat.burns[burn.burn].time + tranTime,
             burnStop: burn.burn + 1
