@@ -1484,6 +1484,51 @@ function drawSatellite(satellite, cross = false) {
             ctx.arc(pixelPosition[0], pixelPosition[1], shapeHeight / 2, 0, 2 * Math.PI)
             ctx.fill()
             break;
+        case 'delta':
+            points = [
+                [0, -shapeHeight / 2],
+                [-3*shapeHeight / 8, shapeHeight / 2],
+                [0, shapeHeight / 4],
+                [3*shapeHeight / 8, shapeHeight / 2],
+                [0, -shapeHeight / 2]
+            ];
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'diamond':
+                points = [
+                    [0, -shapeHeight / 2],
+                    [-shapeHeight / 2, 0],
+                    [0, shapeHeight / 2],
+                    [shapeHeight / 2, 0],
+                    [0, -shapeHeight / 2]
+                ];
+                drawPoints({
+                    points: points,
+                    color: color,
+                    origin: pixelPosition,
+                    ctx
+                });
+                break;
+        case 'star':
+            let a = shapeHeight / 2;
+            let b = shapeHeight / 5;
+            points = [];
+            for (let ang = 0; ang <= 360; ang += 72) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+                points.push([b*Math.sin((36+ang)*Math.PI / 180), -b*Math.cos((36+ang)*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
     }
 }
 
