@@ -2190,6 +2190,7 @@ function calcBurns(burn, cross = false) {
                 windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
         }
         let tranTime = 1.5*math.norm([sat.burns[burn.burn].direction.r, sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c]) / sat.a;
+        tranTime = tranTime < 10800 ? 10800 : tranTime;
         // If burn time is longer than 6 hrs (times 1.5), limit burn
         if (tranTime > 32400) {
             tranTime = 32400;
@@ -2207,7 +2208,8 @@ function calcBurns(burn, cross = false) {
             time: sat.burns[burn.burn].time + tranTime,
             burnStop: burn.burn + 1
         });
-        sat.burns[burn.burn].waypoint.tranTime = tranTime;
+        console.log(targetState.r[0], targetState.i[0]);
+        //sat.burns[burn.burn].waypoint.tranTime = tranTime;
         sat.burns[burn.burn].waypoint.target = {
             r: cross ? sat.burns[burn.burn].waypoint.target.r : targetState.r[0],
             i: cross ? sat.burns[burn.burn].waypoint.target.i : targetState.i[0],
