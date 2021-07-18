@@ -1433,6 +1433,8 @@ function drawSatellite(satellite, cross = false) {
     }
     let shapeHeight = size * window.innerHeight;
     let points;
+    let a = shapeHeight / 2;
+    let b = shapeHeight / 5;
     switch (shape) {
         case 'triangle':
             points = [
@@ -1484,12 +1486,15 @@ function drawSatellite(satellite, cross = false) {
             ctx.fill()
             break;
         case 'delta':
+            
+            a *= 1.1;
+            b *= 1.1;
             points = [
-                [0, -shapeHeight / 2],
-                [-3*shapeHeight / 8, shapeHeight / 2],
+                [0, -a],
+                [-3.3*shapeHeight / 8, a],
                 [0, shapeHeight / 4],
-                [3*shapeHeight / 8, shapeHeight / 2],
-                [0, -shapeHeight / 2]
+                [3.3*shapeHeight / 8, a],
+                [0, -a]
             ];
             drawPoints({
                 points: points,
@@ -1499,27 +1504,75 @@ function drawSatellite(satellite, cross = false) {
             });
             break;
         case 'diamond':
-                points = [
-                    [0, -shapeHeight / 2],
-                    [-shapeHeight / 2, 0],
-                    [0, shapeHeight / 2],
-                    [shapeHeight / 2, 0],
-                    [0, -shapeHeight / 2]
-                ];
-                drawPoints({
-                    points: points,
-                    color: color,
-                    origin: pixelPosition,
-                    ctx
-                });
-                break;
-        case 'star':
-            let a = shapeHeight / 2;
-            let b = shapeHeight / 5;
             points = [];
+            points.push([a*Math.sin(-70*Math.PI / 180), -a*Math.cos(-70*Math.PI / 180)])
+            points.push([a*Math.sin(-38*Math.PI / 180), -a*Math.cos(-38*Math.PI / 180)])
+            points.push([a*Math.sin(38*Math.PI / 180), -a*Math.cos(38*Math.PI / 180)])
+            points.push([a*Math.sin(70*Math.PI / 180), -a*Math.cos(70*Math.PI / 180)])
+            points.push([0, 0.9*a])
+            points.push([a*Math.sin(-70*Math.PI / 180), -a*Math.cos(-70*Math.PI / 180)])
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'star':
+            points = [];
+            a *= 1.1;
+            b *= 1.1;
             for (let ang = 0; ang <= 360; ang += 72) {
                 points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
                 points.push([b*Math.sin((36+ang)*Math.PI / 180), -b*Math.cos((36+ang)*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'pentagon':
+            points = [];
+            for (let ang = 0; ang <= 360; ang += 72) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'hexagon':
+            points = [];
+            for (let ang = 0; ang <= 360; ang += 60) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'septagon':
+            points = [];
+            for (let ang = 0; ang <= 361; ang += 360/7) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'octagon':
+            points = [];
+            for (let ang = 0; ang <= 361; ang += 360/8) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
             }
             drawPoints({
                 points: points,
