@@ -490,13 +490,12 @@ document.getElementById('export-burns').addEventListener('click', () => {
         timeEnd = toStkFormat(timeEnd);
         outString += `Burn Time ${time} \n`
         outString += `Waypoint  r: ${burn.waypoint.target.r.toFixed(1)} km  i: ${burn.waypoint.target.i.toFixed(1)} km  c: ${burn.waypoint.target.c.toFixed(1)} km\n`;
-        outString += `Transfer Time ${(burn.waypoint.tranTime.toFixed(1) / 3600)} hrs\n`;
+        outString += `Transfer Time: ${(burn.waypoint.tranTime.toFixed(1) / 60).toFixed(1)} minutes    ${timeEnd}\n`;
         outString += `Direction  r: ${burn.direction.r.toFixed(6)}  i: ${burn.direction.i.toFixed(6)}  c: ${burn.direction.c.toFixed(6)}\n`;
         outString += `Burn Duration ${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / satellites[selectEl].a).toFixed(1)} seconds\n`;
         outString += `Estimated Delta-V: ${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) * 1000).toFixed(2)} m/s\n`
         outString += `break${time}break${timeEnd}break${burn.waypoint.target.r.toFixed(2)}break${burn.waypoint.target.i.toFixed(2)}break${burn.waypoint.target.c.toFixed(2)}break${burn.direction.r.toFixed(6)}break${burn.direction.i.toFixed(6)}break${burn.direction.c.toFixed(6)}break${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / satellites[selectEl].a).toFixed(1)}\n\n`
     })
-    // downloadFile('burns.txt', JSON.stringify(satellites[selectEl].burns));
     downloadFile('burns.txt', outString);
 })
 document.getElementById('satellite-way-select').addEventListener('input', event => {
