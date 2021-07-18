@@ -735,6 +735,7 @@ function openPanel(button) {
         if (satellites.length === 0) {
             return;
         }
+        windowOptions.scenario_time_des = windowOptions.scenario_length*3600;
         let selectEl = document.getElementById('satellite-way-select');
         let chosenSat = Number(selectEl.value);
         generateBurnTable(chosenSat);
@@ -756,6 +757,7 @@ function openPanel(button) {
 
 function closeAll() {
     let buttons = document.getElementsByClassName('panel');
+    windowOptions.scenario_time_des = Number(document.getElementById('time-slider-range').value);
     for (let jj = 0; jj < buttons.length; jj++) {
         buttons[jj].classList.add('hidden');
     }
