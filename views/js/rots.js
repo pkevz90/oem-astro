@@ -1533,6 +1533,50 @@ function drawSatellite(satellite, cross = false) {
                 ctx
             });
             break;
+            points = [];
+            points.push([a*Math.sin(-70*Math.PI / 180), -a*Math.cos(-70*Math.PI / 180)])
+            points.push([a*Math.sin(-38*Math.PI / 180), -a*Math.cos(-38*Math.PI / 180)])
+            points.push([a*Math.sin(38*Math.PI / 180), -a*Math.cos(38*Math.PI / 180)])
+            points.push([a*Math.sin(70*Math.PI / 180), -a*Math.cos(70*Math.PI / 180)])
+            points.push([0, 0.9*a])
+            points.push([a*Math.sin(-70*Math.PI / 180), -a*Math.cos(-70*Math.PI / 180)])
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case '4-star':
+            points = [];
+            a *= 1.1;
+            b *= 1.1;
+            for (let ang = 0; ang <= 360; ang += 90) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+                points.push([b*Math.sin((45+ang)*Math.PI / 180), -b*Math.cos((45+ang)*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case '3-star':
+            points = [];
+            a *= 1.2;
+            b *= 1.2;
+            for (let ang = 0; ang <= 360; ang += 120) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+                points.push([0.7*b*Math.sin((60+ang)*Math.PI / 180), -0.7*b*Math.cos((60+ang)*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
         case 'pentagon':
             points = [];
             for (let ang = 0; ang <= 360; ang += 72) {
