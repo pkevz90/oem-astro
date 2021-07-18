@@ -51,7 +51,9 @@
             <div style="margin: 20px 5px">Shape
                 <select name="" id="">
                     <option value="delta">Delta</option>
-                    <option value="star">Star</option>
+                    <option value="3-star">3-Point Star</option>
+                    <option value="4-star">4-Point Star</option>
+                    <option value="star">5-Point Star</option>
                     <option value="diamond">Diamond</option>
                     <option value="triangle">Triangle</option>
                     <option value="square">Square</option>
@@ -178,31 +180,36 @@
             <div style="font-size:2em; margin: 4%; font-weight: bold">Instructions</div>
             <ul>
                 <li>
-                    Building a plan (instructions are work in progress)
-                    <ol>
+                    Building a plan
+                    <ul>
                         <li>Add Satellite with + button in bottom right</li>
+                        <li>By default, all burns are computed with finite accelerations</li>
                         <li>To insert a burn, click and hold current satellite position, use slider to change shown time
                         </li>
-                        <li>Burns can either be planned with a manual direction or with a waypoint by hitting the switch
-                            to the right</li>
-                        <li>The Following hotkeys can assist with precise burns, hit them while planning burn
+                        <li>Burn planning options
                             <ul>
-                                <li>1 - Remove relative eccentricity</li>
-                                <li>2 - Remove relative semi-major axis (assumes starting top or bottom of NMC)</li>
-                                <li>3 - Remove relative semi-major axis (allows selecting of NMC center on in-track)
-                                </li>
-                                <li>4 - Zero cross-track velocity</li>
+                                <li>Click and drag to manually choose burn direction</li>
+                                <li>Switch to waypoint above the burns button, and choose waypoint with mouse (defaults to 2 hrs TOF)</li>
+                                <li>Open burns panel and manually insert RIC coordinate and TOF</li>
                             </ul>
                         </li>
-                        <li>Burns can be deleted by cntrl-clicking on the burn</li>
-                    </ol>
+                        <li>Burns can be deleted by cntrl-clicking on the burn point</li>
+                        <li>Limitations
+                            <ul>
+                                <li>Burns durations are limited to 6 hours for mathematical stability</li>
+                                <li>Burns are limited to once every 30 minutes</li>
+                                <li>Clohessy-Wiltshire assumptions are utilized, therefore an error of ~5% can be expected compared to full physics</li>
+                            </ul>
+                        </li>
+                    </ul>
                 </li>
-                <li>See cross-track view by hitting spacebar</li>
-                <li>Generate GIF by hitting 'a', then 'a' again to download produced GIF
+                <li>Spacebar changes current view</li>
+                <li>GIF Generation
                     <ul>
-                        <li>Will generate from the time set on the slider</li>
-                        <li>Frames per second and time step set in options</li>
-                        <li>Can either repeat indefinitely or stop after one</li>
+                        <li>Select options panel</li>
+                        <li>Set start time and end time (in minutes from start of scenario)</li>
+                        <li>Select time step per frame (assuming 30 FPS, so if time step is 1 minute, each hour will be 2 seconds long in video)</li>
+                        <li>Press record</li>
                     </ul>
                 </li>
             </ul>
