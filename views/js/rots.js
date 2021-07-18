@@ -1533,20 +1533,6 @@ function drawSatellite(satellite, cross = false) {
                 ctx
             });
             break;
-            points = [];
-            points.push([a*Math.sin(-70*Math.PI / 180), -a*Math.cos(-70*Math.PI / 180)])
-            points.push([a*Math.sin(-38*Math.PI / 180), -a*Math.cos(-38*Math.PI / 180)])
-            points.push([a*Math.sin(38*Math.PI / 180), -a*Math.cos(38*Math.PI / 180)])
-            points.push([a*Math.sin(70*Math.PI / 180), -a*Math.cos(70*Math.PI / 180)])
-            points.push([0, 0.9*a])
-            points.push([a*Math.sin(-70*Math.PI / 180), -a*Math.cos(-70*Math.PI / 180)])
-            drawPoints({
-                points: points,
-                color: color,
-                origin: pixelPosition,
-                ctx
-            });
-            break;
         case '4-star':
             points = [];
             a *= 1.1;
