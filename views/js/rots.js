@@ -124,6 +124,12 @@ let windowOptions = {
             }
             return math.transpose(out);
         })()
+    },
+    kinReach: {
+        shown: false,
+        sat: 0,
+        time: 1800,
+        burn: 0.5
     }
 }
 formatCanvas();
@@ -843,6 +849,10 @@ function animation(time) {
     } else {
         draw3dScene();
     }
+    if (windowOptions.kinReach.shown) {
+        drawKinematicReach();
+    }
+
     if (windowOptions.makeGif.start) {
         encoder.addFrame(ctx);
         windowOptions.scenario_time_des += windowOptions.makeGif.step * 60;
@@ -1612,6 +1622,37 @@ function drawSatellite(satellite, cross = false) {
             });
             break;
     }
+}
+
+function drawKinematicReach() {
+    let curPos = satellites[windowOptions.kinReach.sat].currentPosition;
+    //console.log('s');
+    curPos = {
+        x: curPos.r[0],
+        y: curPos.i[0],
+        z: curPos.c[0],
+        xd: curPos.rd[0],
+        yd: curPos.id[0],
+        zd: curPos.cd[0]
+    };
+    let stateF, curve = [];
+    ctx.strokeStyle = 'black';
+    ctx.beginPath();
+    stateF  = oneBurnFiniteHcw(curPos, 0, 0, windowOptions.kinReach.burn, windowOptions.kinReach.time,satellites[windowOptions.kinReach.sat].a);
+    stateF = ricToPixel({r: stateF.x, i: stateF.y, c: stateF.c});
+    ctx.moveTo(stateF[0], stateF[1]);  
+    //console.log(stateF);   
+    // curve.push(stateF)
+    for (let alpha = 0.314; alpha < 2 * Math.PI; alpha += 0.314) {
+        stateF  = oneBurnFiniteHcw(curPos, alpha, 0, windowOptions.kinReach.burn, windowOptions.kinReach.time,satellites[windowOptions.kinReach.sat].a);
+        stateF = ricToPixel({r: stateF.x, i: stateF.y, c: stateF.c});
+        ctx.lineTo(stateF[0], stateF[1]);  
+        // curve.push(stateF)
+        //console.log('s');
+    }
+    // curve.push(curve[0]);
+    // drawCurvePoints(ctx, curve);
+    ctx.stroke();
 }
 
 function ricToPixel(point = {
