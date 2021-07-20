@@ -129,7 +129,8 @@ let windowOptions = {
         shown: false,
         sat: 0,
         time: 1800,
-        burn: 0.5
+        burn: 0.5,
+        target: null
     }
 }
 formatCanvas();
@@ -1635,17 +1636,30 @@ function drawKinematicReach() {
         yd: curPos.id[0],
         zd: curPos.cd[0]
     };
-    let stateF, curve = [];
+    let stateF, ang, curve = [], rel, relVel, relTarget = windowOptions.kinReach.target !== null ? satellites[windowOptions.kinReach.target].getCurrentState({time: windowOptions.scenario_time + windowOptions.kinReach.time}) : null;
+    ctx.fillStyle = 'black';
     ctx.strokeStyle = 'black';
+    ctx.font = '15px serif';
     ctx.beginPath();
     stateF  = oneBurnFiniteHcw(curPos, 0, 0, windowOptions.kinReach.burn, windowOptions.kinReach.time,satellites[windowOptions.kinReach.sat].a);
     stateF = ricToPixel({r: stateF.x, i: stateF.y, c: stateF.c});
     ctx.moveTo(stateF[0], stateF[1]);  
     //console.log(stateF);   
-    // curve.push(stateF)
-    for (let alpha = 0.314; alpha < 2 * Math.PI; alpha += 0.314) {
-        stateF  = oneBurnFiniteHcw(curPos, alpha, 0, windowOptions.kinReach.burn, windowOptions.kinReach.time,satellites[windowOptions.kinReach.sat].a);
-        stateF = ricToPixel({r: stateF.x, i: stateF.y, c: stateF.c});
+    // curve.push(stateF);
+
+    for (let alpha = 1; alpha <= 40; alpha ++) {
+        ang = alpha * 2 * Math.PI / 40;
+        stateF  = oneBurnFiniteHcw(curPos, ang, 0, windowOptions.kinReach.burn, windowOptions.kinReach.time,satellites[windowOptions.kinReach.sat].a);
+
+        if ((alpha % 2 === 0) && relTarget !== null) {
+            rel = math.norm([stateF.x - relTarget.r[0], stateF.y - relTarget.i[0], stateF.z - relTarget.c[0]])
+            relVel = math.norm([stateF.xd - relTarget.rd[0], stateF.yd - relTarget.id[0], stateF.zd - relTarget.cd[0]])
+        }
+        stateF = ricToPixel({r: stateF.x, i: stateF.y, c: stateF.z});
+        if ((alpha % 2 === 0) && relTarget !== null) {
+            ctx.fillText(rel.toFixed(0), stateF[0], stateF[1])
+            ctx.fillText((1000*relVel).toFixed(0), stateF[0], stateF[1]+15)
+        }
         ctx.lineTo(stateF[0], stateF[1]);  
         // curve.push(stateF)
         //console.log('s');
