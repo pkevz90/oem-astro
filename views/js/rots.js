@@ -2276,6 +2276,7 @@ function calcBurns(burn, cross = false) {
         }
         let tranTime = 1.5*math.norm([sat.burns[burn.burn].direction.r, sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c]) / sat.a;
         tranTime = tranTime < 10800 ? 10800 : tranTime;
+        tranTime = cross ? sat.burns[burn.burn].waypoint.tranTime : tranTime; 
         // If burn time is longer than 6 hrs (times 1.5), limit burn
         if (tranTime > 32400) {
             tranTime = 32400;
