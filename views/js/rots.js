@@ -3124,11 +3124,10 @@ function initStateFunction(el) {
             id: Number(nodes.children[1].children[4].getElementsByTagName('input')[0].value) / 1000,
             cd: Number(nodes.children[1].children[5].getElementsByTagName('input')[0].value) / 1000
         };
-        console.log(state);
         if (el.classList.contains('panel-button')) {
             let a = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3);
             let ang = state.i / a * 180 / Math.PI;
-            state.r += (a - a * Math.cos(ang * Math.PI / 180 ));
+            state.r += (a - a * Math.cos(ang * Math.PI / 180 ) * Math.cos(state.c / a));
             let rotState = math.squeeze(math.multiply(rotationMatrices(-ang, 3), [[state.rd], [state.id], [state.cd]]));
             state.rd = rotState[0];
             state.id = rotState[1];
