@@ -199,6 +199,33 @@ function keydownFunction(e) {
         }))
         satellites[satellites.length - 1].calcTraj();
     }
+    if (e.ctrlKey && e.key === 'v') {
+        windowOptions.kinReach.shown = !windowOptions.kinReach.shown;
+    }
+    if (e.ctrlKey && e.key === 'b') {
+        if (satellites.length < 2) {
+            return;
+        }
+        if (windowOptions.kinReach.target === null) {
+            windowOptions.kinReach.target = 0;
+        }
+        else {
+            windowOptions.kinReach.target++;
+            if (windowOptions.kinReach.target >= satellites.length) {
+                windowOptions.kinReach.target = null;
+                return;
+            }
+        }
+    }
+    if (e.shiftKey && e.key === 'V') {
+        if (satellites.length < 2) {
+            return;
+        }
+        windowOptions.kinReach.sat++;
+        if (windowOptions.kinReach.sat >= satellites.length) {
+            windowOptions.kinReach.sat = 0;
+        }
+    }
     if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
         if (e.shiftKey || e.ctrlKey) {
             windowOptions.scenario_time_des += (e.key === ',' || e.key === '<' ? -1 : (e.ctrlKey ? 5 :
