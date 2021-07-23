@@ -805,9 +805,34 @@ function recordFunction(button) {
     windowOptions.scenario_time = Number(inputs[5].value) * 60;
     windowOptions.makeGif.start = true;
     windowOptions.makeGif.step = Number(inputs[7].value);
+    windowOptions.makeGif.keyFrames.forEach(frame => {
+        if (frame.time < 300) {
+            windowOptions.width_des = frame.width;
+            windowOptions.width = frame.width;
+            windowOptions.origin_it_des = frame.center;
+            windowOptions.origin_it = frame.center;
+        }
+    })
     encoder.setRepeat(inputs[9].checked ? 0 : 1);
     encoder.setDelay(1000 / Number(inputs[8].value));
     encoder.start();
+}
+
+function addKeyFrame() {
+    if (!windowOptions.makeGif.keyFrames) {
+        windowOptions.makeGif.keyFrames = [];
+    }
+    windowOptions.makeGif.keyFrames.push({
+        time: windowOptions.scenario_time_des,
+        complete: false,
+        center: 0,
+        width: windowOptions.width_des
+    })
+    let outString = '';
+    windowOptions.makeGif.keyFrames.forEach(frame => {
+        outString +=`Time: ${(frame.time / 60).toFixed(0)} min  Width: ${(2*frame.width).toFixed(0)} km\n`
+    })
+    alert(outString)
 }
 
 function mouseWheelFunction(event) {
@@ -834,8 +859,8 @@ function getMousePosition(mouseX, mouseY) {
 
 function animation(time) {
     let a = performance.now();
-    windowOptions.origin_it += (windowOptions.origin_it_des - windowOptions.origin_it) * 0.2;
-    windowOptions.width += (windowOptions.width_des - windowOptions.width) * 0.2;
+    windowOptions.origin_it += (windowOptions.origin_it_des - windowOptions.origin_it) * (windowOptions.makeGif ? 0.05 : 0.2);
+    windowOptions.width += (windowOptions.width_des - windowOptions.width) * (windowOptions.makeGif ? 0.05 : 0.2);
     windowOptions.scenario_time += (windowOptions.scenario_time_des - windowOptions.scenario_time) * 0.2;
     // Transition frames
     let mode = windowOptions.screen.mode;
