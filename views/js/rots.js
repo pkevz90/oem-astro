@@ -4,6 +4,7 @@ let timeSlider = document.getElementById('time-slider-range');
 let encoder = new GIFEncoder();
 encoder.setRepeat(1);
 encoder.setDelay(33);
+encoder.setQuality(20);
 let windowOptions = {
     mm: 2 * Math.PI / 86164,
     center: [0, 0],
