@@ -132,6 +132,13 @@ let windowOptions = {
         time: 1800,
         burn: 0.5,
         target: null
+    },
+    vz_reach: {
+        shown: false,
+        target: 0,
+        object: 1,
+        time: 3600,
+        distance: 10
     }
 }
 formatCanvas();
@@ -200,7 +207,7 @@ function keydownFunction(e) {
         }))
         satellites[satellites.length - 1].calcTraj();
     }
-    if (e.ctrlKey && e.key === 'v') {
+    if (e.ctrlKey && e.key === 'k') {
         windowOptions.kinReach.shown = !windowOptions.kinReach.shown;
     }
     if (e.ctrlKey && e.key === 'b') {
@@ -218,7 +225,7 @@ function keydownFunction(e) {
             }
         }
     }
-    if (e.shiftKey && e.key === 'V') {
+    if (e.shiftKey && e.key === 'K') {
         if (satellites.length < 2) {
             return;
         }
@@ -226,6 +233,12 @@ function keydownFunction(e) {
         if (windowOptions.kinReach.sat >= satellites.length) {
             windowOptions.kinReach.sat = 0;
         }
+    }
+    if (e.shiftKey && e.key === 'V') {
+        if (satellites.length < 2) {
+            return;
+        }
+        windowOptions.vz_reach.shown = !windowOptions.vz_reach.shown;
     }
     if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
         if (e.shiftKey || e.ctrlKey) {
@@ -905,6 +918,9 @@ function animation(time) {
     }
     if (windowOptions.kinReach.shown) {
         drawKinematicReach();
+    }
+    if (windowOptions.vz_reach.shown && satellites.length > 1) {
+        drawVulnerabilityZone();
     }
 
     if (windowOptions.makeGif.start) {
@@ -1719,6 +1735,61 @@ function drawKinematicReach() {
     }
     // curve.push(curve[0]);
     // drawCurvePoints(ctx, curve);
+    ctx.stroke();
+}
+
+function drawVulnerabilityZone() {
+    let point, pointText;
+    let tarPos = satellites[windowOptions.vz_reach.target].getCurrentState({time: windowOptions.scenario_time + windowOptions.vz_reach.time})
+    let objPos = satellites[windowOptions.vz_reach.object].getCurrentState({time: windowOptions.scenario_time})
+    objPos = {
+        x: objPos.r[0],
+        y: objPos.i[0],
+        z: objPos.c[0],
+        xd: objPos.rd[0],
+        yd: objPos.id[0],
+        zd: objPos.cd[0]
+    }
+    // for (let ang = 0; ang < 2 * Math.PI; ang += Math.PI / 4) {
+    //     points.push({x: tarPos.r[0] + windowOptions.vz_reach.distance * Math.sin(ang), 
+    //         y: tarPos.i[0] + windowOptions.vz_reach.distance * Math.cos(ang),
+    //         z: tarPos.c[0],
+    //         xd: 0,
+    //         yd: 0,
+    //         zd: 0
+    //     })
+    // }
+    let burn, results = [], textLoc;
+    ctx.fillStyle = 'black';
+    ctx.strokeStyle = 'black';
+    ctx.font = '15px serif';
+    for (let ang = 0; ang < 2 * Math.PI; ang += Math.PI / 4) {
+        point = {
+            x: tarPos.r[0] + windowOptions.vz_reach.distance * Math.sin(ang),
+            y: tarPos.i[0] + windowOptions.vz_reach.distance * Math.cos(ang),
+            z: tarPos.c[0],
+            xd: 0,
+            yd: 0,
+            zd: 0 
+        };
+        pointText = {
+            x: tarPos.r[0] + windowOptions.vz_reach.distance * Math.sin(ang)*1.1,
+            y: tarPos.i[0] + windowOptions.vz_reach.distance * Math.cos(ang)*1.1,
+            z: tarPos.c[0]
+        };
+        textLoc = ricToPixel({r: pointText.x, i: pointText.y, c: pointText.z});
+        burn = hcwFiniteBurnOneBurn(objPos, point, windowOptions.vz_reach.time, 0.00001);
+        // console.log(burn);
+        results.push(burn ? {
+            dV: math.norm([burn.r, burn.i, burn.c]),
+            vel: math.norm([burn.F.xd-tarPos.rd[0], burn.F.yd-tarPos.id[0], burn.F.zd-tarPos.cd[0]])
+        } : false)
+        ctx.fillText(burn ? (1000*math.norm([burn.r, burn.i, burn.c])).toFixed(0) : '--', textLoc[0], textLoc[1])
+        ctx.fillText(burn ? (1000*math.norm([burn.F.xd-tarPos.rd[0], burn.F.yd-tarPos.id[0], burn.F.zd-tarPos.cd[0]])).toFixed(0) : '--', textLoc[0], textLoc[1]+15)
+    }
+    let zoneCenter = ricToPixel({r: tarPos.r[0], i: tarPos.i[0], c: tarPos.c[0]});
+    ctx.beginPath();
+    ctx.arc(zoneCenter[0], zoneCenter[1], 10 / 2 / windowOptions.width * cnvs.width,0, 2 * Math.PI);
     ctx.stroke();
 }
 
@@ -2660,11 +2731,13 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = windowOptions.m
         }
         errCount++;
     }
+    if (X[2] > 1 || X[2] < 0) return false;
     return {
         r: a0 * X[2] * tf * Math.cos(X[0][0]) * Math.cos(X[1][0]),
         i: a0 * X[2] * tf * Math.sin(X[0][0]) * Math.cos(X[1][0]),
         c: a0 * X[2] * tf * Math.sin(X[1][0]),
-        t: X[2]
+        t: X[2],
+        F
     }
     // return [Xret,X];
 }
