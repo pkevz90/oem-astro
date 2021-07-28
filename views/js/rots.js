@@ -1123,6 +1123,10 @@ function formatCanvas() {
     cnvs.height = document.documentElement.clientHeight;
     windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode === 'ri ci' || windowOptions.screen.mode === 'ci only' ? 2 : 1) / cnvs
         .width;
+    encoder = new GIFEncoder()
+    encoder.setRepeat(1);
+    encoder.setDelay(33);
+    encoder.setQuality(20);
 }
 
 function drawScreenText() {
