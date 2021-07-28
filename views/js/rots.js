@@ -1231,13 +1231,16 @@ function drawScreenText() {
 
 function drawScreenArrows() {
     let height = windowOptions.screen.mode === 'ri ci' ? cnvs.height / 8 : cnvs.height / 6;
+    let width = cnvs.width > 1000 ? 10 : 5;
     // Draw axis arrows on each graph, RI Frame
     drawArrow({
         origin: [cnvs.width / 2 + windowOptions.origin_it / windowOptions.width / 2 * cnvs.width,
             windowOptions.screen.ri_center
         ],
         height,
-        color: windowOptions.arrowColor
+        color: windowOptions.arrowColor,
+        lineWidth: width,
+        arrowWidth: 2 * width
     });
     drawArrow({
         angle: -90,
@@ -1246,7 +1249,9 @@ function drawScreenArrows() {
             windowOptions.screen.ri_center
         ],
         height,
-        color: windowOptions.arrowColor
+        color: windowOptions.arrowColor,
+        lineWidth: width,
+        arrowWidth: 2 * width
     });
     // CI Frame
     drawArrow({
@@ -1254,7 +1259,9 @@ function drawScreenArrows() {
             windowOptions.screen.ci_center
         ],
         height,
-        color: windowOptions.arrowColor
+        color: windowOptions.arrowColor,
+        lineWidth: width,
+        arrowWidth: 2 * width
     });
     drawArrow({
         angle: -90,
@@ -1263,7 +1270,9 @@ function drawScreenArrows() {
             windowOptions.screen.ci_center
         ],
         height,
-        color: windowOptions.arrowColor
+        color: windowOptions.arrowColor,
+        lineWidth: width,
+        arrowWidth: 2 * width
     });
     // Draw Sun
     let sunAngle = math.squeeze(math.multiply(rotationMatrices(-windowOptions.scenario_time * windowOptions.mm * 180 / Math.PI, 3), math.transpose([windowOptions.initSun])));
@@ -1282,7 +1291,9 @@ function drawScreenArrows() {
         startRic,
         stopRic,
         angle,
-        color: 'rgb(255,128,0)'
+        color: 'rgb(255,128,0)',
+        lineWidth: width / 2,
+        arrowWidth: width
     })
     angle = math.atan2(-stopRic.i, stopRic.c) * 180 / Math.PI;
     drawRicArrow({
@@ -1290,7 +1301,9 @@ function drawScreenArrows() {
         stopRic,
         angle,
         color: 'rgb(255,128,0)',
-        cross: true
+        cross: true,
+        lineWidth: width / 2,
+        arrowWidth: width
     })
 }
 
@@ -1401,7 +1414,7 @@ function drawRicArrow(options) {
         stopRic,
         lineWidth = 10,
         arrowWidth = 20,
-        arrowHeight = 20,
+        arrowHeight = 0.15,
         color = 'black',
         cross = false,
         angle = 45
@@ -1426,18 +1439,18 @@ function drawRicArrow(options) {
 
 function drawArrow(options = {}) {
     let {
-        height = 150, lineWidth = 10, arrowWidth = 20, arrowHeight = 20, color = 'black', origin = [cvns.width /
+        height = 150, lineWidth = 10, arrowWidth = 20, arrowHeight = 0.2, color = 'black', origin = [cvns.width /
             2, cvns.height / 2
         ], angle = 0, backHalf = false
     } = options;
     // console.log(origin);
     let points = [
         [-lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
-        [-lineWidth / 2, -height + arrowHeight],
-        [-arrowWidth / 2, -height + arrowHeight],
+        [-lineWidth / 2, -height + height * 0.2],
+        [-arrowWidth / 2, -height + height * 0.2],
         [0, -height],
-        [arrowWidth / 2, -height + arrowHeight],
-        [lineWidth / 2, -height + arrowHeight],
+        [arrowWidth / 2, -height + height * 0.2],
+        [lineWidth / 2, -height + height * 0.2],
         [lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
         [-lineWidth / 2, 0 + (backHalf ? lineWidth / 2 : 0)],
     ];
