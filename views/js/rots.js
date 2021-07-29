@@ -78,6 +78,7 @@ let windowOptions = {
     relativeData: {
         origin: undefined,
         target: undefined,
+        textSize: 30,
         data: {
             range: {
                 exist: false,
@@ -1180,7 +1181,7 @@ function drawScreenText() {
     ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
         .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height - 20);
     // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
-    ctx.font = '15px Arial';
+    ctx.font = windowOptions.relativeData.textSize + 'px Arial';
     if (windowOptions.relativeData.origin !== undefined && windowOptions.relativeData.target !== undefined && windowOptions.relativeData.origin !== windowOptions.relativeData.target) {
         let relDataIn = getRelativeData(windowOptions.relativeData.origin, windowOptions.relativeData.target);
         let y_location = cnvs.height * 0.1;
@@ -1189,7 +1190,7 @@ function drawScreenText() {
                 ctx.fillText(windowOptions.relativeData.data[relData].name + ': ' + relDataIn[relData].toFixed(
                         1) + ' ' + windowOptions.relativeData.data[relData].units, cnvs.width * 0.01,
                     y_location);
-                y_location += 30;
+                y_location += windowOptions.relativeData.textSize*1.1;
             }
         }
         if (windowOptions.relativeData.data.poca.exist) {
