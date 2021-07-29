@@ -73,6 +73,8 @@ let windowOptions = {
         time: 10800,
         constant: 0.0003
     },
+    showScale: true,
+    logScale: 0.1,
     showFinite: true,
     finiteTarget: true,
     relativeData: {
@@ -1211,23 +1213,24 @@ function drawScreenText() {
             ctx.stroke();
         }
     }
-
+    if (!windowOptions.showScale) return;
     // Draw Scale
-    ctx.strokeStyle = 'RGB(0,0,0,0.5)';
+    ctx.strokeStyle = 'RGB(0,0,0,0.15)';
+    ctx.fillStyle = 'RGB(0,0,0,0.15)';
     ctx.textAlign = 'center';
     ctx.lineWidth = 2;
-    let scaleLength = windowOptions.width * 0.7;
-    let logScale = Math.pow(10, math.floor(math.log(windowOptions.width * 2, 10) - 1));
-    scaleLength = math.ceil(scaleLength / logScale) * logScale;
-    ctx.beginPath();
-    ctx.moveTo(0.97 * cnvs.width, cnvs.height * 0.05);
-    ctx.lineTo(0.97 * cnvs.width, cnvs.height * 0.09);
-    ctx.lineTo(0.97 * cnvs.width, cnvs.height * 0.07);
-    ctx.lineTo(0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.07);
-    ctx.lineTo(0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.09);
-    ctx.lineTo(0.97 * cnvs.width - scaleLength / windowOptions.width / 2 * cnvs.width, cnvs.height * 0.05);
-    ctx.strokeText(scaleLength + ' km', 4 * cnvs.width / 5, cnvs.height * 0.12);
-    ctx.stroke();
+    let logScale = math.floor(math.log10(windowOptions.width / 1.5 / 735.918));
+    let numScale = (windowOptions.width  / 1.5 / 735.918).toFixed(math.abs(logScale));
+    let showScale = numScale;
+    point = ricToPixel({r: 0, i: showScale * 735.918, c: 0});
+    ctx.fillText(showScale + String.fromCharCode(176), point[0], point[1])
+    point = ricToPixel({r: 0, i: 2*showScale * 735.918, c: 0});
+    ctx.fillText(2*showScale + String.fromCharCode(176), point[0], point[1])
+    point = ricToPixel({r: 0, i: -showScale * 735.918, c: 0});
+    ctx.fillText(showScale + String.fromCharCode(176), point[0], point[1])
+    point = ricToPixel({r: 0, i: -2*showScale * 735.918, c: 0});
+    ctx.fillText(2*showScale + String.fromCharCode(176), point[0], point[1])
+    
 }
 
 function drawScreenArrows() {
