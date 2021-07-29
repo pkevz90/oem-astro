@@ -2637,6 +2637,24 @@ function loadFileAsText(fileToLoad) {
         textFromFileLoaded = JSON.parse(textFromFileLoaded);
         satellites = textFromFileLoaded.satellites;
         windowOptions = textFromFileLoaded.windowOptions;
+        if(!windowOptions.vz_reach) {
+            windowOptions.vz_reach = {
+                shown: false,
+                target: 0,
+                object: 1,
+                time: 3600,
+                distance: 10
+            }
+        }
+        if(!windowOptions.kinReach) {
+            windowOptions.kinReach = {
+                shown: false,
+                target: 0,
+                object: 1,
+                time: 3600,
+                burn: 0.5
+            }
+        }
         windowOptions.start_date = new Date(windowOptions.start_date);
         let options;
         for (let ii = 0; ii < satellites.length; ii++) {
