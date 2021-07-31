@@ -67,7 +67,7 @@
             <div style="margin: 20px 5px">Color</sub> <input style="width: 4em;" value="#ff0000" type="color"></div>
             <div style="margin: 20px 5px">Name <input style="width: 6em;" value="" type="text"></div>
             <div style="margin-top: 40px;"><span id="add-satellite-button" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Add Satellite</span></div>
-            <div style="margin-top: 40px;"><span style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Edit</span><select style="font-size: 2em" name="" id="">
+            <div style="margin-top: 40px;"><span onclick="editSatellite(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Update</span><select onchange="openPanel(this)" style="font-size: 2em" name="" id="edit-select">
                 
             </select></div>
             <div style="margin-top: 40px;"><span onclick="closeAll()" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Cancel</span></div>

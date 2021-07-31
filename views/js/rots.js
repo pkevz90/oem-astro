@@ -784,6 +784,44 @@ document.getElementById('add-tran-time').addEventListener('input', event => {
     document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
 })
 
+function editSatellite(button) {
+    if (button.nextSibling.selectedIndex < 0) return;
+    let n = windowOptions.mm;
+    el = button.parentNode.parentNode.parentNode;
+    let state = {
+        a: Number(el.children[1].children[1].children[0].children[0].getElementsByTagName('input')[0].value),
+        x: Number(el.children[1].children[1].children[0].children[1].getElementsByTagName('input')[0].value),
+        y: Number(el.children[1].children[1].children[0].children[2].getElementsByTagName('input')[0].value),
+        b: Number(el.children[1].children[1].children[0].children[3].getElementsByTagName('input')[0].value) * Math
+            .PI / 180,
+        m: Number(el.children[1].children[1].children[0].children[5].getElementsByTagName('input')[0].value) * Math
+            .PI / 180,
+        z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
+    };
+    let color = el.children[2].children[3].getElementsByTagName('input')[0].value;
+    let name = el.children[2].children[4].getElementsByTagName('input')[0].value;
+    let shape = el.children[2].children[1].getElementsByTagName('select')[0].value;
+    let a = Number(el.children[2].children[2].getElementsByTagName('input')[0].value) / 1e6;
+    state = {
+        r: -state.a / 2 * Math.cos(state.b) + state.x,
+        i: state.a * Math.sin(state.b) + state.y,
+        c: state.z * Math.sin(state.m),
+        rd: state.a * n / 2 * Math.sin(state.b),
+        id: state.a * n * Math.cos(state.b) - 1.5 * state.x * n,
+        cd: state.z * n * Math.cos(state.m),
+    }
+    let sat = newSatellite({
+        position: state,
+        color,
+        shape,
+        a,
+        name
+    });
+    satellites[button.nextSibling.selectedIndex] = sat;
+    satellites[button.nextSibling.selectedIndex].calcTraj();
+    document.getElementById('add-satellite-panel').classList.toggle("hidden")
+}
+
 function openPanel(button) {
     if (button.id === 'burns') {
         if (satellites.length === 0) {
@@ -799,12 +837,25 @@ function openPanel(button) {
         satellites.forEach((sat, ii) => {
             addedElement = document.createElement('option');
             addedElement.value = ii;
-            addedElement.textContent = sat.shape;
+            addedElement.textContent = sat.name  ? sat.name : sat.shape;
             addedElement.style.color = sat.color;
             selectEl.appendChild(addedElement);
         })
         selectEl.selectedIndex = chosenSat;
         selectEl.style.color = satellites[chosenSat].color;
+    }
+    else if (button.id === 'add-satellite') {
+        let selectEl = document.getElementById('edit-select');
+        while (selectEl.firstChild) {
+            selectEl.removeChild(selectEl.firstChild);
+        }
+        satellites.forEach((sat, ii) => {
+            addedElement = document.createElement('option');
+            addedElement.value = ii;
+            addedElement.textContent = sat.name  ? sat.name : sat.shape;
+            addedElement.style.color = sat.color;
+            selectEl.appendChild(addedElement);
+        })
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden")
 }
