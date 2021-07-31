@@ -80,7 +80,7 @@ let windowOptions = {
     relativeData: {
         origin: undefined,
         target: undefined,
-        textSize: 30,
+        textSize: 20,
         data: {
             range: {
                 exist: false,
@@ -156,7 +156,7 @@ windowOptions.screen = {
 
 function newSatellite(options) {
     let {
-        color = 'red', shape = "square", size = 0.035, position, burns = [], shownTraj = [], a = 0.00001
+        color = 'red', shape = "square", size = 0.035, position, burns = [], shownTraj = [], a = 0.00001, name="Sat"
     } = options;
     currentPosition = {
         r: [position.r],
@@ -168,6 +168,7 @@ function newSatellite(options) {
     }
     return {
         color,
+        name,
         shape,
         size,
         position,
@@ -574,6 +575,7 @@ document.getElementById('add-satellite-button').addEventListener('click', (click
         z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
     };
     let color = el.children[2].children[3].getElementsByTagName('input')[0].value;
+    let name = el.children[2].children[4].getElementsByTagName('input')[0].value;
     let shape = el.children[2].children[1].getElementsByTagName('select')[0].value;
     let a = Number(el.children[2].children[2].getElementsByTagName('input')[0].value) / 1e6;
     state = {
@@ -588,7 +590,8 @@ document.getElementById('add-satellite-button').addEventListener('click', (click
         position: state,
         color,
         shape,
-        a
+        a,
+        name
     }));
     satellites[satellites.length - 1].calcTraj();
     document.getElementById('add-satellite-panel').classList.toggle("hidden")
@@ -1515,7 +1518,7 @@ function drawSatellite(satellite, cross = false) {
         color = 'blue', shape = 'triangle', size = 0.1, position = {
             r: 0,
             i: 0
-        }, data = false
+        }, data = false, name
     } = satellite;
     let pixelPosition = ricToPixel(getSatCurrentPosition({
         position: satellite.position,
@@ -1713,6 +1716,10 @@ function drawSatellite(satellite, cross = false) {
             });
             break;
     }
+    let letterY = pixelPosition[1] + shapeHeight;
+    // console.log(letterY);
+    ctx.font = `${shapeHeight / 2}px serif`;
+    ctx.fillText(name ? name : '', pixelPosition[0], letterY);
 }
 
 function drawKinematicReach() {
@@ -1866,7 +1873,7 @@ function drawPoints(options = {}) {
     let {
         color,
         points,
-        borderWidth = 3,
+        borderWidth = 2,
         borderColor = 'white',
         ctx = ctx,
         origin
@@ -1884,6 +1891,7 @@ function drawPoints(options = {}) {
     });
     ctx.fill();
     ctx.stroke();
+
 }
 
 function drawBurnArrow(burn, options) {
@@ -2358,7 +2366,7 @@ function drawCurvePoints(ctx, points, options = {}) {
                 // ctx.fillStyle = 'white';
                 // ctx.fillRect(draw_point.x-2.5, draw_point.y-2.5, 5, 5);
                 ctx.fillStyle = color;
-                ctx.fillRect(draw_point.x - 1.5, draw_point.y - 1.5, 3, 3);
+                ctx.fillRect(draw_point.x - 0.75, draw_point.y - 0.75, 1.5, 1.5);
             }
         }
     })
@@ -2376,6 +2384,8 @@ function drawBurns(satellite, options = {}) {
     }
     satellite.burns.forEach(burn => {
         if (burn.time < windowOptions.scenario_time) {
+            ctx.globalAlpha = Math.exp(-windowOptions.passiveDropoff.constant * 0.5*(
+                windowOptions.scenario_time - burn.time));
             position = satellite.getCurrentState({
                 time: burn.time
             });
@@ -2396,6 +2406,8 @@ function drawBurns(satellite, options = {}) {
             }
         }
     })
+    
+    ctx.globalAlpha = 1;
 }
 
 function calcBurns(burn, cross = false) {
