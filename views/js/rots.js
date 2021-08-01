@@ -142,7 +142,8 @@ let windowOptions = {
         object: 1,
         time: 3600,
         distance: 10
-    }
+    },
+    panelOpen: false
 }
 formatCanvas();
 windowOptions.screen = {
@@ -196,6 +197,7 @@ window.addEventListener("resize", formatCanvas)
 window.addEventListener("keydown", keydownFunction);
 
 function keydownFunction(e) {
+    if (windowOptions.panelOpen) return;
     if (e.shiftKey && e.ctrlKey && e.key === 'S') {
         satellites.push(newSatellite({
             position: {
@@ -594,7 +596,7 @@ document.getElementById('add-satellite-button').addEventListener('click', (click
         name
     }));
     satellites[satellites.length - 1].calcTraj();
-    document.getElementById('add-satellite-panel').classList.toggle("hidden")
+    closeAll();
 })
 document.getElementById('data-button').addEventListener('click', (click) => {
     if (satellites.length < 2) {
@@ -626,7 +628,7 @@ document.getElementById('data-button').addEventListener('click', (click) => {
     originSel.value = windowOptions.relativeData.origin !== undefined ? windowOptions.relativeData.origin : 0;
     originSel.style.color = windowOptions.relativeData.origin !== undefined ? satellites[windowOptions.relativeData.origin].color : satellites[0].color;
 
-    document.getElementById('data-panel').classList.toggle("hidden")
+    document.getElementById('data-panel').classList.toggle("hidden");
 })
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
     let el = click.target;
@@ -654,7 +656,7 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     sunC = Number(el[1].children[5].getElementsByTagName('input')[0].value) * Math.PI / 180;
     windowOptions.initSun = [-Math.cos(sunIR) * Math.cos(sunC), Math.sin(sunIR) * Math.cos(sunC), Math.sin(sunC)];
     windowOptions.start_date = new Date(date);
-    document.getElementById('options-panel').classList.toggle("hidden")
+    closeAll();
 })
 document.getElementById('confirm-data-button').addEventListener('click', (click) => {
     let el = click.target;
@@ -665,7 +667,7 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
     windowOptions.relativeData.data.sunAngle.exist = el.parentNode.children[4].children[0].checked;
     windowOptions.relativeData.origin = el.parentNode.parentNode.children[0].children[1].value;
     windowOptions.relativeData.target = el.parentNode.parentNode.children[0].children[3].value;
-    document.getElementById('data-panel').classList.toggle("hidden")
+    closeAll();
 })
 document.getElementById('maneuver-type-input').addEventListener('change', (click) => {
     el = click.target;
@@ -784,6 +786,31 @@ document.getElementById('add-tran-time').addEventListener('input', event => {
     document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
 })
 
+function parseState(button) {
+    let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input');
+    let text = document.getElementById('parse-text').value;
+    text = text.split(/ +/);
+    if (text[0] === "") text.shift();
+    if (text[text.length - 1] === "") text.pop();
+    text = text.filter(t => {
+        return Number(t) !== NaN;
+    });
+    text = text.map(t => Number(t));
+    if (text.length < 6) {
+        alert('Please include all six states (R I C Rd Id Cd)');
+        return;
+    } 
+    text.forEach((t, ii) => {
+        if (ii > 2) {
+            stateInputs[ii].value = 1000 * t;
+        }
+        else {
+            stateInputs[ii].value = t;
+        }
+    })
+    initStateFunction(stateInputs[0]);
+}
+
 function editSatellite(button) {
     if (button.nextSibling.selectedIndex < 0) return;
     let n = windowOptions.mm;
@@ -857,7 +884,8 @@ function openPanel(button) {
             selectEl.appendChild(addedElement);
         })
     }
-    document.getElementById(button.id + '-panel').classList.toggle("hidden")
+    document.getElementById(button.id + '-panel').classList.toggle("hidden");
+    windowOptions.panelOpen = true;
 }
 
 function closeAll() {
@@ -866,6 +894,7 @@ function closeAll() {
     for (let jj = 0; jj < buttons.length; jj++) {
         buttons[jj].classList.add('hidden');
     }
+    windowOptions.panelOpen = false;
 }
 
 function recordFunction(button) {
@@ -904,6 +933,8 @@ function addKeyFrame() {
         outString +=`Time: ${(frame.time / 60).toFixed(0)} min  Width: ${(2*frame.width).toFixed(0)} km\n`
     })
     alert(outString)
+    
+    closeAll();
 }
 
 function mouseWheelFunction(event) {
