@@ -847,7 +847,7 @@ function editSatellite(button) {
     });
     satellites[button.nextSibling.selectedIndex] = sat;
     satellites[button.nextSibling.selectedIndex].calcTraj();
-    document.getElementById('add-satellite-panel').classList.toggle("hidden")
+    closeAll();
 }
 
 function openPanel(button) {
@@ -886,6 +886,9 @@ function openPanel(button) {
             addedElement.style.color = sat.color;
             selectEl.appendChild(addedElement);
         })
+    }
+    else if (button.id === 'options') {
+        let inputs = document.getElementById('options-panel').getElementsByTagName('input');
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     windowOptions.panelOpen = true;
