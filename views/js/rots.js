@@ -1272,6 +1272,8 @@ function drawScreenText() {
     if (windowOptions.relativeData.origin !== undefined && windowOptions.relativeData.target !== undefined && windowOptions.relativeData.origin !== windowOptions.relativeData.target) {
         let relDataIn = getRelativeData(windowOptions.relativeData.origin, windowOptions.relativeData.target);
         let y_location = cnvs.height * 0.1;
+        ctx.fillText(satellites[windowOptions.relativeData.origin].name + String.fromCharCode(8594) + satellites[windowOptions.relativeData.target].name, cnvs.width * 0.01, y_location);
+        y_location += windowOptions.relativeData.textSize*1.1;
         for (relData in windowOptions.relativeData.data) {
             if (windowOptions.relativeData.data[relData].exist) {
                 ctx.fillText(windowOptions.relativeData.data[relData].name + ': ' + relDataIn[relData].toFixed(
