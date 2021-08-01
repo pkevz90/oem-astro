@@ -209,7 +209,8 @@ function keydownFunction(e) {
                 id: 0
             },
             color: `rgb(${math.random() * 155},${math.random() * 155},${math.random() * 155})`,
-            shape: Math.random() < 0.33 ? 'square' : Math.random() < 0.5 ? 'triangle' : 'up-triangle'
+            shape: Math.random() < 0.33 ? 'square' : Math.random() < 0.5 ? 'triangle' : 'up-triangle',
+            name: `Sat-${satellites.length+1}`
         }))
         satellites[satellites.length - 1].calcTraj();
     }
@@ -614,12 +615,12 @@ document.getElementById('data-button').addEventListener('click', (click) => {
     satellites.forEach((sat, ii) => {
         addedElement = document.createElement('option');
         addedElement.value = ii;
-        addedElement.textContent = sat.shape;
+        addedElement.textContent = sat.name ? sat.name : sat.shape;
         addedElement.style.color = sat.color;
         originSel.appendChild(addedElement);
         addedElement = document.createElement('option');
         addedElement.value = ii;
-        addedElement.textContent = sat.shape;
+        addedElement.textContent = sat.name ? sat.name : sat.shape;
         addedElement.style.color = sat.color;
         targetSel.appendChild(addedElement);
     })
@@ -873,6 +874,8 @@ function openPanel(button) {
     }
     else if (button.id === 'add-satellite') {
         let selectEl = document.getElementById('edit-select');
+        selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = `Sat-${satellites.length+1}`;
+        document.getElementById('parse-text').value = "";
         while (selectEl.firstChild) {
             selectEl.removeChild(selectEl.firstChild);
         }
