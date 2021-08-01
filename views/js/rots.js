@@ -889,6 +889,14 @@ function openPanel(button) {
     }
     else if (button.id === 'options') {
         let inputs = document.getElementById('options-panel').getElementsByTagName('input');
+        let dateDiff = new Date(windowOptions.start_date.toString().split('GMT')[0]).getTimezoneOffset()*60*1000;
+        dateDiff = new Date(windowOptions.start_date-dateDiff).toISOString().substr(0,19);
+        inputs[0].value = dateDiff;
+        inputs[1].value = windowOptions.scenario_length;
+        inputs[2].value = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3).toFixed(2);
+        inputs[3].value = (24 * math.atan2(windowOptions.initSun[1], -windowOptions.initSun[0]) / 2 / Math.PI).toFixed(0) + '00';
+        if (inputs[3].value.length < 4) inputs[3].value = '0' + inputs[3].value;
+        inputs[4].value = 180 * math.atan2(windowOptions.initSun[2], math.norm(windowOptions.initSun.slice(0,2))) / Math.PI;
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     windowOptions.panelOpen = true;
