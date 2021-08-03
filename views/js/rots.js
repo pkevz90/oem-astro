@@ -10,7 +10,6 @@ let windowOptions = {
     center: [0, 0],
     width: 120,
     width_des: 120,
-    sunInit: 0,
     initSun: [-1, 0, 0], // [R, I, C]
     w_h_ratio: cnvs.width / cnvs.height,
     mousePosition: {
@@ -2865,7 +2864,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = windowOptions.m
     if (X[2] > 1) {
         return false;
     }
-    let errCount = 0;
+    let errCount = 0, sInv;
     while (math.norm(math.squeeze(dX)) > 1e-6) {
         F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, a0, n);
         yErr = [
@@ -2874,6 +2873,8 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = windowOptions.m
             [stateFinal[2][0] - F.z]
         ];
         S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, n);
+        // sInv = math.multiply(math.transpose(S), math.inv(math.multiply(S, math.transpose(S))));
+        // dX = math.multiply(sInv, yErr);
         dX = math.multiply(math.inv(S), yErr);
         // console.log(X,F)
         X = math.add(X, dX)
@@ -3146,19 +3147,19 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0, n = windowOptions.mm) {
 function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
     let m1, m2, mC, mFinal = [];
     //alpha
-    m1 = oneBurnFiniteHcw(state, alpha, phi, tB, tF, a, n);
+    let phi2 = math.abs(Math.cos(phi)) < 1e-6 ? 89 * Math.PI / 180 : phi;
+    m1 = oneBurnFiniteHcw(state, alpha, phi2, tB, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
         [m1.z]
     ];
-    m2 = oneBurnFiniteHcw(state, alpha + 0.01, phi, tB, tF, a, n);
+    m2 = oneBurnFiniteHcw(state, alpha + 0.01, phi2, tB, tF, a, n);
     m2 = [
         [m2.x],
         [m2.y],
         [m2.z]
     ];
-    // console.log(m1,m2)
     mC = math.dotDivide(math.subtract(m2, m1), 0.01);
     mFinal = mC;
     //phi
