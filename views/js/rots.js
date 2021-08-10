@@ -2860,6 +2860,15 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = windowOptions.m
         [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
         [math.norm(math.squeeze(dv1)) / a0 / tf]
     ];
+    if (Xret[2] < 1e-6) {
+        return {
+            r: 0,
+            i: 0,
+            c: 0,
+            t: [0],
+            F: oneBurnFiniteHcw(stateInit, Xret[0][0], Xret[1][0], Xret[2][0], tf, a0, n)
+        }
+    }
     let X = Xret.slice();
     if (X[2] > 1) {
         return false;
@@ -2890,7 +2899,8 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = windowOptions.m
         i: a0 * X[2] * tf * Math.sin(X[0][0]) * Math.cos(X[1][0]),
         c: a0 * X[2] * tf * Math.sin(X[1][0]),
         t: X[2],
-        F
+        F,
+        X
     }
     // return [Xret,X];
 }
@@ -2928,6 +2938,7 @@ function hcwFiniteBurnTwoBurn(stateInit, stateFinal, tf, a0, n = windowOptions.m
         [Math.atan2(dv2[2], math.norm([dv2[0][0], dv2[1][0]]))],
         [math.norm(math.squeeze(dv2)) / a0 / tf]
     ];
+    // console.log(X);
     while (math.norm(math.squeeze(dX)) > 1e-6) {
         F = twoBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[3][0], X[4][0], X[2][0], X[5][0], tf, a0, n);
         yErr = [
@@ -2974,10 +2985,12 @@ function calcTwoBurn(options = {}) {
         stateI,
         a = 0.00001,
         tf = 7200 * 1.5,
-        startTime
+        startTime = 0,
+        rawData = false
     } = options;
     outBurns = [];
     let X = hcwFiniteBurnTwoBurn(stateI, stateF, tf, a);
+    // console.log(X, tf, X.burn1.t < 0, X.burn2.t < 0, (X.burn1.t + X.burn2.t) > tf);
     if (X.burn1.t < 0 || X.burn2.t < 0 || (X.burn1.t + X.burn2.t) > tf) {
         // Find transfer time that works if original returns no solution
         let ii = tf;
@@ -3007,10 +3020,10 @@ function calcTwoBurn(options = {}) {
     let alpha = math.atan2(X.burn1.i, X.burn1.r);
     let phi = math.atan2(X.burn1.c, math.norm([X.burn1.r, X.burn1.i]));
     let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf, tf, a, windowOptions.mm);
-    outBurns.push({
+    outBurns.push(rawData ? {alpha, phi, t: X.burn1.t} : {
         time: startTime,
         direction: {
-            r: 0,
+            r: X.burn1.t * a,
             i: 0,
             z: 0
         },
@@ -3027,10 +3040,10 @@ function calcTwoBurn(options = {}) {
     alpha = math.atan2(X.burn2.i, X.burn2.r);
     phi = math.atan2(X.burn2.c, math.norm([X.burn2.r, X.burn2.i]));
     res = oneBurnFiniteHcw(res, alpha, phi, 0.5, X.burn2.t * 2, a, windowOptions.mm);
-    outBurns.push({
+    outBurns.push(rawData ? {alpha, phi, t: X.burn2.t} : {
         time: startTime + tf - X.burn2.t,
         direction: {
-            r: 0,
+            r: X.burn2.t * a,
             i: 0,
             z: 0
         },
@@ -3043,77 +3056,10 @@ function calcTwoBurn(options = {}) {
             }
         }
     })
-    console.log(X);
     return outBurns;
 }
 
-function testTwoBurn(options = {}) {
-    let tf = 7200 * 2;
-    let a = 0.00001;
-
-    let stateF = {
-        x: 0,
-        y: 0,
-        z: 0,
-        xd: 0,
-        yd: 0,
-        zd: 0
-    };
-    let stateI = {
-        x: satellites[0].currentPosition.r[0],
-        y: satellites[0].currentPosition.i[0],
-        z: satellites[0].currentPosition.c[0],
-        xd: satellites[0].currentPosition.rd[0],
-        yd: satellites[0].currentPosition.id[0],
-        zd: satellites[0].currentPosition.cd[0]
-    };
-    console.log(stateF, stateI, a, tf);
-    let X = hcwFiniteBurnTwoBurn(stateI, stateF, tf, a);
-    if (X.burn1.t < 0 || X.burn2.t < 0) return false;
-    let alpha = math.atan2(X.burn1.i, X.burn1.r);
-    let phi = math.atan2(X.burn1.c, math.norm([X.burn1.r, X.burn1.i]));
-    let res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / tf, tf, a, windowOptions.mm);
-    satellites[0].burns.push({
-        time: windowOptions.scenario_time_des,
-        direction: {
-            r: 0,
-            i: 0,
-            z: 0
-        },
-        waypoint: {
-            tranTime: tf,
-            target: {
-                r: res.x,
-                i: res.y,
-                c: res.z
-            }
-        }
-    })
-    res = oneBurnFiniteHcw(stateI, alpha, phi, X.burn1.t / (tf - X.burn2.t), tf - X.burn2.t, a, windowOptions.mm);
-    alpha = math.atan2(X.burn2.i, X.burn2.r);
-    phi = math.atan2(X.burn2.c, math.norm([X.burn2.r, X.burn2.i]));
-    res = oneBurnFiniteHcw(res, alpha, phi, 0.5, X.burn2.t * 2, a, windowOptions.mm);
-    satellites[0].burns.push({
-        time: windowOptions.scenario_time_des + tf - X.burn2.t,
-        direction: {
-            r: 0,
-            i: 0,
-            z: 0
-        },
-        waypoint: {
-            tranTime: X.burn2.t * 2,
-            target: {
-                r: res.x,
-                i: res.y,
-                c: res.z
-            }
-        }
-    })
-    satellites[0].generateBurns();
-    satellites[0].calcTraj();
-}
-
-function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0, n = windowOptions.mm) {
+function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001, n = windowOptions.mm) {
     x0 = state.x;
     xd0 = state.xd;
     y0 = state.y;
@@ -3198,7 +3144,7 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
 function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, tF, n) {
     let m1, m2, mC, mFinal = [];
     //alpha1
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1 - 0.0001, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -3216,10 +3162,10 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0001);
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = mC;
     //phi1
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1 - 0.0001, alpha2, phi2, tB1, tB2, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -3237,10 +3183,10 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0001);
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = math.concat(mFinal, mC);
     //tB1
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1 - 0.0001, tB2, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -3258,10 +3204,10 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0001);
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = math.concat(mFinal, mC);
     //alpha2
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2 - 0.0001, phi2, tB1, tB2, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -3279,10 +3225,10 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0001);
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = math.concat(mFinal, mC);
     //phi2
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2 - 0.0001, tB1, tB2, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -3300,10 +3246,10 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0001);
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = math.concat(mFinal, mC);
     //tB2
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2 - 0.0001, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -3321,7 +3267,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0001);
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = math.concat(mFinal, mC);
     return mFinal;
 }
@@ -3424,4 +3370,181 @@ function initStateFunction(el) {
         nodes.children[0].children[4].getElementsByTagName('input')[0].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / windowOptions.mm, 2))).toFixed(3);
     }
     
+}
+
+function optimizeBurns3(options = {}) {
+    let {stateI = {r: [-0], i: [400], c: [200], rd: [0], id: [0.00], cd: [0]}, 
+        stateF = {r: [0], i: [-10], c: [0], rd: [0], id: [0], cd: [0]}, 
+        limits = [60 ,   60,  30, 30],
+        tf= 4*3600,
+        a = 0.00001,
+        time = windowOptions.scenario_time_des,
+        sat,
+        limit= 2000} = options;
+    stateI = [stateI.r, stateI.i, stateI.c, stateI.rd, stateI.id, stateI.cd];
+    stateF = [stateF.r, stateF.i, stateF.c, stateF.rd, stateF.id, stateF.cd];
+    if (sat !== undefined) {
+        stateI = satellites[sat].getCurrentState();
+        stateI = [stateI.r, stateI.i, stateI.c, stateI.rd, stateI.id, stateI.cd];
+        a = satellites[sat].a;
+    }
+    F = hcwFiniteBurnOneBurn({x: stateI[0][0], y: stateI[1][0], z: stateI[2][0], xd: stateI[3][0], yd: stateI[4][0], zd: stateI[5][0] }, 
+        {x: stateF[0][0], y: stateF[1][0], z: stateF[2][0], xd: stateF[3][0], yd: stateF[4][0], zd: stateF[5][0] }, tf, a );
+    let X = F.X.slice();
+    X[2][0] = X[2][0] * 3;
+    let state1 = oneBurnFiniteHcw({x: stateI[0][0], y: stateI[1][0], z: stateI[2][0], xd: stateI[3][0], yd: stateI[4][0], zd: stateI[5][0] }, X[0][0], X[1][0], X[2][0], tf / 3, a);
+    // state1 = [[state1.x-20*(Math.random()-0.5)], [state1.y+20*(Math.random()-0.5)], [state1.z+20*(Math.random()-0.5)]]
+    state1 = [[state1.x-10*(Math.random()-0.5)], [state1.y+10*(Math.random()-0.5)], [state1.z+10*(Math.random()-0.5)]]
+    X[2][0] /= 2;
+    state2 = oneBurnFiniteHcw({x: stateI[0][0], y: stateI[1][0], z: stateI[2][0], xd: stateI[3][0], yd: stateI[4][0], zd: stateI[5][0] }, X[0][0], X[1][0], X[2][0], 2 * tf / 3, a);
+    // state2 = [[state2.x+20*(Math.random()-0.5)], [state2.y+20*(Math.random()-0.5)], [state2.z+20*(Math.random()-0.5)]]
+    state2 = [[state2.x+10*(Math.random()-0.5)], [state2.y+10*(Math.random()-0.5)], [state2.z+10*(Math.random()-0.5)]]
+    let phi = phiMatrix(tf / 3);
+    // return;
+    let objFun = (state1obj, state2obj, burns = false) => {
+        state1obj = math.squeeze(state1obj);
+        state2obj = math.squeeze(state2obj);
+        state1obj = {x: state1obj[0], y: state1obj[1], z: state1obj[2], xd: 0, yd: 0, zd: 0};
+        state2obj = {x: state2obj[0], y: state2obj[1], z: state2obj[2], xd: 0, yd: 0, zd: 0};
+        
+        let stateIobj = {x: stateI[0][0], y: stateI[1][0], z: stateI[2][0], xd: stateI[3][0], yd: stateI[4][0], zd: stateI[5][0]};
+        let stateFobj = {x: stateF[0][0], y: stateF[1][0], z: stateF[2][0], xd: stateF[3][0], yd: stateF[4][0], zd: stateF[5][0]};
+        let dV = 0, dVburn = [], F;
+        F = hcwFiniteBurnOneBurn(stateIobj, state1obj, tf / 3, a );
+        dVburn.push(F.t[0]*tf / 3*a);
+        dV += Math.abs(F.t[0]*tf / 3*a);
+        F = hcwFiniteBurnOneBurn(F.F, state2obj, tf / 3, a );
+        // console.log(F);
+        dV += Math.abs(F.t[0]*tf / 3*a);
+        dVburn.push(F.t[0]*tf / 3*a);
+        F = hcwFiniteBurnOneBurn(F.F, stateFobj, tf / 3, a );
+        dV += Math.abs(F.t[0]*tf / 3*a);
+        dVburn.push(F.t[0]*tf / 3*a);
+        dV += Math.abs(math.norm([F.F.xd, F.F.yd, F.F.zd]));
+        dVburn.push(math.norm([F.F.xd, F.F.yd, F.F.zd]));
+        
+        let x = 0;
+        limits.forEach((limit, ii) => {
+            let lim = -limit + 1000*Math.abs(dVburn[[ii]]);
+            x += lim < 0 ? 0 : 0.1 * Math.pow(lim, 1.5);
+        })
+        // x += (10 - state1obj.z) < 0 ? 0 :  0.01 * (10 -state1obj.z);
+        return burns ? dVburn : dV + x;
+        
+    }
+    let objFunImpulse = (state1obj, state2obj, burns = false) => {
+        let vIobj, state1vobj, state1vobjF, state2vobjF, state2vobj, stateFvobj,  dV = 0, dVburn = [], pow = 6;
+        vIobj = math.multiply(math.inv(phi.rv),math.subtract(state1obj, math.multiply(phi.rr, stateI.slice(0,3))));
+        state1vobj = math.add(math.multiply(phi.vr, stateI.slice(0,3)), math.multiply(phi.vv, vIobj));
+        dVburn.push(math.norm(math.squeeze(math.subtract(vIobj, stateI.slice(3,6)))));
+        dV += Math.pow(dVburn[dVburn.length - 1], pow);
+        
+        state1vobjF = math.multiply(math.inv(phi.rv),math.subtract(state2obj, math.multiply(phi.rr, state1obj)));
+        state2vobj = math.add(math.multiply(phi.vr, state1obj), math.multiply(phi.vv, state1vobjF));
+        dVburn.push(math.norm(math.squeeze(math.subtract(state1vobjF, state1vobj))));
+        dV += Math.pow(dVburn[dVburn.length - 1], pow);
+
+        state2vobjF = math.multiply(math.inv(phi.rv),math.subtract(stateF.slice(0,3), math.multiply(phi.rr, state2obj)));
+        stateFvobj = math.add(math.multiply(phi.vr, state2obj), math.multiply(phi.vv, state2vobjF));
+        dVburn.push(math.norm(math.squeeze(math.subtract(state2vobjF, state2vobj))));
+        dV += Math.pow(dVburn[dVburn.length - 1], pow);
+        dVburn.push(math.norm(math.squeeze(math.subtract(stateFvobj, stateF.slice(3,6)))));
+        dV += Math.pow(dVburn[dVburn.length - 1], pow);
+        return burns ? dVburn : Math.pow(dV, 1/pow);
+    }
+    let gradientFun = (state1grad, state2grad, finite = false) => {
+        let x = math.squeeze([state1grad[0], state1grad[1], state1grad[2], state2grad[0], state2grad[1], state2grad[2]]);
+        let dx = [], xCopy, xOrig;
+        let origObj = finite ? objFun(state1grad, state2grad) : objFunImpulse(state1grad, state2grad);
+        for (let ii = 0; ii < x.length; ii++) {
+            xOrig = x.slice();
+            xCopy = x.slice();
+            xCopy[ii] += 0.01;
+            xOrig[ii] -= 0.01;
+            origObj = finite ? objFun([[xOrig[0]], [xOrig[1]], [xOrig[2]]], [[xOrig[3]],[xOrig[4]], [xOrig[5]]]) : objFunImpulse([[xOrig[0]], [xOrig[1]], [xOrig[2]]], [[xOrig[3]],[xOrig[4]], [xOrig[5]]]);
+            copyObj = finite ? objFun([[xCopy[0]], [xCopy[1]], [xCopy[2]]], [[xCopy[3]],[xCopy[4]], [xCopy[5]]]) : objFunImpulse([[xCopy[0]], [xCopy[1]], [xCopy[2]]], [[xCopy[3]],[xCopy[4]], [xCopy[5]]]);
+            dx.push((copyObj - origObj) / 0.01)
+        }
+        return dx;
+    }
+
+    let lr = 500;
+    for (let ii = 1; ii <= limit; ii++) {
+        lr *= 0.9995;
+        gradX = gradientFun(state1, state2, false);
+        // gradX = math.dotDivide(gradX, math.norm(gradX));
+        state1[0][0] -= lr*gradX[0];
+        state1[1][0] -= lr*gradX[1];
+        state1[2][0] -= lr*gradX[2];
+        state2[0][0] -= lr*gradX[3];
+        state2[1][0] -= lr*gradX[4];
+        state2[2][0] -= lr*gradX[5];
+        if (ii % 100 === 0 ) {
+            console.log(ii, state1, (objFunImpulse(state1, state2)*1000).toFixed(2), objFunImpulse(state1, state2, true), math.norm(gradientFun(state1, state2, false)));
+        }
+    }
+    lr = 2;
+    try {
+    for (let ii = 1; ii <= limit; ii++) {
+        lr *= 0.99995;
+        gradX = gradientFun(state1, state2, true);
+        // console.log(objFun(state1, state2, true));
+        // console.log(state1[0][0], state1[1][0], state1[2][0], state2[0][0], state2[1][0], state2[2][0]);
+        // gradX = math.dotDivide(gradX, math.norm(gradX));
+        state1[0][0] -= Math.abs(lr*gradX[0]) > 1 ? Math.sign(lr*gradX[0]) : lr*gradX[0];
+        state1[1][0] -= Math.abs(lr*gradX[1]) > 1 ? Math.sign(lr*gradX[1]) : lr*gradX[1];
+        state1[2][0] -= Math.abs(lr*gradX[2]) > 1 ? Math.sign(lr*gradX[2]) : lr*gradX[2];
+        state2[0][0] -= Math.abs(lr*gradX[3]) > 1 ? Math.sign(lr*gradX[3]) : lr*gradX[3];
+        state2[1][0] -= Math.abs(lr*gradX[4]) > 1 ? Math.sign(lr*gradX[4]) : lr*gradX[4];
+        state2[2][0] -= Math.abs(lr*gradX[5]) > 1 ? Math.sign(lr*gradX[5]) : lr*gradX[5];
+        // console.log(state1[0][0], state1[1][0], state1[2][0], state2[0][0], state2[1][0], state2[2][0]);
+        if (ii % 100 === 0 ) {
+            console.log(ii, state1, (objFun(state1, state2)*1000).toFixed(2), objFun(state1, state2, true), math.norm(gradientFun(state1, state2, true)));
+        }
+    }
+    }
+    catch (e) {
+        console.log(state1, state2, lr);
+        console.info('No solution found');
+        console.info(e);
+        return;
+    };
+    let dVs = objFun(state1, state2,  true);
+    if (sat !== undefined) {
+        satellites[sat].burns.push({
+            direction: {r: 0, i: 0, c: 0},
+            time,
+            waypoint: {
+                target: {r: state1[0][0], i: state1[1][0], c: state1[2][0]},
+                tranTime: tf / 3
+            }
+        },{
+            direction: {r: 0, i: 0, c: 0},
+            time: time+tf/3,
+            waypoint: {
+                target: {r: state2[0][0], i: state2[1][0], c: state2[2][0]},
+                tranTime: tf / 3
+            }
+        },{
+            direction: {r: 0, i: 0, c: 0},
+            time: time+2*tf/3,
+            waypoint: {
+                target: {r: stateF[0][0], i: stateF[1][0], c: stateF[2][0]},
+                tranTime: tf / 3
+            }
+        },{
+            direction: {r: 0, i: 0, c: 0},
+            time: time+3*tf/3 - dVs[3] / a / 2,
+            waypoint: {
+                target: {r: stateF[0][0], i: stateF[1][0], c: stateF[2][0]},
+                tranTime: tf / 3
+            }
+        });
+        satellites[sat].generateBurns();
+        satellites[sat].calcTraj();
+        return;
+    }
+    satellites.push(newSatellite({a, position: {r: stateI[0][0], i: stateI[1][0], c: stateI[2][0], rd: stateI[3][0], id: stateI[4][0], cd: stateI[5][0]}}));
+    satellites[satellites.length - 1].calcTraj();
+    return;
 }

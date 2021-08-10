@@ -32,6 +32,3 @@ document.getElementById('canvas-div').addEventListener('touchmove', event => {
     }
 })
 
-window.onwheel = () => {
-    console.log('hey');
-}
