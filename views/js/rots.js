@@ -80,6 +80,8 @@ let windowOptions = {
         origin: undefined,
         target: undefined,
         textSize: 20,
+        positionX: 20,
+        positionY: 100,
         data: {
             range: {
                 exist: false,
@@ -95,6 +97,11 @@ let windowOptions = {
                 exist: false,
                 units: 'deg',
                 name: 'CATS'
+            },
+            relativeVelocity: {
+                exist: false,
+                units: 'm/s',
+                name: 'RelVel'
             },
             poca: {
                 exist: false,
@@ -660,11 +667,15 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
 })
 document.getElementById('confirm-data-button').addEventListener('click', (click) => {
     let el = click.target;
-    windowOptions.relativeData.data.range.exist = el.parentNode.children[0].children[0].checked;
-    windowOptions.relativeData.data.rangeRate.exist = el.parentNode.children[1].children[0].checked;
-    windowOptions.relativeData.data.tanRate.exist = el.parentNode.children[2].children[0].checked;
-    windowOptions.relativeData.data.poca.exist = el.parentNode.children[3].children[0].checked;
-    windowOptions.relativeData.data.sunAngle.exist = el.parentNode.children[4].children[0].checked;
+    let inputs = el.parentNode.getElementsByTagName('input');
+    windowOptions.relativeData.data.range.exist = inputs[0].checked;
+    windowOptions.relativeData.data.rangeRate.exist = inputs[1].checked;
+    windowOptions.relativeData.data.relativeVelocity.exist = inputs[2].checked;
+    windowOptions.relativeData.data.poca.exist = inputs[3].checked;
+    windowOptions.relativeData.data.sunAngle.exist = inputs[4].checked;
+    windowOptions.relativeData.positionX = !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value)*cnvs.width / 100 : windowOptions.relativeData.positionX;
+    windowOptions.relativeData.positionY = !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value)*cnvs.width / 100 : windowOptions.relativeData.positionY;
+    windowOptions.relativeData.textSize = !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : windowOptions.relativeData.textSize;
     windowOptions.relativeData.origin = el.parentNode.parentNode.children[0].children[1].value;
     windowOptions.relativeData.target = el.parentNode.parentNode.children[0].children[3].value;
     closeAll();
@@ -1287,13 +1298,13 @@ function drawScreenText() {
     ctx.font = windowOptions.relativeData.textSize + 'px Arial';
     if (windowOptions.relativeData.origin !== undefined && windowOptions.relativeData.target !== undefined && windowOptions.relativeData.origin !== windowOptions.relativeData.target) {
         let relDataIn = getRelativeData(windowOptions.relativeData.origin, windowOptions.relativeData.target);
-        let y_location = cnvs.height * 0.1;
-        ctx.fillText(satellites[windowOptions.relativeData.origin].name + String.fromCharCode(8594) + satellites[windowOptions.relativeData.target].name, cnvs.width * 0.01, y_location);
+        let y_location = windowOptions.relativeData.positionY;
+        ctx.fillText(satellites[windowOptions.relativeData.origin].name + String.fromCharCode(8594) + satellites[windowOptions.relativeData.target].name, windowOptions.relativeData.positionX, y_location);
         y_location += windowOptions.relativeData.textSize*1.1;
         for (relData in windowOptions.relativeData.data) {
             if (windowOptions.relativeData.data[relData].exist) {
                 ctx.fillText(windowOptions.relativeData.data[relData].name + ': ' + relDataIn[relData].toFixed(
-                        1) + ' ' + windowOptions.relativeData.data[relData].units, cnvs.width * 0.01,
+                        1) + ' ' + windowOptions.relativeData.data[relData].units, windowOptions.relativeData.positionX,
                     y_location);
                 y_location += windowOptions.relativeData.textSize*1.1;
             }
@@ -2593,7 +2604,8 @@ function getRelativeData(n_target, n_origin) {
         range,
         poca,
         toca,
-        tanRate
+        tanRate,
+        relativeVelocity: math.norm(relVel)*1000
     }
 }
 
@@ -3374,7 +3386,7 @@ function initStateFunction(el) {
 
 function optimizeBurns3(options = {}) {
     let {stateI = {r: [-0], i: [400], c: [200], rd: [0], id: [0.00], cd: [0]}, 
-        stateF = {r: [0], i: [-10], c: [0], rd: [0], id: [0], cd: [0]}, 
+        stateF = {r: [-7.50], i: [-7.5], c: [10], rd: [0], id: [0], cd: [0]}, 
         limits = [60 ,   60,  30, 30],
         tf= 4*3600,
         a = 0.00001,
@@ -3426,7 +3438,7 @@ function optimizeBurns3(options = {}) {
         let x = 0;
         limits.forEach((limit, ii) => {
             let lim = -limit + 1000*Math.abs(dVburn[[ii]]);
-            x += lim < 0 ? 0 : 0.1 * Math.pow(lim, 1.5);
+            x += lim < 0 ? 0 : 0.5 * Math.pow(lim, 1.5);
         })
         // x += (10 - state1obj.z) < 0 ? 0 :  0.01 * (10 -state1obj.z);
         return burns ? dVburn : dV + x;
@@ -3470,7 +3482,7 @@ function optimizeBurns3(options = {}) {
 
     let lr = 500;
     for (let ii = 1; ii <= limit; ii++) {
-        lr *= 0.9995;
+        lr *= 0.99985;
         gradX = gradientFun(state1, state2, false);
         // gradX = math.dotDivide(gradX, math.norm(gradX));
         state1[0][0] -= lr*gradX[0];
