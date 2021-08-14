@@ -224,19 +224,15 @@
     </div>
     <div id="data-panel" class="hidden panel">
         <div>
-            <div style="font-size:2em; margin: 4%; font-weight: bold">Origin</div>
-            <select id="origin-select" style="font-size: 2em">
-            </select>
-            <div style="font-size:2em; margin: 4%; font-weight: bold">Target</div>
-            <select id="target-select" style="font-size: 2em">
+            <select id="data-select" style="font-size: 2em">
             </select>
         </div>
         <div>
-            <div><input type="checkbox">Range</div>
-            <div><input type="checkbox">Range Rate</div>
-            <div><input type="checkbox">Relative Velocity</div>
-            <div><input type="checkbox">POCA</div>
-            <div><input type="checkbox">CATS</div>
+            <div><input id="range" type="checkbox">Range</div>
+            <div><input id="rangeRate" type="checkbox">Range Rate</div>
+            <div><input id="relativeVelocity" type="checkbox">Relative Velocity</div>
+            <div><input id="poca" type="checkbox">POCA</div>
+            <div><input id="sunAngle" type="checkbox">CATS</div>
             <div>Position X: <input style="width: 3em;" type="Number" value="1">% Y: <input style="width: 3em;" type="Number" value="10">%</div>
             <div>Font Size <input style="width: 4em;" type="Number" value="30"></div>
             <div id="confirm-data-button" class="panel-button hoverable noselect">Confirm</div>

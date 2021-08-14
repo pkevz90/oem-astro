@@ -114,6 +114,7 @@ let windowOptions = {
                 name: 'R'
             }
         },
+        dataReqs: []
     },
     options3d: {
         rotation: {
@@ -563,12 +564,6 @@ document.getElementById('satellite-way-select').addEventListener('input', event 
     generateBurnTable(event.target.value)
     event.target.style.color = satellites[event.target.value].color;
 })
-document.getElementById('target-select').addEventListener('change', event => {
-    event.target.style.color = satellites[event.target.value].color;
-})
-document.getElementById('origin-select').addEventListener('change', event => {
-    event.target.style.color = satellites[event.target.value].color;
-})
 document.getElementById('add-satellite-button').addEventListener('click', (click) => {
     let el = click.target,
         n = windowOptions.mm;
@@ -610,31 +605,20 @@ document.getElementById('data-button').addEventListener('click', (click) => {
         return;
     }
     document.getElementById('options-panel').classList.toggle("hidden")
-    let originSel = document.getElementById('origin-select');
-    let targetSel = document.getElementById('target-select');
-    while (originSel.firstChild) {
-        originSel.removeChild(originSel.firstChild);
+    let dataSel = document.getElementById('data-select');
+    while (dataSel.firstChild) {
+        dataSel.removeChild(dataSel.firstChild);
     }
-    while (targetSel.firstChild) {
-        targetSel.removeChild(targetSel.firstChild);
-    }
-    satellites.forEach((sat, ii) => {
-        addedElement = document.createElement('option');
-        addedElement.value = ii;
-        addedElement.textContent = sat.name ? sat.name : sat.shape;
-        addedElement.style.color = sat.color;
-        originSel.appendChild(addedElement);
-        addedElement = document.createElement('option');
-        addedElement.value = ii;
-        addedElement.textContent = sat.name ? sat.name : sat.shape;
-        addedElement.style.color = sat.color;
-        targetSel.appendChild(addedElement);
+    satellites.forEach((satOrg, ii) => {
+        satellites.forEach((satTar, jj) => {
+            if (ii !== jj) {
+                addedElement = document.createElement('option');
+                addedElement.value = `${ii}&${jj}`;
+                addedElement.textContent = satOrg.name + ' to ' + satTar.name;
+                dataSel.appendChild(addedElement);
+            } 
+        })
     })
-    targetSel.value = windowOptions.relativeData.target !== undefined ? windowOptions.relativeData.target : 1;
-    targetSel.style.color = windowOptions.relativeData.target !== undefined ? satellites[windowOptions.relativeData.target].color : satellites[1].color;
-    originSel.value = windowOptions.relativeData.origin !== undefined ? windowOptions.relativeData.origin : 0;
-    originSel.style.color = windowOptions.relativeData.origin !== undefined ? satellites[windowOptions.relativeData.origin].color : satellites[0].color;
-
     document.getElementById('data-panel').classList.toggle("hidden");
 })
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
@@ -667,17 +651,42 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
 })
 document.getElementById('confirm-data-button').addEventListener('click', (click) => {
     let el = click.target;
-    let inputs = el.parentNode.getElementsByTagName('input');
-    windowOptions.relativeData.data.range.exist = inputs[0].checked;
-    windowOptions.relativeData.data.rangeRate.exist = inputs[1].checked;
-    windowOptions.relativeData.data.relativeVelocity.exist = inputs[2].checked;
-    windowOptions.relativeData.data.poca.exist = inputs[3].checked;
-    windowOptions.relativeData.data.sunAngle.exist = inputs[4].checked;
-    windowOptions.relativeData.positionX = !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value)*cnvs.width / 100 : windowOptions.relativeData.positionX;
-    windowOptions.relativeData.positionY = !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value)*cnvs.width / 100 : windowOptions.relativeData.positionY;
-    windowOptions.relativeData.textSize = !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : windowOptions.relativeData.textSize;
-    windowOptions.relativeData.origin = el.parentNode.parentNode.children[0].children[1].value;
-    windowOptions.relativeData.target = el.parentNode.parentNode.children[0].children[3].value;
+    let inputs = el.parentNode.getElementsByTagName('input'), exist = false, data = [];
+    let selectVal = el.parentNode.parentNode.getElementsByTagName('select')[0].value.split('&');
+    let indexCheck = windowOptions.relativeData.dataReqs.findIndex(req => {
+        return req.origin === selectVal[0] && req.target === selectVal[1];
+    });
+    for (let ii = 0; ii < 5; ii++) {
+        exist = exist || inputs[ii].checked;
+        if (inputs[ii].checked) data.push(inputs[ii].id);
+    }
+    if (exist) {
+        if (indexCheck === -1) {
+            windowOptions.relativeData.dataReqs.push({
+                origin: selectVal[0],
+                target: selectVal[1],
+                textSize: !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : 20,
+                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value)*cnvs.width / 100 : 20,
+                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value)*cnvs.height / 100 : 20,
+                data
+            })
+        }
+        else {
+            windowOptions.relativeData.dataReqs[indexCheck] = {
+                origin: selectVal[0],
+                target: selectVal[1],
+                textSize: !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : 20,
+                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value)*cnvs.width / 100 : 20,
+                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value)*cnvs.height / 100 : 20,
+                data
+            }
+        }
+    }
+    else {
+        if (indexCheck !== -1) {
+            windowOptions.relativeData.dataReqs.splice(indexCheck,1);
+        }
+    }
     closeAll();
 })
 document.getElementById('maneuver-type-input').addEventListener('change', (click) => {
@@ -1295,27 +1304,26 @@ function drawScreenText() {
     ctx.fillText(new Date(windowOptions.start_date.getTime() + windowOptions.scenario_time * 1000).toString()
         .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height - 20);
     // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
-    ctx.font = windowOptions.relativeData.textSize + 'px Arial';
-    if (windowOptions.relativeData.origin !== undefined && windowOptions.relativeData.target !== undefined && windowOptions.relativeData.origin !== windowOptions.relativeData.target) {
-        let relDataIn = getRelativeData(windowOptions.relativeData.origin, windowOptions.relativeData.target);
-        let y_location = windowOptions.relativeData.positionY;
-        ctx.fillText(satellites[windowOptions.relativeData.origin].name + String.fromCharCode(8594) + satellites[windowOptions.relativeData.target].name, windowOptions.relativeData.positionX, y_location);
-        y_location += windowOptions.relativeData.textSize*1.1;
-        for (relData in windowOptions.relativeData.data) {
-            if (windowOptions.relativeData.data[relData].exist) {
-                ctx.fillText(windowOptions.relativeData.data[relData].name + ': ' + relDataIn[relData].toFixed(
-                        1) + ' ' + windowOptions.relativeData.data[relData].units, windowOptions.relativeData.positionX,
-                    y_location);
-                y_location += windowOptions.relativeData.textSize*1.1;
-            }
-        }
-        if (windowOptions.relativeData.data.poca.exist) {
+    windowOptions.relativeData.dataReqs.forEach(req => {
+        ctx.font = req.textSize + 'px Arial';
+        if (satellites.length < 2) return;
+        let relDataIn = getRelativeData(req.origin, req.target);
+        let y_location = req.positionY;
+        ctx.fillText(satellites[req.origin].name + String.fromCharCode(8594) + satellites[req.target].name, req.positionX, y_location);
+        y_location += req.textSize*1.1;
+        req.data.forEach(d => {
+            ctx.fillText(windowOptions.relativeData.data[d].name + ': ' + relDataIn[d].toFixed(
+                1) + ' ' + windowOptions.relativeData.data[d].units, req.positionX,
+                y_location);
+            y_location += req.textSize*1.1;
+        })
+        if (req.data.includes('poca')) {
             let {
                 poca,
                 toca
             } = relDataIn;
-            let position1 = satellites[windowOptions.relativeData.origin].shownTraj[toca];
-            let position2 = satellites[windowOptions.relativeData.target].shownTraj[toca];
+            let position1 = satellites[req.origin].shownTraj[toca];
+            let position2 = satellites[req.target].shownTraj[toca];
 
             position1 = ricToPixel(position1);
             position2 = ricToPixel(position2);
@@ -1326,7 +1334,7 @@ function drawScreenText() {
             ctx.lineTo(position2[0], position2[1]);
             ctx.stroke();
         }
-    }
+    })
     if (!windowOptions.showScale) return;
     // Draw Scale
     ctx.strokeStyle = 'RGB(0,0,0,0.15)';
