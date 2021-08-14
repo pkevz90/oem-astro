@@ -666,8 +666,8 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
                 origin: selectVal[0],
                 target: selectVal[1],
                 textSize: !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : 20,
-                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value)*cnvs.width / 100 : 20,
-                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value)*cnvs.height / 100 : 20,
+                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value): 20,
+                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value) : 20,
                 data
             })
         }
@@ -676,8 +676,8 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
                 origin: selectVal[0],
                 target: selectVal[1],
                 textSize: !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : 20,
-                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value)*cnvs.width / 100 : 20,
-                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value)*cnvs.height / 100 : 20,
+                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value) : 20,
+                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value) : 20,
                 data
             }
         }
@@ -687,8 +687,28 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
             windowOptions.relativeData.dataReqs.splice(indexCheck,1);
         }
     }
+    if (inputs[8].checked) {
+        windowOptions.vz_reach.shown = true;true;
+        windowOptions.vz_reach.target = Number(selectVal[0]);
+        windowOptions.vz_reach.object = Number(selectVal[1]);
+        windowOptions.vz_reach.distance = Number(inputs[9].value);
+        windowOptions.vz_reach.time = Number(inputs[10].value)*3600;
+    }
     closeAll();
 })
+function dataChange(el) {
+    let selectVal = el.value.split('&');
+    let indexCheck = windowOptions.relativeData.dataReqs.findIndex(req => {
+        return req.origin === selectVal[0] && req.target === selectVal[1];
+    });
+    let inputs = el.parentNode.parentNode.getElementsByTagName('input');
+    for (let ii = 0; ii < 5; ii++) {
+        inputs[ii].checked = indexCheck === -1 ? false : windowOptions.relativeData.dataReqs[indexCheck].data.includes(inputs[ii].id)
+    }
+    inputs[5].value = indexCheck === -1 ? 1 : windowOptions.relativeData.dataReqs[indexCheck].positionX;
+    inputs[6].value = indexCheck === -1 ? 5 : windowOptions.relativeData.dataReqs[indexCheck].positionY;
+    inputs[7].value = indexCheck === -1 ? 30 : windowOptions.relativeData.dataReqs[indexCheck].textSize;
+}
 document.getElementById('maneuver-type-input').addEventListener('change', (click) => {
     el = click.target;
     switch (windowOptions.maneuver_type) {
@@ -1305,15 +1325,16 @@ function drawScreenText() {
         .split(' GMT')[0].substring(4), cnvs.width * 0.01, cnvs.height - 20);
     // ctx.fillText((windowOptions.refresh_time).toFixed(2), cnvs.width * 0.01, cnvs.height * 0.67);
     windowOptions.relativeData.dataReqs.forEach(req => {
-        ctx.font = req.textSize + 'px Arial';
         if (satellites.length < 2) return;
+        ctx.font = "bold " + req.textSize + "pt Courier";
         let relDataIn = getRelativeData(req.origin, req.target);
-        let y_location = req.positionY;
-        ctx.fillText(satellites[req.origin].name + String.fromCharCode(8594) + satellites[req.target].name, req.positionX, y_location);
+        let y_location = req.positionY * cnvs.height / 100;
+        ctx.fillText(satellites[req.origin].name + String.fromCharCode(8594) + satellites[req.target].name, req.positionX*cnvs.width / 100, y_location);
+        ctx.font = req.textSize + 'px Courier';
         y_location += req.textSize*1.1;
         req.data.forEach(d => {
             ctx.fillText(windowOptions.relativeData.data[d].name + ': ' + relDataIn[d].toFixed(
-                1) + ' ' + windowOptions.relativeData.data[d].units, req.positionX,
+                1) + ' ' + windowOptions.relativeData.data[d].units, req.positionX*cnvs.width / 100,
                 y_location);
             y_location += req.textSize*1.1;
         })
@@ -1936,7 +1957,7 @@ function drawVulnerabilityZone() {
     }
     let zoneCenter = ricToPixel({r: tarPos.r[0], i: tarPos.i[0], c: tarPos.c[0]});
     ctx.beginPath();
-    ctx.arc(zoneCenter[0], zoneCenter[1], 10 / 2 / windowOptions.width * cnvs.width,0, 2 * Math.PI);
+    ctx.arc(zoneCenter[0], zoneCenter[1], windowOptions.vz_reach.distance / 2 / windowOptions.width * cnvs.width,0, 2 * Math.PI);
     ctx.stroke();
 }
 
