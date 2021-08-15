@@ -145,6 +145,15 @@
             <div style="margin: 20px 5px">Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
             <div style="margin: 20px 5px">FPS <input value="30" type="Number" min="15" max="60" step="1"></div>
             <div style="margin: 20px 5px">Repeat <input type="checkbox"></div>
+            <div><select id="res-select">
+                <option value="full">Full Screen</option>
+                <option value="1920x1080">1080p</option>
+                <option value="1280x720">720p</option>
+                <option value="852x480">480p</option>
+                <option value="320x240">240p</option>
+                <option value="852x852">Square Hi</option>
+                <option value="480x480">Square Low</option>
+            </select></div>
             <div style="margin: 20px;"><span onclick="recordFunction(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Record</span></div>
             <div style="margin: 20px;"><span onclick="addKeyFrame()" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Key Frame</span></div>
         

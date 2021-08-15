@@ -26,6 +26,7 @@ let windowOptions = {
     frame_move: false,
     closeLimit: 0.025 * 60,
     closeSat: false,
+    nameFont: 0.04,
     scenario_length: 24,
     start_date: new Date(document.getElementById('start-time').value),
     time_delta: 86164 / 200,
@@ -959,7 +960,6 @@ function recordFunction(button) {
     windowOptions.makeGif.stopEpoch = Number(inputs[6].value) * 60;
     windowOptions.scenario_time_des = Number(inputs[5].value) * 60;
     windowOptions.scenario_time = Number(inputs[5].value) * 60;
-    windowOptions.makeGif.start = true;
     windowOptions.makeGif.step = Number(inputs[7].value);
     windowOptions.makeGif.keyFrames.forEach(frame => {
         if (frame.time < 300) {
@@ -969,9 +969,23 @@ function recordFunction(button) {
             windowOptions.origin_it = frame.center;
         }
     })
+    let val = document.getElementById('res-select').value;
+    val = val.split('x');
+    console.log(val);
+    if (val[0] !== 'full') {
+        cnvs.width = Number(val[0]);
+        cnvs.height = Number(val[1]);
+    }
+    windowOptions.screen.ri_h_w_ratio = cnvs.height / (windowOptions.screen.mode === 'ri ci' || windowOptions.screen.mode === 'ci only' ? 2 : 1) / cnvs
+        .width;
+    encoder = new GIFEncoder();
+    encoder.setQuality(20);
     encoder.setRepeat(inputs[9].checked ? 0 : 1);
     encoder.setDelay(1000 / Number(inputs[8].value));
-    encoder.start();
+    setTimeout(() => {
+        windowOptions.makeGif.start = true;
+        encoder.start();
+    }, 2000)
 }
 
 function addKeyFrame() {
@@ -1076,6 +1090,7 @@ function animation(time) {
             windowOptions.makeGif.stop = false;
             encoder.finish();
             encoder.download("download.gif");
+            formatCanvas();
         }
         else if (windowOptions.scenario_time_des >= windowOptions.makeGif.stopEpoch) {windowOptions.makeGif.stop = true;}
         windowOptions.makeGif.keyFrames.forEach(key => {
@@ -1423,34 +1438,46 @@ function drawScreenArrows() {
     });
     // Draw Sun
     let sunAngle = math.squeeze(math.multiply(rotationMatrices(-windowOptions.scenario_time * windowOptions.mm * 180 / Math.PI, 3), math.transpose([windowOptions.initSun])));
+    // let radisOrbit = (cnvs.height < cnvs.width ? cnvs.height : cnvs.width) * 0.9 / 2;
+    // let sunRadius = cnvs.height / 70;
+    // let angInPlane = math.atan2(sunAngle[1], -sunAngle[0]);
+    // let positionSun = [cnvs.width / 2 - radisOrbit*Math.sin(angInPlane), cnvs.height / 2 + radisOrbit*Math.cos(angInPlane)]
+    // // console.log(positionSun);
+    // ctx.fillStyle = 'rgb(225,165,0)';
+    // ctx.beginPath();
+    // ctx.arc(positionSun[0], positionSun[1], sunRadius, 0, 2 * Math.PI);
+    // ctx.fill()
+    // ctx.fillStyle = '#646464';
+    // console.log(angInPlane);
+    // return;
     let startRic = {
         r: 0,
         i: 0,
         c: 0
     };
     let stopRic = {
-        r: height * 0.9 *windowOptions.width * 2 / cnvs.width * sunAngle[0],
-        i: height * 0.9 *windowOptions.width * 2 / cnvs.width * sunAngle[1],
-        c: height * 0.9 *windowOptions.width * 2 / cnvs.width * sunAngle[2]
+        r: height * 0.6 *windowOptions.width * 2 / cnvs.width * sunAngle[0],
+        i: height * 0.6 *windowOptions.width * 2 / cnvs.width * sunAngle[1],
+        c: height * 0.6 *windowOptions.width * 2 / cnvs.width * sunAngle[2]
     }
     let angle = math.atan2(-stopRic.i, stopRic.r) * 180 / Math.PI;
     drawRicArrow({
         startRic,
         stopRic,
         angle,
-        color: 'rgb(255,128,0)',
-        lineWidth: width / 2,
-        arrowWidth: width
+        color: 'rgb(230,230,0)',
+        lineWidth: width,
+        arrowWidth: width *2
     })
     angle = math.atan2(-stopRic.i, stopRic.c) * 180 / Math.PI;
     drawRicArrow({
         startRic,
         stopRic,
         angle,
-        color: 'rgb(255,128,0)',
+        color: 'rgb(230,230,0)',
         cross: true,
-        lineWidth: width / 2,
-        arrowWidth: width
+        lineWidth: width,
+        arrowWidth: width * 2
     })
 }
 
@@ -1675,7 +1702,7 @@ function drawSatellite(satellite, cross = false) {
     if (pixelPosition[1] > limit.max || pixelPosition[1] < limit.min) {
         return;
     }
-    let shapeHeight = size * window.innerHeight;
+    let shapeHeight = size * cnvs.height;
     let points;
     let a = shapeHeight / 2;
     let b = shapeHeight / 5;
@@ -1856,9 +1883,9 @@ function drawSatellite(satellite, cross = false) {
             });
             break;
     }
-    let letterY = pixelPosition[1] + shapeHeight;
+    let letterY = pixelPosition[1] + shapeHeight / 2 + (cnvs.height*windowOptions.nameFont)*1.3 / 2;
     // console.log(letterY);
-    ctx.font = `${shapeHeight / 2}px serif`;
+    ctx.font = `${cnvs.height*windowOptions.nameFont}px Courier`;
     ctx.fillText(name ? name : '', pixelPosition[0], letterY);
 }
 
