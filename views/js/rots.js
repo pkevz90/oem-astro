@@ -624,30 +624,28 @@ document.getElementById('data-button').addEventListener('click', (click) => {
 })
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
     let el = click.target;
-    el = el.parentNode.parentNode.children;
-    let date = el[1].children[1].getElementsByTagName('input')[0].value;
-    let sun = el[1].children[4].getElementsByTagName('input')[0].value;
-    windowOptions.mm = Math.sqrt(398600.4418 / Math.pow(Number(el[1].children[3].getElementsByTagName('input')[0].value), 3));
-    windowOptions.scenario_length = Number(el[1].children[2].getElementsByTagName('input')[0].value);
+    el = el.parentNode.parentNode;
+    let inputs = el.getElementsByTagName('input');
+    let date = inputs[0].value;
+    let sun = inputs[3].value;
+    windowOptions.mm = Math.sqrt(398600.4418 / Math.pow(Number(inputs[2].value), 3));
+    windowOptions.scenario_length = Number(inputs[1].value);
     timeSlider.max = windowOptions.scenario_length * 3600;
-    let timeStep = el[1].children[7].getElementsByTagName('input')[0].value;
-    let fps = el[1].children[8].getElementsByTagName('input')[0].value;
-    let repeat = el[1].children[9].getElementsByTagName('input')[0].checked;
-    windowOptions.time_delta = windowOptions.scenario_length * 3600 / Number( el[2].children[1].getElementsByTagName('input')[0].value);
-    windowOptions.draw_style = el[2].children[2].getElementsByTagName('input')[0].checked ? 'line' : 'points';
-    windowOptions.showFinite = el[2].children[3].getElementsByTagName('input')[0].checked;
-    windowOptions.finiteTarget = el[2].children[4].getElementsByTagName('input')[0].checked;
+    let repeat = inputs[9].checked;
+    windowOptions.time_delta = windowOptions.scenario_length * 3600 / Number( inputs[10].value);
+    windowOptions.draw_style = inputs[12].checked ? 'line' : 'points';
+    windowOptions.showFinite = inputs[13].checked;
+    windowOptions.finiteTarget = inputs[14].checked;
     satellites.forEach(sat => {
         sat.generateBurns();
         sat.calcTraj()
     });
     encoder.setRepeat(repeat ? 0 : 1);
-    encoder.setDelay(1000 / fps);
-    windowOptions.animate_step = timeStep * 60;
     sunIR = -Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
-    sunC = Number(el[1].children[5].getElementsByTagName('input')[0].value) * Math.PI / 180;
+    sunC = Number(inputs[4].value) * Math.PI / 180;
     windowOptions.initSun = [-Math.cos(sunIR) * Math.cos(sunC), Math.sin(sunIR) * Math.cos(sunC), Math.sin(sunC)];
     windowOptions.start_date = new Date(date);
+    windowOptions.nameFont = Number(inputs[11].value) / 100;
     closeAll();
 })
 document.getElementById('confirm-data-button').addEventListener('click', (click) => {
@@ -934,10 +932,10 @@ function openPanel(button) {
         inputs[0].value = dateDiff;
         inputs[1].value = windowOptions.scenario_length;
         inputs[2].value = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3).toFixed(2);
-        let sunTime = (24 * math.atan2(windowOptions.initSun[1], -windowOptions.initSun[0]) / 2 / Math.PI);
+        let sunTime = Math.round((24 * math.atan2(windowOptions.initSun[1], -windowOptions.initSun[0]) / 2 / Math.PI));
         if (sunTime < 0) sunTime = math.round((sunTime + 24));
         sunTime += '00';
-        if (sunTime < 4) sunTime = '0' + sunTime;
+        if (sunTime.length < 4) sunTime = '0' + sunTime;
         inputs[3].value = sunTime;
         inputs[4].value = 180 * math.atan2(windowOptions.initSun[2], math.norm(windowOptions.initSun.slice(0,2))) / Math.PI;
     }
