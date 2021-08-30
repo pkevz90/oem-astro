@@ -1,27 +1,39 @@
 let P = [10, 10, 10, 0.01, 0.01, 0.01];
 P = math.diag(P);
-let angAmb = 0.0001 * Math.PI / 180; // degrees
-let R = [[Math.pow(angAmb, 2), 0], [0, Math.pow(angAmb, 2)]];
-let Q = [Math.pow(0.0001,2), Math.pow(0.0001,2), Math.pow(0.0001,2), Math.pow(0.000001,2), Math.pow(0.000001,2), Math.pow(0.000001,2)]; 
+let angAmb = 0.1 * Math.PI / 180; // degrees
+let rangeAmb = 0.1;
+let R;
+let Q = [Math.pow(0.001,2), Math.pow(0.001,2), Math.pow(0.001,2), Math.pow(0.00001,2), Math.pow(0.00001,2), Math.pow(0.00001,2)]; 
 Q = math.diag(Q);
-let x = math.transpose([[0, 10, 0, 0.001, 0, 0.002]]);
-let xEst = math.transpose([[2, 9, 0, 0, 0, 0]]);
-let dt = 6;
+let x = math.transpose([[0, 10, 0,0.00036460, 0, 0]]);
+let xEst = math.transpose([[1, 9, 0, 0, 0, 0]]);
+let dt = 1;
 let onesP = math.identity(6)._data;
 let thrust = 0;
+let range = false;
 
 
 window.addEventListener('keypress', () => {
-    for (let ii = 0; ii < 50; ii++) {
-        let F = Fmatrix3(dt);
-        x = oneBurnFiniteHcw3(x, {t: dt, a0: thrust, phi: Math.PI / 2});
-        xEst = oneBurnFiniteHcw3(xEst, {t: dt, a0: thrust, phi: Math.PI / 2});
+    for (let ii = 0; ii < 300; ii++) {
+        let F = Fmatrix(dt);
+        if (range) {
+            R = [[Math.pow(angAmb, 2), 0, 0], [0, Math.pow(angAmb, 2), 0], [0, 0, Math.pow(rangeAmb, 2)]];
+        }
+        else {
+            R = [[Math.pow(angAmb, 2), 0], [0, Math.pow(angAmb, 2)]];
+
+        }
+        let alpha = math.atan2(xEst[1][0], xEst[0][0]);
+        alpha += Math.PI / 2; 
+        x = oneBurnFiniteHcw(x, {t: dt, a0: thrust, alpha});
+        xEst = oneBurnFiniteHcw(xEst, {t: dt, a0: thrust, alpha});
         P = math.add(math.multiply(F,P,math.transpose(F)),Q);
-        let zAct = measEst3(x);
-        let zEst = measEst3(xEst);
-        zEst[1][0] += normalRandom() * angAmb;
-        zEst[0][0] += normalRandom() * angAmb;
-        let H = Hmatrix3(xEst);
+        let zAct = measEst(x);
+        let zEst = measEst(xEst);
+        zAct[1][0] += normalRandom() * angAmb;
+        zAct[0][0] += normalRandom() * angAmb;
+        if (range) zAct[2][0] += normalRandom() * rangeAmb;
+        let H = Hmatrix(xEst);
         if (zAct[0][0]*zEst[0][0] < 0 && Math.abs(zEst[0][0]) > 1) {
             if (zEst[0][0] < 0) {
                 zEst[0][0] += 2*Math.PI;
@@ -35,7 +47,7 @@ window.addEventListener('keypress', () => {
         let y = math.subtract(zAct, zEst);
         xEst = math.add(xEst, math.multiply(K, y));
     }
-    console.log(math.norm(math.subtract(math.squeeze(x), math.squeeze(xEst))));
+    console.log(math.norm(math.subtract(math.squeeze(x), math.squeeze(xEst))), math.norm(math.squeeze(math.subtract(measEst(x),measEst(xEst)))));
 
 })
 
@@ -44,13 +56,20 @@ function Kmatrix(P,H,R) {
     return math.multiply(math.multiply(P,math.transpose(H)),math.inv(S));
 }
 
-function Hmatrix3(x) {
+function Hmatrix(x) {
     x = math.squeeze(x);
     let x12 = math.pow(x[0], 2) + math.pow(x[1],2);
+    let x123 = math.pow(x[0], 2) + math.pow(x[1],2) + math.pow(x[2],2);
+    if (range) {
+        return [[-x[1]/x12, x[0]/x12, 0, 0, 0, 0],
+                [-x[2]*x[0] / Math.sqrt(x12) / (x12 + x[2]*x[2]), -x[2]*x[1] / Math.sqrt(x12) / (x12 + x[2]*x[2]), Math.sqrt(x12) / (x12 + x[2]*x[2]), 0, 0, 0],
+                [x[0] / math.sqrt(x123), x[1] / math.sqrt(x123), x[2] / math.sqrt(x123), 0, 0, 0]];
+
+    }
     return [[-x[1]/x12, x[0]/x12, 0, 0, 0, 0],[-x[2]*x[0] / Math.sqrt(x12) / (x12 + x[2]*x[2]), -x[2]*x[1] / Math.sqrt(x12) / (x12 + x[2]*x[2]), Math.sqrt(x12) / (x12 + x[2]*x[2]), 0, 0, 0]];
 }
 
-function Fmatrix3(t, n = 2 * Math.PI / 86164) {
+function Fmatrix(t, n = 2 * Math.PI / 86164) {
     return [[1,0,0,t,0,0],
             [0,1,0,0,t,0],
             [0,0,1,0,0,t],
@@ -59,8 +78,8 @@ function Fmatrix3(t, n = 2 * Math.PI / 86164) {
             [0,0,-n*n*t,0,0,1]];
 }
 
-function measEst3(x) {
-    return [[Math.atan2(x[1][0],x[0][0])], [Math.atan2(x[2][0], Math.sqrt(x[1][0]*x[1][0]+x[0][0]*x[0][0]))]];
+function measEst(x) {
+    return range ? [[Math.atan2(x[1][0],x[0][0])], [Math.atan2(x[2][0], Math.sqrt(x[1][0]*x[1][0]+x[0][0]*x[0][0]))], [Math.sqrt(x[1][0]*x[1][0]+x[0][0]*x[0][0])]] : [[Math.atan2(x[1][0],x[0][0])], [Math.atan2(x[2][0], Math.sqrt(x[1][0]*x[1][0]+x[0][0]*x[0][0]))]];
 }
 
 
@@ -92,7 +111,7 @@ function normalRandom()
 	return val;
 }
 
-function oneBurnFiniteHcw3(state, options) {
+function oneBurnFiniteHcw(state, options) {
     let {alpha = 10, phi = 0, tB = 1, t = 3600, n = 2*Math.PI / 86164, a0 = 0.00001} = options;
     x0 = state[0][0];
     xd0 = state[3][0];
@@ -164,6 +183,6 @@ function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
 }
 
 function resetP() {
-    P = [1, 1, 1, 0.01, 0.01, 0.01];
+    P = [10, 10, 10, 10, 10, 10];
     P = math.diag(P);   
 }
