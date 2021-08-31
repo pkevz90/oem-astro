@@ -1,6 +1,6 @@
 let cnvs = document.getElementById('main-cnvs');
 let ctx = cnvs.getContext('2d');
-let screen_width = 1000000;
+let screen_width = 1600000;
 let r_Earth = 6371;
 let r_moon = 1738.1;
 let a_moon = 384399;
@@ -69,14 +69,6 @@ function runge_kutta(eom, state, dt) {
     return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
 }
 
-console.log(jacobi_constant(state_sat))
-for (let t = 0; t < 160*86164; t += 50) {
-    ctx.beginPath();
-    ctx.arc(state_sat[0][0] / screen_width * cnvs.width + cnvs.width / 2, -state_sat[1][0] / screen_width * cnvs.width + cnvs.height / 2, 0.15, 0, 2*Math.PI);
-    ctx.fill();
-    state_sat = runge_kutta(crtbd_eom, state_sat, 50);
-    // console.log(state_sat);
-}
 
 function drawJacobiConstant() {
     let c = jacobi_constant(state_sat), stateCheck;
@@ -86,7 +78,7 @@ function drawJacobiConstant() {
             stateCheck = [xx * screen_width, yy*screen_width];
             if (checkJacobiConstant(stateCheck, c) < 0) {
                 ctx.beginPath();
-                ctx.arc(cnvs.width / 2 + xx * cnvs.width, cnvs.height / 2 - yy * cnvs.width, 0.125, 0, 2 * Math.PI);
+                ctx.arc(cnvs.width / 2 + xx * cnvs.width, cnvs.height / 2 - yy * cnvs.width, 0.5, 0, 2 * Math.PI);
                 ctx.fill()
             }
         }
@@ -100,5 +92,39 @@ function checkJacobiConstant(state, c) {
     let r2 = Math.sqrt(Math.pow(x - p_moon, 2) + y*y);
     return 2 * mu_earth / r1 + 2 *mu_moon / r2 - c + omega_moon * omega_moon * (x*x + y*y);
 }
-console.log(jacobi_constant(state_sat))
-drawJacobiConstant()
+
+function applyRotation(ang, state) {
+    return math.multiply([[math.cos(ang), -math.sin(ang)],[math.sin(ang), math.cos(ang)]], state);
+}
+let angle = 0;
+let inertial = false;
+if (!inertial) drawJacobiConstant();
+function drawAnimation() {
+    let rotState = applyRotation(angle, state_sat.slice(0,2));
+    ctx.beginPath();
+    if (inertial) {
+        !ctx.arc(rotState[0][0] / screen_width * cnvs.width + cnvs.width / 2, -rotState[1][0] / screen_width * cnvs.width + cnvs.height / 2, 1, 0, 2*Math.PI);
+    }
+    else
+    {
+        ctx.arc(state_sat[0][0] / screen_width * cnvs.width + cnvs.width / 2, -state_sat[1][0] / screen_width * cnvs.width + cnvs.height / 2, 1, 0, 2*Math.PI);
+    }
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.arc(cnvs.width / 2, cnvs.height / 2, p_moon / screen_width * cnvs.width, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.fillStyle = 'gray';
+    ctx.beginPath();
+    ctx.arc(cnvs.width / 2 + p_moon*math.cos(angle) / screen_width * cnvs.width, cnvs.height / 2- p_moon*math.sin(angle) / screen_width * cnvs.width, r_moon / screen_width * cnvs.width, 0, 2 * Math.PI);
+    ctx.fill();
+    for (let ii = 0; ii < 100; ii++) {  
+        state_sat = runge_kutta(crtbd_eom, state_sat, 50);
+        angle += inertial ? 50 * omega_moon : 0;
+    }
+
+    window.requestAnimationFrame(drawAnimation);
+}
+
+drawAnimation();
