@@ -6,9 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="../SupportLibraries/math.min.js"></script>
     <title>Document</title>
+    <style>
+        #controls {
+            position: fixed;
+            top: 5%;
+            left: 2%; 
+        }
+    </style>
 </head>
 <body>
     <canvas id="main-cnvs"></canvas>
+    <div id="controls">
+        <div>R <input type="Number" style="width: 10ch;" value="42164"> km</div>
+        <div>V <input type="Number" style="width: 10ch;" value="3.95"> km/s</div>
+        <div>Angle <input type="Number" style="width: 6ch;" value="90"> deg</div>
+        <div>Inertial <input type="checkbox" style="width: 10ch;"></div>
+        <div><button id="update-button" onclick="updateState(this)">Update</button></div>
+    </div>
     <script src="./js/crtbp.js"></script>
 </body>
 </html>

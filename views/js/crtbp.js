@@ -12,22 +12,10 @@ let p_earth = a_moon * mu_star;
 let p_moon = a_moon * (1-mu_star);
 let mu_earth = 398600.4418;
 let mu_moon = 4904.8695;
+// mu_moon = 000;
 let omega_moon = 2*Math.PI / 27.321661/86164;
 cnvs.width = window.innerWidth;
 cnvs.height = window.innerHeight;
-ctx.fillStyle = 'green';
-ctx.beginPath();
-ctx.arc(cnvs.width / 2 - p_earth / screen_width * cnvs.width, cnvs.height / 2, r_Earth / screen_width * cnvs.width, 0, 2 * Math.PI);
-ctx.fill();
-
-ctx.fillStyle = 'gray';
-ctx.beginPath();
-ctx.arc(cnvs.width / 2 + p_moon / screen_width * cnvs.width, cnvs.height / 2, r_moon / screen_width * cnvs.width, 0, 2 * Math.PI);
-ctx.fill();
-ctx.strokeStyle = 'gray';
-ctx.beginPath();
-ctx.arc(cnvs.width / 2 - p_earth / screen_width * cnvs.width, cnvs.height / 2, 42164 / screen_width * cnvs.width, 0, 2 * Math.PI);
-ctx.stroke();
 
 function jacobi_constant(state) {
     state = math.squeeze(state);
@@ -56,11 +44,9 @@ function crtbd_eom(state) {
             [-mu_earth*y / Math.pow(r1,3) - mu_moon * y / Math.pow(r2,3) - 2*dx*omega_moon+y*omega_moon*omega_moon]];
 }
 // let state_sat = [[-11568], [0], [0], [-10.55]];
-let alpha = 64, v = 9.825, p = 8000;
-let state_sat = [[-p*math.cos(alpha*Math.PI / 180)-p_earth], [-p*math.sin(alpha*Math.PI / 180)], [v*math.sin(alpha*Math.PI / 180)], [-v*math.cos(alpha*Math.PI / 180)]];
-state_sat = [[326400 - p_earth],[-0.0],[0.05],[0]];
-state_sat = [[111396.481],[154892.626], [-0.325965],[0.978304]];
-console.log(math.squeeze(state_sat));
+let state_sat, inertial, angle;
+
+updateState(document.getElementById('update-button'));
 function runge_kutta(eom, state, dt) {
     let k1 = eom(state);
     let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)));
@@ -96,9 +82,6 @@ function checkJacobiConstant(state, c) {
 function applyRotation(ang, state) {
     return math.multiply([[math.cos(ang), -math.sin(ang)],[math.sin(ang), math.cos(ang)]], state);
 }
-let angle = 0;
-let inertial = false;
-if (!inertial) drawJacobiConstant();
 function drawAnimation() {
     let rotState = applyRotation(angle, state_sat.slice(0,2));
     ctx.beginPath();
@@ -125,6 +108,33 @@ function drawAnimation() {
     }
 
     window.requestAnimationFrame(drawAnimation);
+}
+
+function updateState(el) {
+    let inputs = el.parentNode.parentNode.getElementsByTagName('input');
+    console.log(inputs[3].checked);
+    let p = inputs[0].value, v = inputs[1].value, alpha = inputs[2].value;
+    inertial = inputs[3].checked,
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, cnvs.width, cnvs.height);
+    ctx.fillStyle = 'green';
+    ctx.beginPath();
+    ctx.arc(cnvs.width / 2 - p_earth / screen_width * cnvs.width, cnvs.height / 2, r_Earth / screen_width * cnvs.width, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    ctx.fillStyle = 'gray';
+    ctx.beginPath();
+    ctx.arc(cnvs.width / 2 + p_moon / screen_width * cnvs.width, cnvs.height / 2, r_moon / screen_width * cnvs.width, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'gray';
+    ctx.beginPath();
+    ctx.arc(cnvs.width / 2 - p_earth / screen_width * cnvs.width, cnvs.height / 2, 42164 / screen_width * cnvs.width, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    state_sat = [[-p*math.cos(alpha*Math.PI / 180)-p_earth], [-p*math.sin(alpha*Math.PI / 180)], [v*math.sin(alpha*Math.PI / 180)], [-v*math.cos(alpha*Math.PI / 180)]];
+    if (!inertial) drawJacobiConstant();
+    angle = 0;
 }
 
 drawAnimation();
