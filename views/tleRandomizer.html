@@ -11,11 +11,17 @@
         <input type="file" onchange="loadFileAsText(event)" accept=".e,.tle">
         <span id="e-date" style="visibility: hidden;">Epoch Time <input type="datetime-local"></span>
     </div>
+    <div id="parameters">
+    <div>Range <input type="number" style="width: 8ch;"> m</div>
+    <div>CATS <input type="number" style="width: 6ch;"><sup>o</sup></div>
+    </div>
     <div><button onclick="exportFile()">Export With Error</button></div>
     <script>
         let windowOptions = {
-            p_error: 5000,
-            v_error: 2,
+            p_error_ground: 5000,
+            v_error_ground: 2,
+            p_error: null,
+            v_error: null,
             inputData: null,
             epochDate: null
         }
@@ -121,6 +127,7 @@
     
         function exportFile() {
             let desDate = new Date(document.getElementById('e-date').getElementsByTagName('input')[0].value);
+            if (desDate == 'Invalid Date') return;
             let timeDiff = desDate - windowOptions.epochDate;
             timeDiff /= 1000;
             let timeLine = windowOptions.inputData[1].findIndex(line => {
@@ -128,8 +135,14 @@
             });
             windowOptions.inputData[1] = windowOptions.inputData[1].slice(timeLine,timeLine+1);
             let state = windowOptions.inputData[1][0].split(/ +/);
-            let p_error = Math.sqrt(Math.pow(windowOptions.p_error, 2) / 3);
-            let v_error = Math.sqrt(Math.pow(windowOptions.v_error, 2) / 3);
+            // Get error sources
+            let err_inputs = document.getElementById('parameters').getElementsByTagName('input');
+            let r_input = Number(err_inputs[0].value);
+            let cats_input = Number(err_inputs[1].value);
+            let total_error = r_input * 0.05*(0.056234132519034905 *Math.pow(Math.abs(30-cats_input), 1.25)+0.5);
+            alert(`Total error STD of ${total_error}`)
+            let p_error = Math.sqrt(Math.pow(total_error, 2) / 3);
+            let v_error = Math.sqrt(Math.pow(total_error / 2000, 2) / 3);
             state[2] = Number(state[2]) + normalRandom() * p_error;
             state[3] = Number(state[3]) + normalRandom() * p_error;
             state[4] = Number(state[4]) + normalRandom() * p_error;
