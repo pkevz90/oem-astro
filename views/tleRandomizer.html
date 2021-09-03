@@ -226,7 +226,6 @@
             let state = windowOptions.inputData[1][0].split(/ +/);
             // Get error sources
             let total_error = Number(document.getElementById('error-std').innerText);
-            alert(`Total error STD of ${total_error.toFixed(0)} m`)
             let p_error = Math.sqrt(Math.pow(total_error, 2) / 3);
             let v_error = Math.sqrt(Math.pow(total_error / 2000, 2) / 3);
             state[2] = Number(state[2]) + normalRandom() * p_error;
