@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="../SupportLibraries/math.min.js"></script>
-    <title>Document</title>
+    <title>CRTBP</title>
     <style>
         #controls {
             position: fixed;
@@ -17,11 +17,11 @@
 <body>
     <canvas id="main-cnvs"></canvas>
     <div id="controls">
-        <div>R <input type="Number" style="width: 10ch;" value="320000"> km</div>
-        <div>V <input type="Number" style="width: 10ch;" value="0.17" step="0.01"> km/s</div>
-        <div>Angle <input type="Number" style="width: 6ch;" value="180"> deg</div>
-        <div>Inertial <input type="checkbox" style="width: 10ch;"></div>
-        <div><button id="update-button" onclick="updateState(this)">Update</button></div>
+        <div>J <input type="Number" style="width: 10ch;" value="3.332" title="Jacobi's Constant" step="0.001" oninput="updateJ(this)"> km</div>
+        <div>Lagrange R <input type="Number" style="width: 10ch;" value="300000" title="Starting X for Lyapunov Orbit"></div>
+        <div>Inertial <input id="inert-check" type="checkbox" style="width: 10ch;"></div>
+        <div><button id="update-button" onclick="calcLyapunov(this)">Calculate Lyapunov Orbit</button></div>
+        <div id="calc-data"></div>
     </div>
     <script src="./js/crtbp.js"></script>
 </body>

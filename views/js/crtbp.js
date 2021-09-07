@@ -13,7 +13,14 @@ let p_moon = a_moon * (1-mu_star);
 let mu_earth = 398600.4418;
 let mu_moon = 4904.8695;
 let total_time = 0;
-let timeStep = 50;
+let timeStep = 25;
+let lagrangePoints = {
+    L1: [321721.819, 0], 
+    L2: [444233.312, 0], 
+    L3: [-391823.692, 0], 
+    L4: [a_moon / 2 -p_earth, a_moon * Math.sqrt(3) / 2],
+    L5: [a_moon / 2 -p_earth, -a_moon * Math.sqrt(3) / 2],
+}
 let r_l1 = 323050;
 let r_l2 = 445747;
 let start_List = [
@@ -89,7 +96,6 @@ function crtbd_eom(state) {
 // let state_sat = [[-11568], [0], [0], [-10.55]];
 let state_sat, inertial, angle;
 
-updateState(document.getElementById('update-button'));
 function runge_kuttaRalston(eom, state, dt) {
     let k1 = eom(state);
     let k2 = eom(math.add(state, math.dotMultiply(dt*0.4, k1)));
@@ -113,8 +119,8 @@ function calcLine(x, line) {
     return returnValue;
 }
 
-function drawJacobiConstant() {
-    let c = jacobi_constant(state_sat), stateCheck;
+function drawJacobiConstant(c) {
+    let stateCheck;
     ctx.fillStyle = 'black';
     for (let xx = -0.5; xx <= 0.5; xx += 0.0025) {
         for (let yy = -0.5; yy <= 0.5; yy += 0.0025) {
@@ -175,34 +181,12 @@ function drawAnimation() {
     window.requestAnimationFrame(drawAnimation);
 }
 
-function updateState(el) {
-    let inputs = el.parentNode.parentNode.getElementsByTagName('input');
-    let p = inputs[0].value, v = inputs[1].value, alpha = inputs[2].value;
-    inertial = inputs[3].checked,
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, cnvs.width, cnvs.height);
-    ctx.fillStyle = 'green';
-    ctx.beginPath();
-    ctx.arc(cnvs.width / 2 - p_earth / screen_width * cnvs.width, cnvs.height / 2, r_Earth / screen_width * cnvs.width, 0, 2 * Math.PI);
-    ctx.fill();
-    
-    ctx.fillStyle = 'gray';
-    ctx.beginPath();
-    ctx.arc(cnvs.width / 2 + p_moon / screen_width * cnvs.width, cnvs.height / 2, r_moon / screen_width * cnvs.width, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'gray';
-    ctx.beginPath();
-    ctx.arc(cnvs.width / 2 - p_earth / screen_width * cnvs.width, cnvs.height / 2, 42164 / screen_width * cnvs.width, 0, 2 * Math.PI);
-    ctx.stroke();
-
-    state_sat = [[-p*math.cos(alpha*Math.PI / 180)-p_earth], [-p*math.sin(alpha*Math.PI / 180)], [v*math.sin(alpha*Math.PI / 180)], [-v*math.cos(alpha*Math.PI / 180)]];
-    if (!inertial) drawJacobiConstant();
-    angle = 0;
-    total_time = 0;
+function updateJ(el) {
+    updateStateL(undefined, options = {c: Number(el.value)})
 }
 
-function updateStateL(state) {
+function updateStateL(state, options = {}) {
+    let {c} = options;
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, cnvs.width, cnvs.height);
     ctx.fillStyle = 'green';
@@ -219,11 +203,22 @@ function updateStateL(state) {
     ctx.beginPath();
     ctx.arc(cnvs.width / 2 - p_earth / screen_width * cnvs.width, cnvs.height / 2, 42164 / screen_width * cnvs.width, 0, 2 * Math.PI);
     ctx.stroke();
-
-    state_sat = JSON.parse(JSON.stringify(state));
-    drawJacobiConstant();
+    // console.log(c, state);
+    state_sat = state ? JSON.parse(JSON.stringify(state)) : null;
+    inertial = document.getElementById('inert-check').checked;
+    if (document.getElementById('inert-check').checked) {
+        return;
+    }
+    drawJacobiConstant(c ? c : jacobi_constant(state_sat));
     angle = 0;
     total_time = 0;
+    let coorPoint;
+    for (point in lagrangePoints) {
+        coorPoint = lagrangePoints[point];
+        ctx.beginPath();
+        ctx.arc(cnvs.width / 2 + coorPoint[0] / screen_width * cnvs.width, cnvs.height / 2 - coorPoint[1] / screen_width * cnvs.width, 2.5, 0, 2 * Math.PI);
+        ctx.fill();
+    }
 }
 
 function findYcrossingBetter(state) {
@@ -284,6 +279,10 @@ function findYcrossing(state) {
     return {state, totalTime}
 }
 
+function calcLyapunov(el) {
+    calcInPlaneLagrangeOrbit(Number(el.parentNode.parentNode.getElementsByTagName('input')[1].value))
+}
+
 function calcInPlaneLagrangeOrbit(relX) {
     state_sat = math.transpose([[relX, 0, 0, calcLine(relX, relX > a_moon ? lineFits.negL2 :  (relX > 324000 ? lineFits.posL1 : lineFits.negL1))]]);
     console.log(state_sat);
@@ -292,7 +291,7 @@ function calcInPlaneLagrangeOrbit(relX) {
 }
 
 function findZeroX(state) {
-    console.time()
+    let dataWrite = document.getElementById('calc-data');
     let r1, r2, r, dr;
     let ii = 0;
     let origState = JSON.parse(JSON.stringify(state));
@@ -322,11 +321,11 @@ function findZeroX(state) {
         }
         oldDx = r.state[2][0];
         console.log(ii, math.abs(math.squeeze(r.state)[2]));
+        dataWrite.innerText = `Iter: ${ii} ${math.abs(math.squeeze(r.state)[2])}`;
     }
     r = findYcrossing(JSON.parse(JSON.stringify(state)));
     console.log(math.squeeze(r.state));
     console.log(math.squeeze(state));
-    console.timeEnd()
     updateStateL(state);
     drawAnimation();
 } 
@@ -361,5 +360,32 @@ function calcCovariance(points, order) {
     return b;
 }
 
+updateStateL(undefined, {c: 3.332});
 
-// drawAnimation();
+function equationL1(r) {
+    return m_moon / r / r + (m_earth * a_moon / (m_earth + m_moon) - r) * (m_moon + m_earth) / a_moon / a_moon / a_moon - m_earth / (a_moon - r) / (a_moon - r)
+} 
+
+function findL1() {
+    let r = 60000;
+    let delta = 0.1;
+    for (let ii = 1; ii < 10; ii++) {
+    console.log(r, equationL1(r)); 
+    dr = (equationL1(r+delta) - equationL1(r)) / 0.1;
+    r += (0 - equationL1(r)) / dr;
+    }
+}
+
+function equationL2(r) {
+    return -m_moon / r / r + (m_earth * a_moon / (m_earth + m_moon) + r) * (m_moon + m_earth) / a_moon / a_moon / a_moon - m_earth / (a_moon + r) / (a_moon + r)
+} 
+
+function findL2() {
+    let r = 60000;
+    let delta = 0.1;
+    for (let ii = 1; ii < 10; ii++) {
+    console.log(r, equationL2(r)); 
+    dr = (equationL2(r+delta) - equationL2(r)) / 0.1;
+    r += (0 - equationL2(r)) / dr;
+    }
+}
