@@ -88,7 +88,7 @@
 </head>
 <body>
     <div id="main-area">
-        <div id="drop-div" class="center" ondrop="testDrop(event);" ondragover="dragOverHandler(event);" ondragenter="dragOverHandler(event);" ondragleave="dragOverHandler(event);">
+        <div id="drop-div" class="center" ondrop="testDrop(event);" ondragover="dragOverHandler(event);" ondragenter="dragOverHandler(event);" ondragleave="dragOverHandler(event);" onmouseenter="handleMouseEnter(event)" onmouseleave="handleMouseEnter(event)">
             Drag file into area...
         </div>
         <div id="parameters">
@@ -100,6 +100,7 @@
         <div>
             <canvas id="data-cnvs" onmousedown="handleCnvsClick(event)" onmousemove="handleCnvsClick(event)" onmouseup="handleCnvsClick(event)"></canvas>
         </div>
+        <div id="altered-tle"></div>
     </div>
     <script>
         let windowOptions = {
@@ -244,6 +245,48 @@
             windowOptions.inputData[1] = `${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]} ${state[6]} ${state[7]}`; 
             let outText = windowOptions.inputData[0] + '\n\n' + windowOptions.inputData[1] + '\n\n\n' + 'END Ephemeris';
             downloadFile('corrupted.e', outText);
+        }
+
+        function handleMouseEnter(el) {
+            if (event.type === 'mouseleave') {
+                if (!document.getElementById('tle-area')) return;
+                if (document.getElementById('tle-area').value !== '') return;
+                el.target.innerHTML = 'Draw file into area...';
+                return;
+            }
+            if (windowOptions.inputData) return;
+            if (document.getElementById('tle-area')) return;
+            el.target.innerHTML = 'Enter TLE Below <br> <textarea oninput="hanldeTle(this)" id="tle-area" rows="2" cols="70">';
+        }
+
+        function coesToTle(coes) {
+            return `1 ${coes.Number}U          ${coes.epoch}  .00000000  00000-0  00000-0 0 00006\n2 ${coes.Number} ${coes.inc.toFixed(4)} ${coes.raan.toFixed(4)} ${coes.ecc.toFixed(7).split('.')[1]} ${coes.arg.toFixed(4)} ${coes.mA.toFixed(4)} ${coes.mm}`
+        }
+
+        function introduceTleError(coes) {
+            let total_error = Number(document.getElementById('error-std').innerText);
+            let p_error = Math.sqrt(Math.pow(total_error, 2) / 4);
+            console.log(p_error);
+            let a_sat = Math.pow(398600.4418 * Math.pow(86164*Number(coes.mm) / 2 / Math.PI, 2), 1/3);
+            p_error /= a_sat;
+            p_error *= 180 / Math.PI;
+            console.log(p_error);
+            coes.arg += p_error * normalRandom();
+            coes.inc += p_error * normalRandom();
+            coes.mA += p_error * normalRandom();
+            coes.raan += p_error * normalRandom();
+        }
+
+        function hanldeTle(el) {
+            try {
+                let coes = stringToCoes(el.value);
+                introduceTleError(coes)
+                document.getElementById('altered-tle').innerText =  coesToTle(coes);
+                navigator.clipboard.writeText(document.getElementById('altered-tle').innerText)
+            }
+            catch (e) {
+                console.error('TLE not recognized')
+            }
         }
 
         function testDrop(event) {
