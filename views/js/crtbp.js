@@ -17,7 +17,7 @@ let timeStep = 25;
 let lagrangePoints = {
     L1: [321721.819, 0], 
     L2: [444233.312, 0], 
-    L3: [-391823.692, 0], 
+    L3: [-387122.1173, 0], 
     L4: [a_moon / 2 -p_earth, a_moon * Math.sqrt(3) / 2],
     L5: [a_moon / 2 -p_earth, -a_moon * Math.sqrt(3) / 2],
 }
@@ -387,5 +387,19 @@ function findL2() {
     console.log(r, equationL2(r)); 
     dr = (equationL2(r+delta) - equationL2(r)) / 0.1;
     r += (0 - equationL2(r)) / dr;
+    }
+}
+
+function equationL3(r) {
+    return -m_earth / (a_moon - r) / (a_moon - r)  - m_moon / (2 * a_moon - r) / (2 * a_moon - r) + (m_moon / (m_moon + m_earth) * a_moon + a_moon - r)*(m_earth + m_moon) / a_moon / a_moon / a_moon;
+} 
+
+function findL3() {
+    let r = 60000;
+    let delta = 0.1;
+    for (let ii = 1; ii < 10; ii++) {
+    console.log(r, equationL3(r)); 
+    dr = (equationL3(r+delta) - equationL3(r)) / 0.1;
+    r += (0 - equationL3(r)) / dr;
     }
 }
