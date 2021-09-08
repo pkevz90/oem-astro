@@ -100,7 +100,9 @@
         <div>
             <canvas id="data-cnvs" onmousedown="handleCnvsClick(event)" onmousemove="handleCnvsClick(event)" onmouseup="handleCnvsClick(event)"></canvas>
         </div>
-        <div id="altered-tle"></div>
+        <div id="altered-tle">
+            <textarea cols="75" rows="2"></textarea>
+        </div>
     </div>
     <script>
         let windowOptions = {
@@ -256,11 +258,11 @@
             }
             if (windowOptions.inputData) return;
             if (document.getElementById('tle-area')) return;
-            el.target.innerHTML = 'Enter TLE Below <br> <textarea oninput="hanldeTle(this)" id="tle-area" rows="2" cols="70">';
+            el.target.innerHTML = 'Enter TLE Below <br> <textarea oninput="hanldeTle(this)" id="tle-area" rows="2" cols="75">';
         }
 
         function coesToTle(coes) {
-            return `1 ${coes.Number}U          ${coes.epoch}  .00000000  00000-0  00000-0 0 00006\n2 ${coes.Number} ${coes.inc.toFixed(4)} ${coes.raan.toFixed(4)} ${coes.ecc.toFixed(7).split('.')[1]} ${coes.arg.toFixed(4)} ${coes.mA.toFixed(4)} ${coes.mm}`
+            return `1 ${coes.Number}U          ${coes.epoch}  .00000000  00000-0  00000-0 0 00006\n2 ${coes.Number} ${addZeros(coes.inc.toFixed(4), 3)} ${addZeros(coes.raan.toFixed(4), 3)} ${coes.ecc.toFixed(7).split('.')[1]} ${addZeros(coes.arg.toFixed(4), 3)} ${addZeros(coes.mA.toFixed(4), 3)} ${coes.mm}`
         }
 
         function introduceTleError(coes) {
@@ -281,8 +283,8 @@
             try {
                 let coes = stringToCoes(el.value);
                 introduceTleError(coes)
-                document.getElementById('altered-tle').innerText =  coesToTle(coes);
-                navigator.clipboard.writeText(document.getElementById('altered-tle').innerText)
+                document.getElementById('altered-tle').getElementsByTagName('textarea')[0].value =  coesToTle(coes);
+                navigator.clipboard.writeText(document.getElementById('altered-tle').getElementsByTagName('textarea')[0].value)
             }
             catch (e) {
                 console.error('TLE not recognized')
@@ -445,6 +447,15 @@
             let error = linePoints[0] * Math.pow(err_inputs[1], 2) + linePoints[1] * err_inputs[1] + linePoints[2];
             error = err_inputs[0] * Number(document.getElementById('range-factor').value) * error;
             document.getElementById('error-std').innerText = error.toFixed(0)
+        }
+        
+        function addZeros(num, dec) {
+            let alteredNum = num.split('.');
+            while (alteredNum[0].length < dec) {
+                alteredNum[0] = '0' + alteredNum[0]
+            }
+            console.log(alteredNum);
+            return alteredNum[0] + '.' + alteredNum[1];
         }
     </script>
 </body>
