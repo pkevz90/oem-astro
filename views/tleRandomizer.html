@@ -125,9 +125,10 @@
             oldTle = oldTle.split(/\n/);
             oldTle[0] = oldTle[0].split(/ +/);
             oldTle[1] = oldTle[1].split(/ +/);
+            console.log(oldTle[0]);
             return {
                 Number: oldTle[1][1],
-                epoch: oldTle[0][2],
+                epoch: Number(oldTle[0][2]) ? oldTle[0][2] : oldTle[0][3],
                 inc: Number(oldTle[1][2]),
                 raan: Number(oldTle[1][3]),
                 arg: Number(oldTle[1][5]),
@@ -266,7 +267,7 @@
         }
 
         function introduceTleError(coes) {
-            let total_error = Number(document.getElementById('error-std').innerText);
+            let total_error = Number(document.getElementById('error-std').innerText) / 1000;
             let p_error = Math.sqrt(Math.pow(total_error, 2) / 4);
             console.log(p_error);
             let a_sat = Math.pow(398600.4418 * Math.pow(86164*Number(coes.mm) / 2 / Math.PI, 2), 1/3);
