@@ -89,7 +89,7 @@
 <body>
     <div id="main-area">
         <div id="drop-div" class="center" ondrop="testDrop(event);" ondragover="dragOverHandler(event);" ondragenter="dragOverHandler(event);" ondragleave="dragOverHandler(event);" onmouseenter="handleMouseEnter(event)" onmouseleave="handleMouseEnter(event)">
-            Drag file into area...
+            Drag ephemeris file into area...
         </div>
         <div id="parameters">
             <div class="parameter-box">Range <input value="10000" type="number" style="width: 8ch;"> m</div> 
@@ -254,7 +254,7 @@
             if (event.type === 'mouseleave') {
                 if (!document.getElementById('tle-area')) return;
                 if (document.getElementById('tle-area').value !== '') return;
-                el.target.innerHTML = 'Draw file into area...';
+                el.target.innerHTML = 'Drag ephemeris file into area...';
                 return;
             }
             if (windowOptions.inputData) return;
