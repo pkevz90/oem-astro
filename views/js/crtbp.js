@@ -24,44 +24,62 @@ let lagrangePoints = {
 let r_l1 = 323050;
 let r_l2 = 445747;
 let start_List = [
-    [320000, 0.0373198],
-    [315000, 0.1690624],
-    [305000, 0.4017912],
-    [295000, 0.4950998],
-    [290000, 0.5285252],
-    [285000, 0.5592776],
-    [281695, 0.5789062],
-    [277982, 0.6066675],
-    [273619, 0.6212661],
-    [268433, 0.6565165],
-    [262189, 0.6936229],
-    [395000, 0.7651171],
-    [400000, 0.6359031],
-    [405000, 0.5374359],
-    [410000, 0.4553654],
-    [420000, 0.3154343],
-    [430000, 0.1876775],
-    [440000, 0.0574053],
-    [330000, -0.1632151],
-    [340000, -0.3245016],
-    [345000, -0.4011516],
-    [350000, -0.4801243],
-    [360000, -0.6683041],
-    [361000, -0.6917287], 
-    [362000, -0.7165618],
-    [365000, -0.8021397], 
-    [366000, -0.8355603],
-    [368000, -0.9130046], 
-    [369000, -0.9587229],
-    [370000, -1.0107337],
-    [371000, -1.0708598],
+    // [320000, 0.0373198],
+    // [315000, 0.1690624],
+    // [305000, 0.4017912],
+    // [295000, 0.4950998],
+    // [290000, 0.5285252],
+    // [285000, 0.5592776],
+    // [281695, 0.5789062],
+    // [277982, 0.6066675],
+    // [273619, 0.6212661],
+    // [268433, 0.6565165],
+    // [262189, 0.6936229],
+    // [395000, 0.7651171],
+    // [400000, 0.6359031],
+    // [405000, 0.5374359],
+    // [410000, 0.4553654],
+    // [420000, 0.3154343],
+    // [430000, 0.1876775],
+    // [440000, 0.0574053],
+    // [330000, -0.1632151],
+    // [340000, -0.3245016],
+    // [345000, -0.4011516],
+    // [350000, -0.4801243],
+    // [360000, -0.6683041],
+    // [361000, -0.6917287], 
+    // [362000, -0.7165618],
+    // [365000, -0.8021397], 
+    // [366000, -0.8355603],
+    // [368000, -0.9130046], 
+    // [369000, -0.9587229],
+    // [370000, -1.0107337],
+    // [371000, -1.0708598],
     // [375000, -1.4723240],
+    // [380000, -1.528355],
+    [-320000, -0.3741911],
+    [-340000, -0.2564482],
+    [-350000, -0.1991286],
+    [-355000, -0.1708210],
+    [-365000, -0.1148648],
+    [-370000, -0.0871991],
+    [-375000, -0.0597308],
+    [-380000, -0.0324523],
+    [-395000,  0.0483162],
+    [-405000,  0.1013398],
+    [-415000,  0.1537639],
+    [-425000,  0.2056344],
+    [-435000,  0.2569941],
+    [-445000,  0.3078832],
+    [-455000,  0.3583402]
 ]
 let lineFits = {
     negL1: [1.4767699104458463e-34, -1.444802714244446e-28, 3.178239681119367e-23, 7.781419479231116e-18, -1.8200377175309124e-12, -0.0000011272047365332115, 0.39307073789995134, -34562.87981910345],
     negL2: [1.1643443351043588e-19, -1.9937362098427212e-13, 1.2800708620166524e-7, -0.03653599771316007, 3913.0928052662703],
-    // posL1: [-5.806226091280285e-30, 4.663676345076874e-24, 2.1747576940358077e-18, -3.7876259884365225e-12, 0.000001685834259013218, -0.32806773006227147, 24246.91817584545],
-    posL1: [2.6985012487887867e-29, -6.063233670389052e-23, 5.605914087504013e-17, -2.735889785771263e-11, 0.000007445253078495057, -1.072502930476524, 63954.08354692072]
+    // posL2: [-5.806226091280285e-30, 4.663676345076874e-24, 2.1747576940358077e-18, -3.7876259884365225e-12, 0.000001685834259013218, -0.32806773006227147, 24246.91817584545],
+    posL1: [2.6985012487887867e-29, -6.063233670389052e-23, 5.605914087504013e-17, -2.735889785771263e-11, 0.000007445253078495057, -1.072502930476524, 63954.08354692072],
+    // posL3: [-7.0412663265527585e-40, -1.1065439321396623e-33, -5.977788830175305e-28, -9.97309209674038e-23, 1.1499866863035163e-18, -1.5004917122706597e-11, -0.000014672453345190975, -3.509039710947583]
+    posL3: [3.212220134373138e-40, 7.820034403842488e-34, 7.544826046887085e-28, 3.3678195769037975e-22, 3.663120031573807e-17, -3.0815485039573485e-11, -0.000019058905864049367, -3.8462941451232253]
 }
 // mu_moon = 000;
 let omega_moon = 2*Math.PI / 27.321661/86164;
@@ -221,7 +239,7 @@ function updateStateL(state, options = {}) {
     }
 }
 
-function findYcrossingBetter(state) {
+function findApogee(state) {
     let dt_check = 100;
     let old_Y, iter = 0;
     let totalTime = 0;
@@ -244,6 +262,16 @@ function findYcrossingBetter(state) {
         }  
     }
     return {state, totalTime}
+}
+
+function orbitPlanet(options = {}) {
+    let {planet = "Earth", p = 50164, v = 3, ang = 0} = options;
+    ang *= Math.PI / 180;
+    let state = [[p * Math.cos(ang) + (planet === "Earth" ? -p_earth : p_moon)],
+                 [p * Math.sin(ang)],
+                 [-v * Math.sin(ang)],
+                 [v * Math.cos(ang)]]
+    updateStateL(state);
 }
 
 function findYcrossing(state) {
@@ -285,10 +313,72 @@ function calcLyapunov(el) {
 
 function calcInPlaneLagrangeOrbit(relX) {
     state_sat = math.transpose([[relX, 0, 0, calcLine(relX, relX > a_moon ? lineFits.negL2 :  (relX > 324000 ? lineFits.posL1 : lineFits.negL1))]]);
-    console.log(state_sat);
+    let estV;
+    if (relX < 0) {
+        estV = calcLine(relX, lineFits.posL3);
+    }
+    else if (relX > a_moon) {
+        if (relX < lagrangePoints.L2[0]) {
+            estV = calcLine(relX, lineFits.negL2);
+        }
+        else {
+            return;
+            // Need to calculate line
+        }
+    }
+    else {
+        if (relX > lagrangePoints.L1[0]) {
+            estV = calcLine(relX, lineFits.posL1);
+        }
+        else {
+            estV = calcLine(relX, lineFits.negL1);
+        }
+    }
+    state_sat = math.transpose([[relX, 0, 0,estV]]);
+    
     // return
     findZeroX(state_sat);
 }
+
+// function findZeroX(state) {
+//     let dataWrite = document.getElementById('calc-data');
+//     let r1, r2, r, dr;
+//     let ii = 0;
+//     let origState = JSON.parse(JSON.stringify(state));
+//     let oldDx = 1000, ddr = 10, consecBad = 0, limit = 60;
+//     let ii_total = 0;
+//     while ((ii < limit && ii_total < 200) && math.abs(oldDx) > 1e-14) {
+//         r1 = findYcrossing([state[0], state[1], state[2], [state[3][0] - 0.000001]]);
+//         r2 = findYcrossing([state[0], state[1], state[2], [state[3][0] + 0.000001]]);
+//         r = findYcrossing(JSON.parse(JSON.stringify(state)));
+//         dr = (r2.state[2][0] - r1.state[2][0]) / 0.000002;
+//         state[3][0] += dr / ddr * (0 - r.state[2][0])
+//         ii++;
+//         ii_total++;
+//         if (Math.pow(oldDx, 2) < Math.pow(r.state[2][0], 2)) {
+//             console.log('consecBad: ' + consecBad);
+//             if ((consecBad > 1 || (ii < 10)) && math.abs(oldDx) > 1e-8 ) {
+//                 console.log('Reset to ddr of' + ddr / 0.5);
+//                 ddr /= 0.5;
+//                 state = JSON.parse(JSON.stringify(origState));
+//                 ii = 0;
+//                 oldDx = 1000;
+//                 consecBad = 0;
+//             }
+//             else {
+//                 consecBad++;
+//             }
+//         }
+//         oldDx = r.state[2][0];
+//         console.log(ii, math.abs(math.squeeze(r.state)[2]));
+//         dataWrite.innerText = `Iter: ${ii} ${math.abs(math.squeeze(r.state)[2])}`;
+//     }
+//     r = findYcrossing(JSON.parse(JSON.stringify(state)));
+//     console.log(math.squeeze(r.state));
+//     console.log(math.squeeze(state));
+//     updateStateL(state);
+//     drawAnimation();
+// } 
 
 function findZeroX(state) {
     let dataWrite = document.getElementById('calc-data');
@@ -297,11 +387,11 @@ function findZeroX(state) {
     let origState = JSON.parse(JSON.stringify(state));
     let oldDx = 1000, ddr = 10, consecBad = 0, limit = 60;
     let ii_total = 0;
-    while ((ii < limit && ii_total < 200) && math.abs(oldDx) > 1e-14) {
-        r1 = findYcrossing([state[0], state[1], state[2], [state[3][0] - 0.000001]]);
-        r2 = findYcrossing([state[0], state[1], state[2], [state[3][0] + 0.000001]]);
+    let guessFunction = () => {
+        r1 = findYcrossing([state[0], state[1], state[2], [state[3][0] - 0.0000001]]);
+        r2 = findYcrossing([state[0], state[1], state[2], [state[3][0] + 0.0000001]]);
         r = findYcrossing(JSON.parse(JSON.stringify(state)));
-        dr = (r2.state[2][0] - r1.state[2][0]) / 0.000002;
+        dr = (r2.state[2][0] - r1.state[2][0]) / 0.0000002;
         state[3][0] += dr / ddr * (0 - r.state[2][0])
         ii++;
         ii_total++;
@@ -321,14 +411,22 @@ function findZeroX(state) {
         }
         oldDx = r.state[2][0];
         console.log(ii, math.abs(math.squeeze(r.state)[2]));
-        dataWrite.innerText = `Iter: ${ii} ${math.abs(math.squeeze(r.state)[2])}`;
+        dataWrite.innerText = `Iter: ${ii} \n Error: ${math.abs(math.squeeze(r.state)[2]).toExponential(3)}`;
+        if ((ii < limit && ii_total < 200) && math.abs(oldDx) > 1e-14) {
+            setTimeout(guessFunction, 10);
+        }
+        else {
+            
+            r = findYcrossing(JSON.parse(JSON.stringify(state)));
+            console.log(math.squeeze(r.state));
+            console.log(math.squeeze(state));
+            updateStateL(state);
+            drawAnimation();
+            
+        }
     }
-    r = findYcrossing(JSON.parse(JSON.stringify(state)));
-    console.log(math.squeeze(r.state));
-    console.log(math.squeeze(state));
-    updateStateL(state);
-    drawAnimation();
-} 
+    setTimeout(guessFunction, 10)
+}
 
 function calcCovariance(points, order) {
     let x = [],
@@ -349,7 +447,7 @@ function calcCovariance(points, order) {
         }
     }
     let yCalc;
-    for (let ii = 0; ii < 1; ii++) {
+    for (let ii = 0; ii < 10; ii++) {
         yCalc = [];
         x.forEach(xDig => {
             yCalc.push([calcLine(xDig, math.squeeze(b))]);
@@ -373,33 +471,5 @@ function findL1() {
     console.log(r, equationL1(r)); 
     dr = (equationL1(r+delta) - equationL1(r)) / 0.1;
     r += (0 - equationL1(r)) / dr;
-    }
-}
-
-function equationL2(r) {
-    return -m_moon / r / r + (m_earth * a_moon / (m_earth + m_moon) + r) * (m_moon + m_earth) / a_moon / a_moon / a_moon - m_earth / (a_moon + r) / (a_moon + r)
-} 
-
-function findL2() {
-    let r = 60000;
-    let delta = 0.1;
-    for (let ii = 1; ii < 10; ii++) {
-    console.log(r, equationL2(r)); 
-    dr = (equationL2(r+delta) - equationL2(r)) / 0.1;
-    r += (0 - equationL2(r)) / dr;
-    }
-}
-
-function equationL3(r) {
-    return -m_earth / (a_moon - r) / (a_moon - r)  - m_moon / (2 * a_moon - r) / (2 * a_moon - r) + (m_moon / (m_moon + m_earth) * a_moon + a_moon - r)*(m_earth + m_moon) / a_moon / a_moon / a_moon;
-} 
-
-function findL3() {
-    let r = 60000;
-    let delta = 0.1;
-    for (let ii = 1; ii < 10; ii++) {
-    console.log(r, equationL3(r)); 
-    dr = (equationL3(r+delta) - equationL3(r)) / 0.1;
-    r += (0 - equationL3(r)) / dr;
     }
 }
