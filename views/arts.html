@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ROTS</title>
+    <script src="../SupportLibraries/math.min.js"></script>
+    <script src="../SupportLibraries/LZWEncoder.js"></script>
+    <script src="../SupportLibraries/NeuQuant.js"></script>
+    <script src="../SupportLibraries/GIFEncoder.js"></script>
+    <link rel="stylesheet" href="./css/rots.css">
+</head>
+
+<body class="noselect">
+    <div id="canvas-div">
+        <canvas id="main-plot"></canvas>
+    </div>
+    <div id="time-slider">
+        <input id="time-slider-range" type="range" min=0 max=86164 step=0.1 value=0>
+    </div>
+    <div class="full-page-menu hidden panel" id="add-satellite-panel">
+        <div class="title-text" style="width: 100%; text-align: center; height: auto; font-weight: 900;">Add Satellite</div>
+        <div>
+            <div class="title-text">Initial State</div>
+            <div style="display: flex; justify-content: space-evenly; align-items: center;">
+                <div>
+                    <div style="margin: 20px 5px">A<sub>e</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">R<sub>c</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">I<sub>c</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">B<sub>o</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> deg</div>
+                    <div style="margin: 20px 5px">Z<sub>max</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">M<sub>o</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> deg</div>
+                </div>
+                <div>
+                    <div style="margin: 20px 5px">R <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">I <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">C <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
+                    <div style="margin: 20px 5px">V<sub>x</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
+                    <div style="margin: 20px 5px">V<sub>y</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
+                    <div style="margin: 20px 5px">V<sub>z</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
+                </div>
+                
+            </div>
+            <div style="margin: 20px;"><span onclick=initStateFunction(this) style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">To Curvilinear</span></div>
+            <div style="margin: 20px 5px"><input title="R I C Rd Id Cd" style="width: 100%;" value="" type="text" id="parse-text"></div>
+            <div style="margin: 20px;"><span onclick="parseState(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Parse</span></div>
+        
+        </div>
+        <div>
+            <div class="title-text">Satellite Details</div>
+            <div style="margin: 20px 5px">Shape
+                <select name="" id="">
+                    <option value="delta">Delta</option>
+                    <option value="3-star">3-Point Star</option>
+                    <option value="4-star">4-Point Star</option>
+                    <option value="star">5-Point Star</option>
+                    <option value="diamond">Diamond</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="square">Square</option>
+                    <option value="pentagon">Pentagon</option>
+                    <option value="hexagon">Hexagon</option>
+                    <option value="septagon">Septagon</option>
+                    <option value="octagon">Octagon</option>
+                </select>
+            </div>
+            <div style="margin: 20px 5px">Acceleration <input style="width: 4em;" value="10" type="Number"> mm/s<sup>2</sup></div>
+            <div style="margin: 20px 5px">Color</sub> <input style="width: 4em;" value="#ff0000" type="color"></div>
+            <div style="margin: 20px 5px">Name <input style="width: 6em;" value="" type="text"></div>
+            <div style="margin-top: 40px;"><span id="add-satellite-button" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Add Satellite</span></div>
+            <div style="margin-top: 40px;"><span onclick="editSatellite(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Update</span><select onchange="openPanel(this)" style="font-size: 2em" name="" id="edit-select">
+                
+            </select></div>
+            <div style="margin-top: 40px;"><span onclick="closeAll()" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Cancel</span></div>
+        
+        </div>
+    </div>
+    <div class="full-page-menu panel hidden" id="burns-panel">
+        <div class="title-text" style="width: 100%; text-align: center; font-weight: 900;">View/Edit Burns</div>
+        <div style="width: 100%;" >
+            <div style="margin-left: 10%" class="title-text">
+                <select id="satellite-way-select" style="font-size: 1em">
+                    <option value="0">Blue Triangle</option>
+                    <option value="1">Red Circle</option>
+                </select>
+            </div>
+            <table id="waypoint-table" style="width: 100%; margin-top: 2%;">
+                <thead>
+                    <tr>
+                        <th>Start Time</th>
+                        <th>Target (R, I, C)</th>
+                        <th>Transfer Time</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top:2%; padding: 2% 0%; display: flex; justify-content: space-evenly; align-items: center; flex-wrap: wrap;">
+                <div class="add-value">
+                    <input type="datetime-local" id="add-start-time" name="meeting-time" value="2021-04-01T00:00" class="center"> 
+                </div>
+                <div class="add-value">
+                    R: <input class="center" type="Number" value="0" style="width: 4em"> km
+                </div class="add-value"> 
+                <div class="add-value">
+                    I: <input class="center" type="Number" value="0" style="width: 4em"> km
+                </div> 
+                <div class="add-value">
+                    C: <input class="center" id="add-cross" type="Number" value="0" style="width: 4em"> km 
+                </div>
+                <div class="add-value">
+                    Time: <input class="center" type="Number" id="add-tran-time" value="120" style="width: 4em"> min
+                </div>
+            </div>
+            <div style="margin-top:1%; padding: 2% 0%; display: flex; justify-content: space-evenly; align-items: center; flex-wrap: wrap;">
+                <div class="">
+                    <span style="padding: 10px; font-size: 1.5em" id="add-waypoint-button">Add</span>
+                </div>
+                <div class="">
+                    Zero RI Velocity <input type="checkbox"></div>
+                </div>
+                <div style="margin: 1% 5%; font-size: 1.5em; padding: 1em 2em;" id="export-burns" class="panel-button hoverable noselect">Export Burn List</div>
+                <div onclick="closeAll()" style="margin: 1% 5%; font-size: 1.5em; padding: 1em 2em;" class="close-button panel-button hoverable noselect">Close</div>
+            </div>
+            
+        </div>    
+    </div>
+    <div class="full-page-menu panel hidden" id="options-panel">
+        <div class="title-text" style="width: 100%; text-align: center; height: auto; font-weight: 900;">Options</div>
+        <div>
+            <div class="title-text">Time & Location</div>
+            <div style="margin: 20px 5px">Start Date <input style="width: 60%" type="datetime-local" id="start-time" name="meeting-time"
+                    value="2021-04-01T00:00"></div>
+            <div style="margin: 20px 5px">Scenario Length <input value="24" type="Number" min="0" max="360" step="1"> hrs</div>
+            <div style="margin: 20px 5px">Reference SMA <input value="42164" type="Number" min="6700" max="50000" step="1"> km</div>
+            <div style="margin: 20px 5px">Sun Time <input value="0000" type="Text" maxLength="4" style="width: 4em"></div>
+            <div style="margin: 20px 5px">Sun Cross Angle <input style="width: 3em" value="0" type="Number" min="-90" max="90"><sup>o</sup></div>
+            <div style="margin: 20px 5px" class="title-text">Recording</div>
+            <div style="margin: 20px 5px">Start Epoch <input value="0" type="Number" min="0" max="10000" step="1"> minutes</div>
+            <div style="margin: 20px 5px">End Epoch <input value="1440" type="Number" min="0" max="10000" step="1"> minutes</div>
+            <div style="margin: 20px 5px">Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
+            <div style="margin: 20px 5px">FPS <input value="30" type="Number" min="15" max="60" step="1"></div>
+            <div style="margin: 20px 5px">Repeat <input type="checkbox"></div>
+            <div><select id="res-select">
+                <option value="full">Full Screen</option>
+                <option value="1920x1080">1080p</option>
+                <option value="1280x720">720p</option>
+                <option value="852x480">480p</option>
+                <option value="320x240">240p</option>
+                <option value="852x852">Square Hi</option>
+                <option value="480x480">Square Low</option>
+            </select></div>
+            <div style="margin: 20px;"><span onclick="recordFunction(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Record</span></div>
+            <div style="margin: 20px;"><span onclick="addKeyFrame()" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Key Frame</span></div>
+        
+        </div>
+        <div>
+            <div class="title-text">Visualization</div>
+            <div style="margin: 20px 5px">Data Points <input style="width: 4em;" value="200" type="Number"></div>
+            <div style="margin: 20px 5px">Name Size <input style="width: 4em;" value="4" type="Number"></div>
+            <div style="margin: 20px 5px">Line Trajectory<input type="checkbox"></div>
+            <div style="margin: 20px 5px">Finite Burns<input type="checkbox" checked></div>
+            <div style="margin: 20px 5px">Finite Targeting<input type="checkbox" checked></div>
+            <div style="margin: 20px 5px">Angle Markers<input type="checkbox" checked></div>
+            <div style="font-size: 1.5em; padding: 14px 4px;" id="export-option-button" class="panel-button hoverable noselect">Export</div>
+            <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
+            <div style="font-size: 1.5em; padding: 14px 4px;"  id="data-button" class="panel-button hoverable noselect">Data</div>
+            <div style="font-size: 1.5em; padding: 14px 4px;"  id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
+            <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
+        </div>
+    </div>
+    <div onclick=openPanel(this) id="add-satellite" class="noselect hoverable" title="Add Satellite">
+        +
+    </div>
+    <div onclick=openPanel(this) id="options" class="noselect hoverable side-button" title="Add Satellite">
+        Options
+    </div>
+    <div onclick=openPanel(this) id="burns" class="noselect hoverable side-button" title="Add Satellite">
+        Burns
+    </div>
+    <div id="maneuver-type-slider">
+        <span>Manual</span>
+        <label class="switch">
+            <input id="maneuver-type-input" type="checkbox">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div onclick=openPanel(this) id="instructions" class="noselect hoverable side-button" title="Add Satellite">
+        Instructions
+    </div>
+    <div id="instructions-panel" class="hidden panel">
+        <div>
+            <div style="font-size:2em; margin: 4%; font-weight: bold">Instructions</div>
+            <ul>
+                <li>
+                    Building a plan
+                    <ul>
+                        <li>Add Satellite with + button in bottom right</li>
+                        <li>By default, all burns are computed with finite accelerations</li>
+                        <li>To insert a burn, click and hold current satellite position, use slider to change shown time
+                        </li>
+                        <li>Burn planning options
+                            <ul>
+                                <li>Click and drag to manually choose burn direction</li>
+                                <li>Switch to waypoint above the burns button, and choose waypoint with mouse (defaults to 2 hrs TOF)</li>
+                                <li>Open burns panel and manually insert RIC coordinate and TOF</li>
+                            </ul>
+                        </li>
+                        <li>Burns can be deleted by cntrl-clicking on the burn point</li>
+                        <li>Limitations
+                            <ul>
+                                <li>Burns durations are limited to 6 hours for mathematical stability</li>
+                                <li>Burns are limited to once every 30 minutes</li>
+                                <li>Clohessy-Wiltshire assumptions are utilized, therefore an error of ~5% can be expected compared to full physics</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li>Spacebar changes current view</li>
+                <li>GIF Generation
+                    <ul>
+                        <li>Select options panel</li>
+                        <li>Set start time and end time (in minutes from start of scenario)</li>
+                        <li>Select time step per frame (assuming 30 FPS, so if time step is 1 minute, each hour will be 2 seconds long in video)</li>
+                        <li>Press record</li>
+                    </ul>
+                </li>
+            </ul>
+            <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Close</div>
+        </div>
+    </div>
+    <div id="data-panel" class="hidden panel">
+        <div>
+            <select onchange="dataChange(this)" id="data-select" style="font-size: 2em">
+            </select>
+        </div>
+        <div>
+            <div><input id="range" type="checkbox">Range</div>
+            <div><input id="rangeRate" type="checkbox">Range Rate</div>
+            <div><input id="relativeVelocity" type="checkbox">Relative Velocity</div>
+            <div><input id="poca" type="checkbox">POCA</div>
+            <div><input id="sunAngle" type="checkbox">CATS</div>
+            <div>Position X: <input style="width: 3em;" type="Number" value="1">% Y: <input style="width: 3em;" type="Number" value="10">%</div>
+            <div>Font Size <input style="width: 4em;" type="Number" value="30"></div>
+            <div id="confirm-data-button" class="panel-button hoverable noselect">Confirm</div>
+            <div><input id="kinematic" type="checkbox">Kinematic Reach Distance: <input style="width: 3em;" type="Number" value="10"> km TOF: <input style="width: 3em;" type="Number" value="1"> hr(s)</div>
+        </div>
+    </div>
+    <script src="./js/arts.js"></script>
+</body>
+
+</html>

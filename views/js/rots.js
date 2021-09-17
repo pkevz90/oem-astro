@@ -163,6 +163,32 @@ windowOptions.screen = {
     lineHeight: cnvs.height
 };
 
+class Satellite {
+    #shape;
+    #color;
+    constructor(options = {}) {
+        let {
+            color = 'red',
+            name = 'Sat',
+            shape = 'square',
+            size = 0.035,
+            position = [[0], [0], [0], [0], [0], [0]],
+            burns = [],
+            shownTraj = [],
+            a = 1e-5,
+        } = options;
+        this.position = position;
+        this.currentPosition = position;
+        this.size = size;
+        this.#color = color;
+        this.#shape = shape;
+        this.name = name;
+        this.burns = burns;
+        this.shownTraj = shownTraj;
+        this.a = a;
+    }
+}
+
 function newSatellite(options) {
     let {
         color = 'red', shape = "square", size = 0.035, position, burns = [], shownTraj = [], a = 0.00001, name="Sat"
