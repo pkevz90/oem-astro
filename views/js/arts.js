@@ -14,6 +14,7 @@ class windowCanvas {
         },
         speed: 0.1
     };
+    #initSun = [1, 0, 0.2];
     #desired = {
         scenario_time: 0
     };
@@ -24,6 +25,7 @@ class windowCanvas {
     #state = 'ri';
     burnStatus = true;
     showFinite = true;
+    currentTarget = false;
     satellites = [];
     constructor(cnvs) {
         this.#cnvs = cnvs;
@@ -48,9 +50,24 @@ class windowCanvas {
     getState() {
         return this.#state;
     }
+    getCurrentSun() {
+        return math.squeeze(math.multiply(rotationMatrices(-this.scenario_time * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
+    }
     setPlotWidth(width) {
         this.#plotWidth = width;
         this.#plotHeight = width * this.getRatio();
+    }
+    setAxisWidth(type = 'set', width) {
+        if (type === 'set') {
+            this.#plotWidth = width;
+        }
+        else if (type === 'increase') {
+            this.#plotWidth *= 1.05;
+        }
+        else if (type === 'decrease') {
+            this.#plotWidth /= 1.05;
+        }
+        this.#plotHeight = this.#plotWidth * this.getRatio();
     }
     setPlotCenter(center) {
         this.#plotCenter = center;
@@ -80,6 +97,29 @@ class windowCanvas {
         this.setSize(window.innerWidth, window.innerHeight);
         this.setPlotWidth(this.#plotWidth);
     }
+    convertToRic(input = [0, 0]) {
+        if (Array.isArray(input)) {
+            input = math.squeeze(input);
+            input = {
+                x:  input[0],
+                y:  input[1]
+            };
+        }
+        return{
+            ri: {
+                i: -(input.x - this.#cnvs.width * this.#frameCenter.ri.x) * this.#plotWidth / this.#cnvs.width + this.#plotCenter,
+                r: -(input.y - this.#cnvs.height * this.#frameCenter.ri.y) * this.#plotHeight/ this.#cnvs.height
+            },
+            ci: {
+                i: -(input.x - this.#cnvs.width * this.#frameCenter.ci.x) * this.#plotWidth / this.#cnvs.width + this.#plotCenter,
+                c: -(input.y - this.#cnvs.height * this.#frameCenter.ci.y) * this.#plotHeight/ this.#cnvs.height
+            },
+            rc: {
+                r: (input.x - this.#cnvs.width * this.#frameCenter.rc.x) * this.#plotWidth / this.#cnvs.width + this.#plotCenter,
+                c: -(input.y - this.#cnvs.height * this.#frameCenter.rc.y) * this.#plotHeight/ this.#cnvs.height
+            },
+        }
+    }
     convertToPixels(input = [0, 0, 0, 0, 0, 0], cross = false) {
         if (Array.isArray(input)) {
             input = math.squeeze(input);
@@ -99,8 +139,8 @@ class windowCanvas {
                 y: this.#cnvs.height * this.#frameCenter.ci.y - input.c * this.#cnvs.height/ this.#plotHeight
             },
             rc: {
-                x: -(input.c - this.#plotCenter) * this.#cnvs.width / this.#plotWidth + this.#cnvs.width * this.#frameCenter.rc.x,
-                y: this.#cnvs.height * this.#frameCenter.rc.y - input.r * this.#cnvs.height / this.#plotHeight
+                x: (input.r - this.#plotCenter) * this.#cnvs.width / this.#plotWidth + this.#cnvs.width * this.#frameCenter.rc.x,
+                y: this.#cnvs.height * this.#frameCenter.rc.y - input.c * this.#cnvs.height / this.#plotHeight
             }
         }
     }
@@ -109,6 +149,8 @@ class windowCanvas {
         ctx.strokeStyle = 'black';
         ctx.fillStyle = 'black';
         let axesLength = 0.5;
+        let sunLength = 0.4 * this.#plotHeight / 2;
+        let sunCoor = this.convertToPixels(math.dotMultiply(sunLength, this.getCurrentSun()));
         let origin = this.convertToPixels([0, 0, 0]);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -121,6 +163,12 @@ class windowCanvas {
             ctx.moveTo(origin.ri.x + this.#cnvs.width * this.#frameCenter.ri.w / 400, origin.ri.y)
             ctx.lineTo(origin.ri.x - this.#cnvs.height * axesLength * this.#frameCenter.ri.h / 2, origin.ri.y);
             ctx.stroke();
+            ctx.strokeStyle = 'orange';
+            ctx.beginPath()
+            ctx.moveTo(origin.ri.x, origin.ri.y);
+            ctx.lineTo(sunCoor.ri.x, sunCoor.ri.y);
+            ctx.stroke();
+            ctx.strokeStyle = 'black';
             ctx.fillText('R', origin.ri.x, origin.ri.y - this.#cnvs.height * axesLength * this.#frameCenter.ri.h / 2 - this.#cnvs.width * this.#frameCenter.ri.w / 60)
             ctx.fillText('I', origin.ri.x - this.#cnvs.height * axesLength * this.#frameCenter.ri.h / 2 - this.#cnvs.width * this.#frameCenter.ri.w / 80, origin.ri.y)
         }
@@ -133,6 +181,12 @@ class windowCanvas {
             ctx.moveTo(origin.ci.x + this.#cnvs.width * this.#frameCenter.ci.w / 400, origin.ci.y)
             ctx.lineTo(origin.ci.x - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2, origin.ci.y);
             ctx.stroke();
+            ctx.strokeStyle = 'orange';
+            ctx.beginPath()
+            ctx.moveTo(origin.ci.x, origin.ci.y);
+            ctx.lineTo(sunCoor.ci.x, sunCoor.ci.y);
+            ctx.stroke();
+            ctx.strokeStyle = 'black';
             ctx.fillText('C', origin.ci.x, origin.ci.y - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2 - this.#cnvs.width * this.#frameCenter.ci.w / 60)
             ctx.fillText('I', origin.ci.x - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2 - this.#cnvs.width * this.#frameCenter.ci.w / 80, origin.ci.y)
         }
@@ -142,33 +196,39 @@ class windowCanvas {
             ctx.beginPath()
             ctx.moveTo(origin.rc.x, origin.rc.y);
             ctx.lineTo(origin.rc.x, origin.rc.y - this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2);
-            ctx.moveTo(origin.rc.x + this.#cnvs.width * this.#frameCenter.rc.w / 400, origin.rc.y)
-            ctx.lineTo(origin.rc.x - this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2, origin.rc.y);
+            ctx.moveTo(origin.rc.x - this.#cnvs.width * this.#frameCenter.rc.w / 400, origin.rc.y)
+            ctx.lineTo(origin.rc.x + this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2, origin.rc.y);
             ctx.stroke();
-            ctx.fillText('R', origin.rc.x, origin.rc.y - this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2 - this.#cnvs.width * this.#frameCenter.rc.w / 60)
-            ctx.fillText('C', origin.rc.x - this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2 - this.#cnvs.width * this.#frameCenter.rc.w / 80, origin.rc.y)
+            ctx.strokeStyle = 'orange';
+            ctx.beginPath()
+            ctx.moveTo(origin.rc.x, origin.rc.y);
+            ctx.lineTo(sunCoor.rc.x, sunCoor.rc.y);
+            ctx.stroke();
+            ctx.strokeStyle = 'black';
+            ctx.fillText('C', origin.rc.x, origin.rc.y - this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2 - this.#cnvs.width * this.#frameCenter.rc.w / 60)
+            ctx.fillText('R', origin.rc.x + this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2 + this.#cnvs.width * this.#frameCenter.rc.w / 80, origin.rc.y)
         }
     }
     drawCurve(line, options = {}) {
         // console.log(line);
-        let {color = 'red'} = options
+        let {color = 'red', size = 1} = options
         let ctx = this.getContext();
         ctx.fillStyle = color;
         line.forEach((point, ii) => {
             let pixelPos = this.convertToPixels(point);
             if (this.#state.search('ri') !== -1) {
                 ctx.beginPath();
-                ctx.arc(pixelPos.ri.x, pixelPos.ri.y, 1, 0, 2 * Math.PI);
+                ctx.arc(pixelPos.ri.x, pixelPos.ri.y, size, 0, 2 * Math.PI);
                 ctx.fill()
             }
             if (this.#state.search('ci') !== -1){
                 ctx.beginPath()
-                ctx.arc(pixelPos.ci.x, pixelPos.ci.y, 1, 0, 2 * Math.PI);
+                ctx.arc(pixelPos.ci.x, pixelPos.ci.y, size, 0, 2 * Math.PI);
                 ctx.fill();
             }
             if (this.#state.search('rc') !== -1) {
                 ctx.beginPath()
-                ctx.arc(pixelPos.rc.x, pixelPos.rc.y, 1, 0, 2 * Math.PI);
+                ctx.arc(pixelPos.rc.x, pixelPos.rc.y, size, 0, 2 * Math.PI);
                 ctx.fill();
             }
         })
@@ -178,19 +238,22 @@ class windowCanvas {
 
 class Satellite {
     position;
+    #currentPosition;
     #color;
     #size;
     #shape;
     burns = [];
     #a;
+    name;
     stateHistory;
     constructor(options = {}) {
         let {
             position = {r: 2, i: 50, c: 10, rd: 0.001, id: 0, cd: -0.001},
-            size = 0.05,
+            size = 0.005,
             color = 'blue',
             shape = 'square',
-            a = 0.00001
+            a = 0.00001,
+            name = 'Sat'
         } = options; 
         this.position = position;
         this.#size = size;
@@ -200,18 +263,34 @@ class Satellite {
         this.stateHistory = this.calcTraj();
     }
     calcTraj = calcSatShownTrajectories;
+    genBurns = generateBurns;
     drawTrajectory() {
         // console.log(this.#stateHistory);
         if (!this.stateHistory) return;
         mainWindow.drawCurve(this.stateHistory, {color: this.#color});
     }
+    currentPosition = getSatCurrentPosition;
+    drawCurrentPosition() {
+        let cur = this.currentPosition();
+        cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
+        this.#currentPosition = cur;
+        mainWindow.drawCurve([cur], {size: 5, color: this.#color});
+    }
+    checkClickProximity(position) {
+        // Check if clicked on current position of object
+        return {
+            ri: math.norm([this.#currentPosition.r - position.ri.r, this.#currentPosition.i - position.ri.i]) < (mainWindow.getWidth() / 400),
+            ci: math.norm([this.#currentPosition.c - position.ci.c, this.#currentPosition.i - position.ci.i]) < (mainWindow.getWidth() / 400),
+            rc: math.norm([this.#currentPosition.c - position.rc.c, this.#currentPosition.r - position.rc.r]) < (mainWindow.getWidth() / 400)
+        }
+    }
+    checkBurnProximity(position) {
 
+    }
 }
 
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
 mainWindow.fillWindow();
-
-
 
 (function animationLoop() {
     mainWindow.clear();
@@ -219,10 +298,13 @@ mainWindow.fillWindow();
     mainWindow.drawAxes();
     mainWindow.satellites.forEach(sat => {
         sat.drawTrajectory();
+        sat.drawCurrentPosition();
     })
     window.requestAnimationFrame(animationLoop)
 })()
-
+//------------------------------------------------------------------
+// Adding event listeners for window objects
+//------------------------------------------------------------------
 window.addEventListener('keydown', key => {
     key = key.key;
     if (key === ' ') {
@@ -316,6 +398,136 @@ window.addEventListener('keydown', key => {
         mainWindow.satellites.push(newSat)
     }
 })
+window.addEventListener('wheel', event => mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease'))
+document.getElementById('main-plot').addEventListener('mousedown', event => {
+    let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
+    let sat = 0, check;
+    while (sat < mainWindow.satellites.length) {
+        check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
+        mainWindow.currentTarget = false;
+        for (frame in check) {
+            mainWindow.currentTarget = check[frame] ? {sat, frame, type: 'current'} : mainWindow.currentTarget;
+        }
+        if (mainWindow.currentTarget) break;
+        sat++;
+    }
+    console.log(mainWindow.currentTarget);
+    if (mainWindow.currentTarget.type === 'current') {
+        setTimeout(() => {
+            if (!mainWindow.currentTarget) return;
+            let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
+                time: mainWindow.scenario_time + 7200
+            });
+            mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
+                time: mainWindow.scenario_time,
+                direction: {
+                    r: 0,
+                    i: 0,
+                    c: 0
+                },
+                waypoint: {
+                    tranTime: 7200,
+                    target: {
+                        r: targetState.r[0],
+                        i: targetState.i[0],
+                        c: targetState.c[0]
+                    }
+                }
+            })
+            mainWindow.satellites[mainWindow.currentTarget.sat].burns.sort((a, b) => {
+                return a.time - b.time;
+            })
+        }, 250)
+    }
+})
+document.getElementById('main-plot').addEventListener('mouseup', event => {
+    mainWindow.currentTarget = false;
+})
+//------------------------------------------------------------------
+// Adding functions to handle data planels, etc.
+//------------------------------------------------------------------
+function openPanel(button) {
+    if (button.id === 'burns') {
+        if (mainWindow.satellites.length === 0) {
+            return;
+        }
+        mainWindow.scenario_time_des = mainWindow.scenario_length*3600;
+        let selectEl = document.getElementById('satellite-way-select');
+        let chosenSat = Number(selectEl.value);
+        generateBurnTable(chosenSat);
+        while (selectEl.firstChild) {
+            selectEl.removeChild(selectEl.firstChild);
+        }
+        mainWindow.satellites.forEach((sat, ii) => {
+            addedElement = document.createElement('option');
+            addedElement.value = ii;
+            addedElement.textContent = sat.name  ? sat.name : sat.shape;
+            addedElement.style.color = sat.color;
+            selectEl.appendChild(addedElement);
+        })
+        selectEl.selectedIndex = chosenSat;
+        selectEl.style.color = satellites[chosenSat].color;
+    }
+    else if (button.id === 'add-satellite') {
+        let selectEl = document.getElementById('edit-select');
+        selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = `Sat-${mainWindow.satellites.length+1}`;
+        document.getElementById('parse-text').value = "";
+        while (selectEl.firstChild) {
+            selectEl.removeChild(selectEl.firstChild);
+        }
+        mainWindow.satellites.forEach((sat, ii) => {
+            addedElement = document.createElement('option');
+            addedElement.value = ii;
+            addedElement.textContent = sat.name  ? sat.name : sat.shape;
+            addedElement.style.color = sat.color;
+            selectEl.appendChild(addedElement);
+        })
+    }
+    else if (button.id === 'options') {
+        let inputs = document.getElementById('options-panel').getElementsByTagName('input');
+        let dateDiff = new Date(mainWindow.start_date.toString().split('GMT')[0]).getTimezoneOffset()*60*1000;
+        dateDiff = new Date(mainWindow.start_date-dateDiff).toISOString().substr(0,19);
+        inputs[0].value = dateDiff;
+        inputs[1].value = mainWindow.scenario_length;
+        inputs[2].value = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3).toFixed(2);
+        let sunTime = Math.round((24 * math.atan2(mainWindow.initSun[1], -mainWindow.initSun[0]) / 2 / Math.PI));
+        if (sunTime < 0) sunTime = math.round((sunTime + 24));
+        sunTime += '00';
+        if (sunTime.length < 4) sunTime = '0' + sunTime;
+        inputs[3].value = sunTime;
+        inputs[4].value = 180 * math.atan2(mainWindow.initSun[2], math.norm(mainWindow.initSun.slice(0,2))) / Math.PI;
+    }
+    document.getElementById(button.id + '-panel').classList.toggle("hidden");
+    // mainWindow.panelOpen = true;
+}
+
+function phiMatrix(t = 0, n = mainWindow.mm) {
+    let nt = n * t;
+    let cnt = Math.cos(nt);
+    let snt = Math.sin(nt);
+    return {
+        rr: [
+            [4 - 3 * cnt, 0, 0],
+            [6 * (snt - nt), 1, 0],
+            [0, 0, cnt]
+        ],
+        rv: [
+            [snt / n, 2 * (1 - cnt) / n, 0],
+            [2 * (cnt - 1) / n, (4 * snt - 3 * nt) / n, 0],
+            [0, 0, snt / n]
+        ],
+        vr: [
+            [3 * n * snt, 0, 0],
+            [6 * n * (cnt - 1), 0, 0],
+            [0, 0, -n * snt]
+        ],
+        vv: [
+            [cnt, 2 * snt, 0],
+            [-2 * snt, 4 * cnt - 3, 0],
+            [0, 0, cnt]
+        ]
+    };
+}
 
 function phiMatrixWhole(t = 0, n = mainWindow.mm) {
     let nt = n * t;
@@ -329,6 +541,117 @@ function phiMatrixWhole(t = 0, n = mainWindow.mm) {
         [6 * n * (cnt - 1), 0, 0, -2 * snt, 4 * cnt - 3, 0],
         [0, 0, -n * snt, 0, 0, cnt]
     ];
+}
+
+function getSatCurrentPosition(options = {}) {
+    let {
+        time = mainWindow.scenario_time, burnStop, position = this.position, burns = this.burns, a = this.a, log = false
+    } = options
+    if (burnStop === undefined) burnStop = burns.length;
+    if (mainWindow.showFinite) {
+        let t_prop = 0,
+            phi, t_burn, alpha, phi_angle, n = mainWindow.mm;
+        let pos = [
+            [position.r],
+            [position.i],
+            [position.c],
+            [position.rd],
+            [position.id],
+            [position.cd]
+        ];
+        for (let n_burn = 0; n_burn < burns.length; n_burn++) {
+            if (time <= burns[n_burn].time) break;
+            pos = math.multiply(phiMatrixWhole(burns[n_burn].time - t_prop), pos);
+            t_prop = burns[n_burn].time;
+            t_burn = burnStop <= n_burn ? 0 : math.norm([burns[n_burn].direction.r, burns[n_burn].direction.i,
+                burns[n_burn].direction
+                .c
+            ]) / a;
+
+            if (n_burn !== burns.length - 1) {
+                t_burn = t_burn > (burns[n_burn + 1].time - burns[n_burn].time) ? burns[n_burn + 1].time - burns[n_burn].time : t_burn;
+            }
+            alpha = math.atan2(burns[n_burn].direction.i, burns[n_burn].direction.r);
+            phi_angle = math.atan2(burns[n_burn].direction.c, math.norm([burns[n_burn].direction.r, burns[
+                n_burn].direction.i]));
+            if ((t_prop + t_burn) > time) {
+                t_burn = time - t_prop;
+                return {
+                    r: [radialPosClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
+                        t_burn, n)],
+                    i: [intrackPosClosed(pos[0][0], pos[3][0], pos[1][0], pos[4][0], a,
+                        alpha, phi_angle, t_burn, n)],
+                    c: [crosstrackPosClosed(pos[2][0], pos[5][0], a, phi_angle, t_burn, n)],
+                    rd: [radialVelClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
+                        t_burn, n)],
+                    id: [intrackVelClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
+                        t_burn, n)],
+                    cd: [crosstrackVelClosed(pos[2][0], pos[5][0], a, phi_angle, t_burn, n)]
+                }
+            }
+            pos = [
+                [radialPosClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
+                    t_burn, n)],
+                [intrackPosClosed(pos[0][0], pos[3][0], pos[1][0], pos[4][0], a, alpha,
+                    phi_angle, t_burn, n)],
+                [crosstrackPosClosed(pos[2][0], pos[5][0], a, phi_angle, t_burn, n)],
+                [radialVelClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
+                    t_burn, n)],
+                [intrackVelClosed(pos[0][0], pos[3][0], pos[4][0], a, alpha, phi_angle,
+                    t_burn, n)],
+                [crosstrackVelClosed(pos[2][0], pos[5][0], a, phi_angle, t_burn, n)]
+            ];
+            t_prop += t_burn;
+        }
+        phi = phiMatrixWhole(time - t_prop);
+        pos = math.multiply(phi, pos);
+        return {
+            r: pos[0],
+            i: pos[1],
+            c: pos[2],
+            rd: pos[3],
+            id: pos[4],
+            cd: pos[5]
+        };
+    }
+    let r = [
+            [position.r],
+            [position.i],
+            [position.c]
+        ],
+        r1, phi;
+    let v = [
+        [position.rd],
+        [position.id],
+        [position.cd]
+    ];
+    let timeProp = 0;
+    for (let ii = 0; ii < burns.length; ii++) {
+        if (burns[ii].time <= time) {
+            phi = phiMatrix(burns[ii].time - timeProp);
+            r1 = math.add(math.multiply(phi.rr, r), math.multiply(phi.rv, v));
+            v = math.add(math.multiply(phi.vr, r), math.multiply(phi.vv, v));
+            r = r1;
+            v[0][0] += burnStop <= ii ? 0 : burnStop <= ii ? 0 : burns[ii].direction.r;
+            v[1][0] += burnStop <= ii ? 0 : burns[ii].direction.i;
+            v[2][0] += burnStop <= ii ? 0 : burns[ii].direction.c;
+            timeProp = burns[ii].time;
+        } else {
+            break;
+        }
+    }
+    phi = phiMatrix(time - timeProp);
+    r1 = math.add(math.multiply(phi.rr, r), math.multiply(phi.rv, v));
+    v = math.add(math.multiply(phi.vr, r), math.multiply(phi.vv, v));
+    r = r1;
+    return {
+        r: r[0],
+        i: r[1],
+        c: r[2],
+        rd: v[0],
+        id: v[1],
+        cd: v[2]
+    };
 }
 
 function calcSatShownTrajectories(whole = false, allBurns = false) {
@@ -391,7 +714,7 @@ function calcSatShownTrajectories(whole = false, allBurns = false) {
                                 ], this.a, phi_angle, t_calc - this.burns[satBurn]
                                 .time, n)
                         }
-                        this.shownTraj.push(position_finite);
+                        this.stateHistory.push(position_finite);
                     }
                     t_calc += mainWindow.timeDelta;
                     currentState = [
@@ -963,4 +1286,83 @@ function proxOpsTargeter(r1, r2, t) {
     v1 = math.multiply(math.inv(phi.rv), math.subtract(r2, math.multiply(phi.rr, r1)));
     v2 = math.add(math.multiply(phi.vr, r1), math.multiply(phi.vv, v1));
     return [v1, v2];
+}
+
+function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
+    angle *= Math.PI / 180;
+    let rotMat;
+    if (axis === 1) {
+        rotMat = [
+            [1, 0, 0],
+            [0, Math.cos(angle), -Math.sin(angle)],
+            [0, Math.sin(angle), Math.cos(angle)]
+        ];
+    } else if (axis === 2) {
+        rotMat = [
+            [Math.cos(angle), 0, Math.sin(angle)],
+            [0, 1, 0],
+            [-Math.sin(angle), 0, Math.cos(angle)]
+        ];
+    } else {
+        rotMat = [
+            [Math.cos(angle), -Math.sin(angle), 0],
+            [Math.sin(angle), Math.cos(angle), 0],
+            [0, 0, 1]
+        ]
+    }
+    return rotMat;
+}
+
+function generateBurns(options = {}) {
+    let {
+        drawnBurn
+    } = options;
+    let r1, r2, v10;
+    for (let ii = 0; ii < this.burns.length; ii++) {
+        r1 = this.currentPosition({
+            time: this.burns[ii].time,
+            burnStop: ii
+        });
+        v10 = [r1.rd, r1.id, r1.cd];
+        r1 = [r1.r, r1.i, r1.c]
+        r2 = [
+            [this.burns[ii].waypoint.target.r],
+            [this.burns[ii].waypoint.target.i],
+            [this.burns[ii].waypoint.target.c]
+        ];
+        let dir = hcwFiniteBurnOneBurn({
+            x: r1[0][0],
+            y: r1[1][0],
+            z: r1[2][0],
+            xd: v10[0][0],
+            yd: v10[1][0],
+            zd: v10[2][0]
+        }, {
+            x: r2[0][0],
+            y: r2[1][0],
+            z: r2[2][0],
+            xd: 0,
+            yd: 0,
+            zd: 0
+        }, this.burns[ii].waypoint.tranTime, this.a);
+        if (dir && dir.t > 0 && dir.t < 1) {
+            this.burns[ii].direction.r = dir.r;
+            this.burns[ii].direction.i = dir.i;
+            this.burns[ii].direction.c = dir.c;
+
+            // if (ii === drawnBurn) {
+            //     drawBurnArrow(this.burns[ii], {
+            //         location: {
+            //             r: r1[0][0],
+            //             i: r1[1][0],
+            //             c: r1[2][0]
+            //         },
+            //         object: windowOptions.burn_status.object,
+            //         length: undefined
+            //     });
+            // }
+        }
+    }
+
+    this.calcTraj(true);
 }
