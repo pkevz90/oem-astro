@@ -27,6 +27,7 @@ class windowCanvas {
     showFinite = true;
     currentTarget = false;
     satellites = [];
+    mousePosition = [];
     constructor(cnvs) {
         this.#cnvs = cnvs;
     }
@@ -234,6 +235,17 @@ class windowCanvas {
         })
         ctx.fill();
     }
+    drawMouse(position = [0, 0]) {
+        let ctx = this.getContext();
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(position[0] - this.#cnvs.width / 60, position[1]);
+        ctx.lineTo(position[0] + this.#cnvs.width / 60, position[1]);
+        ctx.moveTo(position[0], position[1] - this.#cnvs.width / 60);
+        ctx.lineTo(position[0], position[1] + this.#cnvs.width / 60);
+        ctx.stroke();
+    }
 }
 
 class Satellite {
@@ -243,7 +255,6 @@ class Satellite {
     #size;
     #shape;
     burns = [];
-    #a;
     name;
     stateHistory;
     constructor(options = {}) {
@@ -287,6 +298,16 @@ class Satellite {
     checkBurnProximity(position) {
 
     }
+    checkInBurn() {
+        let time = mainWindow.scenario_time;
+        this.burns.forEach(burn => {
+            let burnDuration = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a;
+            if (time > burn.time && time < (burn.time + burnDuration)) {
+                // this.calcTraj();
+            }
+        });
+        this.calcTraj();
+    }
 }
 
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
@@ -297,9 +318,11 @@ mainWindow.fillWindow();
     mainWindow.updateSettings();
     mainWindow.drawAxes();
     mainWindow.satellites.forEach(sat => {
+        sat.checkInBurn()
         sat.drawTrajectory();
         sat.drawCurrentPosition();
     })
+    mainWindow.drawMouse(mainWindow.mousePosition);
     window.requestAnimationFrame(animationLoop)
 })()
 //------------------------------------------------------------------
@@ -442,6 +465,9 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
 })
 document.getElementById('main-plot').addEventListener('mouseup', event => {
     mainWindow.currentTarget = false;
+})
+document.getElementById('main-plot').addEventListener('mousemove', event => {
+    mainWindow.mousePosition = [event.clientX, event.clientY];
 })
 //------------------------------------------------------------------
 // Adding functions to handle data planels, etc.
@@ -677,79 +703,66 @@ function calcSatShownTrajectories(whole = false, allBurns = false) {
         });
         if (satBurn !== undefined) {
             if (((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
-                    (mainWindow.scenario_time + 0.5))) || allBurns) {
-                if (mainWindow.showFinite) {
-                    let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
-                        .direction.i, this.burns[satBurn].direction.c
-                    ]) / this.a;
-                    if (satBurn !== this.burns.length - 1) {
-                        t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
-                    }
-                    if (this.completedBurn && !mainWindow.burnS) {
-                        t_burn = t_burn < (mainWindow.scenario_time - this.burns[satBurn].time) ?
-                            t_burn : mainWindow.scenario_time - this.burns[satBurn].time;
-                    } else {
-                        this.burnsDrawn++;
-                    }
-                    let position_start = math.multiply(phiMatrixWhole(this.burns[satBurn].time -
-                        t_calc), currentState);
-                    let position_finite;
-                    let n = mainWindow.mm;
-                    let alpha = math.atan2(this.burns[satBurn].direction.i, this.burns[satBurn]
-                        .direction.r);
-                    let phi_angle = math.atan2(this.burns[satBurn].direction.c, math.norm([this
-                        .burns[satBurn].direction.r, this.burns[satBurn].direction.i
-                    ]));
-                    while ((this.burns[satBurn].time + t_burn - t_calc) > mainWindow.timeDelta) {
-                        t_calc += mainWindow.timeDelta;
-                        position_finite = {
-                            r: radialPosClosed(position_start[0][0], position_start[3][0],
-                                position_start[4][0], this.a, alpha, phi_angle, t_calc -
-                                this.burns[satBurn].time, n),
-                            i: intrackPosClosed(position_start[0][0], position_start[3][0],
-                                position_start[1][0], position_start[4][0], this.a,
-                                alpha, phi_angle, t_calc - this.burns[satBurn].time, n),
-                            c: crosstrackPosClosed(position_start[2][0], position_start[5][
-                                    0
-                                ], this.a, phi_angle, t_calc - this.burns[satBurn]
-                                .time, n)
-                        }
-                        this.stateHistory.push(position_finite);
-                    }
+                (mainWindow.scenario_time + 0.5))) || allBurns) {
+                let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
+                    .direction.i, this.burns[satBurn].direction.c
+                ]) / this.a;
+                if (satBurn !== this.burns.length - 1) {
+                    t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
+                } 
+                t_burn = (mainWindow.scenario_time - this.burns[satBurn].time) < t_burn ? (mainWindow.scenario_time - this.burns[satBurn].time) : t_burn;
+
+                // if (this.completedBurn && !mainWindow.burnS) {
+                //     t_burn = t_burn < (mainWindow.scenario_time - this.burns[satBurn].time) ?
+                //         t_burn : mainWindow.scenario_time - this.burns[satBurn].time;
+                // } else {
+                //     this.burnsDrawn++;
+                // }
+                let position_start = math.multiply(phiMatrixWhole(this.burns[satBurn].time -
+                    t_calc), currentState);
+                let position_finite;
+                let n = mainWindow.mm;
+                let alpha = math.atan2(this.burns[satBurn].direction.i, this.burns[satBurn]
+                    .direction.r);
+                let phi_angle = math.atan2(this.burns[satBurn].direction.c, math.norm([this
+                    .burns[satBurn].direction.r, this.burns[satBurn].direction.i
+                ]));
+                while ((this.burns[satBurn].time + t_burn - t_calc) > mainWindow.timeDelta) {
                     t_calc += mainWindow.timeDelta;
-                    currentState = [
-                        [radialPosClosed(position_start[0][0], position_start[3][0],
-                            position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
-                        [intrackPosClosed(position_start[0][0], position_start[3][0],
-                            position_start[1][0], position_start[4][0], this.a, alpha,
-                            phi_angle, t_burn, n)],
-                        [crosstrackPosClosed(position_start[2][0], position_start[5][0], this
-                            .a, phi_angle, t_burn, n)],
-                        [radialVelClosed(position_start[0][0], position_start[3][0],
-                            position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
-                        [intrackVelClosed(position_start[0][0], position_start[3][0],
-                            position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
-                        [crosstrackVelClosed(position_start[2][0], position_start[5][0], this
-                            .a, phi_angle, t_burn, n)]
-                    ];
-                    currentState = math.multiply(phiMatrixWhole(t_calc - this.burns[satBurn]
-                        .time - t_burn), currentState);
-                    satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
-                    continue;
-                } else {
-                    this.burnsDrawn++;
-                    let phiI = phiMatrixWhole(this.burns[satBurn].time - t_calc),
-                        phiF = phiMatrixWhole(mainWindow.timeDelta - (this.burns[satBurn]
-                            .time - t_calc));
-                    currentState = math.multiply(phiI, currentState);
-                    currentState[3][0] += this.burns[satBurn].direction.r;
-                    currentState[4][0] += this.burns[satBurn].direction.i;
-                    currentState[5][0] += this.burns[satBurn].direction.c;
-                    currentState = math.multiply(phiF, currentState);
-                    satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
-                    t_calc += mainWindow.timeDelta;
-                    continue;
+                    position_finite = {
+                        r: radialPosClosed(position_start[0][0], position_start[3][0],
+                            position_start[4][0], this.a, alpha, phi_angle, t_calc -
+                            this.burns[satBurn].time, n),
+                        i: intrackPosClosed(position_start[0][0], position_start[3][0],
+                            position_start[1][0], position_start[4][0], this.a,
+                            alpha, phi_angle, t_calc - this.burns[satBurn].time, n),
+                        c: crosstrackPosClosed(position_start[2][0], position_start[5][
+                                0
+                            ], this.a, phi_angle, t_calc - this.burns[satBurn]
+                            .time, n)
+                    }
+                    this.stateHistory.push(position_finite);
                 }
+                t_calc += mainWindow.timeDelta;
+                currentState = [
+                    [radialPosClosed(position_start[0][0], position_start[3][0],
+                        position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
+                    [intrackPosClosed(position_start[0][0], position_start[3][0],
+                        position_start[1][0], position_start[4][0], this.a, alpha,
+                        phi_angle, t_burn, n)],
+                    [crosstrackPosClosed(position_start[2][0], position_start[5][0], this
+                        .a, phi_angle, t_burn, n)],
+                    [radialVelClosed(position_start[0][0], position_start[3][0],
+                        position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
+                    [intrackVelClosed(position_start[0][0], position_start[3][0],
+                        position_start[4][0], this.a, alpha, phi_angle, t_burn, n)],
+                    [crosstrackVelClosed(position_start[2][0], position_start[5][0], this
+                        .a, phi_angle, t_burn, n)]
+                ];
+                currentState = math.multiply(phiMatrixWhole(t_calc - this.burns[satBurn]
+                    .time - t_burn), currentState);
+                satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
+                continue;
             }
         }
         currentState = math.multiply(phiMain, currentState);
