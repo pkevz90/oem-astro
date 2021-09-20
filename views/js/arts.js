@@ -16,12 +16,19 @@ class windowCanvas {
     };
     #initSun = [1, 0, 0.2];
     #desired = {
-        scenario_time: 0
+        scenarioTime: 0,
+        plotCenter: 0
     };
+    burnStatus = {
+        type: false,
+        sat: null,
+        tranTime: null
+    }
     mm = 2 * Math.PI / 86164;
     timeDelta = 400;
-    scenario_length = 48;
-    scenario_time = 0;
+    scenarioLength = 48;
+    scenarioTime = 0;
+    startDate = new Date(document.getElementById('start-time').value);
     #state = 'ri';
     burnStatus = true;
     showFinite = true;
@@ -52,7 +59,7 @@ class windowCanvas {
         return this.#state;
     }
     getCurrentSun() {
-        return math.squeeze(math.multiply(rotationMatrices(-this.scenario_time * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
+        return math.squeeze(math.multiply(rotationMatrices(-this.scenarioTime * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
     }
     setPlotWidth(width) {
         this.#plotWidth = width;
@@ -299,14 +306,21 @@ class Satellite {
 
     }
     checkInBurn() {
-        let time = mainWindow.scenario_time;
+        let time = mainWindow.scenarioTime;
         this.burns.forEach(burn => {
             let burnDuration = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a;
             if (time > burn.time && time < (burn.time + burnDuration)) {
-                // this.calcTraj();
+                this.calcTraj();
+            }
+            else if (burn.shown && time < burn.time) {
+                this.calcTraj();
+                burn.shown = false;
+            }
+            else if (!burn.shown && time > burn.time) {
+                this.calcTraj();
+                burn.shown = true;
             }
         });
-        this.calcTraj();
     }
 }
 
@@ -439,10 +453,11 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
             let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
-                time: mainWindow.scenario_time + 7200
+                time: mainWindow.scenarioTime + 7200
             });
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
-                time: mainWindow.scenario_time,
+                time: mainWindow.scenarioTime,
+                shown: false,
                 direction: {
                     r: 0,
                     i: 0,
@@ -477,7 +492,7 @@ function openPanel(button) {
         if (mainWindow.satellites.length === 0) {
             return;
         }
-        mainWindow.scenario_time_des = mainWindow.scenario_length*3600;
+        mainWindow.scenarioTime_des = mainWindow.scenarioLength*3600;
         let selectEl = document.getElementById('satellite-way-select');
         let chosenSat = Number(selectEl.value);
         generateBurnTable(chosenSat);
@@ -492,7 +507,7 @@ function openPanel(button) {
             selectEl.appendChild(addedElement);
         })
         selectEl.selectedIndex = chosenSat;
-        selectEl.style.color = satellites[chosenSat].color;
+        selectEl.style.color = mainWindow.satellites[chosenSat].color;
     }
     else if (button.id === 'add-satellite') {
         let selectEl = document.getElementById('edit-select');
@@ -511,10 +526,10 @@ function openPanel(button) {
     }
     else if (button.id === 'options') {
         let inputs = document.getElementById('options-panel').getElementsByTagName('input');
-        let dateDiff = new Date(mainWindow.start_date.toString().split('GMT')[0]).getTimezoneOffset()*60*1000;
-        dateDiff = new Date(mainWindow.start_date-dateDiff).toISOString().substr(0,19);
+        let dateDiff = new Date(mainWindow.startDate.toString().split('GMT')[0]).getTimezoneOffset()*60*1000;
+        dateDiff = new Date(mainWindow.startDate-dateDiff).toISOString().substr(0,19);
         inputs[0].value = dateDiff;
-        inputs[1].value = mainWindow.scenario_length;
+        inputs[1].value = mainWindow.scenarioLength;
         inputs[2].value = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3).toFixed(2);
         let sunTime = Math.round((24 * math.atan2(mainWindow.initSun[1], -mainWindow.initSun[0]) / 2 / Math.PI));
         if (sunTime < 0) sunTime = math.round((sunTime + 24));
@@ -525,6 +540,15 @@ function openPanel(button) {
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     // mainWindow.panelOpen = true;
+}
+
+function closeAll() {
+    let buttons = document.getElementsByClassName('panel');
+    mainWindow.scenarioTime_des = Number(document.getElementById('time-slider-range').value);
+    for (let jj = 0; jj < buttons.length; jj++) {
+        buttons[jj].classList.add('hidden');
+    }
+    // windowOptions.panelOpen = false;
 }
 
 function phiMatrix(t = 0, n = mainWindow.mm) {
@@ -571,7 +595,7 @@ function phiMatrixWhole(t = 0, n = mainWindow.mm) {
 
 function getSatCurrentPosition(options = {}) {
     let {
-        time = mainWindow.scenario_time, burnStop, position = this.position, burns = this.burns, a = this.a, log = false
+        time = mainWindow.scenarioTime, burnStop, position = this.position, burns = this.burns, a = this.a, log = false
     } = options
     if (burnStop === undefined) burnStop = burns.length;
     if (mainWindow.showFinite) {
@@ -695,7 +719,7 @@ function calcSatShownTrajectories(whole = false, allBurns = false) {
     ];
     satBurn = this.burns.length > 0 ? 0 : undefined;
     this.burnsDrawn = 0;
-    while (t_calc <= mainWindow.scenario_length * 3600) {
+    while (t_calc <= mainWindow.scenarioLength * 3600) {
         this.stateHistory.push({
             r: currentState[0][0],
             i: currentState[1][0],
@@ -703,21 +727,14 @@ function calcSatShownTrajectories(whole = false, allBurns = false) {
         });
         if (satBurn !== undefined) {
             if (((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
-                (mainWindow.scenario_time + 0.5))) || allBurns) {
+                (mainWindow.scenarioTime + 0.5))) || allBurns) {
                 let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
                     .direction.i, this.burns[satBurn].direction.c
                 ]) / this.a;
                 if (satBurn !== this.burns.length - 1) {
                     t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
                 } 
-                t_burn = (mainWindow.scenario_time - this.burns[satBurn].time) < t_burn ? (mainWindow.scenario_time - this.burns[satBurn].time) : t_burn;
-
-                // if (this.completedBurn && !mainWindow.burnS) {
-                //     t_burn = t_burn < (mainWindow.scenario_time - this.burns[satBurn].time) ?
-                //         t_burn : mainWindow.scenario_time - this.burns[satBurn].time;
-                // } else {
-                //     this.burnsDrawn++;
-                // }
+                t_burn = (mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
                 let position_start = math.multiply(phiMatrixWhole(this.burns[satBurn].time -
                     t_calc), currentState);
                 let position_finite;
@@ -1362,20 +1379,67 @@ function generateBurns(options = {}) {
             this.burns[ii].direction.r = dir.r;
             this.burns[ii].direction.i = dir.i;
             this.burns[ii].direction.c = dir.c;
-
-            // if (ii === drawnBurn) {
-            //     drawBurnArrow(this.burns[ii], {
-            //         location: {
-            //             r: r1[0][0],
-            //             i: r1[1][0],
-            //             c: r1[2][0]
-            //         },
-            //         object: windowOptions.burn_status.object,
-            //         length: undefined
-            //     });
-            // }
         }
     }
 
     this.calcTraj(true);
+}
+
+function generateBurnTable(object = 0) {
+    let table = document.getElementById('waypoint-table').children[1];
+    while (table.firstChild) {
+        table.removeChild(table.firstChild);
+    }
+    let addStartTime = document.getElementById('add-start-time');
+    let tranTime = Number(document.getElementById('add-tran-time').value);
+    let endTime = mainWindow.satellites[object].burns.length === 0 ? mainWindow.startDate : new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[mainWindow.satellites[object].burns.length - 1].time * 1000 + mainWindow.satellites[object].burns[mainWindow.satellites[object].burns.length - 1].waypoint.tranTime * 1000);
+    let dt = (endTime.getTime() - mainWindow.startDate.getTime() + tranTime * 60000) / 1000;
+    let crossState = mainWindow.satellites[object].currentPosition({
+        time: dt
+    });
+    document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
+    addStartTime.value = new Date(new Date(endTime).toString().split(' GMT')[0].substring(4) + 'Z').toISOString().substr(0, 19);
+
+    if (mainWindow.satellites[object].burns.length === 0) return;
+    let r1, r2, v, addedElement;
+    for (let burn = 0; burn < mainWindow.satellites[object].burns.length; burn++) {
+        addedElement = document.createElement('tr');
+        addedElement.innerHTML = `
+            <td>${new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[burn].time * 1000).toString()
+        .split(' GMT')[0].substring(4)}</td>
+            <td><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span> km</td>
+            <td><span>${(mainWindow.satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
+            <td class="edit-button">Edit</td>
+        `;
+        table.appendChild(addedElement);
+    }
+    let editButtons = document.getElementsByClassName('edit-button');
+    for (let button = 0; button < editButtons.length; button++) {
+        editButtons[button].addEventListener('click', editButtonFunction);
+    }
+}
+
+function editButtonFunction(event) {
+    let tdList = event.target.parentElement.children,
+        oldValue;
+    if (event.target.innerText === 'Confirm') {
+        event.target.innerText = 'Edit';
+        oldValue = new Date(tdList[0].children[0].value).toString()
+            .split(' GMT')[0].substring(4);
+        tdList[0].innerText = oldValue;
+        let tarList = tdList[1].children[0].getElementsByTagName('input');
+        tdList[1].children[0].innerText = `(${tarList[0].value}, ${tarList[1].value}, ${tarList[2].value})`
+        tdList[2].children[0].innerText = tdList[2].children[0].getElementsByTagName('input')[0].value;
+        table2burns(Number(document.getElementById('satellite-way-select').value));
+        return;
+    }
+    event.target.innerText = 'Confirm';
+    // nextValue = new Date(new Date(event.target.parentElement.nextSibling.children[0].innerText + 'Z') - 15 * 60 * 1000);
+    let tarList = tdList[1].children[0].innerText.substr(1, tdList[1].children[0].innerText.length - 2).split(',');
+    oldValue = tdList[0].innerText + 'Z';
+    tdList[0].innerHTML = `<input type="datetime-local" oninput="editChanged(this)" id="edit-date" style="width: 12vw" value="${new Date(oldValue).toISOString().substr(0,19)}"/>`;
+    // tdList[0].children[0].value = '2014-02-09';
+    tdList[1].children[0].innerHTML = `(<input style="width: 9vw; font-size: 2.25vw;" type="number" value="${Number(tarList[0])}"/>, <input style="width: 8vw; font-size: 2.25vw;" type="number" value="${Number(tarList[1])}"/>, <input style="width: 8vw; font-size: 2.25vw;" type="number" value="${Number(tarList[2])}"/>)`;
+    tdList[2].children[0].innerHTML = `<input style="width: 9vw; font-size: 2.25vw;" type="number" value="${tdList[2].children[0].innerText}"/>`;
+    
 }
