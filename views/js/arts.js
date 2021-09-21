@@ -23,12 +23,12 @@ class windowCanvas {
         type: false,
         sat: null,
         burn: null,
-        tranTime: null,
         frame: null
     }
     mm = 2 * Math.PI / 86164;
     timeDelta = 900;
     scenarioLength = 48;
+    burnSensitivity = 0.1;
     scenarioTime = 0;
     startDate = new Date(document.getElementById('start-time').value);
     #state = 'ri';
@@ -341,7 +341,6 @@ class Satellite {
         mainWindow.drawCurve(this.stateHistory, {color: this.#color});
     }
     drawBurns() {
-        let pixelPos;
         this.burns.forEach(burn => {
             mainWindow.drawCurve([burn.location], {color: this.#color, size: 4});
         })
@@ -355,11 +354,17 @@ class Satellite {
     }
     checkClickProximity(position) {
         // Check if clicked on current position of object
-        return {
-            ri: math.norm([this.#currentPosition.r - position.ri.r, this.#currentPosition.i - position.ri.i]) < (mainWindow.getWidth() / 400),
-            ci: math.norm([this.#currentPosition.c - position.ci.c, this.#currentPosition.i - position.ci.i]) < (mainWindow.getWidth() / 400),
-            rc: math.norm([this.#currentPosition.c - position.rc.c, this.#currentPosition.r - position.rc.r]) < (mainWindow.getWidth() / 400)
+        let out = {};
+        if (position.ri) {
+            out.ri = math.norm([this.#currentPosition.r - position.ri.r, this.#currentPosition.i - position.ri.i]) < (mainWindow.getWidth() / 400);
         }
+        if (position.ci) {
+            out.ci = math.norm([this.#currentPosition.c - position.ci.c, this.#currentPosition.i - position.ci.i]) < (mainWindow.getWidth() / 400);
+        }
+        if (position.rc) {
+            out.rc = math.norm([this.#currentPosition.c - position.rc.c, this.#currentPosition.r - position.rc.r]) < (mainWindow.getWidth() / 400);
+        }
+        return out
     }
     checkBurnProximity(position) {
 
@@ -390,6 +395,9 @@ mainWindow.fillWindow();
     mainWindow.clear();
     mainWindow.updateSettings();
     mainWindow.drawAxes();
+    if (mainWindow.burnStatus.type) {
+        mainWindow.calculateBurn();
+    }
     // console.time('sats')
     mainWindow.satellites.forEach(sat => {
         sat.checkInBurn()
@@ -511,7 +519,6 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
         if (mainWindow.currentTarget) break;
         sat++;
     }
-    console.log(mainWindow.currentTarget);
     if (mainWindow.currentTarget.type === 'current') {
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
@@ -540,11 +547,18 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                 return a.time - b.time;
             })
             mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
+            mainWindow.burnStatus = {
+                type: 'manual',
+                sat: mainWindow.currentTarget.sat,
+                burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.scenarioTime),
+                frame: Object.keys(check)[0]
+            }
         }, 250)
     }
 })
 document.getElementById('main-plot').addEventListener('mouseup', event => {
     mainWindow.currentTarget = false;
+    mainWindow.burnStatus.type = false;
 })
 document.getElementById('main-plot').addEventListener('mousemove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
@@ -1448,28 +1462,26 @@ function generateBurns() {
     this.calcTraj(true);
 }
 
-function calcBurns(cross = false) {
+function calcBurns() {
+    let cross = this.burnStatus.frame === 'ri' ? false : true;
     let sat = this.satellites[this.burnStatus.sat];
     let mousePosition = this.convertToRic(this.mousePosition);
-    console.log(mousePosition);
-    let crossState = sat.getCurrentState({
+    let crossState = sat.currentPosition({
         time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].time
     })
-    if (windowOptions.burn_status.type === 'waypoint') {
+    if (mainWindow.burnStatus.type === 'waypoint' && !cross) {
         sat.burns[burn.burn].waypoint.tranTime = burn.time;
         sat.burns[burn.burn].waypoint.target = {
-            r: cross ? crossState.r[0] : windowOptions.mousePosition.ric.r,
-            i: cross ? crossState.i[0] : windowOptions.mousePosition.ric.i,
+            r: mousePosition[this.burnStatus.frame].r,
+            i: mousePosition[this.burnStatus.frame].i,
             c: crossState.c[0]
         }
     } else {
-        sat.burns[burn.burn].direction = {
-            r: cross ? sat.burns[burn.burn].direction.r : (windowOptions.mousePosition.ric.r - windowOptions
-                .burn_status.burnLocation.r[0]) * windowOptions.burn_sensitivity / 1000,
-            i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions
-                .burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
-            c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) *
-                windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
+        sat.burns[this.burnStatus.burn].direction = {
+            r: cross ? sat.burns[this.burnStatus.burn].direction.r : (mousePosition[this.burnStatus.frame].r - sat.burns[this.burnStatus.burn].location.r[0]) * mainWindow.burnSensitivity / 1000,
+            i: cross ? sat.burns[this.burnStatus.burn].direction.i : (mousePosition[this.burnStatus.frame].i - sat.burns[this.burnStatus.burn].location.i[0]) * mainWindow.burnSensitivity / 1000,
+            c: cross ? (mousePosition[this.burnStatus.frame].c - sat.burns[this.burnStatus.burn].location.c[0]) *
+                mainWindow.burnSensitivity / 1000 : sat.burns[this.burnStatus.burn].direction.c
         }
         let tranTime = 1.5*math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c]) / sat.a;
         tranTime = tranTime < 10800 ? 10800 : tranTime;
@@ -1477,21 +1489,21 @@ function calcBurns(cross = false) {
         // If burn time is longer than 6 hrs (times 1.5), limit burn
         if (tranTime > 32400) {
             tranTime = 32400;
-            let dir = [sat.burns[burn.burn].direction.r, sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c];
+            let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
             dir = math.dotDivide(dir, math.norm(dir));
             dir = math.dotMultiply(dir, (tranTime/1.5) * sat.a);
-            sat.burns[burn.burn].direction = {
+            sat.burns[this.burnStatus.burn].direction = {
                 r: dir[0],
                 i: dir[1],
                 c: dir[2],
             }
         }
         sat.burns[this.burnStatus.burn].waypoint.tranTime = tranTime;
-        let targetState = sat.getCurrentState({
+        let targetState = sat.currentPosition({
             time: sat.burns[this.burnStatus.burn].time + tranTime,
             burnStop: this.burnStatus.burn + 1
         });
-        sat.burns[burn.burn].waypoint.target = {
+        sat.burns[this.burnStatus.burn].waypoint.target = {
             r: cross ? sat.burns[this.burnStatus.burn].waypoint.target.r : targetState.r[0],
             i: cross ? sat.burns[this.burnStatus.burn].waypoint.target.i : targetState.i[0],
             c: targetState.c[0]
@@ -1499,7 +1511,7 @@ function calcBurns(cross = false) {
         if (true) {
             // Reset cross-track waypoint values in future to natural motion
             for (let hh = this.burnStatus.burn + 1; hh < sat.burns.length; hh++) {
-                targetState = sat.getCurrentState({
+                targetState = sat.currentPosition({
                     time: sat.burns[hh].time + sat.burns[hh].waypoint.tranTime,
                     burnStop: burn.burn + 1
                 });
@@ -1507,8 +1519,16 @@ function calcBurns(cross = false) {
             }
         }
     }
-    sat.generateBurns({
-        drawnBurn: burn.burn
+    // Draw burn direction
+    let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location);
+    let ctx = this.getContext();
+    ctx.strokeStyle = 'black';
+    ctx.beginPath();
+    ctx.moveTo(initPos[this.burnStatus.frame].x, initPos[this.burnStatus.frame].y);
+    ctx.lineTo(this.mousePosition[0], this.mousePosition[1]);
+    ctx.stroke();
+    sat.genBurns({
+        drawnBurn: this.burnStatus.burn
     });
 }
 
