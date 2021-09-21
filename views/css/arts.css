@@ -4,6 +4,15 @@ html, body {
     margin: 0;
 }
 
+#burn-type-control {
+    position: fixed;
+    z-index: 3;
+    height: 12%;
+    /* width: 5%; */
+    top: 25%;
+    right: 4%;
+}
+
 #add-satellite {
     position: fixed;
     z-index: 3;
