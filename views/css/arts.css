@@ -1,17 +1,16 @@
 html, body {
     overflow: hidden;
     font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
 }
-canvas {
-    cursor: none;
-}
+
 #add-satellite {
     position: fixed;
     z-index: 3;
-    height: 10vh;
-    width: 10vh;
+    height: 8%;
+    /* width: 5%; */
     top: 10%;
-    right: 2.5%;
+    right: 4%;
 }
 #add-satellite, #plus-sign {      
     transition: fill 125ms;
@@ -48,22 +47,7 @@ canvas {
     cursor: pointer;
     margin-left: 5%;
 }
-/* #add-satellite {
-    position: fixed;
-    height: 5vh;
-    width: 5vh;
-    border: 1px solid black;
-    z-index: 3;
-    bottom: 2.5%;
-    right: 2.5%;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 5vh;
-    cursor: pointer;
-    transition: 0.2s;
-    font-weight: 900;
-    font-size: 5vh;
-} */
+
 #options {
     position: fixed;
     height: auto;

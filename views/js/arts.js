@@ -22,7 +22,9 @@ class windowCanvas {
     burnStatus = {
         type: false,
         sat: null,
-        tranTime: null
+        burn: null,
+        tranTime: null,
+        frame: null
     }
     mm = 2 * Math.PI / 86164;
     timeDelta = 900;
@@ -105,7 +107,7 @@ class windowCanvas {
         this.setSize(window.innerWidth, window.innerHeight);
         this.setPlotWidth(this.#plotWidth);
     }
-    convertToRic(input = [0, 0]) {
+    convertToRic(input = [0, 0], filter = true) {
         if (Array.isArray(input)) {
             input = math.squeeze(input);
             input = {
@@ -113,22 +115,34 @@ class windowCanvas {
                 y:  input[1]
             };
         }
-        return{
+        let initData = {
             ri: {
                 i: -(input.x - this.#cnvs.width * this.#frameCenter.ri.x) * this.#plotWidth / this.#cnvs.width + this.#plotCenter,
-                r: -(input.y - this.#cnvs.height * this.#frameCenter.ri.y) * this.#plotHeight/ this.#cnvs.height
+                r: -(input.y - this.#cnvs.height * this.#frameCenter.ri.y) * this.#plotHeight / this.#cnvs.height
             },
             ci: {
                 i: -(input.x - this.#cnvs.width * this.#frameCenter.ci.x) * this.#plotWidth / this.#cnvs.width + this.#plotCenter,
-                c: -(input.y - this.#cnvs.height * this.#frameCenter.ci.y) * this.#plotHeight/ this.#cnvs.height
+                c: -(input.y - this.#cnvs.height * this.#frameCenter.ci.y) * this.#plotHeight / this.#cnvs.height
             },
             rc: {
                 r: (input.x - this.#cnvs.width * this.#frameCenter.rc.x) * this.#plotWidth / this.#cnvs.width + this.#plotCenter,
-                c: -(input.y - this.#cnvs.height * this.#frameCenter.rc.y) * this.#plotHeight/ this.#cnvs.height
+                c: -(input.y - this.#cnvs.height * this.#frameCenter.rc.y) * this.#plotHeight / this.#cnvs.height
             },
+        };
+        if (filter) {
+            // Check RI
+            if (Math.abs(initData.ri.i - this.#plotCenter) < this.#plotWidth * this.#frameCenter.ri.w / 2 && Math.abs(initData.ri.r) < this.#plotHeight * this.#frameCenter.ri.h / 2) {
+                return {ri: initData.ri};
+            }
+            if (Math.abs(initData.ci.i - this.#plotCenter) < this.#plotWidth * this.#frameCenter.ci.w / 2 && Math.abs(initData.ci.c) < this.#plotHeight * this.#frameCenter.ci.h / 2) {
+                return {ci: initData.ci};
+            }
+            if (Math.abs(initData.rc.r - this.#plotCenter) < this.#plotWidth * this.#frameCenter.rc.w / 2 && Math.abs(initData.rc.c) < this.#plotHeight * this.#frameCenter.rc.h / 2) {
+                return {rc: initData.rc};
+            }
         }
     }
-    convertToPixels(input = [0, 0, 0, 0, 0, 0], cross = false) {
+    convertToPixels(input = [0, 0, 0, 0, 0, 0]) {
         if (Array.isArray(input)) {
             input = math.squeeze(input);
             input = {
@@ -242,7 +256,7 @@ class windowCanvas {
         })
     }
     drawSatLocation(position, sat = {}) {
-        let {shape, size, color} = sat;
+        let {shape, size, color, name} = sat;
         let pixelPosition = this.convertToPixels(position);
         if (this.#state.search('ri') !== -1) {
             drawSatellite({
@@ -251,14 +265,31 @@ class windowCanvas {
                 shape,
                 size,
                 color,
-                pixelPosition: [pixelPosition.ri.x, pixelPosition.ri.y]
+                pixelPosition: [pixelPosition.ri.x, pixelPosition.ri.y],
+                name
             })
         }
         if (this.#state.search('ci') !== -1) {
-            // console.log('ci');
+            drawSatellite({
+                cnvs: this.#cnvs, 
+                ctx: this.getContext(),
+                shape,
+                size,
+                color,
+                pixelPosition: [pixelPosition.ci.x, pixelPosition.ci.y],
+                name
+            })
         }
         if (this.#state.search('rc') !== -1) {
-            // console.log('rc');
+            drawSatellite({
+                cnvs: this.#cnvs, 
+                ctx: this.getContext(),
+                shape,
+                size,
+                color,
+                pixelPosition: [pixelPosition.rc.x, pixelPosition.rc.y],
+                name
+            })
         }
     }
     drawMouse(position = [0, 0]) {
@@ -272,6 +303,7 @@ class windowCanvas {
         ctx.lineTo(position[0], position[1] + this.#cnvs.width / 60);
         ctx.stroke();
     }
+    calculateBurn = calcBurns;
 }
 
 class Satellite {
@@ -308,12 +340,18 @@ class Satellite {
         if (!this.stateHistory) return;
         mainWindow.drawCurve(this.stateHistory, {color: this.#color});
     }
+    drawBurns() {
+        let pixelPos;
+        this.burns.forEach(burn => {
+            mainWindow.drawCurve([burn.location], {color: this.#color, size: 4});
+        })
+    }
     currentPosition = getSatCurrentPosition;
     drawCurrentPosition() {
         let cur = this.currentPosition();
         cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
         this.#currentPosition = cur;
-        mainWindow.drawSatLocation(cur, {size: this.#size, color: this.#color, shape: this.#shape});
+        mainWindow.drawSatLocation(cur, {size: this.#size, color: this.#color, shape: this.#shape, name: this.name});
     }
     checkClickProximity(position) {
         // Check if clicked on current position of object
@@ -356,10 +394,11 @@ mainWindow.fillWindow();
     mainWindow.satellites.forEach(sat => {
         sat.checkInBurn()
         sat.drawTrajectory();
+        sat.drawBurns();
         sat.drawCurrentPosition();
     })
     // console.timeEnd('sats')
-    mainWindow.drawMouse(mainWindow.mousePosition);
+    // mainWindow.drawMouse(mainWindow.mousePosition);
     window.requestAnimationFrame(animationLoop)
 })()
 //------------------------------------------------------------------
@@ -412,7 +451,7 @@ window.addEventListener('keydown', key => {
                 mainWindow.setState('rc');
                 mainWindow.setFrameCenter({
                     ri: {
-                        x: 0.5, y: 0.5, w: 1, h: 1
+                        x: 0, y: 0.5, w: 0, h: 0
                     },
                     ci: {
                         x: 1, y: 1, w: 0, h: 0
@@ -461,6 +500,7 @@ window.addEventListener('keydown', key => {
 window.addEventListener('wheel', event => mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease'))
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
+    // console.log(ricCoor);
     let sat = 0, check;
     while (sat < mainWindow.satellites.length) {
         check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
@@ -481,6 +521,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.scenarioTime,
                 shown: false,
+                location: null,
                 direction: {
                     r: 0,
                     i: 0,
@@ -498,6 +539,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.sort((a, b) => {
                 return a.time - b.time;
             })
+            mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
         }, 250)
     }
 })
@@ -1366,16 +1408,14 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
     return rotMat;
 }
 
-function generateBurns(options = {}) {
-    let {
-        drawnBurn
-    } = options;
+function generateBurns() {
     let r1, r2, v10;
     for (let ii = 0; ii < this.burns.length; ii++) {
         r1 = this.currentPosition({
             time: this.burns[ii].time,
             burnStop: ii
         });
+        this.burns[ii].location = {...r1};
         v10 = [r1.rd, r1.id, r1.cd];
         r1 = [r1.r, r1.i, r1.c]
         r2 = [
@@ -1406,6 +1446,70 @@ function generateBurns(options = {}) {
     }
 
     this.calcTraj(true);
+}
+
+function calcBurns(cross = false) {
+    let sat = this.satellites[this.burnStatus.sat];
+    let mousePosition = this.convertToRic(this.mousePosition);
+    console.log(mousePosition);
+    let crossState = sat.getCurrentState({
+        time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].time
+    })
+    if (windowOptions.burn_status.type === 'waypoint') {
+        sat.burns[burn.burn].waypoint.tranTime = burn.time;
+        sat.burns[burn.burn].waypoint.target = {
+            r: cross ? crossState.r[0] : windowOptions.mousePosition.ric.r,
+            i: cross ? crossState.i[0] : windowOptions.mousePosition.ric.i,
+            c: crossState.c[0]
+        }
+    } else {
+        sat.burns[burn.burn].direction = {
+            r: cross ? sat.burns[burn.burn].direction.r : (windowOptions.mousePosition.ric.r - windowOptions
+                .burn_status.burnLocation.r[0]) * windowOptions.burn_sensitivity / 1000,
+            i: cross ? sat.burns[burn.burn].direction.i : (windowOptions.mousePosition.ric.i - windowOptions
+                .burn_status.burnLocation.i[0]) * windowOptions.burn_sensitivity / 1000,
+            c: cross ? (windowOptions.mousePosition.ric.c - windowOptions.burn_status.burnLocation.c[0]) *
+                windowOptions.burn_sensitivity / 1000 : sat.burns[burn.burn].direction.c
+        }
+        let tranTime = 1.5*math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c]) / sat.a;
+        tranTime = tranTime < 10800 ? 10800 : tranTime;
+        tranTime = cross ? sat.burns[this.burnStatus.burn].waypoint.tranTime : tranTime; 
+        // If burn time is longer than 6 hrs (times 1.5), limit burn
+        if (tranTime > 32400) {
+            tranTime = 32400;
+            let dir = [sat.burns[burn.burn].direction.r, sat.burns[burn.burn].direction.i, sat.burns[burn.burn].direction.c];
+            dir = math.dotDivide(dir, math.norm(dir));
+            dir = math.dotMultiply(dir, (tranTime/1.5) * sat.a);
+            sat.burns[burn.burn].direction = {
+                r: dir[0],
+                i: dir[1],
+                c: dir[2],
+            }
+        }
+        sat.burns[this.burnStatus.burn].waypoint.tranTime = tranTime;
+        let targetState = sat.getCurrentState({
+            time: sat.burns[this.burnStatus.burn].time + tranTime,
+            burnStop: this.burnStatus.burn + 1
+        });
+        sat.burns[burn.burn].waypoint.target = {
+            r: cross ? sat.burns[this.burnStatus.burn].waypoint.target.r : targetState.r[0],
+            i: cross ? sat.burns[this.burnStatus.burn].waypoint.target.i : targetState.i[0],
+            c: targetState.c[0]
+        }
+        if (true) {
+            // Reset cross-track waypoint values in future to natural motion
+            for (let hh = this.burnStatus.burn + 1; hh < sat.burns.length; hh++) {
+                targetState = sat.getCurrentState({
+                    time: sat.burns[hh].time + sat.burns[hh].waypoint.tranTime,
+                    burnStop: burn.burn + 1
+                });
+                sat.burns[hh].waypoint.target.c = targetState.c[0];
+            }
+        }
+    }
+    sat.generateBurns({
+        drawnBurn: burn.burn
+    });
 }
 
 function generateBurnTable(object = 0) {
@@ -1634,7 +1738,7 @@ function drawPoints(options = {}) {
 }
 
 function drawSatellite(satellite = {}) {
-    let {cnvs, ctx, pixelPosition, shape, color, size} = satellite;
+    let {cnvs, ctx, pixelPosition, shape, color, size, name} = satellite;
     let shapeHeight = size / 100 * cnvs.height;
     let points;
     let a = shapeHeight / 2;
@@ -1816,8 +1920,7 @@ function drawSatellite(satellite = {}) {
             });
             break;
     }
-    let letterY = pixelPosition[1] + shapeHeight / 2 + (cnvs.height*0.05)*1.3 / 2;
-    // console.log(letterY);
-    ctx.font = `${cnvs.height*0.05}px Courier`;
+    let letterY = pixelPosition[1] + shapeHeight / 2 + (cnvs.height*0.025)*1.3 / 2;
+    ctx.font = `${cnvs.height*0.025}px Courier`;
     ctx.fillText(name ? name : '', pixelPosition[0], letterY);
 }
