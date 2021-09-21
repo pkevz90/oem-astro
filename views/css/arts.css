@@ -5,6 +5,26 @@ html, body {
 canvas {
     cursor: none;
 }
+#add-satellite {
+    position: fixed;
+    z-index: 3;
+    height: 10vh;
+    width: 10vh;
+    top: 10%;
+    right: 2.5%;
+}
+#add-satellite, #plus-sign {      
+    transition: fill 125ms;
+}
+#add-satellite:hover {
+    fill: black;
+    cursor: pointer;
+
+}
+#add-satellite:hover #plus-sign {
+    fill: white;
+    stroke: white;
+}
 #radial-intrack-plot {
     position: fixed;
     width: 100%;
@@ -28,7 +48,7 @@ canvas {
     cursor: pointer;
     margin-left: 5%;
 }
-#add-satellite {
+/* #add-satellite {
     position: fixed;
     height: 5vh;
     width: 5vh;
@@ -43,7 +63,7 @@ canvas {
     transition: 0.2s;
     font-weight: 900;
     font-size: 5vh;
-}
+} */
 #options {
     position: fixed;
     height: auto;

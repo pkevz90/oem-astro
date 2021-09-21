@@ -224,18 +224,42 @@ class windowCanvas {
         ctx.fillStyle = color;
         line.forEach((point, ii) => {
             let pixelPos = this.convertToPixels(point);
-            ctx.beginPath();
             if (this.#state.search('ri') !== -1) {
+                ctx.beginPath();
                 ctx.arc(pixelPos.ri.x, pixelPos.ri.y, size, 0, 2 * Math.PI);
+                ctx.fill()
             }
             if (this.#state.search('ci') !== -1){
+                ctx.beginPath();
                 ctx.arc(pixelPos.ci.x, pixelPos.ci.y, size, 0, 2 * Math.PI);
+                ctx.fill()
             }
             if (this.#state.search('rc') !== -1) {
+                ctx.beginPath();
                 ctx.arc(pixelPos.rc.x, pixelPos.rc.y, size, 0, 2 * Math.PI);
+                ctx.fill()
             }
-            ctx.fill()
         })
+    }
+    drawSatLocation(position, sat = {}) {
+        let {shape, size, color} = sat;
+        let pixelPosition = this.convertToPixels(position);
+        if (this.#state.search('ri') !== -1) {
+            drawSatellite({
+                cnvs: this.#cnvs, 
+                ctx: this.getContext(),
+                shape,
+                size,
+                color,
+                pixelPosition: [pixelPosition.ri.x, pixelPosition.ri.y]
+            })
+        }
+        if (this.#state.search('ci') !== -1) {
+            // console.log('ci');
+        }
+        if (this.#state.search('rc') !== -1) {
+            // console.log('rc');
+        }
     }
     drawMouse(position = [0, 0]) {
         let ctx = this.getContext();
@@ -262,9 +286,9 @@ class Satellite {
     constructor(options = {}) {
         let {
             position = {r: 2, i: 50, c: 10, rd: 0.001, id: 0, cd: -0.001},
-            size = 0.005,
+            size = 2.5,
             color = 'blue',
-            shape = 'square',
+            shape = 'pentagon',
             a = 0.00001,
             name = 'Sat'
         } = options; 
@@ -289,7 +313,7 @@ class Satellite {
         let cur = this.currentPosition();
         cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
         this.#currentPosition = cur;
-        mainWindow.drawCurve([cur], {size: 5, color: this.#color});
+        mainWindow.drawSatLocation(cur, {size: this.#size, color: this.#color, shape: this.#shape});
     }
     checkClickProximity(position) {
         // Check if clicked on current position of object
@@ -547,7 +571,7 @@ function closeAll() {
     for (let jj = 0; jj < buttons.length; jj++) {
         buttons[jj].classList.add('hidden');
     }
-    // windowOptions.panelOpen = false;
+    // mainWindow.panelOpen = false;
 }
 
 function phiMatrix(t = 0, n = mainWindow.mm) {
@@ -1582,4 +1606,218 @@ function initStateFunction(el) {
         nodes.children[0].children[4].getElementsByTagName('input')[0].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / mainWindow.mm, 2))).toFixed(3);
     }
     
+}
+
+function drawPoints(options = {}) {
+    let {
+        color,
+        points,
+        borderWidth = 2,
+        borderColor = 'white',
+        ctx = ctx,
+        origin
+    } = options;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = borderWidth;
+    ctx.beginPath();
+    points.forEach((point, ii) => {
+        if (ii === 0) {
+            ctx.moveTo(origin[0] + point[0], origin[1] + point[1]);
+        } else {
+            ctx.lineTo(origin[0] + point[0], origin[1] + point[1]);
+        }
+    });
+    ctx.fill();
+    ctx.stroke();
+
+}
+
+function drawSatellite(satellite = {}) {
+    let {cnvs, ctx, pixelPosition, shape, color, size} = satellite;
+    let shapeHeight = size / 100 * cnvs.height;
+    let points;
+    let a = shapeHeight / 2;
+    let b = shapeHeight / 5;
+    switch (shape) {
+        case 'triangle':
+            points = [
+                [0, -shapeHeight / 2],
+                [-shapeHeight / 2, shapeHeight / 2],
+                [shapeHeight / 2, shapeHeight / 2],
+                [0, -shapeHeight / 2]
+            ];
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'square':
+            points = [
+                [-shapeHeight / 2, -shapeHeight / 2],
+                [shapeHeight / 2, -shapeHeight / 2],
+                [shapeHeight / 2, shapeHeight / 2],
+                [-shapeHeight / 2, shapeHeight / 2],
+                [-shapeHeight / 2, -shapeHeight / 2]
+            ];
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'up-triangle':
+            points = [
+                [0, shapeHeight / 2],
+                [-shapeHeight / 2, -shapeHeight / 2],
+                [shapeHeight / 2, -shapeHeight / 2],
+                [0, shapeHeight / 2]
+            ];
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'circle':
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(pixelPosition[0], pixelPosition[1], shapeHeight / 2, 0, 2 * Math.PI)
+            ctx.fill()
+            break;
+        case 'delta':
+            
+            a *= 1.1;
+            b *= 1.1;
+            points = [
+                [0, -a],
+                [-3.3*shapeHeight / 8, a],
+                [0, shapeHeight / 4],
+                [3.3*shapeHeight / 8, a],
+                [0, -a]
+            ];
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'diamond':
+            points = [];
+            points.push([a*Math.sin(-70*Math.PI / 180), -a*Math.cos(-70*Math.PI / 180)])
+            points.push([a*Math.sin(-38*Math.PI / 180), -a*Math.cos(-38*Math.PI / 180)])
+            points.push([a*Math.sin(38*Math.PI / 180), -a*Math.cos(38*Math.PI / 180)])
+            points.push([a*Math.sin(70*Math.PI / 180), -a*Math.cos(70*Math.PI / 180)])
+            points.push([0, 0.9*a])
+            points.push([a*Math.sin(-70*Math.PI / 180), -a*Math.cos(-70*Math.PI / 180)])
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'star':
+            points = [];
+            a *= 1.1;
+            b *= 1.1;
+            for (let ang = 0; ang <= 360; ang += 72) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+                points.push([b*Math.sin((36+ang)*Math.PI / 180), -b*Math.cos((36+ang)*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case '4-star':
+            points = [];
+            a *= 1.1;
+            b *= 1.1;
+            for (let ang = 0; ang <= 360; ang += 90) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+                points.push([b*Math.sin((45+ang)*Math.PI / 180), -b*Math.cos((45+ang)*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case '3-star':
+            points = [];
+            a *= 1.2;
+            b *= 1.2;
+            for (let ang = 0; ang <= 360; ang += 120) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+                points.push([0.7*b*Math.sin((60+ang)*Math.PI / 180), -0.7*b*Math.cos((60+ang)*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'pentagon':
+            points = [];
+            for (let ang = 0; ang <= 360; ang += 72) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'hexagon':
+            points = [];
+            for (let ang = 0; ang <= 360; ang += 60) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'septagon':
+            points = [];
+            for (let ang = 0; ang <= 361; ang += 360/7) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+        case 'octagon':
+            points = [];
+            for (let ang = 0; ang <= 361; ang += 360/8) {
+                points.push([a*Math.sin(ang*Math.PI / 180), -a*Math.cos(ang*Math.PI / 180)])
+            }
+            drawPoints({
+                points: points,
+                color: color,
+                origin: pixelPosition,
+                ctx
+            });
+            break;
+    }
+    let letterY = pixelPosition[1] + shapeHeight / 2 + (cnvs.height*0.05)*1.3 / 2;
+    // console.log(letterY);
+    ctx.font = `${cnvs.height*0.05}px Courier`;
+    ctx.fillText(name ? name : '', pixelPosition[0], letterY);
 }
