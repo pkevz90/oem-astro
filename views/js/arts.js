@@ -25,7 +25,7 @@ class windowCanvas {
         tranTime: null
     }
     mm = 2 * Math.PI / 86164;
-    timeDelta = 400;
+    timeDelta = 900;
     scenarioLength = 48;
     scenarioTime = 0;
     startDate = new Date(document.getElementById('start-time').value);
@@ -219,28 +219,23 @@ class windowCanvas {
     }
     drawCurve(line, options = {}) {
         // console.log(line);
-        let {color = 'red', size = 1} = options
+        let {color = 'red', size = 1, shape = "circle"} = options
         let ctx = this.getContext();
         ctx.fillStyle = color;
         line.forEach((point, ii) => {
             let pixelPos = this.convertToPixels(point);
+            ctx.beginPath();
             if (this.#state.search('ri') !== -1) {
-                ctx.beginPath();
                 ctx.arc(pixelPos.ri.x, pixelPos.ri.y, size, 0, 2 * Math.PI);
-                ctx.fill()
             }
             if (this.#state.search('ci') !== -1){
-                ctx.beginPath()
                 ctx.arc(pixelPos.ci.x, pixelPos.ci.y, size, 0, 2 * Math.PI);
-                ctx.fill();
             }
             if (this.#state.search('rc') !== -1) {
-                ctx.beginPath()
                 ctx.arc(pixelPos.rc.x, pixelPos.rc.y, size, 0, 2 * Math.PI);
-                ctx.fill();
             }
+            ctx.fill()
         })
-        ctx.fill();
     }
     drawMouse(position = [0, 0]) {
         let ctx = this.getContext();
@@ -276,9 +271,11 @@ class Satellite {
         this.position = position;
         this.#size = size;
         this.#color = color;
+        console.log(shape);
         this.#shape = shape;
+        this.name = name;
         this.a = a;
-        this.stateHistory = this.calcTraj();
+        setTimeout(() => this.calcTraj(), 250);
     }
     calcTraj = calcSatShownTrajectories;
     genBurns = generateBurns;
@@ -331,11 +328,13 @@ mainWindow.fillWindow();
     mainWindow.clear();
     mainWindow.updateSettings();
     mainWindow.drawAxes();
+    // console.time('sats')
     mainWindow.satellites.forEach(sat => {
         sat.checkInBurn()
         sat.drawTrajectory();
         sat.drawCurrentPosition();
     })
+    // console.timeEnd('sats')
     mainWindow.drawMouse(mainWindow.mousePosition);
     window.requestAnimationFrame(animationLoop)
 })()
@@ -530,7 +529,7 @@ function openPanel(button) {
         dateDiff = new Date(mainWindow.startDate-dateDiff).toISOString().substr(0,19);
         inputs[0].value = dateDiff;
         inputs[1].value = mainWindow.scenarioLength;
-        inputs[2].value = Math.pow(398600.4418 / Math.pow(windowOptions.mm, 2), 1/3).toFixed(2);
+        inputs[2].value = Math.pow(398600.4418 / Math.pow(mainWindow.mm, 2), 1/3).toFixed(2);
         let sunTime = Math.round((24 * math.atan2(mainWindow.initSun[1], -mainWindow.initSun[0]) / 2 / Math.PI));
         if (sunTime < 0) sunTime = math.round((sunTime + 24));
         sunTime += '00';
@@ -1441,5 +1440,146 @@ function editButtonFunction(event) {
     // tdList[0].children[0].value = '2014-02-09';
     tdList[1].children[0].innerHTML = `(<input style="width: 9vw; font-size: 2.25vw;" type="number" value="${Number(tarList[0])}"/>, <input style="width: 8vw; font-size: 2.25vw;" type="number" value="${Number(tarList[1])}"/>, <input style="width: 8vw; font-size: 2.25vw;" type="number" value="${Number(tarList[2])}"/>)`;
     tdList[2].children[0].innerHTML = `<input style="width: 9vw; font-size: 2.25vw;" type="number" value="${tdList[2].children[0].innerText}"/>`;
+    
+}
+
+function editChanged(el) {
+    let sat = document.getElementById('satellite-way-select').value;
+    let parent = el.type === 'number' ? el.parentNode.parentNode.parentNode : el.parentNode.parentNode;
+    let tranTime = Number(parent.children[2].children[0].children[0].value) * 60;
+    let time = new Date(parent.children[0].children[0].value).getTime() - new Date(mainWindow.startDate).getTime();
+    time /= 1000;
+    let targetState = mainWindow.satellites[sat].currentPosition({
+        time: time + tranTime
+    });
+    let tarList = parent.children[1].getElementsByTagName('input');
+    tarList[2].value = targetState.c[0].toFixed(1);
+}
+
+function waypoints2table(waypoints) {
+    let table = document.getElementById('waypoint-table').children[1];
+    while (table.firstChild) {
+        table.removeChild(table.firstChild);
+    }
+    let addedElement;
+    waypoints.forEach(point => {
+        addedElement = document.createElement('tr');
+        addedElement.innerHTML = `
+            <td>${new Date(point.time).toString()
+        .split(' GMT')[0].substring(4)}</td>
+            <td><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span> km</td>
+            <td><span>${(point.tranTime).toFixed(3)}</span></td>
+            <td class="edit-button">Edit</td>
+        `;
+        table.appendChild(addedElement);
+    });
+}
+
+function table2burns(object) {
+    let tableTrs = document.getElementById('waypoint-table').children[1].children,
+        time, tranTime, startTime = mainWindow.startDate.getTime(),
+        burns = [], target;
+    for (let tr = 0; tr < tableTrs.length; tr++) {
+        time = (Date.parse(tableTrs[tr].children[0].innerText) - startTime) / 1000;
+        tranTime = Number(tableTrs[tr].children[2].innerText) * 60;
+        target = tableTrs[tr].children[1].children[0].innerText.substr(1, tableTrs[tr].children[1].children[0].innerText.length - 2).split(',');
+        burns.push({
+            time,
+            shown: false,
+            direction: {
+                r: 0,
+                i: 0,
+                c: 0
+            },
+            waypoint: {
+                tranTime,
+                target: {
+                    r: Number(target[0]),
+                    i: Number(target[1]),
+                    c: Number(target[2])
+                }
+            }
+        });
+    }
+    mainWindow.satellites[object].burns = [...burns];
+    mainWindow.satellites[object].genBurns();
+}
+
+function initStateFunction(el) {
+    let nodes; // Set nodes to top div under initial state to grab inputs
+    nodes = el.parentNode.parentNode.parentNode;
+    if (el.classList.contains('rmoe')) {
+        let rmoes = {
+            ae: Number(nodes.children[0].children[0].getElementsByTagName('input')[0].value),
+            x:  Number(nodes.children[0].children[1].getElementsByTagName('input')[0].value),
+            y:  Number(nodes.children[0].children[2].getElementsByTagName('input')[0].value),
+            b:  Number(nodes.children[0].children[3].getElementsByTagName('input')[0].value),
+            z:  Number(nodes.children[0].children[4].getElementsByTagName('input')[0].value),
+            m:  Number(nodes.children[0].children[5].getElementsByTagName('input')[0].value)
+        }
+        nodes.children[1].children[0].getElementsByTagName('input')[0].value = (-rmoes.ae / 2 * Math.cos(rmoes.b * Math.PI / 180) + rmoes.x).toFixed(3);
+        nodes.children[1].children[1].getElementsByTagName('input')[0].value = (rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) + rmoes.y).toFixed(3);
+        nodes.children[1].children[2].getElementsByTagName('input')[0].value = (rmoes.z * Math.sin(rmoes.m * Math.PI / 180)).toFixed(3);
+        nodes.children[1].children[3].getElementsByTagName('input')[0].value = (1000 * rmoes.ae * mainWindow.mm / 2 * Math.sin(rmoes.b * Math.PI / 180)).toFixed(3);
+        nodes.children[1].children[4].getElementsByTagName('input')[0].value = (1000 * rmoes.ae * mainWindow.mm * Math.cos(rmoes.b * Math.PI / 180) - 1500 * rmoes.x * mainWindow.mm).toFixed(3);
+        nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000 * rmoes.z * mainWindow.mm * Math.cos(rmoes.m * Math.PI / 180)).toFixed(3);
+    }
+    else if (el.id === 'add-satellite-button') {
+        let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
+        console.log(inputs);
+        let position = {
+            r: Number(inputs[6].value), 
+            i: Number(inputs[7].value), 
+            c: Number(inputs[8].value), 
+            rd: Number(inputs[9].value)  / 1000, 
+            id: Number(inputs[10].value) / 1000, 
+            cd: Number(inputs[11].value) / 1000
+        }
+        let shape = el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value;
+        console.log(el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value);
+        let a = Number(inputs[13].value) / 1e6;
+        let color = inputs[14].value;
+        let name = inputs[15].value;
+        mainWindow.satellites.push(new Satellite({
+            position,
+            shape,
+            a,
+            color,
+            name
+        }));
+        closeAll();
+    }
+    else {
+        if (el.classList.contains('panel-button')) {
+            nodes = el.parentNode.parentNode.children[1];
+        }
+        let state = {
+            r: Number(nodes.children[1].children[0].getElementsByTagName('input')[0].value),
+            i: Number(nodes.children[1].children[1].getElementsByTagName('input')[0].value),
+            c: Number(nodes.children[1].children[2].getElementsByTagName('input')[0].value),
+            rd: Number(nodes.children[1].children[3].getElementsByTagName('input')[0].value) / 1000,
+            id: Number(nodes.children[1].children[4].getElementsByTagName('input')[0].value) / 1000,
+            cd: Number(nodes.children[1].children[5].getElementsByTagName('input')[0].value) / 1000
+        };
+        if (el.classList.contains('panel-button')) {
+            let a = Math.pow(398600.4418 / Math.pow(mainWindow.mm, 2), 1/3);
+            let ang = state.i / a * 180 / Math.PI;
+            state.r += (a - a * Math.cos(ang * Math.PI / 180 ) * Math.cos(state.c / a));
+            let rotState = math.squeeze(math.multiply(rotationMatrices(-ang, 3), [[state.rd], [state.id], [state.cd]]));
+            state.rd = rotState[0];
+            state.id = rotState[1];
+            rotState = math.squeeze(math.multiply(rotationMatrices(-ang, 3), [[state.r], [0], [0]]));
+            nodes.children[1].children[0].getElementsByTagName('input')[0].value = (rotState[0]).toFixed(3);
+            nodes.children[1].children[1].getElementsByTagName('input')[0].value = (state.i + rotState[1]).toFixed(3);
+            nodes.children[1].children[3].getElementsByTagName('input')[0].value = (state.rd * 1000).toFixed(3);
+            nodes.children[1].children[4].getElementsByTagName('input')[0].value = (state.id * 1000).toFixed(3);
+        }
+        nodes.children[0].children[1].getElementsByTagName('input')[0].value = (4 * state.r + 2 * state.id / mainWindow.mm).toFixed(3);
+        nodes.children[0].children[2].getElementsByTagName('input')[0].value = (state.i - 2 * state.rd / mainWindow.mm).toFixed(3);
+        nodes.children[0].children[0].getElementsByTagName('input')[0].value = (2 * Math.sqrt(Math.pow(3 * state.r + 2 * state.id / mainWindow.mm, 2) + Math.pow(state.rd / mainWindow.mm, 2))).toFixed(3);
+        nodes.children[0].children[3].getElementsByTagName('input')[0].value = (Math.atan2(state.rd, 3 * mainWindow.mm * state.r + 2 * state.id) * 180 / Math.PI).toFixed(3);
+        nodes.children[0].children[5].getElementsByTagName('input')[0].value = (Math.atan2(state.c, state.cd / mainWindow.mm) * 180 / Math.PI).toFixed(3);
+        nodes.children[0].children[4].getElementsByTagName('input')[0].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / mainWindow.mm, 2))).toFixed(3);
+    }
     
 }
