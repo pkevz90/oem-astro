@@ -233,22 +233,23 @@ class windowCanvas {
     }
     drawCurve(line, options = {}) {
         // console.log(line);
-        let {color = 'red', size = 1, shape = "circle"} = options
+        let {color = 'red', size = 1} = options
         let ctx = this.getContext();
         ctx.fillStyle = color;
         line.forEach((point, ii) => {
             let pixelPos = this.convertToPixels(point);
-            if (this.#state.search('ri') !== -1) {
+            if (this.#state.search('ri') !== -1 && Math.abs(point.r) < (this.#plotHeight / 2 * this.#frameCenter.ri.h) && Math.abs(point.i) < (this.#plotWidth / 2* this.#frameCenter.ri.w)) {
                 ctx.beginPath();
                 ctx.arc(pixelPos.ri.x, pixelPos.ri.y, size, 0, 2 * Math.PI);
                 ctx.fill()
             }
-            if (this.#state.search('ci') !== -1){
+            if (this.#state.search('ci') !== -1 && Math.abs(point.c) < (this.#plotHeight / 2 * this.#frameCenter.ci.h) && Math.abs(point.i) < (this.#plotWidth / 2 * this.#frameCenter.ci.w)){
+                console.log('hey');
                 ctx.beginPath();
                 ctx.arc(pixelPos.ci.x, pixelPos.ci.y, size, 0, 2 * Math.PI);
                 ctx.fill()
             }
-            if (this.#state.search('rc') !== -1) {
+            if (this.#state.search('rc') !== -1 && Math.abs(point.c) < (this.#plotHeight / 2 * this.#frameCenter.rc.h) && Math.abs(point.r) < (this.#plotWidth / 2 * this.#frameCenter.rc.w)) {
                 ctx.beginPath();
                 ctx.arc(pixelPos.rc.x, pixelPos.rc.y, size, 0, 2 * Math.PI);
                 ctx.fill()
@@ -258,7 +259,7 @@ class windowCanvas {
     drawSatLocation(position, sat = {}) {
         let {shape, size, color, name} = sat;
         let pixelPosition = this.convertToPixels(position);
-        if (this.#state.search('ri') !== -1) {
+        if (this.#state.search('ri') !== -1 && Math.abs(position.r) < (this.#plotHeight / 2 * this.#frameCenter.ri.h) && Math.abs(position.i) < (this.#plotWidth / 2* this.#frameCenter.ri.w)) {
             drawSatellite({
                 cnvs: this.#cnvs, 
                 ctx: this.getContext(),
@@ -269,7 +270,7 @@ class windowCanvas {
                 name
             })
         }
-        if (this.#state.search('ci') !== -1) {
+        if (this.#state.search('ci') !== -1 && Math.abs(position.c) < (this.#plotHeight / 2 * this.#frameCenter.ci.h) && Math.abs(position.i) < (this.#plotWidth / 2* this.#frameCenter.ci.w)) {
             drawSatellite({
                 cnvs: this.#cnvs, 
                 ctx: this.getContext(),
@@ -280,7 +281,7 @@ class windowCanvas {
                 name
             })
         }
-        if (this.#state.search('rc') !== -1) {
+        if (this.#state.search('rc') !== -1 && Math.abs(position.c) < (this.#plotHeight / 2 * this.#frameCenter.rc.h) && Math.abs(position.r) < (this.#plotWidth / 2* this.#frameCenter.rc.w)) {
             drawSatellite({
                 cnvs: this.#cnvs, 
                 ctx: this.getContext(),
