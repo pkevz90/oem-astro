@@ -5,20 +5,17 @@ class windowCanvas {
     #plotCenter = 0;
     #frameCenter= {
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
-        ci: {x: 0.5, y: 1, w: 0, h: 0},
-        rc: {x: 0, y: 0.5, w: 0, h: 0},
-        desired: {
-            ri: {x: 0.5, y: 0.5, w: 1, h: 1},
-            ci: {x: 1, y: 1, w: 0, h: 0},
-            rc: {x: 0, y: 1, w: 0, h: 0},
-        },
-        speed: 0.1
+        ci: {x: 0.5, y: 1, w: 1, h: 0},
+        rc: {x: 0, y: 0.5, w: 0, h: 0}
     };
     #initSun = [1, 0, 0.2];
     desired = {
         scenarioTime: 0,
         plotCenter: 0,
-        speed: 0.2
+        speed: 0.2,
+        ri: {x: 0.5, y: 0.5, w: 1, h: 1},
+        ci: {x: 0.5, y: 1, w: 1, h: 0},
+        rc: {x: 0, y: 1, w: 0, h: 0},
     };
     burnStatus = {
         type: false,
@@ -61,6 +58,19 @@ class windowCanvas {
     getState() {
         return this.#state;
     }
+    drawBorder() {
+        let ctx = this.getContext();
+        ctx.strokeStyle = 'black';
+        for (const frame in this.#frameCenter) {
+            ctx.beginPath();
+            ctx.moveTo((this.#frameCenter[frame].x - this.#frameCenter[frame].w / 2) * this.#cnvs.width, (this.#frameCenter[frame].y - this.#frameCenter[frame].h / 2) * this.#cnvs.height);
+            ctx.lineTo((this.#frameCenter[frame].x + this.#frameCenter[frame].w / 2) * this.#cnvs.width, (this.#frameCenter[frame].y - this.#frameCenter[frame].h / 2) * this.#cnvs.height);
+            ctx.lineTo((this.#frameCenter[frame].x + this.#frameCenter[frame].w / 2) * this.#cnvs.width, (this.#frameCenter[frame].y + this.#frameCenter[frame].h / 2) * this.#cnvs.height);
+            ctx.lineTo((this.#frameCenter[frame].x - this.#frameCenter[frame].w / 2) * this.#cnvs.width, (this.#frameCenter[frame].y + this.#frameCenter[frame].h / 2) * this.#cnvs.height);
+            ctx.lineTo((this.#frameCenter[frame].x - this.#frameCenter[frame].w / 2) * this.#cnvs.width, (this.#frameCenter[frame].y - this.#frameCenter[frame].h / 2) * this.#cnvs.height);
+            ctx.stroke();
+        }
+    }
     getCurrentSun() {
         return math.squeeze(math.multiply(rotationMatrices(-this.scenarioTime * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
     }
@@ -85,16 +95,16 @@ class windowCanvas {
     }
     setFrameCenter(options) {
         let {ri = this.#frameCenter.ri, ci = this.#frameCenter.ci, rc = this.#frameCenter.rc} = options;
-        this.#frameCenter.desired = {
-            ri, ci, rc
-        }
+        this.desired.ri = ri;
+        this.desired.ci = ci;
+        this.desired.rc = rc;
     }
     updateSettings() {
-        for (const frame in this.#frameCenter.desired) {
-            this.#frameCenter[frame].x += (this.#frameCenter.desired[frame].x - this.#frameCenter[frame].x) * this.#frameCenter.speed;
-            this.#frameCenter[frame].y += (this.#frameCenter.desired[frame].y - this.#frameCenter[frame].y) * this.#frameCenter.speed;
-            this.#frameCenter[frame].h += (this.#frameCenter.desired[frame].h - this.#frameCenter[frame].h) * this.#frameCenter.speed;
-            this.#frameCenter[frame].w += (this.#frameCenter.desired[frame].w - this.#frameCenter[frame].w) * this.#frameCenter.speed;
+        for (const frame in this.#frameCenter) {
+            this.#frameCenter[frame].x += (this.desired[frame].x - this.#frameCenter[frame].x) * this.desired.speed;
+            this.#frameCenter[frame].y += (this.desired[frame].y - this.#frameCenter[frame].y) * this.desired.speed;
+            this.#frameCenter[frame].h += (this.desired[frame].h - this.#frameCenter[frame].h) * this.desired.speed;
+            this.#frameCenter[frame].w += (this.desired[frame].w - this.#frameCenter[frame].w) * this.desired.speed;
         }
         this.scenarioTime += (this.desired.scenarioTime - this.scenarioTime) * this.desired.speed 
     }
@@ -178,6 +188,7 @@ class windowCanvas {
         let origin = this.convertToPixels([0, 0, 0]);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        this.drawBorder();
         if (this.#state.search('ri') !== -1) {
             ctx.lineWidth = this.#cnvs.width * this.#frameCenter.ri.w / 200;
             ctx.font = 'bold ' + this.#cnvs.width * this.#frameCenter.ri.w / 40 + 'px serif';
@@ -454,24 +465,27 @@ window.addEventListener('keydown', key => {
                 })
                 break;
             case 'ri ci rc': 
-                mainWindow.setState('ri rc');
+                mainWindow.setState('ci rc');
                 mainWindow.setFrameCenter({
                     ri: {
-                        x: 0.75, y: 0.5, w: 0.5, h: 1
+                        x: 0.5, y: 0, w: 1, h: 0
                     },
                     rc: {
                         x: 0.25, y: 0.5, w:0.50, h: 1
+                    },
+                    ci: {
+                        x: 0.75, y: 0.5, w: 0.5, h: 1
                     }
                 })
                 break;
-            case 'ri rc': 
+            case 'ci rc': 
                 mainWindow.setState('rc');
                 mainWindow.setFrameCenter({
                     ri: {
-                        x: 0, y: 0.5, w: 0, h: 0
+                        x: 1, y: 0, w: 0, h: 0
                     },
                     ci: {
-                        x: 1, y: 1, w: 0, h: 0
+                        x: 1, y: 0.5, w: 0, h: 1
                     },
                     rc: {
                         x: 0.5, y: 0.5, w: 1, h: 1
@@ -482,13 +496,13 @@ window.addEventListener('keydown', key => {
                 mainWindow.setState('ci');
                 mainWindow.setFrameCenter({
                     ri: {
-                        x: 0.5, y: 0, w: 0, h: 0
+                        x: 0.5, y: 0, w: 1, h: 0
                     },
                     ci: {
                         x: 0.5, y: 0.5, w: 1, h: 1
                     },
                     rc: {
-                        x: 0, y: 1, w: 0, h: 0
+                        x: 0, y: 0.5, w: 0, h: 1
                     }
                 })
                 break;
@@ -499,7 +513,7 @@ window.addEventListener('keydown', key => {
                         x: 0.5, y: 0.5, w: 1, h: 1
                     },
                     ci: {
-                        x: 1, y: 1, w: 0, h: 0
+                        x: 0.5, y: 1, w: 1, h: 0
                     },
                     rc: {
                         x: 0, y: 1, w: 0, h: 0
@@ -587,17 +601,123 @@ document.getElementById('main-plot').addEventListener('mouseup', event => {
 document.getElementById('main-plot').addEventListener('mousemove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
 })
+document.getElementById('export-option-button').addEventListener('click', () => {
+    downloadFile('scenario.sas', JSON.stringify({
+        mainWindow
+    }));
+})
+document.getElementById('add-waypoint-button').addEventListener('click', event => {
+    let chosenSat = Number(document.getElementById('satellite-way-select').value);
+    let divTarget = event.target.parentNode.parentNode.parentNode.children;
+    let tableTrs = document.getElementById('waypoint-table').children[1].children,
+        waypoints = [], target;
+    for (let tr = 0; tr < tableTrs.length; tr++) {
+        target = tableTrs[tr].children[1].children[0].innerText.substr(1, tableTrs[tr].children[1].children[0].innerText.length - 2).split(',');
+        waypoints.push({
+            time: Date.parse(tableTrs[tr].children[0].innerText),
+            r: Number(target[0]),
+            i: Number(target[1]),
+            c: Number(target[2]),
+            tranTime: Number(tableTrs[tr].children[2].innerText)
+        })
+    }
+    if (divTarget[3].children[1].children[0].checked) {
+        // Switch to 2-burn calculation, delete all burns after
+        divTarget = divTarget[2].children;
+        let startTime = Date.parse(divTarget[0].getElementsByTagName('input')[0].value);
+        waypoints = waypoints.filter(point => point.time < startTime);
+        let curPos = mainWindow.satellites[chosenSat].currentPosition({
+            time: startTime / 1000 - Date.parse(mainWindow.startDate) / 1000
+        })
+        let newPoints = calcTwoBurn({
+            stateI: {
+                x: curPos.r[0],
+                y: curPos.i[0],
+                z: curPos.c[0],
+                xd: curPos.rd[0],
+                yd: curPos.id[0],
+                zd: curPos.cd[0]
+            },
+            stateF: {
+                x: Number(divTarget[1].getElementsByTagName('input')[0].value),
+                y: Number(divTarget[2].getElementsByTagName('input')[0].value),
+                z: Number(divTarget[3].getElementsByTagName('input')[0].value),
+                xd: 0,
+                yd: 0,
+                zd: 0
+            },
+            a: mainWindow.satellites[chosenSat].a,
+            startTime: startTime / 1000 - Date.parse(windowOptions.start_date) / 1000,
+            tf: Number(divTarget[4].getElementsByTagName('input')[0].value) === 0 ? 7200 : 60 * Number(divTarget[4].getElementsByTagName('input')[0].value)
+        })
+        if (!newPoints) {
+            alert("No solution found, increase transfer time or move target point closer to origin");
+            return;
+        }
+        waypoints.push({
+            time: newPoints[0].time * 1000 + Date.parse(windowOptions.start_date),
+            r: newPoints[0].waypoint.target.r,
+            i: newPoints[0].waypoint.target.i,
+            c: newPoints[0].waypoint.target.c,
+            tranTime: newPoints[0].waypoint.tranTime / 60,
+        }, {
+            time: newPoints[1].time * 1000 + Date.parse(windowOptions.start_date),
+            r: newPoints[1].waypoint.target.r,
+            i: newPoints[1].waypoint.target.i,
+            c: newPoints[1].waypoint.target.c,
+            tranTime: newPoints[1].waypoint.tranTime / 60,
+        })
+    } else {
+        divTarget = divTarget[2].children;
+        let newWaypoint = {
+            time: Date.parse(divTarget[0].getElementsByTagName('input')[0].value),
+            r: Number(divTarget[1].getElementsByTagName('input')[0].value),
+            i: Number(divTarget[2].getElementsByTagName('input')[0].value),
+            c: Number(divTarget[3].getElementsByTagName('input')[0].value),
+            tranTime: Number(divTarget[4].getElementsByTagName('input')[0].value) === 0 ? 120 : Number(divTarget[4].getElementsByTagName('input')[0].value)
+        }
+
+        let filterLimit = 15 * 60 * 1000; // Reject burns closer than 15 minutes to other burns 
+        if (waypoints.filter(point => Math.abs(point.time - newWaypoint.time) < filterLimit).length > 0) {
+            return;
+        }
+        waypoints.push(newWaypoint);
+        waypoints.sort((a, b) => a.time - b.time);
+    }
+    waypoints2table(waypoints);
+    table2burns(chosenSat);
+})
+document.getElementById('add-start-time').addEventListener('input', event => {
+    let startTime = new Date(event.target.value).getTime();
+    let dt = startTime - mainWindow.startDate.getTime() + Number(document.getElementById('add-tran-time').value) * 60000;
+    let crossState = mainWindow.satellites[document.getElementById('satellite-way-select').value].currentPosition({
+        time: dt / 1000
+    });
+    document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
+})
+document.getElementById('add-tran-time').addEventListener('input', event => {
+    let startTime = new Date(document.getElementById('add-start-time').value).getTime();
+    let dt = startTime - mainWindow.startDate.getTime() + Number(document.getElementById('add-tran-time').value) * 60000;
+    let crossState = mainWindow.satellites[document.getElementById('satellite-way-select').value].currentPosition({
+        time: dt / 1000
+    });
+    document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
+})
+document.getElementById('satellite-way-select').addEventListener('input', event => {
+    generateBurnTable(event.target.value)
+    event.target.style.color = mainWindow.satellites[event.target.value].color;
+})
 function changeBurnType() {
     if (mainWindow.burnType === 'waypoint') {
         document.getElementById('way-arrows').style['fill-opacity'] = 0;
         document.getElementById('manual-arrows').style['fill-opacity'] = 1;
-        document.getElementById('burn-type-control').style.transform = 'translateX(12%)';
+        document.getElementById('burn-type-control').style.right = '1.75%';
         mainWindow.burnType = 'manual'
     }
     else {
         document.getElementById('manual-arrows').style['fill-opacity'] = 0;
         document.getElementById('way-arrows').style['fill-opacity'] = 1;
-        document.getElementById('burn-type-control').style.transform = 'translateX(-0.6%)';
+        document.getElementById('burn-type-control').style.right = '2.25%';
         mainWindow.burnType = 'waypoint'
     }
 }

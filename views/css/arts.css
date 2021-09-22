@@ -4,15 +4,19 @@ html, body {
     margin: 0;
 }
 
+#burn-type-control:hover {
+    transform: rotate(10deg);
+}
+
 #burn-type-control {
     position: fixed;
     z-index: 3;
     height: 10%;
     /* width: 5%; */
     top: 20%;
-    right: 3%;
+    right: 2.25%;
     cursor: pointer;
-    transition: transform 500ms;
+    transition: transform 500ms, right 500ms;
 }
 #manual-arrows, #way-arrows {
     transition: fill-opacity 500ms;
@@ -68,7 +72,7 @@ html, body {
     width: auto;
     border: 1px solid black;
     z-index: 3;
-    bottom: 10%;
+    bottom: 2%;
     right: 2.5%;
     text-align: center;
     cursor: pointer;
@@ -90,7 +94,7 @@ html, body {
     width: auto;
     border: 1px solid black;
     z-index: 3;
-    bottom: 20%;
+    bottom: 13%;
     right: 2.5%;
     text-align: center;
     cursor: pointer;
@@ -135,7 +139,7 @@ html, body {
     width: auto;
     border: 1px solid black;
     z-index: 3;
-    bottom: 15%;
+    bottom: 7%;
     right: 2.5%;
     text-align: center;
     cursor: pointer;
