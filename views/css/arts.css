@@ -7,10 +7,15 @@ html, body {
 #burn-type-control {
     position: fixed;
     z-index: 3;
-    height: 12%;
+    height: 10%;
     /* width: 5%; */
-    top: 25%;
-    right: 4%;
+    top: 20%;
+    right: 3%;
+    cursor: pointer;
+    transition: transform 500ms;
+}
+#manual-arrows, #way-arrows {
+    transition: fill-opacity 500ms;
 }
 
 #add-satellite {

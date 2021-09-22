@@ -18,7 +18,7 @@
         <canvas id="main-plot"></canvas>
     </div>
     <div id="time-slider">
-        <input id="time-slider-range" type="range" min=0 max=86164 step=0.1 value=0 oninput="mainWindow.scenarioTime = Number(this.value)">
+        <input id="time-slider-range" type="range" min=0 max=86164 step=0.1 value=0 oninput="mainWindow.desired.scenarioTime = Number(this.value)">
     </div>
     <div class="full-page-menu hidden panel" id="add-satellite-panel">
         <div class="title-text" style="width: 100%; text-align: center; height: auto; font-weight: 900;">Add Satellite</div>
@@ -209,13 +209,6 @@
     <div onclick=openPanel(this) id="burns" class="noselect hoverable side-button" title="Add Satellite">
         Burns
     </div>
-    <div id="maneuver-type-slider">
-        <span>Manual</span>
-        <label class="switch">
-            <input id="maneuver-type-input" type="checkbox">
-            <span class="slider"></span>
-        </label>
-    </div>
     <div onclick=openPanel(this) id="instructions" class="noselect hoverable side-button" title="Add Satellite">
         Instructions
     </div>
@@ -277,7 +270,7 @@
             <div><input id="kinematic" type="checkbox">Kinematic Reach Distance: <input style="width: 3em;" type="Number" value="10"> km TOF: <input style="width: 3em;" type="Number" value="1"> hr(s)</div>
         </div>
     </div>
-    <svg viewBox="0 0 500 500" id="burn-type-control">
+    <!-- <svg viewBox="0 0 500 500" id="burn-type-control">
         <defs></defs>
         <rect x="226.252" y="13.817" width="65.63" height="265.976" style="fill: rgb(28, 17, 117);"></rect>
         <rect x="203.8" y="94.128" width="113.99" height="104.491" style="fill: rgb(72, 72, 72);"></rect>
@@ -288,7 +281,39 @@
         <path d="M 330.743 141.805 H 396.097 L 396.097 126.805 L 436.097 146.805 L 396.097 166.805 L 396.097 151.805 H 330.743 V 141.805 Z" style="" bx:shape="arrow 330.743 126.805 105.354 40 10 40 0 1@ce8a271d"></path>
         <circle cx="468.048" cy="148.532" r="24.44"></circle>
         <path d="M 254.749 157.168 L 286.159 211.572 L 223.339 211.572 L 254.749 157.168 Z" style="fill: rgb(73, 73, 73);" transform="matrix(0.866025, -0.5, 0.5, 0.866025, -112.674866, 103.204071)" bx:shape="triangle 223.339 157.168 62.82 54.404 0.5 0 1@66c6d631"></path>
-      </svg>
+      </svg> -->
+      <svg id="burn-type-control" viewBox="0 0 900 840" preserveAspectRatio="xMinYMin meet" onclick="changeBurnType()">
+        <g>
+            <rect id="svgEditorBackground" x="0" y="0" width="1380" height="840" style="fill: none; stroke: none;"/>
+            <rect id="solar-panels" x="256.630000" y="37.315500" style="fill-opacity: 0.45; fill:#32328F;stroke:black;stroke-width:1px;" id="e3_rectangle" width="171.389000" height="670.604000" transform="matrix(0.581999 0 0 1.15907 124.768 -14.0137)"/>
+            <path d="M-7.034483,-2.344828l8,-2v8l-8,-2Z" style="fill:white; stroke:black; vector-effect:non-scaling-stroke;stroke-width:1px;" id="e9_shape" transform="matrix(-14.4484 0 0 -14.4484 171.388 428.47)"/>
+            <path d="M-5.151774-3.285313l-2,2v4l2,2h4l2-2v-4l-2-2Z" style="fill:white; stroke:black; vector-effect:non-scaling-stroke;stroke-width:1px;" id="e10_shape" transform="matrix(34.6686 0 0 34.6686 425.389 404.938)"/>
+            <g style="fill-opacity: 0.25;">
+                <circle id="e10_circle" cx="117.580000" cy="433.452000" style="fill:orange;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e2_circle" cx="110.899000" cy="516.966000" style="fill:orange;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e1_circle" cx="107.558000" cy="587.117000" style="fill:orange;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e3_circle" cx="100.877000" cy="650.587000" style="fill:orange;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e4_circle" cx="50.768800" cy="590.458000" style="fill:orange;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e5_circle" cx="37.406700" cy="540.350000" style="fill:orange;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e6_circle" cx="64.131100" cy="480.220000" style="fill:orange;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e7_circle" cx="0.6605443953179702" cy="550.371000" style="fill:orange;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e8_circle" cx="80.833600" cy="513.625000" style="fill:gold;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+                <circle id="e9_circle" cx="64.130900" cy="573.755000" style="fill:gold;stroke:black;stroke-width:0px;" r="56.736000" transform="matrix(0.298287 0 0 0.298287 113.397 269.283)"/>
+            </g>
+            </g>
+        <g id="manual-arrows" style="fill-opacity: 0; stroke-opacity: 0">
+            <path d="M2.975831,3.090257l1.5625,-1.25h-1.25a8,8,0,0,0,-6,-6.25a2,2,0,0,1,-0.625,3.125a4.6,4.6,0,0,1,5.875,3.125h-1.25Z" style="fill:#0D0C07; stroke:black; vector-effect:non-scaling-stroke;stroke-width:1px;" id="e12_shape" transform="matrix(29.6152 -29.6152 29.6152 29.6152 330.072 133.607)"/>
+            <path d="M4.403322,14.034358l1.5625-1.25h-1.25a8,8,0,0,0,-6-6.25a2,2,0,0,1,-0.625,3.125a4.6,4.6,0,0,1,5.875,3.125h-1.25Z" style="fill:#0D0C07; stroke:black; vector-effect:non-scaling-stroke;stroke-width:1px;" id="e11_shape" transform="matrix(-29.6152 29.6152 -29.6152 -29.6152 696.956 983.484)"/>
+        </g>
+        <g id="way-arrows" style="fill-opacity: 1; stroke-opacity: 0">
+            <path d="M9.114,-1.899v-1.291l6.431,3.393l-6.43,2.785v-1.19h-13.115v-3.797Z" style="fill:#000000; stroke:black; vector-effect:non-scaling-stroke;stroke-width:1px;" id="e14_shape" transform="matrix(9.83986 0 0 9.83986 507.687 426.975)"/>    
+            <circle id="e15_circle" cx="761.281000" cy="424.483000" style="fill:#000000;stroke:black;stroke-width:1px;" r="84.656000"/>
+            <circle id="e11_circle" cx="933.664000" cy="411.159000" style="fill:#FFFFFF;stroke:black;stroke-width:1px;" r="84.656000" transform="matrix(0.728302 0 0 0.728302 81.0419 124.787)"/>
+            <circle id="e12_circle" cx="1200.070000" cy="473.495000" style="fill:#000000;stroke:black;stroke-width:1px;" r="84.656000" transform="matrix(0.535778 0 0 0.535778 119.055 169.549)"/>
+            <circle id="e13_circle" cx="945.902000" cy="414.958000" style="fill:#FFFFFF;stroke:black;stroke-width:1px;" r="84.656000" transform="matrix(0.354273 0 0 0.354273 427.419 275.732)"/>
+            <circle id="e14_circle" cx="361.363000" cy="884.913000" style="fill:#000000;stroke:black;stroke-width:1px;" r="84.656000" transform="matrix(0.206285 0 0 0.206285 687.734 238.95)"/>
+        </g>
+        </svg>
     <script src="./js/arts.js"></script>
 </body>
 

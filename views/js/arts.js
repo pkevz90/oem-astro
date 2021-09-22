@@ -15,9 +15,10 @@ class windowCanvas {
         speed: 0.1
     };
     #initSun = [1, 0, 0.2];
-    #desired = {
+    desired = {
         scenarioTime: 0,
-        plotCenter: 0
+        plotCenter: 0,
+        speed: 0.2
     };
     burnStatus = {
         type: false,
@@ -32,7 +33,7 @@ class windowCanvas {
     scenarioTime = 0;
     startDate = new Date(document.getElementById('start-time').value);
     #state = 'ri';
-    burnStatus = true;
+    burnType = 'waypoint';
     showFinite = true;
     currentTarget = false;
     satellites = [];
@@ -95,6 +96,7 @@ class windowCanvas {
             this.#frameCenter[frame].h += (this.#frameCenter.desired[frame].h - this.#frameCenter[frame].h) * this.#frameCenter.speed;
             this.#frameCenter[frame].w += (this.#frameCenter.desired[frame].w - this.#frameCenter[frame].w) * this.#frameCenter.speed;
         }
+        this.scenarioTime += (this.desired.scenarioTime - this.scenarioTime) * this.desired.speed 
     }
     setSize(width, height) {
         this.#cnvs.width = width;
@@ -244,7 +246,6 @@ class windowCanvas {
                 ctx.fill()
             }
             if (this.#state.search('ci') !== -1 && Math.abs(point.c) < (this.#plotHeight / 2 * this.#frameCenter.ci.h) && Math.abs(point.i) < (this.#plotWidth / 2 * this.#frameCenter.ci.w)){
-                console.log('hey');
                 ctx.beginPath();
                 ctx.arc(pixelPos.ci.x, pixelPos.ci.y, size, 0, 2 * Math.PI);
                 ctx.fill()
@@ -527,7 +528,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                 time: mainWindow.scenarioTime + 7200
             });
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
-                time: mainWindow.scenarioTime,
+                time: mainWindow.desired.scenarioTime,
                 shown: false,
                 location: null,
                 direction: {
@@ -549,21 +550,37 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             })
             mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
             mainWindow.burnStatus = {
-                type: 'manual',
+                type: mainWindow.burnType,
                 sat: mainWindow.currentTarget.sat,
-                burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.scenarioTime),
+                burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
                 frame: Object.keys(check)[0]
             }
+            if (mainWindow.burnType === 'waypoint') mainWindow.desired.scenarioTime += 7200;
         }, 250)
     }
 })
 document.getElementById('main-plot').addEventListener('mouseup', event => {
     mainWindow.currentTarget = false;
+    mainWindow.satellites.forEach(sat => sat.calcTraj());
     mainWindow.burnStatus.type = false;
 })
 document.getElementById('main-plot').addEventListener('mousemove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
 })
+function changeBurnType() {
+    if (mainWindow.burnType === 'waypoint') {
+        document.getElementById('way-arrows').style['fill-opacity'] = 0;
+        document.getElementById('manual-arrows').style['fill-opacity'] = 1;
+        document.getElementById('burn-type-control').style.transform = 'translateX(12%)';
+        mainWindow.burnType = 'manual'
+    }
+    else {
+        document.getElementById('manual-arrows').style['fill-opacity'] = 0;
+        document.getElementById('way-arrows').style['fill-opacity'] = 1;
+        document.getElementById('burn-type-control').style.transform = 'translateX(-0.6%)';
+        mainWindow.burnType = 'waypoint'
+    }
+}
 //------------------------------------------------------------------
 // Adding functions to handle data planels, etc.
 //------------------------------------------------------------------
@@ -784,7 +801,7 @@ function getSatCurrentPosition(options = {}) {
     };
 }
 
-function calcSatShownTrajectories(whole = false, allBurns = false) {
+function calcSatShownTrajectories(allBurns = false) {
     let t_calc, currentState, satBurn;
     phiMain = phiMatrixWhole(mainWindow.timeDelta);
     this.stateHistory = [];
@@ -806,15 +823,15 @@ function calcSatShownTrajectories(whole = false, allBurns = false) {
             c: currentState[2][0]
         });
         if (satBurn !== undefined) {
-            if (((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
-                (mainWindow.scenarioTime + 0.5))) || allBurns) {
+            if ((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
+                (mainWindow.scenarioTime + 0.5) || allBurns)) {
                 let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
                     .direction.i, this.burns[satBurn].direction.c
                 ]) / this.a;
                 if (satBurn !== this.burns.length - 1) {
                     t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
                 } 
-                t_burn = (mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
+                t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !allBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
                 let position_start = math.multiply(phiMatrixWhole(this.burns[satBurn].time -
                     t_calc), currentState);
                 let position_finite;
@@ -1423,7 +1440,7 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
     return rotMat;
 }
 
-function generateBurns() {
+function generateBurns(all = false) {
     let r1, r2, v10;
     for (let ii = 0; ii < this.burns.length; ii++) {
         r1 = this.currentPosition({
@@ -1468,11 +1485,11 @@ function calcBurns() {
     let sat = this.satellites[this.burnStatus.sat];
     let mousePosition = this.convertToRic(this.mousePosition);
     let crossState = sat.currentPosition({
-        time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].time
+        time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].waypoint.tranTime
     })
     if (mainWindow.burnStatus.type === 'waypoint' && !cross) {
-        sat.burns[burn.burn].waypoint.tranTime = burn.time;
-        sat.burns[burn.burn].waypoint.target = {
+        // sat.burns[this.burnStatus.burn].waypoint.tranTime = burn.time;
+        sat.burns[this.burnStatus.burn].waypoint.target = {
             r: mousePosition[this.burnStatus.frame].r,
             i: mousePosition[this.burnStatus.frame].i,
             c: crossState.c[0]
@@ -1514,7 +1531,7 @@ function calcBurns() {
             for (let hh = this.burnStatus.burn + 1; hh < sat.burns.length; hh++) {
                 targetState = sat.currentPosition({
                     time: sat.burns[hh].time + sat.burns[hh].waypoint.tranTime,
-                    burnStop: burn.burn + 1
+                    burnStop: this.burnStatus.burn + 1
                 });
                 sat.burns[hh].waypoint.target.c = targetState.c[0];
             }
@@ -1528,9 +1545,7 @@ function calcBurns() {
     ctx.moveTo(initPos[this.burnStatus.frame].x, initPos[this.burnStatus.frame].y);
     ctx.lineTo(this.mousePosition[0], this.mousePosition[1]);
     ctx.stroke();
-    sat.genBurns({
-        drawnBurn: this.burnStatus.burn
-    });
+    sat.genBurns(true);
 }
 
 function generateBurnTable(object = 0) {
