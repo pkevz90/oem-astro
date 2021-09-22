@@ -320,7 +320,7 @@ class Satellite {
     constructor(options = {}) {
         let {
             position = {r: 2, i: 50, c: 10, rd: 0.001, id: 0, cd: -0.001},
-            size = 2.5,
+            size = 4,
             color = 'blue',
             shape = 'pentagon',
             a = 0.00001,
@@ -369,7 +369,13 @@ class Satellite {
         return out
     }
     checkBurnProximity(position) {
-
+        let out = {};
+        for (let ii = 0; ii < this.burns.length; ii++) {
+            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < (mainWindow.getWidth() / 400) ? ii : out.ri ? out.ri : false; 
+            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < (mainWindow.getWidth() / 400) ? ii : out.ci ? out.ci : false; 
+            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < (mainWindow.getWidth() / 400) ? ii : out.rc ? out.rc : false; 
+        }
+        return out;
     }
     checkInBurn() {
         let time = mainWindow.scenarioTime;
@@ -377,14 +383,15 @@ class Satellite {
             let burnDuration = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a;
             if (time > burn.time && time < (burn.time + burnDuration)) {
                 this.calcTraj();
+                burn.shown = 'during';
             }
-            else if (burn.shown && time < burn.time) {
+            else if (burn.shown !== 'pre' && time < burn.time) {
                 this.calcTraj();
-                burn.shown = false;
+                burn.shown = 'pre';
             }
-            else if (!burn.shown && time > burn.time) {
+            else if (burn.shown !== 'post' && time > burn.time) {
                 this.calcTraj();
-                burn.shown = true;
+                burn.shown = 'post';
             }
         });
     }
@@ -519,6 +526,11 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             mainWindow.currentTarget = check[frame] ? {sat, frame, type: 'current'} : mainWindow.currentTarget;
         }
         if (mainWindow.currentTarget) break;
+        check = mainWindow.satellites[sat].checkBurnProximity(ricCoor);
+        for (frame in check) {
+            mainWindow.currentTarget = check[frame] !== false ? {sat, frame, type: 'burn'} : mainWindow.currentTarget;
+        }
+        if (mainWindow.currentTarget) break;
         sat++;
     }
     if (mainWindow.currentTarget.type === 'current') {
@@ -529,7 +541,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             });
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.desired.scenarioTime,
-                shown: false,
+                shown: 'during',
                 location: null,
                 direction: {
                     r: 0,
@@ -557,6 +569,14 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             }
             if (mainWindow.burnType === 'waypoint') mainWindow.desired.scenarioTime += 7200;
         }, 250)
+    }
+    else if (mainWindow.currentTarget.type === 'burn') {
+        mainWindow.burnStatus = {
+            type: mainWindow.burnType,
+            sat: mainWindow.currentTarget.sat,
+            burn: check[mainWindow.currentTarget.frame],
+            frame: mainWindow.currentTarget.frame
+        }
     }
 })
 document.getElementById('main-plot').addEventListener('mouseup', event => {
