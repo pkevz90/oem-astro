@@ -41,6 +41,9 @@ class windowCanvas {
     getWidth() {
         return this.#cnvs.width;
     }
+    getPlotWidth() {
+        return this.#plotWidth;
+    }
     getHeight() {
         return this.#cnvs.height;
     }
@@ -323,6 +326,7 @@ class Satellite {
     position;
     #currentPosition;
     #color;
+    color;
     #size;
     #shape;
     burns = [];
@@ -340,7 +344,7 @@ class Satellite {
         this.position = position;
         this.#size = size;
         this.#color = color;
-        console.log(shape);
+        this.color = color;
         this.#shape = shape;
         this.name = name;
         this.a = a;
@@ -354,9 +358,34 @@ class Satellite {
         mainWindow.drawCurve(this.stateHistory, {color: this.#color});
     }
     drawBurns() {
+        let timeDelta, ctx = mainWindow.getContext(), mag, dist = mainWindow.getPlotWidth() * 0.05;
+        ctx.lineWidth = 2;
+        // console.log(ctx.lineWidth)
         this.burns.forEach(burn => {
-            mainWindow.drawCurve([burn.location], {color: this.#color, size: 4});
+            timeDelta = mainWindow.scenarioTime - burn.time;
+            let mag = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]);
+            let dispDist = timeDelta > (mag / this.a) ? dist : dist * timeDelta * this.a / mag;
+            if (timeDelta > 0) {
+                mainWindow.drawCurve([burn.location], {color: this.#color, size: 4});
+                let point1 = mainWindow.convertToPixels(burn.location);
+                let point2 = [burn.location.r[0] + dispDist * burn.direction.r / mag, burn.location.i[0] + dispDist * burn.direction.i / mag, burn.location.c[0] + dist * burn.direction.c / mag]
+                point2 = mainWindow.convertToPixels(point2);
+                ctx.strokeStyle = this.#color;
+                ctx.beginPath();
+                ctx.moveTo(point1.ri.x, point1.ri.y);
+                ctx.lineTo(point2.ri.x, point2.ri.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(point1.ci.x, point1.ci.y);
+                ctx.lineTo(point2.ci.x, point2.ci.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(point1.rc.x, point1.rc.y);
+                ctx.lineTo(point2.rc.x, point2.rc.y);
+                ctx.stroke();
+            }
         })
+    
     }
     currentPosition = getSatCurrentPosition;
     drawCurrentPosition() {
@@ -1677,13 +1706,22 @@ function calcBurns() {
             }
         }
     }
-    // Draw burn direction
+    // Draw burn 
+    let mag = math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c])
     let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location);
     let ctx = this.getContext();
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = sat.color;
     ctx.beginPath();
     ctx.moveTo(initPos[this.burnStatus.frame].x, initPos[this.burnStatus.frame].y);
-    ctx.lineTo(this.mousePosition[0], this.mousePosition[1]);
+    if (this.burnStatus.type === 'manaul') {
+        ctx.lineTo(this.mousePosition[0], this.mousePosition[1]);
+    }
+    else {
+        let dist = mag * 1000 / this.burnSensitivity;
+        let point2 = {r: sat.burns[this.burnStatus.burn].location.r[0] + dist * sat.burns[this.burnStatus.burn].direction.r / mag, i: sat.burns[this.burnStatus.burn].location.i[0] + dist * sat.burns[this.burnStatus.burn].direction.i / mag}
+        initPos = this.convertToPixels(point2);
+        ctx.lineTo(initPos[this.burnStatus.frame].x, initPos[this.burnStatus.frame].y);
+    }
     ctx.stroke();
     sat.genBurns(true);
 }
