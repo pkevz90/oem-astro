@@ -503,6 +503,56 @@ class windowCanvas {
             // })
         }
     }
+    getData() {
+        let satellites = [];
+        this.satellites.forEach(sat => {
+            satellites.push(sat.getData())
+        })
+        return {
+            plotWidth: this.#plotWidth,
+            relativeData: this.relativeData,
+            satellites,
+            mm: this.mm,
+            timeDelta: this.timeDelta,
+            scenarioLength: this.scenarioLength,
+            initSun: this.#initSun
+        }
+    }
+    loadDate(data = {}) {
+        let {
+            plotWidth = this.#plotWidth, 
+            relativeData = this.relativeData,
+            satellites,
+            mm = this.mm,
+            timeDelta = this.timeDelta,
+            scenarioLength = this.scenarioLength,
+            initSun = this.#initSun,
+            startDate = this.startDate
+        } = data
+        this.#plotWidth = plotWidth;
+        this.relativeData = relativeData;
+        this.satellites = [];
+        satellites.forEach(sat =>{
+            this.satellites.push(
+                new Satellite({
+                    position: sat.position,
+                    size: sat.size,
+                    color: sat.color,
+                    shape: sat.shape,
+                    a: sat.a,
+                    name: sat.name,
+                    burns: sat.burns
+                })
+            )
+        })
+        this.mm = mm;
+        this.timeDelta = timeDelta;
+        this.scenarioLength = scenarioLength;
+        this.#initSun = initSun;
+        this.startDate = this.startDate;
+
+
+    }
 }
 
 class Satellite {
@@ -522,7 +572,8 @@ class Satellite {
             color = 'blue',
             shape = 'pentagon',
             a = 0.00001,
-            name = 'Sat'
+            name = 'Sat',
+            burns = []
         } = options; 
         this.position = position;
         this.#size = size;
@@ -530,6 +581,7 @@ class Satellite {
         this.color = color;
         this.#shape = shape;
         this.name = name;
+        this.burns = burns;
         this.a = a;
         setTimeout(() => this.calcTraj(), 250);
     }
@@ -631,6 +683,18 @@ class Satellite {
     }
     getVelocityArray() {
         return math.transpose([[this.#currentPosition.rd, this.#currentPosition.id, this.#currentPosition.cd]]);
+    }
+    getData() {
+        return {
+            position: this.position,
+            color: this.color,
+            size: this.#size,
+            shape: this.#shape,
+            color: this.color,
+            burns: this.burns,
+            name: this.name,
+            a: this.a
+        }
     }
 }
 
@@ -842,10 +906,21 @@ document.getElementById('main-plot').addEventListener('mousemove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
 })
 document.getElementById('export-option-button').addEventListener('click', () => {
-    downloadFile('scenario.sas', JSON.stringify({
-        mainWindow
-    }));
+    downloadFile('scenario.sas', JSON.stringify(mainWindow.getData()));
 })
+function downloadFile(filename, text) {
+    var pom = document.createElement('a');
+    pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    pom.setAttribute('download', filename);
+
+    if (document.createEvent) {
+        var event = document.createEvent('MouseEvents');
+        event.initEvent('click', true, true);
+        pom.dispatchEvent(event);
+    } else {
+        pom.click();
+    }
+}
 document.getElementById('add-waypoint-button').addEventListener('click', event => {
     let chosenSat = Number(document.getElementById('satellite-way-select').value);
     let divTarget = event.target.parentNode.parentNode.parentNode.children;
@@ -1038,6 +1113,21 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
     // }
     closeAll();
 })
+document.getElementById('upload-options-button').addEventListener('change', event => {
+    loadFileAsText(event.path[0].files[0])
+})
+function loadFileAsText(fileToLoad) {
+
+    var fileReader = new FileReader();
+    fileReader.onload = function (fileLoadedEvent) {
+        var textFromFileLoaded = fileLoadedEvent.target.result;
+        textFromFileLoaded = JSON.parse(textFromFileLoaded);
+        // mainWindow = JSON.parse(JSON.stringify(textFromFileLoaded));
+        mainWindow.loadDate(textFromFileLoaded);
+    };
+
+    fileReader.readAsText(fileToLoad, "UTF-8");
+}
 function dataChange(el) {
     let selectVal = el.value.split('&');
     let indexCheck = mainWindow.relativeData.dataReqs.findIndex(req => {
