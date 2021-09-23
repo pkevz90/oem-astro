@@ -420,7 +420,7 @@ class Satellite {
     stateHistory;
     constructor(options = {}) {
         let {
-            position = {r: 2, i: 50, c: 10, rd: 0.001, id: 0, cd: -0.001},
+            position = {r: 20 * Math.random() - 10, i: 20 * Math.random() - 10, c: 20 * Math.random() - 10, rd: 0.002 * Math.random() - 0.001, id: 0.002 * Math.random() - 0.001, cd: 0.002 * Math.random() - 0.001},
             size = 4,
             color = 'blue',
             shape = 'pentagon',
