@@ -422,9 +422,9 @@ class Satellite {
     checkBurnProximity(position) {
         let out = {};
         for (let ii = 0; ii < this.burns.length; ii++) {
-            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < (mainWindow.getWidth() / 400) ? ii : out.ri ? out.ri : false; 
-            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < (mainWindow.getWidth() / 400) ? ii : out.ci ? out.ci : false; 
-            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < (mainWindow.getWidth() / 400) ? ii : out.rc ? out.rc : false; 
+            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < (mainWindow.getWidth() / 400) ? ii : out.ri !== false ? out.ri : false; 
+            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < (mainWindow.getWidth() / 400) ? ii : out.ci !== false ? out.ci : false; 
+            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < (mainWindow.getWidth() / 400) ? ii : out.rc !== false ? out.rc : false; 
         }
         return out;
     }
