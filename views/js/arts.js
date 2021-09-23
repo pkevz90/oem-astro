@@ -420,6 +420,33 @@ class windowCanvas {
             this.relativeData.time = this.relativeData.time > 1 ? 0 : this.relativeData.time + 0.03;
         
     }
+    showTime() {
+        let ctx = this.getContext();
+        ctx.textAlign = 'left';
+        ctx.font = 'bold ' + this.#cnvs.height * 0.05 + 'px serif'
+        ctx.fillText(new Date(this.startDate.getTime() + this.scenarioTime * 1000).toString()
+            .split(' GMT')[0].substring(4), this.#cnvs.width * 0.02, this.#cnvs.height*0.96);
+    }
+    showLocation() {
+        let ricCoor = this.convertToRic(this.mousePosition);
+        let ctx = this.getContext();
+        ctx.textAlign = 'center';
+        ctx.font = 'bold ' + this.#cnvs.height * 0.02 + 'px serif';
+        ctx.fillStyle = 'rgb(150,150,150)'
+        if (ricCoor?.ri) {
+            ctx.fillText('R ' + ricCoor.ri.r.toFixed(1) + ' km', this.mousePosition[0] - this.#cnvs.height * 0.1 , this.mousePosition[1])
+            ctx.fillText('I ' + ricCoor.ri.i.toFixed(1) + ' km', this.mousePosition[0] + this.#cnvs.height * 0.1 , this.mousePosition[1])
+        } 
+        else if (ricCoor?.ci) {
+            ctx.fillText('C ' + ricCoor.ci.c.toFixed(1) + ' km', this.mousePosition[0] - this.#cnvs.height * 0.1 , this.mousePosition[1])
+            ctx.fillText('I ' + ricCoor.ci.i.toFixed(1) + ' km', this.mousePosition[0] + this.#cnvs.height * 0.1 , this.mousePosition[1])
+        }
+        else if (ricCoor?.rc) {
+            ctx.fillText('C ' + ricCoor.rc.c.toFixed(1) + ' km', this.mousePosition[0] - this.#cnvs.height * 0.1 , this.mousePosition[1])
+            ctx.fillText('R ' + ricCoor.rc.r.toFixed(1) + ' km', this.mousePosition[0] + this.#cnvs.height * 0.1 , this.mousePosition[1])
+
+        }
+    }
     calculateBurn = calcBurns;
     startRecord(button) {
         closeAll();
@@ -617,6 +644,8 @@ mainWindow.fillWindow();
     mainWindow.updateSettings();
     mainWindow.drawAxes();
     mainWindow.showData();
+    mainWindow.showTime();
+    mainWindow.showLocation();
     if (mainWindow.burnStatus.type) {
         mainWindow.calculateBurn();
     }
@@ -806,6 +835,9 @@ document.getElementById('main-plot').addEventListener('mouseup', event => {
     mainWindow.satellites.forEach(sat => sat.calcTraj());
     mainWindow.burnStatus.type = false;
 })
+document.getElementById('main-plot').addEventListener('mouseleave', event => {
+    mainWindow.mousePosition = undefined;
+})
 document.getElementById('main-plot').addEventListener('mousemove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
 })
@@ -944,7 +976,7 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let sun = inputs[3].value;
     mainWindow.mm = Math.sqrt(398600.4418 / Math.pow(Number(inputs[2].value), 3));
     mainWindow.scenarioLength = Number(inputs[1].value);
-    timeSlider.max = mainWindow.scenario_length * 3600;
+    document.getElementById('time-slider-range').max = mainWindow.scenario_length * 3600;
     // let repeat = inputs[9].checked;
     mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / Number( inputs[10].value);
     mainWindow.satellites.forEach(sat => {
@@ -1032,6 +1064,30 @@ function changeBurnType() {
         document.getElementById('burn-type-control').style.right = '2.25%';
         mainWindow.burnType = 'waypoint'
     }
+}
+function parseState(button) {
+    let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input');
+    let text = document.getElementById('parse-text').value;
+    text = text.split(/ +/);
+    if (text[0] === "") text.shift();
+    if (text[text.length - 1] === "") text.pop();
+    text = text.filter(t => {
+        return Number(t) !== NaN;
+    });
+    text = text.map(t => Number(t));
+    if (text.length < 6) {
+        alert('Please include all six states (R I C Rd Id Cd)');
+        return;
+    } 
+    text.forEach((t, ii) => {
+        if (ii > 2) {
+            stateInputs[ii].value = 1000 * t;
+        }
+        else {
+            stateInputs[ii].value = t;
+        }
+    })
+    initStateFunction(stateInputs[0]);
 }
 //------------------------------------------------------------------
 // Adding functions to handle data planels, etc.
