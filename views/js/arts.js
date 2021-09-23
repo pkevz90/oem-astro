@@ -35,6 +35,47 @@ class windowCanvas {
     currentTarget = false;
     satellites = [];
     mousePosition = [];
+    relativeData = {
+        origin: undefined,
+        target: undefined,
+        textSize: 20,
+        positionX: 20,
+        positionY: 100,
+        data: {
+            range: {
+                exist: false,
+                units: 'km',
+                name: 'R'
+            },
+            rangeRate: {
+                exist: false,
+                units: 'm/s',
+                name: 'RR'
+            },
+            sunAngle: {
+                exist: false,
+                units: 'deg',
+                name: 'CATS'
+            },
+            relativeVelocity: {
+                exist: false,
+                units: 'm/s',
+                name: 'RelVel'
+            },
+            poca: {
+                exist: false,
+                units: 'km',
+                name: 'POCA'
+            },
+            tanRate: {
+                exist: false,
+                units: 'm/s',
+                name: 'R'
+            }
+        },
+        dataReqs: [],
+        time: 0
+    };
     constructor(cnvs) {
         this.#cnvs = cnvs;
     }
@@ -76,6 +117,12 @@ class windowCanvas {
     }
     getCurrentSun() {
         return math.squeeze(math.multiply(rotationMatrices(-this.scenarioTime * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
+    }
+    getInitSun() {
+        return this.#initSun;
+    }
+    setInitSun(sun) {
+        this.#initSun = sun;
     }
     setPlotWidth(width) {
         this.#plotWidth = width;
@@ -322,6 +369,42 @@ class windowCanvas {
         ctx.lineTo(position[0], position[1] + this.#cnvs.width / 60);
         ctx.stroke();
     }
+    showData() {
+        let ctx = this.getContext();
+        let oldWidth = ctx.lineWidth;
+        ctx.lineWidth = 1;
+        this.relativeData.dataReqs.forEach(req => {
+            // Draw line between objects
+            let point1 = this.convertToPixels(this.satellites[req.origin].currentPosition());
+            let point2 = this.convertToPixels(this.satellites[req.target].currentPosition());
+            let start = this.relativeData.time * 0.05;
+            ctx.beginPath();
+            while (start < 1) {
+                // ctx.arc((point2.ri.x - point1.ri.x) * start + point1.ri.x, (point2.ri.y - point1.ri.y) * start + point1.ri.y, 1, 0, 2 * Math.PI);
+                ctx.moveTo((point2.ri.x - point1.ri.x) * start + point1.ri.x, (point2.ri.y - point1.ri.y) * start + point1.ri.y);
+                ctx.lineTo((point2.ri.x - point1.ri.x) * (start-0.01) + point1.ri.x, (point2.ri.y - point1.ri.y) * (start-0.01) + point1.ri.y);
+                
+                start += 0.05;
+            }
+            ctx.stroke();
+            ctx.textAlign = 'left';
+            ctx.font = "bold " + req.textSize + "pt Courier";
+            let relDataIn = getRelativeData(req.origin, req.target);
+            let y_location = req.positionY * this.#cnvs.height / 100;
+            ctx.fillText(this.satellites[req.origin].name + String.fromCharCode(8594) + this.satellites[req.target].name, req.positionX*this.#cnvs.width / 100, y_location);
+            ctx.font = req.textSize + 'px Courier';
+            y_location += req.textSize*1.1;
+            req.data.forEach(d => {
+                ctx.fillText(this.relativeData.data[d].name + ': ' + relDataIn[d].toFixed(
+                    1) + ' ' + this.relativeData.data[d].units, req.positionX*this.#cnvs.width / 100,
+                    y_location);
+                y_location += req.textSize*1.1;
+            })
+            })
+            ctx.lineWidth = oldWidth;
+            this.relativeData.time = this.relativeData.time > 1 ? 0 : this.relativeData.time + 0.03;
+        
+    }
     calculateBurn = calcBurns;
 }
 
@@ -446,6 +529,12 @@ class Satellite {
             }
         });
     }
+    getPositionArray() {
+        return math.transpose([[this.#currentPosition.r, this.#currentPosition.i, this.#currentPosition.c]]);
+    }
+    getVelocityArray() {
+        return math.transpose([[this.#currentPosition.rd, this.#currentPosition.id, this.#currentPosition.cd]]);
+    }
 }
 
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
@@ -455,6 +544,7 @@ mainWindow.fillWindow();
     mainWindow.clear();
     mainWindow.updateSettings();
     mainWindow.drawAxes();
+    mainWindow.showData();
     if (mainWindow.burnStatus.type) {
         mainWindow.calculateBurn();
     }
@@ -692,7 +782,7 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
                 zd: 0
             },
             a: mainWindow.satellites[chosenSat].a,
-            startTime: startTime / 1000 - Date.parse(windowOptions.start_date) / 1000,
+            startTime: startTime / 1000 - Date.parse(mainWindow.startDate) / 1000,
             tf: Number(divTarget[4].getElementsByTagName('input')[0].value) === 0 ? 7200 : 60 * Number(divTarget[4].getElementsByTagName('input')[0].value)
         })
         if (!newPoints) {
@@ -700,13 +790,13 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
             return;
         }
         waypoints.push({
-            time: newPoints[0].time * 1000 + Date.parse(windowOptions.start_date),
+            time: newPoints[0].time * 1000 + Date.parse(mainWindow.startDate),
             r: newPoints[0].waypoint.target.r,
             i: newPoints[0].waypoint.target.i,
             c: newPoints[0].waypoint.target.c,
             tranTime: newPoints[0].waypoint.tranTime / 60,
         }, {
-            time: newPoints[1].time * 1000 + Date.parse(windowOptions.start_date),
+            time: newPoints[1].time * 1000 + Date.parse(mainWindow.startDate),
             r: newPoints[1].waypoint.target.r,
             i: newPoints[1].waypoint.target.i,
             c: newPoints[1].waypoint.target.c,
@@ -752,6 +842,110 @@ document.getElementById('satellite-way-select').addEventListener('input', event 
     generateBurnTable(event.target.value)
     event.target.style.color = mainWindow.satellites[event.target.value].color;
 })
+document.getElementById('data-button').addEventListener('click', (click) => {
+    if (mainWindow.satellites.length < 2) {
+        return;
+    }
+    document.getElementById('options-panel').classList.toggle("hidden")
+    let dataSel = document.getElementById('data-select');
+    while (dataSel.firstChild) {
+        dataSel.removeChild(dataSel.firstChild);
+    }
+    mainWindow.satellites.forEach((satOrg, ii) => {
+        mainWindow.satellites.forEach((satTar, jj) => {
+            if (ii !== jj) {
+                addedElement = document.createElement('option');
+                addedElement.value = `${ii}&${jj}`;
+                addedElement.textContent = satOrg.name + ' to ' + satTar.name;
+                dataSel.appendChild(addedElement);
+            } 
+        })
+    })
+    document.getElementById('data-panel').classList.toggle("hidden");
+})
+document.getElementById('confirm-option-button').addEventListener('click', (click) => {
+    let el = click.target;
+    el = el.parentNode.parentNode;
+    let inputs = el.getElementsByTagName('input');
+    let date = inputs[0].value;
+    let sun = inputs[3].value;
+    mainWindow.mm = Math.sqrt(398600.4418 / Math.pow(Number(inputs[2].value), 3));
+    mainWindow.scenarioLength = Number(inputs[1].value);
+    timeSlider.max = mainWindow.scenario_length * 3600;
+    // let repeat = inputs[9].checked;
+    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / Number( inputs[10].value);
+    mainWindow.satellites.forEach(sat => {
+        sat.generateBurns();
+        sat.calcTraj()
+    });
+    // encoder.setRepeat(repeat ? 0 : 1);
+    sunIR = -Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
+    sunC = Number(inputs[4].value) * Math.PI / 180;
+    mainWindow.setInitSun([-Math.cos(sunIR) * Math.cos(sunC), Math.sin(sunIR) * Math.cos(sunC), Math.sin(sunC)]);
+    mainWindow.startDate = new Date(date);
+    // mainWindow.nameFont = Number(inputs[11].value) / 100;
+    closeAll();
+})
+document.getElementById('confirm-data-button').addEventListener('click', (click) => {
+    let el = click.target;
+    let inputs = el.parentNode.getElementsByTagName('input'), exist = false, data = [];
+    let selectVal = el.parentNode.parentNode.getElementsByTagName('select')[0].value.split('&');
+    let indexCheck = mainWindow.relativeData.dataReqs.findIndex(req => {
+        return req.origin === selectVal[0] && req.target === selectVal[1];
+    });
+    for (let ii = 0; ii < 5; ii++) {
+        exist = exist || inputs[ii].checked;
+        if (inputs[ii].checked) data.push(inputs[ii].id);
+    }
+    if (exist) {
+        if (indexCheck === -1) {
+            mainWindow.relativeData.dataReqs.push({
+                origin: selectVal[0],
+                target: selectVal[1],
+                textSize: !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : 20,
+                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value): 20,
+                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value) : 20,
+                data
+            })
+        }
+        else {
+            mainWindow.relativeData.dataReqs[indexCheck] = {
+                origin: selectVal[0],
+                target: selectVal[1],
+                textSize: !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : 20,
+                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value) : 20,
+                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value) : 20,
+                data
+            }
+        }
+    }
+    else {
+        if (indexCheck !== -1) {
+            mainWindow.relativeData.dataReqs.splice(indexCheck,1);
+        }
+    }
+    // if (inputs[8].checked) {
+    //     mainWindow.vz_reach.shown = true;true;
+    //     mainWindow.vz_reach.target = Number(selectVal[0]);
+    //     mainWindow.vz_reach.object = Number(selectVal[1]);
+    //     mainWindow.vz_reach.distance = Number(inputs[9].value);
+    //     mainWindow.vz_reach.time = Number(inputs[10].value)*3600;
+    // }
+    closeAll();
+})
+function dataChange(el) {
+    let selectVal = el.value.split('&');
+    let indexCheck = mainWindow.relativeData.dataReqs.findIndex(req => {
+        return req.origin === selectVal[0] && req.target === selectVal[1];
+    });
+    let inputs = el.parentNode.parentNode.getElementsByTagName('input');
+    for (let ii = 0; ii < 5; ii++) {
+        inputs[ii].checked = indexCheck === -1 ? false : mainWindow.relativeData.dataReqs[indexCheck].data.includes(inputs[ii].id)
+    }
+    inputs[5].value = indexCheck === -1 ? 1 : mainWindow.relativeData.dataReqs[indexCheck].positionX;
+    inputs[6].value = indexCheck === -1 ? 5 : mainWindow.relativeData.dataReqs[indexCheck].positionY;
+    inputs[7].value = indexCheck === -1 ? 30 : mainWindow.relativeData.dataReqs[indexCheck].textSize;
+}
 function changeBurnType() {
     if (mainWindow.burnType === 'waypoint') {
         document.getElementById('way-arrows').style['fill-opacity'] = 0;
@@ -813,12 +1007,12 @@ function openPanel(button) {
         inputs[0].value = dateDiff;
         inputs[1].value = mainWindow.scenarioLength;
         inputs[2].value = Math.pow(398600.4418 / Math.pow(mainWindow.mm, 2), 1/3).toFixed(2);
-        let sunTime = Math.round((24 * math.atan2(mainWindow.initSun[1], -mainWindow.initSun[0]) / 2 / Math.PI));
+        let sunTime = Math.round((24 * math.atan2(mainWindow.getInitSun()[1], -mainWindow.getInitSun()[0]) / 2 / Math.PI));
         if (sunTime < 0) sunTime = math.round((sunTime + 24));
         sunTime += '00';
         if (sunTime.length < 4) sunTime = '0' + sunTime;
         inputs[3].value = sunTime;
-        inputs[4].value = 180 * math.atan2(mainWindow.initSun[2], math.norm(mainWindow.initSun.slice(0,2))) / Math.PI;
+        inputs[4].value = 180 * math.atan2(mainWindow.getInitSun()[2], math.norm(mainWindow.getInitSun().slice(0,2))) / Math.PI;
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     // mainWindow.panelOpen = true;
@@ -2148,4 +2342,40 @@ function drawSatellite(satellite = {}) {
     let letterY = pixelPosition[1] + shapeHeight / 2 + (cnvs.height*0.025)*1.3 / 2;
     ctx.font = `${cnvs.height*0.025}px Courier`;
     ctx.fillText(name ? name : '', pixelPosition[0], letterY);
+}
+
+function getRelativeData(n_target, n_origin) {
+    let sunAngle, rangeRate, range, poca, toca, tanRate;
+    let relPos = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getPositionArray(), mainWindow.satellites[n_target]
+        .getPositionArray()));
+    let relVel = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getVelocityArray(), mainWindow.satellites[n_target]
+        .getVelocityArray()));
+    range = math.norm(relPos);
+    sunAngle = math.squeeze(math.multiply(rotationMatrices(-mainWindow.scenarioTime * mainWindow.mm * 180 / Math.PI, 3), math.transpose([mainWindow.getInitSun()])));
+    sunAngle = math.acos(math.dot(relPos, sunAngle) / range) * 180 / Math.PI;
+    sunAngle = 180 - sunAngle; // Appropriate for USSF
+    rangeRate = math.dot(relVel, relPos) * 1000 / range;
+    tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
+    let relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
+    poca = math.min(findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory));
+    toca = relPosHis.findIndex(element => element === poca);
+    return {
+        sunAngle,
+        rangeRate,
+        range,
+        poca,
+        toca,
+        tanRate,
+        relativeVelocity: math.norm(relVel)*1000
+    }
+}
+
+function findMinDistance(vector1, vector2) {
+    let outVec = [];
+    for (let jj = 0; jj < vector1.length; jj++) {
+        outVec.push(math.norm([vector1[jj].r - vector2[jj].r, vector1[jj].i - vector2[jj].i, vector1[jj].c -
+            vector2[jj].c
+        ]));
+    }
+    return outVec
 }
