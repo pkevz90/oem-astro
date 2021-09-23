@@ -22,7 +22,8 @@ class windowCanvas {
         sat: null,
         burn: null,
         frame: null
-    }
+    };
+    encoder;
     mm = 2 * Math.PI / 86164;
     timeDelta = 900;
     scenarioLength = 48;
@@ -75,6 +76,20 @@ class windowCanvas {
         },
         dataReqs: [],
         time: 0
+    };
+    makeGif = {
+        start: false,
+        stop: false,
+        step: 5,
+        stopEpoch: 1440,
+        keyFrames: [
+            // {
+            //     time: 4 * 3600,
+            //     complete: false,
+            //     width: 200,
+            //     center: 0
+            // }
+        ]
     };
     constructor(cnvs) {
         this.#cnvs = cnvs;
@@ -236,7 +251,7 @@ class windowCanvas {
         ctx.strokeStyle = 'black';
         ctx.fillStyle = 'black';
         let axesLength = 0.5;
-        let sunLength = 0.4 * this.#plotHeight / 2;
+        let sunLength = 0.4 * this.#plotHeight / 2 * Math.max(this.#frameCenter.ri.h, this.#frameCenter.ci.h, this.#frameCenter.rc.h);
         let sunCoor = this.convertToPixels(math.dotMultiply(sunLength, this.getCurrentSun()));
         let origin = this.convertToPixels([0, 0, 0]);
         ctx.textAlign = 'center';
@@ -254,7 +269,7 @@ class windowCanvas {
             ctx.strokeStyle = 'orange';
             ctx.beginPath()
             ctx.moveTo(origin.ri.x, origin.ri.y);
-            ctx.lineTo(sunCoor.ri.x, sunCoor.ri.y);
+            ctx.lineTo(sunCoor.ri.x , sunCoor.ri.y);
             ctx.stroke();
             ctx.strokeStyle = 'black';
             ctx.fillText('R', origin.ri.x, origin.ri.y - this.#cnvs.height * axesLength * this.#frameCenter.ri.h / 2 - this.#cnvs.width * this.#frameCenter.ri.w / 60)
@@ -382,7 +397,7 @@ class windowCanvas {
             while (start < 1) {
                 // ctx.arc((point2.ri.x - point1.ri.x) * start + point1.ri.x, (point2.ri.y - point1.ri.y) * start + point1.ri.y, 1, 0, 2 * Math.PI);
                 ctx.moveTo((point2.ri.x - point1.ri.x) * start + point1.ri.x, (point2.ri.y - point1.ri.y) * start + point1.ri.y);
-                ctx.lineTo((point2.ri.x - point1.ri.x) * (start-0.01) + point1.ri.x, (point2.ri.y - point1.ri.y) * (start-0.01) + point1.ri.y);
+                ctx.lineTo((point2.ri.x - point1.ri.x) * (start-0.03) + point1.ri.x, (point2.ri.y - point1.ri.y) * (start-0.03) + point1.ri.y);
                 
                 start += 0.05;
             }
@@ -406,6 +421,61 @@ class windowCanvas {
         
     }
     calculateBurn = calcBurns;
+    startRecord(button) {
+        closeAll();
+        let inputs = button.parentNode.parentNode.getElementsByTagName('input');
+        this.makeGif.stopEpoch = Number(inputs[6].value) * 60;
+        this.scenario_time_des = Number(inputs[5].value) * 60;
+        this.scenario_time = Number(inputs[5].value) * 60;
+        this.makeGif.step = Number(inputs[7].value);
+        // mainWindow.makeGif.keyFrames.forEach(frame => {
+        //     if (frame.time < 300) {
+        //         windowOptions.width_des = frame.width;
+        //         windowOptions.width = frame.width;
+        //         windowOptions.origin_it_des = frame.center;
+        //         windowOptions.origin_it = frame.center;
+        //     }
+        // })
+        let val = document.getElementById('res-select').value;
+        val = val.split('x');
+        if (val[0] !== 'full') {
+            this.#cnvs.width = Number(val[0]);
+            this.#cnvs.height = Number(val[1]);
+        }
+        this.encoder = new GIFEncoder();
+        this.encoder.setQuality(20);
+        this.encoder.setRepeat(inputs[9].checked ? 0 : 1);
+        this.encoder.setDelay(1000 / Number(inputs[8].value));
+        setTimeout(() => {
+            this.makeGif.start = true;
+            this.encoder.start();
+        }, 2000)
+    }
+    recordFunction() {
+        if (this.makeGif.start) {
+            let ctx = this.getContext();
+            this.encoder.addFrame(ctx);
+            this.scenarioTime += this.makeGif.step * 60;
+            this.desired.scenarioTime += this.makeGif.step * 60;
+            if (this.makeGif.stop) {
+                this.makeGif.start = false;
+                this.makeGif.stop = false;
+                this.encoder.finish();
+                this.encoder.download("download.gif");
+                this.fillWindow();
+            }
+            else if (this.scenarioTime >= this.makeGif.stopEpoch) {this.makeGif.stop = true;}
+            // this.makeGif.keyFrames.forEach(key => {
+            //     if (windowOptions.scenario_time_des > key.time && !key.complete) {
+            //         // windowOptions.screen.mode = key.view;
+            //         windowOptions.width_des = key.width;
+            //         windowOptions.origin_it_des = key.center;
+            //         key.complete = true;
+            //         // formatCanvas();
+            //     }
+            // })
+        }
+    }
 }
 
 class Satellite {
@@ -420,7 +490,7 @@ class Satellite {
     stateHistory;
     constructor(options = {}) {
         let {
-            position = {r: 20 * Math.random() - 10, i: 20 * Math.random() - 10, c: 20 * Math.random() - 10, rd: 0.002 * Math.random() - 0.001, id: 0.002 * Math.random() - 0.001, cd: 0.002 * Math.random() - 0.001},
+            position = {r: 40 * Math.random() - 20, i: 40 * Math.random() - 20, c: 40 * Math.random() - 20, rd: 0.002 * Math.random() - 0.001, id: 0.002 * Math.random() - 0.001, cd: 0.002 * Math.random() - 0.001},
             size = 4,
             color = 'blue',
             shape = 'pentagon',
@@ -505,9 +575,9 @@ class Satellite {
     checkBurnProximity(position) {
         let out = {};
         for (let ii = 0; ii < this.burns.length; ii++) {
-            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < (mainWindow.getWidth() / 400) ? ii : out.ri !== false ? out.ri : false; 
-            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < (mainWindow.getWidth() / 400) ? ii : out.ci !== false ? out.ci : false; 
-            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < (mainWindow.getWidth() / 400) ? ii : out.rc !== false ? out.rc : false; 
+            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < (mainWindow.getWidth() / 400) ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
+            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < (mainWindow.getWidth() / 400) ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
+            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < (mainWindow.getWidth() / 400) ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
         }
         return out;
     }
@@ -537,6 +607,8 @@ class Satellite {
     }
 }
 
+
+
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
 mainWindow.fillWindow();
 
@@ -555,6 +627,7 @@ mainWindow.fillWindow();
         sat.drawBurns();
         sat.drawCurrentPosition();
     })
+    mainWindow.recordFunction();
     // console.timeEnd('sats')
     // mainWindow.drawMouse(mainWindow.mousePosition);
     window.requestAnimationFrame(animationLoop)
