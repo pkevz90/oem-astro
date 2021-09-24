@@ -91,6 +91,13 @@ class windowCanvas {
             // }
         ]
     };
+    vz_reach = {
+        shown: true,
+        target: 0,
+        object: 1,
+        time: 3600,
+        distance: 10
+    }
     constructor(cnvs) {
         this.#cnvs = cnvs;
     }
@@ -720,6 +727,9 @@ mainWindow.fillWindow();
         sat.drawBurns();
         sat.drawCurrentPosition();
     })
+    if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
+        drawVulnerabilityZone();
+    }
     mainWindow.recordFunction();
     // console.timeEnd('sats')
     // mainWindow.drawMouse(mainWindow.mousePosition);
@@ -824,7 +834,16 @@ window.addEventListener('keydown', key => {
         mainWindow.satellites.push(newSat)
     }
 })
-window.addEventListener('wheel', event => mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease'))
+window.addEventListener('wheel', event => {
+    if (mainWindow.burnStatus.type) {
+        if (mainWindow.burnStatus.type === 'waypoint') {
+            mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime += event.deltaY > 0 ? -300 : 300;   
+            mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
+        }
+        return;
+    }
+    mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
+})
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
     // console.log(ricCoor);
@@ -891,6 +910,9 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             sat: mainWindow.currentTarget.sat,
             burn: check[mainWindow.currentTarget.frame],
             frame: mainWindow.currentTarget.frame
+        }
+        if (mainWindow.burnType === 'waypoint') {
+            mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
         }
     }
 })
@@ -1051,7 +1073,7 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let sun = inputs[3].value;
     mainWindow.mm = Math.sqrt(398600.4418 / Math.pow(Number(inputs[2].value), 3));
     mainWindow.scenarioLength = Number(inputs[1].value);
-    document.getElementById('time-slider-range').max = mainWindow.scenario_length * 3600;
+    document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
     // let repeat = inputs[9].checked;
     mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / Number( inputs[10].value);
     mainWindow.satellites.forEach(sat => {
@@ -1104,13 +1126,13 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
             mainWindow.relativeData.dataReqs.splice(indexCheck,1);
         }
     }
-    // if (inputs[8].checked) {
-    //     mainWindow.vz_reach.shown = true;true;
-    //     mainWindow.vz_reach.target = Number(selectVal[0]);
-    //     mainWindow.vz_reach.object = Number(selectVal[1]);
-    //     mainWindow.vz_reach.distance = Number(inputs[9].value);
-    //     mainWindow.vz_reach.time = Number(inputs[10].value)*3600;
-    // }
+    if (inputs[8].checked) {
+        mainWindow.vz_reach.shown = true;
+        mainWindow.vz_reach.target = Number(selectVal[0]);
+        mainWindow.vz_reach.object = Number(selectVal[1]);
+        mainWindow.vz_reach.distance = Number(inputs[9].value);
+        mainWindow.vz_reach.time = Number(inputs[10].value)*3600;
+    }
     closeAll();
 })
 document.getElementById('upload-options-button').addEventListener('change', event => {
@@ -2599,4 +2621,51 @@ function findMinDistance(vector1, vector2) {
         ]));
     }
     return outVec
+}
+
+function drawVulnerabilityZone() {
+    let ctx = mainWindow.getContext();
+    let point, pointText;
+    let tarPos = mainWindow.satellites[mainWindow.vz_reach.target].currentPosition({time: mainWindow.scenarioTime + mainWindow.vz_reach.time})
+    let objPos = mainWindow.satellites[mainWindow.vz_reach.object].currentPosition({time: mainWindow.scenarioTime})
+    objPos = {
+        x: objPos.r[0],
+        y: objPos.i[0],
+        z: objPos.c[0],
+        xd: objPos.rd[0],
+        yd: objPos.id[0],
+        zd: objPos.cd[0]
+    }
+    let burn, results = [], textLoc;
+    ctx.fillStyle = 'black';
+    ctx.strokeStyle = 'black';
+    ctx.font = '15px serif';
+    for (let ang = 0; ang < 2 * Math.PI; ang += Math.PI / 4) {
+        point = {
+            x: tarPos.r[0] + mainWindow.vz_reach.distance * Math.sin(ang),
+            y: tarPos.i[0] + mainWindow.vz_reach.distance * Math.cos(ang),
+            z: tarPos.c[0],
+            xd: 0,
+            yd: 0,
+            zd: 0 
+        };
+        pointText = {
+            x: tarPos.r[0] + mainWindow.vz_reach.distance * Math.sin(ang)*1.1,
+            y: tarPos.i[0] + mainWindow.vz_reach.distance * Math.cos(ang)*1.1,
+            z: tarPos.c[0]
+        };
+        textLoc = mainWindow.convertToPixels({r: pointText.x, i: pointText.y, c: pointText.z}).ri;
+        burn = hcwFiniteBurnOneBurn(objPos, point, mainWindow.vz_reach.time, 0.00001);
+        results.push(burn ? {
+            dV: math.norm([burn.r, burn.i, burn.c]),
+            vel: math.norm([burn.F.xd-tarPos.rd[0], burn.F.yd-tarPos.id[0], burn.F.zd-tarPos.cd[0]])
+        } : false)
+        // console.log(textLoc);
+        ctx.fillText(burn ? (1000*math.norm([burn.r, burn.i, burn.c])).toFixed(0) : '--', textLoc.x, textLoc.y)
+        ctx.fillText(burn ? (1000*math.norm([burn.F.xd-tarPos.rd[0], burn.F.yd-tarPos.id[0], burn.F.zd-tarPos.cd[0]])).toFixed(0) : '--', textLoc.x, textLoc.y+15)
+    }
+    let zoneCenter = mainWindow.convertToPixels({r: tarPos.r[0], i: tarPos.i[0], c: tarPos.c[0]}).ri;
+    ctx.beginPath();
+    ctx.arc(zoneCenter.x, zoneCenter.y, mainWindow.vz_reach.distance / 2 / mainWindow.getPlotWidth() * mainWindow.getWidth(),0, 2 * Math.PI);
+    ctx.stroke();
 }
