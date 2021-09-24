@@ -668,6 +668,7 @@ class Satellite {
         return out;
     }
     checkInBurn() {
+        if (mainWindow.burnStatus.type) return;
         let time = mainWindow.scenarioTime;
         this.burns.forEach(burn => {
             let burnDuration = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a;
@@ -2103,7 +2104,10 @@ function generateBurns(all = false) {
 function calcBurns() {
     let cross = this.burnStatus.frame === 'ri' ? false : true;
     let sat = this.satellites[this.burnStatus.sat];
+    console.log(this.mousePosition);
+    if (!this.mousePosition) return;
     let mousePosition = this.convertToRic(this.mousePosition);
+    if (!this.mousePosition || !mousePosition) return;
     let crossState = sat.currentPosition({
         time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].waypoint.tranTime
     })
