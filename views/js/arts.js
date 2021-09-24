@@ -440,6 +440,7 @@ class windowCanvas {
         ctx.textAlign = 'center';
         ctx.font = 'bold ' + this.#cnvs.height * 0.02 + 'px serif';
         ctx.fillStyle = 'rgb(150,150,150)'
+        if (this.burnStatus.type === 'manual') return;
         if (ricCoor?.ri) {
             ctx.fillText('R ' + ricCoor.ri.r.toFixed(1) + ' km', this.mousePosition[0] - this.#cnvs.height * 0.1 , this.mousePosition[1])
             ctx.fillText('I ' + ricCoor.ri.i.toFixed(1) + ' km', this.mousePosition[0] + this.#cnvs.height * 0.1 , this.mousePosition[1])
@@ -619,6 +620,9 @@ class Satellite {
                     ctx.beginPath();
                     ctx.moveTo(point1.ri.x, point1.ri.y);
                     ctx.lineTo(point2.ri.x, point2.ri.y);
+                    let mag2 = math.norm([point2.ri.x - point1.ri.x, point2.ri.y - point1.ri.y]);
+                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(point2.ri.x - point1.ri.x) / mag2 + point1.ri.x, -60*(point2.ri.y - point1.ri.y) / mag2 + point1.ri.y)
+    
                     ctx.stroke();
                 }
                 if (state.search('ci') !== -1) {
@@ -835,6 +839,7 @@ window.addEventListener('keydown', key => {
         mainWindow.satellites.push(newSat)
     }
 })
+window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
     if (mainWindow.burnStatus.type) {
         if (mainWindow.burnStatus.type === 'waypoint') {
@@ -2162,16 +2167,19 @@ function calcBurns() {
     }
     // Draw burn 
     let mag = math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c])
-    let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location);
+    let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location)[this.burnStatus.frame];
     let ctx = this.getContext();
     ctx.strokeStyle = sat.color;
     ctx.beginPath();
-    ctx.moveTo(initPos[this.burnStatus.frame].x, initPos[this.burnStatus.frame].y);
+    ctx.moveTo(initPos.x, initPos.y);
     let dist = mag * 1000 / this.burnSensitivity;
     let point2 = {r: sat.burns[this.burnStatus.burn].location.r[0] + dist * sat.burns[this.burnStatus.burn].direction.r / mag, i: sat.burns[this.burnStatus.burn].location.i[0] + dist * sat.burns[this.burnStatus.burn].direction.i / mag, c: sat.burns[this.burnStatus.burn].location.c[0] + dist * sat.burns[this.burnStatus.burn].direction.c / mag}
-    initPos = this.convertToPixels(point2);
-    ctx.lineTo(initPos[this.burnStatus.frame].x, initPos[this.burnStatus.frame].y);
+    let finalPos = this.convertToPixels(point2)[this.burnStatus.frame];
+    ctx.lineTo(finalPos.x, finalPos.y);
     ctx.stroke();
+    let mag2 = math.norm([finalPos.x - initPos.x, finalPos.y - initPos.y]);
+    // console.log(ctx.font);
+    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 + initPos.y)
     sat.genBurns(true);
 }
 
