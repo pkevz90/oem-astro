@@ -35,7 +35,7 @@ class windowCanvas {
     showFinite = true;
     currentTarget = false;
     satellites = [];
-    mousePosition = [];
+    mousePosition = undefined;
     relativeData = {
         origin: undefined,
         target: undefined,
@@ -435,25 +435,21 @@ class windowCanvas {
             .split(' GMT')[0].substring(4), this.#cnvs.width * 0.02, this.#cnvs.height*0.96);
     }
     showLocation() {
+        if (!this.mousePosition) return;
         let ricCoor = this.convertToRic(this.mousePosition);
+        let frame = Object.keys(ricCoor)[0];
         let ctx = this.getContext();
         ctx.textAlign = 'center';
         ctx.font = 'bold ' + this.#cnvs.height * 0.02 + 'px serif';
-        ctx.fillStyle = 'rgb(150,150,150)'
+        ctx.fillStyle = 'rgb(150,150,150)';
+        let angle = (this.mousePosition[0] - this.#cnvs.width * 0.5) / this.#cnvs.width / 0.45;
+        angle = Math.PI / 2 * angle ** 6;
+        angle = angle > Math.PI / 2 ? Math.PI / 2 : angle;
         if (this.burnStatus.type === 'manual') return;
-        if (ricCoor?.ri) {
-            ctx.fillText('R ' + ricCoor.ri.r.toFixed(1) + ' km', this.mousePosition[0] - this.#cnvs.height * 0.1 , this.mousePosition[1])
-            ctx.fillText('I ' + ricCoor.ri.i.toFixed(1) + ' km', this.mousePosition[0] + this.#cnvs.height * 0.1 , this.mousePosition[1])
-        } 
-        else if (ricCoor?.ci) {
-            ctx.fillText('C ' + ricCoor.ci.c.toFixed(1) + ' km', this.mousePosition[0] - this.#cnvs.height * 0.1 , this.mousePosition[1])
-            ctx.fillText('I ' + ricCoor.ci.i.toFixed(1) + ' km', this.mousePosition[0] + this.#cnvs.height * 0.1 , this.mousePosition[1])
-        }
-        else if (ricCoor?.rc) {
-            ctx.fillText('C ' + ricCoor.rc.c.toFixed(1) + ' km', this.mousePosition[0] - this.#cnvs.height * 0.1 , this.mousePosition[1])
-            ctx.fillText('R ' + ricCoor.rc.r.toFixed(1) + ' km', this.mousePosition[0] + this.#cnvs.height * 0.1 , this.mousePosition[1])
-
-        }
+        ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km`, this.mousePosition[0] - this.#cnvs.height * 0.1*Math.cos(angle) , this.mousePosition[1] - this.#cnvs.height * 0.1*Math.sin(angle))
+        ctx.fillText(`${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km`, this.mousePosition[0] + this.#cnvs.height * 0.1*Math.cos(angle) , this.mousePosition[1] + this.#cnvs.height * 0.1*Math.sin(angle))
+        
+        // if (ri 
     }
     calculateBurn = calcBurns;
     startRecord(button) {
