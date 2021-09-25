@@ -25,7 +25,7 @@ class windowCanvas {
     };
     encoder;
     mm = 2 * Math.PI / 86164;
-    timeDelta = 900;
+    timeDelta = 0.006*86164;
     scenarioLength = 48;
     burnSensitivity = 0.3;
     scenarioTime = 0;
@@ -92,7 +92,7 @@ class windowCanvas {
         ]
     };
     vz_reach = {
-        shown: true,
+        shown: false,
         target: 0,
         object: 1,
         time: 3600,
@@ -907,7 +907,10 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                 burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
                 frame: Object.keys(check)[0]
             }
-            if (mainWindow.burnType === 'waypoint') mainWindow.desired.scenarioTime += 7200;
+            if (mainWindow.burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri') {
+                mainWindow.desired.scenarioTime += 7200;
+                document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
+            };
         }, 250)
     }
     else if (mainWindow.currentTarget.type === 'burn') {
@@ -917,8 +920,9 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             burn: check[mainWindow.currentTarget.frame],
             frame: mainWindow.currentTarget.frame
         }
-        if (mainWindow.burnType === 'waypoint') {
+        if (mainWindow.burnType === 'waypoint' && mainWindow.burnStatus.frame === 'ri') {
             mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
+            document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         }
     }
 })
@@ -1083,8 +1087,8 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     // let repeat = inputs[9].checked;
     mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / Number( inputs[10].value);
     mainWindow.satellites.forEach(sat => {
-        sat.generateBurns();
-        sat.calcTraj()
+        sat.genBurns();
+        sat.calcTraj();
     });
     // encoder.setRepeat(repeat ? 0 : 1);
     sunIR = -Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
