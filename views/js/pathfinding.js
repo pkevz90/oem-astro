@@ -96,12 +96,6 @@ class Grid {
             this.grid[this.currentGrid[0]][this.currentGrid[1] + 1].computeCost(this.target, this.currentGrid);
         }
     }
-    checkExplored(x, y) {
-        let filteredExplored = this.explored.filter(space => {
-            return space[0] === x && space[1] === y;
-        })
-        return filteredExplored.length > 0;
-    }
     findSmallest() {
         let small = 1e8, smallCoor = null;
         for (let yy = 0; yy < this.grid.length; yy++) {
@@ -170,6 +164,15 @@ class Grid {
         this.grid[this.start[0]][this.start[1]].computed = true;
         this.drawGrid();
     }
+    switchElements(a,b,list) {
+        let el = list[b];
+        list[b] = list[a];
+        list[a] = el;
+        return list;
+    }
+    addToHash() {
+        
+    }
 }
 
 class Space {
@@ -193,14 +196,14 @@ class Space {
         let g = mainGrid.grid[parent[0]][parent[1]].g + roadM*((this.coor[0] - parent[0]) ** 2 + (this.coor[1] - parent[1]) ** 2) ** (1/2);
         let h = h_constant*((this.coor[0] - target[0]) ** 2 + (this.coor[1] - target[1]) ** 2) ** (1/2);
         // let h = 0;
-        if ((g + h) < this.getTotal() && !mainGrid.checkExplored(this.coor[0], this.coor[1])) {
+        if ((g + h) < this.getTotal()) {
             this.g = g;
             this.h = h;
             this.parent = parent;
         }
         
         ctx.font = 'bold ' + cnvs.height * 0.5 / mainGrid.grid.length + 'px serif';
-        ctx.fillStyle = mainGrid.checkExplored(this.coor[0], this.coor[1]) ? 'green' : 'red';
+        ctx.fillStyle = 'red';
         ctx.fillStyle = (this.coor[0] === mainGrid.start[0] && this.coor[1] === mainGrid.start[1]) || (this.coor[0] === mainGrid.target[0] && this.coor[1] === mainGrid.target[1]) ? 'orange' : ctx.fillStyle;
         // console.log(this.coor);
         ctx.strokeRect(this.coor[0] * cnvs.width / mainGrid.grid[this.coor[1]].length, this.coor[1] * cnvs.height / mainGrid.grid.length,cnvs.width / mainGrid.grid[this.coor[1]].length,cnvs.height / mainGrid.grid.length)
@@ -244,7 +247,6 @@ cnvs.addEventListener('click', el => {
                     if (ii >= 10000) break;
                     ii++;
                 }
-                console.log(ii);
                 clearInterval(intervalVar);
                 return;
             }
@@ -256,18 +258,15 @@ cnvs.addEventListener('click', el => {
         let loc = mainGrid.findSmallest();
         if (loc[0] === mainGrid.target[0] && loc[1] === mainGrid.target[1]) {
             loc = [mainGrid.target[0],mainGrid.target[1]];
-            console.log(loc);
             let ii = 0;
             ctx.fillStyle = 'orange';
             let width = cnvs.width;
             let height = cnvs.height;
             while (loc[0] !== mainGrid.start[0] || loc[1] !== mainGrid.start[1]) {
                 loc = mainGrid.grid[loc[0]][loc[1]].parent;
-                console.log(loc);
                 ctx.strokeRect(loc[0] * width / mainGrid.grid[loc[1]].length, loc[1] * height / mainGrid.grid.length, width / mainGrid.grid[loc[1]].length, height / mainGrid.grid.length)
                 ctx.fillRect(loc[0] * width / mainGrid.grid[loc[1]].length, loc[1] * height / mainGrid.grid.length, width / mainGrid.grid[loc[1]].length, height / mainGrid.grid.length)
                 if (ii >= 10000) break;
-                console.log(ii);
                 ii++;
             }
             return;
