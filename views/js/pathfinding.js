@@ -3,16 +3,18 @@ ctx = cnvs.getContext('2d');
 cnvs.width = window.innerWidth;
 cnvs.height = window.innerHeight;
 auto = true;
-h_constant = 1;
+let h_constant = 1;
+let intervalVar;
 class Grid {
     grid;
     exCol = 'green';
     unExCol = 'red';
     currentGrid = undefined;
     explored = [];
+    minTree = [];
     smallest = [];
     constructor(options = {}) {
-        let {spaces = 50, start = [1,1]} = options;
+        let {spaces = 10, start = [1,1]} = options;
         this.start = start;
         this.target =  [Math.floor(Math.random() * spaces), Math.floor(Math.random() * spaces)];
         this.produceGrid(spaces);
@@ -59,7 +61,7 @@ class Grid {
     }
     updateNeighbors() {
         // up
-        if (this.currentGrid[1] > 0 && this.grid[this.currentGrid[0]]?.[this.currentGrid[1] - 1]?.passable) {
+        if (this.currentGrid[1] > 0 && this.grid[this.currentGrid[0]]?.[this.currentGrid[1] - 1]?.passable && !this.grid[this.currentGrid[0]]?.[this.currentGrid[1] - 1]?.explored) {
             this.grid[this.currentGrid[0]][this.currentGrid[1] - 1].computeCost(this.target, this.currentGrid);
         }
         // //northeast
@@ -80,17 +82,17 @@ class Grid {
         //     this.grid[this.currentGrid[0]+1][this.currentGrid[1] + 1].computeCost(this.target, this.currentGrid);
         // }
         // right
-        if (this.currentGrid[0] < this.grid[0].length - 1 && this.grid[this.currentGrid[0]+1]?.[this.currentGrid[1]]?.passable) {
+        if (this.currentGrid[0] < this.grid[0].length - 1 && this.grid[this.currentGrid[0]+1]?.[this.currentGrid[1]]?.passable && !this.grid[this.currentGrid[0]+1]?.[this.currentGrid[1]]?.explored) {
             this.grid[this.currentGrid[0] + 1][this.currentGrid[1]].computeCost(this.target, this.currentGrid);
         }
 
         // left
-        if (this.currentGrid[0] > 0 && this.grid[this.currentGrid[0]-1]?.[this.currentGrid[1]]?.passable) {
+        if (this.currentGrid[0] > 0 && this.grid[this.currentGrid[0]-1]?.[this.currentGrid[1]]?.passable && !this.grid[this.currentGrid[0]-1]?.[this.currentGrid[1] ]?.explored) {
             this.grid[this.currentGrid[0] - 1][this.currentGrid[1]].computeCost(this.target, this.currentGrid);
         }
 
         // down
-        if (this.currentGrid[0] < this.grid.length - 1 && this.grid[this.currentGrid[0]]?.[this.currentGrid[1]+1]?.passable) {
+        if (this.currentGrid[0] < this.grid.length && this.grid[this.currentGrid[0]]?.[this.currentGrid[1]+1]?.passable && !this.grid[this.currentGrid[0]]?.[this.currentGrid[1] + 1]?.explored) {
             this.grid[this.currentGrid[0]][this.currentGrid[1] + 1].computeCost(this.target, this.currentGrid);
         }
     }
@@ -104,7 +106,7 @@ class Grid {
         let small = 1e8, smallCoor = null;
         for (let yy = 0; yy < this.grid.length; yy++) {
             for (let xx = 0; xx < this.grid[yy].length; xx++) {
-                if (this.grid[xx][yy].getTotal() < small && !this.checkExplored(xx,yy)) {
+                if (this.grid[xx][yy].getTotal() < small && !this.grid[xx][yy].explored) {
                     small = this.grid[xx][yy].getTotal();
                     smallCoor = [xx, yy];
                 }
@@ -113,12 +115,25 @@ class Grid {
                 //     smallCoor = [xx, yy];
                 // }
             }
+        
         }
+        console.log(smallCoor, small);
         return smallCoor;
+
     }
     updateCurrentGrid(xx,yy) {
+        if (!this.grid[xx][yy].passable) {
+            clearInterval(intervalVar);
+            console.log('no solution');
+        }
         this.currentGrid = [xx, yy];
+        console.log(this.currentGrid);
         this.explored.push([xx, yy]);
+        this.grid[xx][yy].explored = true;
+        ctx.fillStyle = 'green';
+        ctx.strokeRect(xx * cnvs.width / this.grid[yy].length, yy * cnvs.height / this.grid.length,cnvs.width / mainGrid.grid[yy].length,cnvs.height / mainGrid.grid.length)
+        ctx.fillRect(xx * cnvs.width / this.grid[yy].length, yy * cnvs.height / this.grid.length, cnvs.width / mainGrid.grid[yy].length, cnvs.height / mainGrid.grid.length)
+     
         this.updateNeighbors();
         // this.drawGrid();
     }
@@ -130,7 +145,7 @@ class Grid {
                 
                 let isRoadNear = this.grid[jj]?.[ii-1]?.road;
                 let notNext = this.grid[jj-1]?.[ii]?.road
-                console.log(isWallNear);
+                // console.log(isWallNear);
                 this.grid[jj][ii].passable = Math.random() < (isWallNear ? 0.4 : 0.95) ? true : false;
                 if (this.grid[jj][ii].passable) {
                     this.grid[jj][ii].road = Math.random() < (notNext ? 0: 1)*(isRoadNear ? 0.75 : 0.05) ? true : false;
@@ -161,6 +176,7 @@ class Space {
     constructor(x, y) {
         this.coor = [x, y];
         this.computed = false;
+        this.explored = false;
         this.g = 1000000; // distance from start
         this.h = 1000000; // distance from target
         this.parent = undefined;
@@ -172,7 +188,8 @@ class Space {
     }
     computeCost(target, parent) {
         this.computed = true;
-        let roadM = mainGrid.grid[parent[0]][parent[1]].road && this.road ? 0.75 : 1;
+        // let roadM = mainGrid.grid[parent[0]][parent[1]].road && this.road ? 0.75 : 1;
+        let roadM = this.road ? 0.75 : 1;
         let g = mainGrid.grid[parent[0]][parent[1]].g + roadM*((this.coor[0] - parent[0]) ** 2 + (this.coor[1] - parent[1]) ** 2) ** (1/2);
         let h = h_constant*((this.coor[0] - target[0]) ** 2 + (this.coor[1] - target[1]) ** 2) ** (1/2);
         // let h = 0;
@@ -210,7 +227,7 @@ cnvs.addEventListener('click', el => {
         mainGrid.updateCurrentGrid(mainGrid.start[0], mainGrid.start[1]);
     }
     if (auto) {
-        let a = setInterval(() => {
+        intervalVar = setInterval(() => {
             let loc = mainGrid.findSmallest();
             
             if (loc[0] === mainGrid.target[0] && loc[1] === mainGrid.target[1]) {
@@ -228,7 +245,7 @@ cnvs.addEventListener('click', el => {
                     ii++;
                 }
                 console.log(ii);
-                clearInterval(a);
+                clearInterval(intervalVar);
                 return;
             }
             mainGrid.updateCurrentGrid(loc[0], loc[1]);
