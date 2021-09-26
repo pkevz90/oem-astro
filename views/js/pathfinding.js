@@ -2,7 +2,7 @@ cnvs = document.getElementsByTagName('canvas')[0];
 ctx = cnvs.getContext('2d');
 cnvs.width = window.innerWidth;
 cnvs.height = window.innerHeight;
-auto = false;
+auto = true;
 h_constant = 1;
 class Grid {
     grid;
@@ -139,7 +139,7 @@ class Grid {
         }
         this.drawGrid();
     }
-    reserGrid() {
+    resetGrid() {
         for (let yy = 0; yy < this.grid.length; yy++) {
             for (let xx = 0; xx < this.grid[yy].length; xx++) {
                 this.grid[xx][yy].g = 1e6;
@@ -150,6 +150,9 @@ class Grid {
         }
         this.explored = [];
         this.currentGrid = undefined;
+        this.grid[this.start[0]][this.start[1]].g = 0;
+        this.grid[this.start[0]][this.start[1]].h = 0;
+        this.grid[this.start[0]][this.start[1]].computed = true;
         this.drawGrid();
     }
 }
@@ -201,7 +204,6 @@ cnvs.addEventListener('click', el => {
     // if (!mainGrid.grid[loc[0]][loc[1]].computed) return;
     if (mainGrid.currentGrid === undefined) {
         mainGrid.updateCurrentGrid(mainGrid.start[0], mainGrid.start[1]);
-        return;
     }
     if (auto) {
         let a = setInterval(() => {
@@ -237,7 +239,7 @@ cnvs.addEventListener('click', el => {
             ctx.fillStyle = 'orange';
             let width = cnvs.width;
             let height = cnvs.height;
-            while (loc[0] !== mainGrid.start[0] && loc[1] !== mainGrid.start[1]) {
+            while (loc[0] !== mainGrid.start[0] || loc[1] !== mainGrid.start[1]) {
                 loc = mainGrid.grid[loc[0]][loc[1]].parent;
                 console.log(loc);
                 ctx.strokeRect(loc[0] * width / mainGrid.grid[loc[1]].length, loc[1] * height / mainGrid.grid.length, width / mainGrid.grid[loc[1]].length, height / mainGrid.grid.length)
