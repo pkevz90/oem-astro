@@ -15,7 +15,7 @@ class Grid {
     smallest = [];
     hash = [];
     constructor(options = {}) {
-        let {spaces = 200, start = [1,1]} = options;
+        let {spaces = 100, start = [1,1]} = options;
         this.start = start;
         this.target =  [Math.floor(Math.random() * spaces), Math.floor(Math.random() * spaces)];
         this.produceGrid(spaces);
@@ -253,8 +253,8 @@ cnvs.addEventListener('click', el => {
         mainGrid.updateCurrentGrid(mainGrid.start[0], mainGrid.start[1]);
     }
     if (auto) {
-        while (true) {
-            // let loc = mainGrid.findSmallest();
+        intervalVar = setInterval(() => {
+            for (let ii = 0; ii < 40; ii++){
             let loc = mainGrid.removeSmallestFromHash().coor;
             if (loc[0] === mainGrid.target[0] && loc[1] === mainGrid.target[1]) {
                 loc = [mainGrid.target[0],mainGrid.target[1]];
@@ -271,11 +271,11 @@ cnvs.addEventListener('click', el => {
                     ii++;
                 }
                 console.log(ii);
-                break;
+                clearInterval(intervalVar)
             }
             mainGrid.updateCurrentGrid(loc[0], loc[1]);
-            
-        }
+            }
+        }, 1)
     }
     else {
         // console.time()
