@@ -97,7 +97,8 @@ class windowCanvas {
         object: 1,
         time: 3600,
         distance: 10
-    }
+    };
+    curvilinear = true;
     constructor(cnvs) {
         this.#cnvs = cnvs;
     }
@@ -435,21 +436,27 @@ class windowCanvas {
             .split(' GMT')[0].substring(4), this.#cnvs.width * 0.02, this.#cnvs.height*0.96);
     }
     showLocation() {
-        if (!this.mousePosition) return;
-        let ricCoor = this.convertToRic(this.mousePosition);
-        let frame = Object.keys(ricCoor)[0];
-        let ctx = this.getContext();
-        ctx.textAlign = 'center';
-        ctx.font = 'bold ' + this.#cnvs.height * 0.02 + 'px serif';
-        ctx.fillStyle = 'rgb(150,150,150)';
-        let angle = (this.mousePosition[0] - this.#cnvs.width * 0.5) / this.#cnvs.width / 0.45;
-        angle = Math.PI / 2 * angle ** 6;
-        angle = angle > Math.PI / 2 ? Math.PI / 2 : angle;
-        if (this.burnStatus.type === 'manual') return;
-        ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km`, this.mousePosition[0] - this.#cnvs.height * 0.1*Math.cos(angle) , this.mousePosition[1] - this.#cnvs.height * 0.1*Math.sin(angle))
-        ctx.fillText(`${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km`, this.mousePosition[0] + this.#cnvs.height * 0.1*Math.cos(angle) , this.mousePosition[1] + this.#cnvs.height * 0.1*Math.sin(angle))
+        try {
+            let ctx = this.getContext();
+            ctx.textAlign = 'center';
+            ctx.font = 'bold ' + this.#cnvs.height * 0.02 + 'px serif';
+            if (!this.mousePosition) return;
+            let ricCoor = this.convertToRic(this.mousePosition);
+            let frame = Object.keys(ricCoor)[0];
+            ctx.font = 'bold ' + this.#cnvs.height * 0.02 + 'px serif';
+            ctx.fillStyle = 'rgb(150,150,150)';
+            let angle = (this.mousePosition[0] - this.#cnvs.width * 0.5) / this.#cnvs.width / 0.45;
+            angle = Math.PI / 2 * angle ** 6;
+            angle = angle > Math.PI / 2 ? Math.PI / 2 : angle;
+            if (this.burnStatus.type === 'manual') return;
+            ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km`, this.mousePosition[0] - this.#cnvs.height * 0.1*Math.cos(angle) , this.mousePosition[1] - this.#cnvs.height * 0.1*Math.sin(angle))
+            ctx.fillText(`${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km`, this.mousePosition[0] + this.#cnvs.height * 0.1*Math.cos(angle) , this.mousePosition[1] + this.#cnvs.height * 0.1*Math.sin(angle))
+            
+        }
+        catch (e) {
+
+        }
         
-        // if (ri 
     }
     calculateBurn = calcBurns;
     startRecord(button) {
@@ -556,6 +563,19 @@ class windowCanvas {
         this.startDate = this.startDate;
 
 
+    }
+    drawOrbitCurve() {
+        this.getContext().lineWidth = 1;
+        let drawnLine = [], ang, a = (398600.4418 / this.mm ** 2) ** (1/3), dr, loc;
+        for (let it = this.#plotWidth / 2; it > -this.#plotWidth / 2; it -= this.#plotWidth / 100) {
+            ang = Math.asin(it / a);
+            dr = (Math.cos(ang) - 1) * a;
+            loc = this.convertToPixels({r: dr, i: it, c: 0}).ri;
+            drawnLine.push(loc);
+        }
+        // console.log(loc)
+        drawCurve(this.getContext(),drawnLine);
+        this.getContext().lineWidth = 6.049;
     }
 }
 
@@ -715,6 +735,7 @@ mainWindow.fillWindow();
     mainWindow.clear();
     mainWindow.updateSettings();
     mainWindow.drawAxes();
+    // mainWindow.drawOrbitCurve();
     mainWindow.showData();
     mainWindow.showTime();
     mainWindow.showLocation();
@@ -2722,5 +2743,25 @@ function drawVulnerabilityZone() {
     let zoneCenter = mainWindow.convertToPixels({r: tarPos.r[0], i: tarPos.i[0], c: tarPos.c[0]}).ri;
     ctx.beginPath();
     ctx.arc(zoneCenter.x, zoneCenter.y, mainWindow.vz_reach.distance / 2 / mainWindow.getPlotWidth() * mainWindow.getWidth(),0, 2 * Math.PI);
+    ctx.stroke();
+}
+
+function drawCurve(ctx, points) {
+    ctx.beginPath();
+    let point1 = points[0];
+    var t = 1;
+    for (var i = 0; i < points.length - 1; i++) {
+        var p0 = (i > 0) ? points[i - 1] : point1;
+        var p1 = points[i];
+        var p2 = points[i + 1];
+        var p3 = (i != points.length - 2) ? points[i + 2] : p2;
+
+        var cp1x = p1.x + (p2.x - p0.x) / 6 * t;
+        var cp1y = p1.y + (p2.y - p0.y) / 6 * t;
+
+        var cp2x = p2.x - (p3.x - p1.x) / 6 * t;
+        var cp2y = p2.y - (p3.y - p1.y) / 6 * t;
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
     ctx.stroke();
 }
