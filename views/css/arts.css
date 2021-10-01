@@ -69,11 +69,10 @@ html, body {
 #options {
     position: fixed;
     height: auto;
-    width: auto;
     border: 1px solid black;
     z-index: 3;
     bottom: 2%;
-    right: 2.5%;
+    right: 1%;
     text-align: center;
     cursor: pointer;
     transition: 0.2s;
@@ -84,6 +83,8 @@ html, body {
     border-radius: 20px;
     line-height: 2vh;
     font-size: 3vh;
+    width: 15vh;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.4);
 }
 .blurred {
     backdrop-filter: blur(10px);
@@ -91,11 +92,10 @@ html, body {
 #burns {
     position: fixed;
     height: auto;
-    width: auto;
     border: 1px solid black;
     z-index: 3;
-    bottom: 13%;
-    right: 2.5%;
+    bottom: 11%;
+    right: 1%;
     text-align: center;
     cursor: pointer;
     transition: 0.2s;
@@ -136,11 +136,10 @@ html, body {
 #instructions {
     position: fixed;
     height: auto;
-    width: auto;
     border: 1px solid black;
     z-index: 3;
-    bottom: 7%;
-    right: 2.5%;
+    bottom: 6.5%;
+    right: 1%;
     text-align: center;
     cursor: pointer;
     transition: 0.2s;
