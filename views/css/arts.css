@@ -52,19 +52,44 @@ html, body {
 }
 #time-slider {
     position: fixed;
-    top: 1.25%;
-    left: 0%;
+    top: 1%;
+    left: 1%;
     width:100%;
+    margin: 0;
     cursor: pointer;
 }
 .center {
     text-align: center;
 }
 #time-slider input {
-    width: 90%;
-    cursor: pointer;
-    margin-left: 5%;
+    -webkit-appearance: none;
+    width: 98%;
+    height: 25px;
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
 }
+#time-slider input:hover {
+    opacity: 1;
+}
+
+#time-slider input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    background: black;
+    cursor: pointer;
+  }
+  
+#time-slider input::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    background: black;
+    cursor: pointer;
+  }
 
 #options {
     position: fixed;
@@ -220,30 +245,6 @@ html, body {
     height: 0;
   }
   
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    -webkit-transition: .4s;
-    transition: .4s;
-  }
-  
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 1.25vh;
-    width: 20px;
-    left: 4px;
-    bottom: 0.35vh;
-    background-color: white;
-    -webkit-transition: .4s;
-    transition: .4s;
-  }
-  
   input:checked + .slider {
     background-color: #000;
   }
@@ -256,15 +257,6 @@ html, body {
     -webkit-transform: translateX(20px);
     -ms-transform: translateX(20px);
     transform: translateX(20px);
-  }
-  
-  /* Rounded sliders */
-  .slider.round {
-    border-radius: 34px;
-  }
-  
-  .slider.round:before {
-    border-radius: 50%;
   }
 
   .edit-button, #add-waypoint-button {
