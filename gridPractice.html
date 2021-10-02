@@ -6,27 +6,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
-        .basic-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 2FR));
-
+        .main {
+            left: 50%;
+            top: 500px;
+            transform: translateX(-50%);
+            background-color: gray;
+            height: 200px;
+            width: 200px;
+            position: relative;    
+        }
+        .main::before, .main::after {
+            --scale: 0;
+            --tooltip-color: #333;
+            --arrow-size: 10px;
+            position: absolute;
+            top: -0.25rem;
+            /* left: 50%; */
+            transform:  translateX(-0%) translateY(-100%) scale(var(--scale));
+            transition: 150ms transform;
+            transform-origin: bottom left;
+        }
+        .main::before {
+            content: attr(data-tooltip);
+            color: white;
+            padding: 0.5rem;
+            width: max-content;
+            max-width: 100%;
+            background: var(--tooltip-color);
+            border-radius: 0.3rem;
+            text-align: center;
+        }
+        .main:hover::before, .main:hover::after {
+            --scale: 1;
         }
     </style>
 </head>
 <body>
-    <section class="basic-grid">
-        <div>1</div>
-        <div>2</div>
-        <div>3</div>
-        <div>4</div>
-        <div>5</div>
-        <div>6</div>
-        <div>7</div>
-        <div>8</div>
-        <div>9</div>
-        <div>10</div>
-        <div>11</div>
-        <div>12</div>
-    </section>
+    <div class="main" data-tooltip="This is a tooltip"></div>
+    <script src="./SupportLibraries/math.js"></script>
+    <script src="./views/js/lambert.js"></script>
 </body>
 </html>
