@@ -61,3 +61,22 @@ function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
     let v2 = math.dotDivide(math.subtract(math.dotMultiply(returnedValues.gdot, r2_vec),r1_vec), returnedValues.g);
     return {v1, v2}
 }
+
+function gibbsMethod(r1, r2, r3, mu = 398600.4418) {
+    /*
+        Method taken from Algorithm 54 pg. 460 Fundamentals of Astrodynamics by David Vallado, 4th Edition
+    */
+    
+    let z12 = math.cross(r1, r2), z23 = math.cross(r2, r3), z31 = math.cross(r3, r1);
+    let r1n = math.norm(r1), r2n = math.norm(r2), r3n = math.norm(r3); 
+    let alpha_cop = Math.asin(math.dot(z23, r1) / math.norm(z23) / r1n);
+    let cos_a12 = math.dot(r1,r2) / r1n / r2n;
+    let cos_a23 = math.dot(r2,r3) / r2n / r3n;
+    let N = math.add(math.dotMultiply(r1n, z23), math.dotMultiply(r2n, z31), math.dotMultiply(r3n, z12));
+    let D = math.add(z12, z23, z31);
+    let S = math.add(math.dotMultiply(r2n - r3n, r1), math.dotMultiply(r3n - r1n, r2), math.dotMultiply(r1n - r2n, r3));
+    let B = math.cross(D, r2);
+    let Lg = Math.sqrt(mu / math.norm(N) / math.norm(D));
+
+    return math.add(math.dotMultiply(Lg / r2n, B), math.dotMultiply(Lg, S));
+}

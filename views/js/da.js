@@ -73,7 +73,7 @@ function drawSite() {
 }
 
 function createRendezvousObject() {
-    timeToImpact = 7*60;
+    timeToImpact = 15*60;
     interceptor = math.transpose([[sitePos[0], sitePos[1], 0, 2]]);
     timeStep /= 4 ;
 }
@@ -82,7 +82,7 @@ function generateDebris() {
     let pos = math.squeeze(satState).slice(0,2);
     let vel1 = math.squeeze(satState).slice(2,4);
     let vel2 = math.squeeze(interceptor).slice(2,4);
-    let c = 4, c1, c2;
+    let c = 20, c1, c2;
     debris = [];
     for (let ii = 0; ii < 300; ii++) {
         c1 = Math.random() * c;
@@ -93,7 +93,7 @@ function generateDebris() {
 }
 
 function updateTargetState() {
-    if (timeToImpact < 10) {
+    if (timeToImpact <= 5) {
         generateDebris();
         interceptor = undefined;
         return;
