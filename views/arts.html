@@ -46,7 +46,7 @@
                 
             </div>
             <div onclick=initStateFunction(this) style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">To Curvilinear</div>
-            <div style="margin: 20px 5px"><input placeholder="R I C Rd Id Cd" style="width: 100%;" value="" type="text" id="parse-text"></div>
+            <div style="margin: 20px 5px"><input autocomplete="off" placeholder="R I C Rd Id Cd" style="width: 100%;" value="" type="text" id="parse-text"></div>
             <div onclick="parseState(this)" style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">Parse</div>
         
         </div>
@@ -120,7 +120,8 @@
             </div>
             <div style="margin-top:1%; padding: 2% 0%; display: flex; justify-content: space-evenly; align-items: center; flex-wrap: wrap;">
                 <div class="">
-                    <span style="padding: 10px; font-size: 1.5em" id="add-waypoint-button">Add</span>
+                    <!-- <span style="padding: 10px; font-size: 1.5em" id="add-waypoint-button">Add</span> -->
+                    <button style="padding: 10px; font-size: 1.5em" id="add-waypoint-button">Add</button>
                 </div>
                 <div title="Program will add two waypoints, one that will get you to target, and one timed to stop you right when you arrive">
                     <span style="font-size: 2em;">Zero RI Velocity</span> <input style="height: 1.5em; cursor: pointer;" type="checkbox"></div>
@@ -169,8 +170,7 @@
             <div style="font-size: 1.5em; padding: 14px 4px;"  id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
             <div style="font-size: 1.5em; padding: 14px 4px;" id="export-option-button" class="panel-button hoverable noselect">Export</div>
-            <label style="display: block; font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect" for="upload-options-button">Import</div><input style="display: none;" id="upload-options-button" type="file" accept=".sas">
-            </div>
+        <label style="display: block; font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect" for="upload-options-button">Import</div><input style="display: none;" id="upload-options-button" type="file" accept=".sas">
     </div>
     <svg id="add-satellite"  onclick=openPanel(this) stroke-width="10px" fill="white" viewBox="-10 0 531.996 511.996">
         <g>

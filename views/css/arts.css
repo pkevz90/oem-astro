@@ -271,6 +271,7 @@ html, body {
   #add-waypoint-button {
       padding: 0.5% 2%;
       margin-left: 7%;
+      background-color: white;
   }
 
   .full-page-menu {
@@ -311,13 +312,17 @@ html, body {
       padding: 3px;
       outline: none;
       border-color: rgba(0,0,0,0.25);
-      transition: border-radius 250ms;
+      transition: border-radius 250ms, backgroud-color 250ms;
       /* box-shadow: 2px 2px 5px black; */
+    }
+    input::selection {
+        background: rgba(0,0,0,0);
     }
 
     input:focus, select:focus {
         border-color: rgba(0,0,0,1);
         border-radius: 0px;
+        background-color: rgb(240,240,240);
     }
     
     select {
