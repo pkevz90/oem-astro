@@ -1,0 +1,6 @@
+Start Time,Position (km), Velocity (m/s), Acceleration (m/s2)
+01 Jun 2019 00:00:00.000,"-10.38  18.80  3.43","-0.22  -0.36  0.17",0.01,
+
+
+Time, Magnitude (m/s), Waypoint (km), Transfer Time (min), Direction, Duration (s)
+01 Jun 2019 02:26:25.000,5.24,"1.2  33.5  3.5",120.0,"0.904  0.427  -0.000",524.5,

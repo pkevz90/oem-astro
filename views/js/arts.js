@@ -8,6 +8,7 @@ class windowCanvas {
         ci: {x: 0.5, y: 1, w: 1, h: 0},
         rc: {x: 0, y: 0.5, w: 0, h: 0}
     };
+    frameMove = undefined;
     #initSun = [1, 0, 0.2];
     desired = {
         scenarioTime: 0,
@@ -111,6 +112,9 @@ class windowCanvas {
     getPlotHeight() {
         return this.#plotHeight;
     }
+    getPlotCenter() {
+        return this.#plotCenter;
+    }
     getHeight() {
         return this.#cnvs.height;
     }
@@ -186,6 +190,7 @@ class windowCanvas {
             this.#frameCenter[frame].w += (this.desired[frame].w - this.#frameCenter[frame].w) * this.desired.speed;
         }
         this.scenarioTime += (this.desired.scenarioTime - this.scenarioTime) * this.desired.speed 
+        this.#plotCenter += (this.desired.plotCenter - this.#plotCenter) * this.desired.speed 
     }
     setSize(width, height) {
         this.#cnvs.width = width;
@@ -219,7 +224,7 @@ class windowCanvas {
                 c: -(input.y - this.#cnvs.height * this.#frameCenter.ci.y) * this.#plotHeight / this.#cnvs.height
             },
             rc: {
-                r: (input.x - this.#cnvs.width * this.#frameCenter.rc.x) * this.#plotWidth / this.#cnvs.width + this.#plotCenter,
+                r: (input.x - this.#cnvs.width * this.#frameCenter.rc.x) * this.#plotWidth / this.#cnvs.width,
                 c: -(input.y - this.#cnvs.height * this.#frameCenter.rc.y) * this.#plotHeight / this.#cnvs.height
             },
         };
@@ -231,7 +236,7 @@ class windowCanvas {
             if (Math.abs(initData.ci.i - this.#plotCenter) < this.#plotWidth * this.#frameCenter.ci.w / 2 && Math.abs(initData.ci.c) < this.#plotHeight * this.#frameCenter.ci.h / 2) {
                 return {ci: initData.ci};
             }
-            if (Math.abs(initData.rc.r - this.#plotCenter) < this.#plotWidth * this.#frameCenter.rc.w / 2 && Math.abs(initData.rc.c) < this.#plotHeight * this.#frameCenter.rc.h / 2) {
+            if (Math.abs(initData.rc.r) < this.#plotWidth * this.#frameCenter.rc.w / 2 && Math.abs(initData.rc.c) < this.#plotHeight * this.#frameCenter.rc.h / 2) {
                 return {rc: initData.rc};
             }
         }
@@ -255,7 +260,7 @@ class windowCanvas {
                 y: this.#cnvs.height * this.#frameCenter.ci.y - input.c * this.#cnvs.height/ this.#plotHeight
             },
             rc: {
-                x: (input.r - this.#plotCenter) * this.#cnvs.width / this.#plotWidth + this.#cnvs.width * this.#frameCenter.rc.x,
+                x: (input.r) * this.#cnvs.width / this.#plotWidth + this.#cnvs.width * this.#frameCenter.rc.x,
                 y: this.#cnvs.height * this.#frameCenter.rc.y - input.c * this.#cnvs.height / this.#plotHeight
             }
         }
@@ -271,6 +276,7 @@ class windowCanvas {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         this.drawBorder();
+        // console.log(axesLength * this.#plotHeight);
         if (this.#state.search('ri') !== -1) {
             ctx.lineWidth = this.#cnvs.width * this.#frameCenter.ri.w / 200;
             ctx.font = 'bold ' + this.#cnvs.width * this.#frameCenter.ri.w / 40 + 'px serif';
@@ -292,20 +298,30 @@ class windowCanvas {
         if (this.#state.search('ci') !== -1) {
             ctx.lineWidth = this.#cnvs.width * this.#frameCenter.ci.w / 200;
             ctx.font = 'bold ' + this.#cnvs.width * this.#frameCenter.ci.w / 40 + 'px serif';
+            let drawX = math.abs(this.#plotCenter) < this.#plotWidth / 2* this.#frameCenter.ci.w;
+            let drawY = this.#plotCenter + this.#plotWidth / 2 * this.#frameCenter.ci.w;
             ctx.beginPath()
-            ctx.moveTo(origin.ci.x, origin.ci.y);
-            ctx.lineTo(origin.ci.x, origin.ci.y - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2);
-            ctx.moveTo(origin.ci.x + this.#cnvs.width * this.#frameCenter.ci.w / 400, origin.ci.y)
-            ctx.lineTo(origin.ci.x - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2, origin.ci.y);
+            if (drawX) {
+                ctx.moveTo(origin.ci.x, origin.ci.y);
+                ctx.lineTo(origin.ci.x, origin.ci.y - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2);
+            }
+            if (drawY > 0) {
+                ctx.moveTo(origin.ci.x + this.#cnvs.width * this.#frameCenter.ci.w / 400, origin.ci.y)
+                ctx.lineTo(origin.ci.x - (drawY > this.#plotHeight / 2 * this.#frameCenter.ci.h * axesLength ? this.#plotHeight / 2 * this.#frameCenter.ci.h * axesLength : drawY) * this.#cnvs.width / this.#plotWidth, origin.ci.y);
+            }
             ctx.stroke();
-            ctx.strokeStyle = 'orange';
-            ctx.beginPath()
-            ctx.moveTo(origin.ci.x, origin.ci.y);
-            ctx.lineTo(sunCoor.ci.x, sunCoor.ci.y);
-            ctx.stroke();
+            if (drawX) {
+                ctx.strokeStyle = 'orange';
+                ctx.beginPath()
+                ctx.moveTo(origin.ci.x, origin.ci.y);
+                ctx.lineTo(sunCoor.ci.x, sunCoor.ci.y);
+                ctx.stroke();
+
+            }
             ctx.strokeStyle = 'black';
-            ctx.fillText('C', origin.ci.x, origin.ci.y - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2 - this.#cnvs.width * this.#frameCenter.ci.w / 60)
-            ctx.fillText('I', origin.ci.x - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2 - this.#cnvs.width * this.#frameCenter.ci.w / 80, origin.ci.y)
+            
+            if (drawX) ctx.fillText('C', origin.ci.x, origin.ci.y - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2 - this.#cnvs.width * this.#frameCenter.ci.w / 60)
+            if (drawY > this.#plotHeight / 2 * this.#frameCenter.ci.h * axesLength) ctx.fillText('I', origin.ci.x - this.#cnvs.height * axesLength * this.#frameCenter.ci.h / 2 - this.#cnvs.width * this.#frameCenter.ci.w / 80, origin.ci.y)
         }
         if (this.#state.search('rc') !== -1) {
             ctx.lineWidth = this.#cnvs.width * this.#frameCenter.rc.w / 200;
@@ -333,12 +349,12 @@ class windowCanvas {
         ctx.fillStyle = color;
         line.forEach((point, ii) => {
             let pixelPos = this.convertToPixels(point);
-            if (this.#state.search('ri') !== -1 && Math.abs(point.r) < (this.#plotHeight / 2 * this.#frameCenter.ri.h) && Math.abs(point.i) < (this.#plotWidth / 2* this.#frameCenter.ri.w)) {
+            if (this.#state.search('ri') !== -1 && Math.abs(point.r) < (this.#plotHeight / 2 * this.#frameCenter.ri.h) && Math.abs(point.i - this.#plotCenter) < (this.#plotWidth / 2* this.#frameCenter.ri.w)) {
                 ctx.beginPath();
                 ctx.arc(pixelPos.ri.x, pixelPos.ri.y, size, 0, 2 * Math.PI);
                 ctx.fill()
             }
-            if (this.#state.search('ci') !== -1 && Math.abs(point.c) < (this.#plotHeight / 2 * this.#frameCenter.ci.h) && Math.abs(point.i) < (this.#plotWidth / 2 * this.#frameCenter.ci.w)){
+            if (this.#state.search('ci') !== -1 && Math.abs(point.c) < (this.#plotHeight / 2 * this.#frameCenter.ci.h) && Math.abs(point.i - this.#plotCenter) < (this.#plotWidth / 2 * this.#frameCenter.ci.w)){
                 ctx.beginPath();
                 ctx.arc(pixelPos.ci.x, pixelPos.ci.y, size, 0, 2 * Math.PI);
                 ctx.fill()
@@ -353,7 +369,7 @@ class windowCanvas {
     drawSatLocation(position, sat = {}) {
         let {shape, size, color, name} = sat;
         let pixelPosition = this.convertToPixels(position);
-        if (this.#state.search('ri') !== -1 && Math.abs(position.r) < (this.#plotHeight / 2 * this.#frameCenter.ri.h) && Math.abs(position.i) < (this.#plotWidth / 2* this.#frameCenter.ri.w)) {
+        if (this.#state.search('ri') !== -1 && Math.abs(position.r) < (this.#plotHeight / 2 * this.#frameCenter.ri.h) && Math.abs(position.i - this.#plotCenter) < (this.#plotWidth / 2* this.#frameCenter.ri.w)) {
             drawSatellite({
                 cnvs: this.#cnvs, 
                 ctx: this.getContext(),
@@ -364,7 +380,7 @@ class windowCanvas {
                 name
             })
         }
-        if (this.#state.search('ci') !== -1 && Math.abs(position.c) < (this.#plotHeight / 2 * this.#frameCenter.ci.h) && Math.abs(position.i) < (this.#plotWidth / 2* this.#frameCenter.ci.w)) {
+        if (this.#state.search('ci') !== -1 && Math.abs(position.c) < (this.#plotHeight / 2 * this.#frameCenter.ci.h) && Math.abs(position.i - this.#plotCenter) < (this.#plotWidth / 2* this.#frameCenter.ci.w)) {
             drawSatellite({
                 cnvs: this.#cnvs, 
                 ctx: this.getContext(),
@@ -532,7 +548,8 @@ class windowCanvas {
             mm: this.mm,
             timeDelta: this.timeDelta,
             scenarioLength: this.scenarioLength,
-            initSun: this.#initSun
+            initSun: this.#initSun,
+            startDate: this.startDate
         }
     }
     loadDate(data = {}) {
@@ -566,8 +583,8 @@ class windowCanvas {
         this.timeDelta = timeDelta;
         this.scenarioLength = scenarioLength;
         this.#initSun = initSun;
-        this.startDate = this.startDate;
-
+        this.startDate = new Date(startDate);
+        console.log(this.startDate);
 
     }
     drawOrbitCurve() {
@@ -635,6 +652,7 @@ class Satellite {
             if (timeDelta > 0) {
                 mainWindow.drawCurve([burn.location], {color: this.#color, size: 4});
                 if (mainWindow.burnStatus.type) return;
+                
                 let point1 = mainWindow.convertToPixels(burn.location), mag2;
                 let point2 = [burn.location.r[0] + dispDist * burn.direction.r / mag, burn.location.i[0] + dispDist * burn.direction.i / mag, burn.location.c[0] + dist * burn.direction.c / mag]
                 point2 = mainWindow.convertToPixels(point2);
@@ -642,15 +660,18 @@ class Satellite {
                 let textWidth = ctx.measureText((1000*mag).toFixed(1) + ' m/s').width;
                 let textHeight = 20;
                 // console.log(Math.abs(burn.location.r) , (mainWindow.getPlotHeight() * fC.ri.h / 2), (Math.abs(location.i) < (mainWindow.getPlotWidth() * fC.ri.w / 2)));
-                if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
+                if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i - mainWindow.getPlotCenter()) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
                     ctx.beginPath();
                     ctx.moveTo(point1.ri.x, point1.ri.y);
                     ctx.lineTo(point2.ri.x, point2.ri.y);
                     mag2 = math.norm([point2.ri.x - point1.ri.x, point2.ri.y - point1.ri.y]);
-                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -textWidth * (point2.ri.x - point1.ri.x) / mag2 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 + point1.ri.y)
-                    ctx.stroke();
+                    if (mag2 > 1e-6) {
+                        ctx.fillText((1000*mag).toFixed(1) + ' m/s', -textWidth * (point2.ri.x - point1.ri.x) / mag2 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 + point1.ri.y)
+                        ctx.stroke();
+                    }
                 }
-                if (state.search('ci') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location.i) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
+                if (state.search('ci') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location.i - mainWindow.getPlotCenter()) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
+               
                     ctx.beginPath();
                     ctx.moveTo(point1.ci.x, point1.ci.y);
                     ctx.lineTo(point2.ci.x, point2.ci.y);
@@ -958,17 +979,30 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         }
     }
+    else if (ricCoor.ri || ricCoor.ci) {
+        mainWindow.frameMove = {
+            x: mainWindow.mousePosition[0],
+            origin: mainWindow.getPlotCenter()
+        };
+        return;
+    }
 })
 document.getElementById('main-plot').addEventListener('mouseup', event => {
     mainWindow.currentTarget = false;
     mainWindow.satellites.forEach(sat => sat.calcTraj());
     mainWindow.burnStatus.type = false;
+    mainWindow.frameMove = undefined;
 })
 document.getElementById('main-plot').addEventListener('mouseleave', event => {
     mainWindow.mousePosition = undefined;
 })
 document.getElementById('main-plot').addEventListener('mousemove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
+    if (mainWindow.frameMove) {
+        // console.log('d');
+        let delX = event.clientX - mainWindow.frameMove.x;
+        mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
+    }
 })
 document.getElementById('export-option-button').addEventListener('click', () => {
     downloadFile('scenario.sas', JSON.stringify(mainWindow.getData()));
