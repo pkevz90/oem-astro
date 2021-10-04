@@ -8,6 +8,10 @@ html, body {
     transform: rotate(10deg);
 }
 
+.striked-through {
+    text-decoration: line-through;
+}
+
 #burn-type-control {
     position: fixed;
     z-index: 3;

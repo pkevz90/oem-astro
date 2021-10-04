@@ -640,7 +640,7 @@ class Satellite {
         mainWindow.drawCurve(this.stateHistory, {color: this.#color});
     }
     drawBurns() {
-        let timeDelta, ctx = mainWindow.getContext(), mag, dist = mainWindow.getPlotWidth() * 0.05;
+        let timeDelta, ctx = mainWindow.getContext(), mag, dist = mainWindow.getPlotWidth() * 0.025;
         ctx.lineWidth = 2;
         // console.log(ctx.lineWidth)
         let state = mainWindow.getState();
@@ -799,6 +799,16 @@ mainWindow.fillWindow();
 //------------------------------------------------------------------
 window.addEventListener('keydown', key => {
     key = key.key;
+    // console.log(key);
+    if (key === 'Control') {
+        let buttons = document.getElementsByClassName('ctrl-switch');
+        for (let ii = 0; ii < buttons.length; ii++) {
+            if (buttons[ii].innerText === 'Confirm') return;
+        }
+        for (let ii = 0; ii < buttons.length; ii++) {
+            buttons[ii].innerText = 'Delete';
+        }
+    }
     if (key === ' ') {
         switch (mainWindow.getState()) {
             case 'ri': 
@@ -893,6 +903,18 @@ window.addEventListener('keydown', key => {
         mainWindow.satellites.push(newSat)
     }
 })
+window.addEventListener('keyup', key => {
+    key = key.key;
+    if (key === 'Control') {
+        let buttons = document.getElementsByClassName('ctrl-switch');
+        for (let ii = 0; ii < buttons.length; ii++) {
+            if (buttons[ii].innerText === 'Confirm') return;
+        }
+        for (let ii = 0; ii < buttons.length; ii++) {
+            buttons[ii].innerText = 'Edit';
+        }
+    }
+})
 window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
     if (mainWindow.burnStatus.type) {
@@ -968,6 +990,11 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
         }, 250)
     }
     else if (mainWindow.currentTarget.type === 'burn') {
+        if (event.ctrlKey) {
+            mainWindow.satellites[mainWindow.currentTarget.sat].burns.splice(check[mainWindow.currentTarget.frame], 1);
+            mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
+            return;
+        }
         mainWindow.burnStatus = {
             type: mainWindow.burnType,
             sat: mainWindow.currentTarget.sat,
@@ -2314,9 +2341,9 @@ function generateBurnTable(object = 0) {
         addedElement.innerHTML = `
             <td>${new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[burn].time * 1000).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span> km</td>
+            <td><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
             <td><span>${(mainWindow.satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
-            <td class="edit-button">Edit</td>
+            <td class="edit-button ctrl-switch">Edit</td>
         `;
         table.appendChild(addedElement);
     }
