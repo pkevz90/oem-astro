@@ -999,7 +999,7 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
             tranTime: Number(tableTrs[tr].children[2].innerText)
         })
     }
-    if (divTarget[3].children[1].children[0].checked) {
+    if (divTarget[3].children[1].children[1].checked) {
         // Switch to 2-burn calculation, delete all burns after
         divTarget = divTarget[2].children;
         let startTime = Date.parse(divTarget[0].getElementsByTagName('input')[0].value);
@@ -1017,16 +1017,16 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
                 zd: curPos.cd[0]
             },
             stateF: {
-                x: Number(divTarget[1].getElementsByTagName('input')[0].value),
-                y: Number(divTarget[2].getElementsByTagName('input')[0].value),
-                z: Number(divTarget[3].getElementsByTagName('input')[0].value),
+                x: Number(divTarget[2].getElementsByTagName('input')[0].value),
+                y: Number(divTarget[3].getElementsByTagName('input')[0].value),
+                z: Number(divTarget[4].getElementsByTagName('input')[0].value),
                 xd: 0,
                 yd: 0,
                 zd: 0
             },
             a: mainWindow.satellites[chosenSat].a,
             startTime: startTime / 1000 - Date.parse(mainWindow.startDate) / 1000,
-            tf: Number(divTarget[4].getElementsByTagName('input')[0].value) === 0 ? 7200 : 60 * Number(divTarget[4].getElementsByTagName('input')[0].value)
+            tf: Number(divTarget[2].getElementsByTagName('input')[0].value) === 0 ? 7200 : 60 * Number(divTarget[2].getElementsByTagName('input')[0].value)
         })
         if (!newPoints) {
             alert("No solution found, increase transfer time or move target point closer to origin");
@@ -1049,12 +1049,11 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
         divTarget = divTarget[2].children;
         let newWaypoint = {
             time: Date.parse(divTarget[0].getElementsByTagName('input')[0].value),
-            r: Number(divTarget[1].getElementsByTagName('input')[0].value),
-            i: Number(divTarget[2].getElementsByTagName('input')[0].value),
-            c: Number(divTarget[3].getElementsByTagName('input')[0].value),
-            tranTime: Number(divTarget[4].getElementsByTagName('input')[0].value) === 0 ? 120 : Number(divTarget[4].getElementsByTagName('input')[0].value)
+            r: Number(divTarget[2].getElementsByTagName('input')[0].value),
+            i: Number(divTarget[3].getElementsByTagName('input')[0].value),
+            c: Number(divTarget[4].getElementsByTagName('input')[0].value),
+            tranTime: Number(divTarget[1].getElementsByTagName('input')[0].value) === 0 ? 120 : Number(divTarget[1].getElementsByTagName('input')[0].value)
         }
-
         let filterLimit = 15 * 60 * 1000; // Reject burns closer than 15 minutes to other burns 
         if (waypoints.filter(point => Math.abs(point.time - newWaypoint.time) < filterLimit).length > 0) {
             return;
@@ -1277,14 +1276,9 @@ function parseState(button) {
         return;
     } 
     text.forEach((t, ii) => {
-        if (ii > 2) {
-            stateInputs[ii].value = 1000 * t;
-        }
-        else {
-            stateInputs[ii].value = t;
-        }
+        stateInputs[ii+6].value = ((ii > 2) ? 1000 : 1) * t;
     })
-    initStateFunction(stateInputs[0]);
+    initStateFunction(stateInputs[6]);
 }
 //------------------------------------------------------------------
 // Adding functions to handle data planels, etc.
@@ -2404,20 +2398,18 @@ function initStateFunction(el) {
     }
     else if (el.id === 'add-satellite-button') {
         let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
-        console.log(inputs);
         let position = {
-            r: Number(inputs[6].value), 
-            i: Number(inputs[7].value), 
-            c: Number(inputs[8].value), 
-            rd: Number(inputs[9].value)  / 1000, 
-            id: Number(inputs[10].value) / 1000, 
-            cd: Number(inputs[11].value) / 1000
+            r: Number(inputs[7].value), 
+            i: Number(inputs[8].value), 
+            c: Number(inputs[9].value), 
+            rd: Number(inputs[10].value)  / 1000, 
+            id: Number(inputs[11].value) / 1000, 
+            cd: Number(inputs[12].value) / 1000
         }
         let shape = el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value;
-        console.log(el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value);
-        let a = Number(inputs[13].value) / 1e6;
-        let color = inputs[14].value;
-        let name = inputs[15].value;
+        let a = Number(inputs[14].value) / 1e6;
+        let color = inputs[15].value;
+        let name = inputs[16].value;
         mainWindow.satellites.push(new Satellite({
             position,
             shape,
@@ -2460,6 +2452,44 @@ function initStateFunction(el) {
         nodes.children[0].children[4].getElementsByTagName('input')[0].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / mainWindow.mm, 2))).toFixed(3);
     }
     
+}
+
+function editSatellite(button) {
+    if (button.nextSibling.selectedIndex < 0) return;
+    let n = mainWindow.mm;
+    el = button.parentNode.parentNode.parentNode;
+    let state = {
+        a: Number(el.children[1].children[1].children[0].children[0].getElementsByTagName('input')[0].value),
+        x: Number(el.children[1].children[1].children[0].children[1].getElementsByTagName('input')[0].value),
+        y: Number(el.children[1].children[1].children[0].children[2].getElementsByTagName('input')[0].value),
+        b: Number(el.children[1].children[1].children[0].children[3].getElementsByTagName('input')[0].value) * Math
+            .PI / 180,
+        m: Number(el.children[1].children[1].children[0].children[5].getElementsByTagName('input')[0].value) * Math
+            .PI / 180,
+        z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
+    };
+    let color = el.children[2].children[3].getElementsByTagName('input')[0].value;
+    let name = el.children[2].children[4].getElementsByTagName('input')[0].value;
+    let shape = el.children[2].children[1].getElementsByTagName('select')[0].value;
+    let a = Number(el.children[2].children[2].getElementsByTagName('input')[0].value) / 1e6;
+    state = {
+        r: -state.a / 2 * Math.cos(state.b) + state.x,
+        i: state.a * Math.sin(state.b) + state.y,
+        c: state.z * Math.sin(state.m),
+        rd: state.a * n / 2 * Math.sin(state.b),
+        id: state.a * n * Math.cos(state.b) - 1.5 * state.x * n,
+        cd: state.z * n * Math.cos(state.m),
+    }
+    let sat = new Satellite({
+        position: state,
+        color,
+        shape,
+        a,
+        name
+    });
+    mainWindow.satellites[button.nextSibling.selectedIndex] = sat;
+    mainWindow.satellites[button.nextSibling.selectedIndex].calcTraj();
+    closeAll();
 }
 
 function drawPoints(options = {}) {

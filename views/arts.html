@@ -10,7 +10,9 @@
     <script src="../SupportLibraries/LZWEncoder.js"></script>
     <script src="../SupportLibraries/NeuQuant.js"></script>
     <script src="../SupportLibraries/GIFEncoder.js"></script>
+    <script src="./js/arts.js" defer></script>
     <link rel="stylesheet" href="./css/arts.css">
+    <link rel="icon" href="./Media/sallellite_icon.ico">
 </head>
 
 <body class="noselect">
@@ -43,14 +45,14 @@
                 </div>
                 
             </div>
-            <div style="margin: 20px;"><span onclick=initStateFunction(this) style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">To Curvilinear</span></div>
-            <div style="margin: 20px 5px"><input title="R I C Rd Id Cd" style="width: 100%;" value="" type="text" id="parse-text"></div>
-            <div style="margin: 20px;"><span onclick="parseState(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Parse</span></div>
+            <div onclick=initStateFunction(this) style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">To Curvilinear</div>
+            <div style="margin: 20px 5px"><input placeholder="R I C Rd Id Cd" style="width: 100%;" value="" type="text" id="parse-text"></div>
+            <div onclick="parseState(this)" style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">Parse</div>
         
         </div>
         <div>
             <div class="title-text">Satellite Details</div>
-            <div style="margin: 20px 5px">Shape
+            <div style="margin: 20px 5px">
                 <select name="" id="">
                     <option value="delta">Delta</option>
                     <option value="3-star">3-Point Star</option>
@@ -68,18 +70,18 @@
             <div style="margin: 20px 5px">Acceleration <input style="width: 4em;" value="10" type="Number"> mm/s<sup>2</sup></div>
             <div style="margin: 20px 5px">Color</sub> <input style="width: 4em;" value="#ff0000" type="color"></div>
             <div style="margin: 20px 5px">Name <input style="width: 6em;" value="" type="text"></div>
-            <div style="margin-top: 40px;"><span onclick="initStateFunction(this)" id="add-satellite-button" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Add Satellite</span></div>
-            <div style="margin-top: 40px;"><span onclick="editSatellite(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Update</span><select onchange="openPanel(this)" style="font-size: 2em" name="" id="edit-select">
+            <div onclick="initStateFunction(this)" id="add-satellite-button" style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">Add Satellite</div>
+            <div><span onclick="editSatellite(this)" style="font-size: 1.5em; padding: 2px 4px; width: 50%;" class="panel-button hoverable noselect">Update</span><select onchange="openPanel(this)" style="font-size: 2em; width: 50%;" name="" id="edit-select">
                 
             </select></div>
-            <div style="margin-top: 40px;"><span onclick="closeAll()" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Cancel</span></div>
+            <div onclick="closeAll()" style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">Cancel</div>
         
         </div>
     </div>
     <div class="full-page-menu panel hidden" id="burns-panel">
         <div class="title-text" style="width: 100%; text-align: center; font-weight: 900;">View/Edit Burns</div>
-        <div style="width: 100%;" >
-            <div style="margin-left: 10%" class="title-text">
+        <div style="width: 90%;" >
+            <div style="margin-left: 35%; width: 30%;" class="title-text">
                 <select id="satellite-way-select" style="font-size: 1em">
                     <option value="0">Blue Triangle</option>
                     <option value="1">Red Circle</option>
@@ -104,6 +106,9 @@
                     <input type="datetime-local" id="add-start-time" name="meeting-time" value="2021-04-01T00:00" class="center"> 
                 </div>
                 <div class="add-value">
+                    Time: <input class="center" type="Number" id="add-tran-time" value="120" style="width: 4em"> min
+                </div>
+                <div class="add-value">
                     R: <input class="center" type="Number" value="0" style="width: 4em"> km
                 </div class="add-value"> 
                 <div class="add-value">
@@ -112,19 +117,16 @@
                 <div class="add-value">
                     C: <input class="center" id="add-cross" type="Number" value="0" style="width: 4em"> km 
                 </div>
-                <div class="add-value">
-                    Time: <input class="center" type="Number" id="add-tran-time" value="120" style="width: 4em"> min
-                </div>
             </div>
             <div style="margin-top:1%; padding: 2% 0%; display: flex; justify-content: space-evenly; align-items: center; flex-wrap: wrap;">
                 <div class="">
                     <span style="padding: 10px; font-size: 1.5em" id="add-waypoint-button">Add</span>
                 </div>
-                <div class="">
-                    Zero RI Velocity <input type="checkbox"></div>
+                <div title="Program will add two waypoints, one that will get you to target, and one timed to stop you right when you arrive">
+                    <span style="font-size: 2em;">Zero RI Velocity</span> <input style="height: 1.5em; cursor: pointer;" type="checkbox"></div>
                 </div>
-                <div style="margin: 1% 5%; font-size: 1.5em; padding: 1em 2em;" id="export-burns" class="panel-button hoverable noselect">Export Burn List</div>
-                <div onclick="closeAll()" style="margin: 1% 5%; font-size: 1.5em; padding: 1em 2em;" class="close-button panel-button hoverable noselect">Close</div>
+                <div style="font-size: 1.5em; padding: 14px 4px;" id="export-burns" class="panel-button hoverable noselect">Export Burn List</div>
+                <div onclick="closeAll()" style="font-size: 1.5em; padding: 14px 4px;" class="close-button panel-button hoverable noselect">Close</div>
             </div>
             
         </div>    
@@ -142,7 +144,7 @@
             <div style="margin: 20px 5px" class="title-text">Recording</div>
             <div style="margin: 20px 5px">Start Epoch <input value="0" type="Number" min="0" max="10000" step="1"> minutes</div>
             <div style="margin: 20px 5px">End Epoch <input value="1440" type="Number" min="0" max="10000" step="1"> minutes</div>
-            <div style="margin: 20px 5px">Time Step <input value="5" type="Number" min="1" max="120" step="1"> mins</div>
+            <div style="margin: 20px 5px">Time Step <input value="5" type="Number" min="1" max="120" step="1"> minutes</div>
             <div style="margin: 20px 5px">FPS <input value="30" type="Number" min="15" max="60" step="1"></div>
             <div style="margin: 20px 5px">Repeat <input type="checkbox"></div>
             <div><select id="res-select">
@@ -154,24 +156,21 @@
                 <option value="852x852">Square Hi</option>
                 <option value="480x480">Square Low</option>
             </select></div>
-            <div style="margin: 20px;"><span onclick="mainWindow.startRecord(this)" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Record</span></div>
-            <div style="margin: 20px;"><span onclick="addKeyFrame()" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Key Frame</span></div>
+            <div class="panel-button hoverable noselect" onclick="mainWindow.startRecord(this)" style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">Record</div>
+            <!-- <div class="panel-button hoverable noselect" style="font-size: 1.5em; padding: 14px 4px;" onclick="addKeyFrame()" style="font-size: 1.5em; padding: 2px 4px;" class="panel-button hoverable noselect">Key Frame</div> -->
         
         </div>
         <div>
             <div class="title-text">Visualization</div>
             <div style="margin: 20px 5px">Data Points <input style="width: 4em;" value="200" type="Number"></div>
             <div style="margin: 20px 5px">Name Size <input style="width: 4em;" value="4" type="Number"></div>
-            <div style="margin: 20px 5px">Line Trajectory<input type="checkbox"></div>
-            <div style="margin: 20px 5px">Finite Burns<input type="checkbox" checked></div>
-            <div style="margin: 20px 5px">Finite Targeting<input type="checkbox" checked></div>
-            <div style="margin: 20px 5px">Angle Markers<input type="checkbox" checked></div>
-            <div style="font-size: 1.5em; padding: 14px 4px;" id="export-option-button" class="panel-button hoverable noselect">Export</div>
-            <div>Import <input style="width: 50%" id="upload-options-button" type="file" accept=".sas"></div>
+             <!-- <div style="margin: 20px 5px">Angle Markers<input type="checkbox" checked></div> -->
             <div style="font-size: 1.5em; padding: 14px 4px;"  id="data-button" class="panel-button hoverable noselect">Data</div>
             <div style="font-size: 1.5em; padding: 14px 4px;"  id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
-        </div>
+            <div style="font-size: 1.5em; padding: 14px 4px;" id="export-option-button" class="panel-button hoverable noselect">Export</div>
+            <label style="display: block; font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect" for="upload-options-button">Import</div><input style="display: none;" id="upload-options-button" type="file" accept=".sas">
+            </div>
     </div>
     <svg id="add-satellite"  onclick=openPanel(this) stroke-width="10px" fill="white" viewBox="-10 0 531.996 511.996">
         <g>
@@ -314,7 +313,6 @@
             <circle id="e14_circle" cx="361.363000" cy="884.913000" style="fill:#000000;stroke:black;stroke-width:1px;" r="84.656000" transform="matrix(0.206285 0 0 0.206285 687.734 238.95)"/>
         </g>
         </svg>
-    <script src="./js/arts.js"></script>
 </body>
 
 </html>
