@@ -2367,6 +2367,16 @@ function editButtonFunction(event) {
         table2burns(Number(document.getElementById('satellite-way-select').value));
         return;
     }
+    else if (event.target.innerText === 'Delete') {
+        let buttons = document.getElementsByClassName('ctrl-switch'), el;
+        for (let ii = 0; ii < buttons.length; ii++) {
+            if (buttons[ii] === event.target) el = ii;
+        }
+        event.target.parentElement.parentElement.removeChild(event.target.parentElement);
+        table2burns(Number(document.getElementById('satellite-way-select').value));
+
+        return;
+    }
     event.target.innerText = 'Confirm';
     // nextValue = new Date(new Date(event.target.parentElement.nextSibling.children[0].innerText + 'Z') - 15 * 60 * 1000);
     let tarList = tdList[1].children[0].innerText.substr(1, tdList[1].children[0].innerText.length - 2).split(',');
