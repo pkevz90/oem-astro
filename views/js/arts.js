@@ -639,13 +639,15 @@ class Satellite {
                 let point2 = [burn.location.r[0] + dispDist * burn.direction.r / mag, burn.location.i[0] + dispDist * burn.direction.i / mag, burn.location.c[0] + dist * burn.direction.c / mag]
                 point2 = mainWindow.convertToPixels(point2);
                 ctx.strokeStyle = this.#color;
+                let textWidth = ctx.measureText((1000*mag).toFixed(1) + ' m/s').width;
+                let textHeight = 20;
                 // console.log(Math.abs(burn.location.r) , (mainWindow.getPlotHeight() * fC.ri.h / 2), (Math.abs(location.i) < (mainWindow.getPlotWidth() * fC.ri.w / 2)));
                 if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
                     ctx.beginPath();
                     ctx.moveTo(point1.ri.x, point1.ri.y);
                     ctx.lineTo(point2.ri.x, point2.ri.y);
                     mag2 = math.norm([point2.ri.x - point1.ri.x, point2.ri.y - point1.ri.y]);
-                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -30 *(point2.ri.x - point1.ri.x) / mag2 + point1.ri.x, -30*(point2.ri.y - point1.ri.y) / mag2 + point1.ri.y)
+                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -textWidth * (point2.ri.x - point1.ri.x) / mag2 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 + point1.ri.y)
                     ctx.stroke();
                 }
                 if (state.search('ci') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location.i) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
@@ -654,7 +656,7 @@ class Satellite {
                     ctx.lineTo(point2.ci.x, point2.ci.y);
                     ctx.stroke();
                     mag2 = math.norm([point2.ci.x - point1.ci.x, point2.ci.y - point1.ci.y]);
-                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -30 *(point2.ci.x - point1.ci.x) / mag2 + point1.ci.x, -30*(point2.ci.y - point1.ci.y) / mag2 + point1.ci.y)
+                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -textWidth *(point2.ci.x - point1.ci.x) / mag2 + point1.ci.x, -textHeight*(point2.ci.y - point1.ci.y) / mag2 + point1.ci.y)
                     ctx.stroke();
                 }
                 if (state.search('rc') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.rc.h / 2)) && (Math.abs(burn.location.r) < (mainWindow.getPlotWidth() * fC.rc.w / 2))) {
@@ -664,7 +666,7 @@ class Satellite {
                     ctx.stroke();
                     
                     mag2 = math.norm([point2.rc.x - point1.rc.x, point2.rc.y - point1.rc.y]);
-                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -30 *(point2.rc.x - point1.rc.x) / mag2 + point1.rc.x, -30*(point2.rc.y - point1.rc.y) / mag2 + point1.rc.y)
+                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -textWidth *(point2.rc.x - point1.rc.x) / mag2 + point1.rc.x, -textHeight*(point2.rc.y - point1.rc.y) / mag2 + point1.rc.y)
                     ctx.stroke();
                 }
             }
@@ -2251,7 +2253,7 @@ function calcBurns() {
     ctx.lineTo(finalPos.x, finalPos.y);
     ctx.stroke();
     let mag2 = math.norm([finalPos.x - initPos.x, finalPos.y - initPos.y]);
-    // console.log(ctx.font);
+    
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 + initPos.y)
     sat.genBurns(true);
 }
