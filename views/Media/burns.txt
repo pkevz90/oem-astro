@@ -1,5 +1,0 @@
-Position  r: 0 km  i: 6.651118340433946 km c: 10 km 
-Velocity  r: 0 m/s  i: 0 m/s c: 0 m/s 
-
-Engine Acceleration  0.00001 km/s2
-
