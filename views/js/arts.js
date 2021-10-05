@@ -100,6 +100,7 @@ class windowCanvas {
         distance: 10
     };
     curvilinear = true;
+    panelOpen = false;
     constructor(cnvs) {
         this.#cnvs = cnvs;
     }
@@ -705,22 +706,22 @@ class Satellite {
         // Check if clicked on current position of object
         let out = {};
         if (position.ri) {
-            out.ri = math.norm([this.#currentPosition.r - position.ri.r, this.#currentPosition.i - position.ri.i]) < (mainWindow.getWidth() / 400);
+            out.ri = math.norm([this.#currentPosition.r - position.ri.r, this.#currentPosition.i - position.ri.i]) < (mainWindow.getPlotWidth() / 40);
         }
         if (position.ci) {
-            out.ci = math.norm([this.#currentPosition.c - position.ci.c, this.#currentPosition.i - position.ci.i]) < (mainWindow.getWidth() / 400);
+            out.ci = math.norm([this.#currentPosition.c - position.ci.c, this.#currentPosition.i - position.ci.i]) < (mainWindow.getPlotWidth() / 40);
         }
         if (position.rc) {
-            out.rc = math.norm([this.#currentPosition.c - position.rc.c, this.#currentPosition.r - position.rc.r]) < (mainWindow.getWidth() / 400);
+            out.rc = math.norm([this.#currentPosition.c - position.rc.c, this.#currentPosition.r - position.rc.r]) < (mainWindow.getPlotWidth() / 40);
         }
         return out
     }
     checkBurnProximity(position) {
         let out = {};
         for (let ii = 0; ii < this.burns.length; ii++) {
-            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < (mainWindow.getWidth() / 400) ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
-            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < (mainWindow.getWidth() / 400) ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
-            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < (mainWindow.getWidth() / 400) ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
+            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < (mainWindow.getPlotWidth() / 40) ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
+            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < (mainWindow.getPlotWidth() / 40) ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
+            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < (mainWindow.getPlotWidth() / 40) ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
         }
         return out;
     }
@@ -798,9 +799,9 @@ mainWindow.fillWindow();
 // Adding event listeners for window objects
 //------------------------------------------------------------------
 window.addEventListener('keydown', key => {
-    key = key.key;
-    // console.log(key);
-    if (key === 'Control') {
+    // key = key.key;
+    // console.log(key.key);
+    if (key.key === 'Control') {
         let buttons = document.getElementsByClassName('ctrl-switch');
         for (let ii = 0; ii < buttons.length; ii++) {
             if (buttons[ii].innerText === 'Confirm') return;
@@ -809,7 +810,15 @@ window.addEventListener('keydown', key => {
             buttons[ii].innerText = 'Delete';
         }
     }
-    if (key === ' ') {
+    else if (key.key === 'Tab') {
+        // let a = document.getElementById('add-waypoint-button').hasFocus();
+        if (document.activeElement === document.getElementById('add-waypoint-button')) {
+            key.preventDefault();
+            document.getElementById('add-start-time').focus();
+        }
+    }
+    if (mainWindow.panelOpen) return;
+    if (key.key === ' ') {
         switch (mainWindow.getState()) {
             case 'ri': 
                 mainWindow.setState('ri ci');
@@ -897,7 +906,7 @@ window.addEventListener('keydown', key => {
                 break;
         }
     }
-    else if (key === 'n') {
+    else if (key.key === 'n') {
         let newSat = new Satellite();
         newSat.calcTraj();
         mainWindow.satellites.push(newSat)
@@ -917,6 +926,7 @@ window.addEventListener('keyup', key => {
 })
 window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
+    if (mainWindow.panelOpen) return;
     if (mainWindow.burnStatus.type) {
         if (mainWindow.burnStatus.type === 'waypoint') {
             mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime += event.deltaY > 0 ? -300 : 300;   
@@ -1089,7 +1099,7 @@ document.getElementById('add-waypoint-button').addEventListener('click', event =
             },
             a: mainWindow.satellites[chosenSat].a,
             startTime: startTime / 1000 - Date.parse(mainWindow.startDate) / 1000,
-            tf: Number(divTarget[2].getElementsByTagName('input')[0].value) === 0 ? 7200 : 60 * Number(divTarget[2].getElementsByTagName('input')[0].value)
+            tf: Number(divTarget[1].getElementsByTagName('input')[0].value) === 0 ? 7200 : 60 * Number(divTarget[1].getElementsByTagName('input')[0].value)
         })
         if (!newPoints) {
             alert("No solution found, increase transfer time or move target point closer to origin");
@@ -1347,6 +1357,7 @@ function parseState(button) {
 // Adding functions to handle data planels, etc.
 //------------------------------------------------------------------
 function openPanel(button) {
+    mainWindow.panelOpen = true;
     if (button.id === 'burns') {
         if (mainWindow.satellites.length === 0) {
             return;
@@ -1402,6 +1413,7 @@ function openPanel(button) {
 }
 
 function closeAll() {
+    mainWindow.panelOpen = false;
     let buttons = document.getElementsByClassName('panel');
     mainWindow.scenarioTime_des = Number(document.getElementById('time-slider-range').value);
     for (let jj = 0; jj < buttons.length; jj++) {
