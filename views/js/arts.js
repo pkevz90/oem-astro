@@ -2427,7 +2427,7 @@ function waypoints2table(waypoints) {
         addedElement.innerHTML = `
             <td>${new Date(point.time).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span> km</td>
+            <td><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span></td>
             <td><span>${(point.tranTime).toFixed(3)}</span></td>
             <td class="edit-button">Edit</td>
         `;
