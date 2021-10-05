@@ -24,6 +24,7 @@ class windowCanvas {
         burn: null,
         frame: null
     };
+    trajSize = 2;
     encoder;
     mm = 2 * Math.PI / 86164;
     timeDelta = 0.006*86164;
@@ -345,7 +346,7 @@ class windowCanvas {
     }
     drawCurve(line, options = {}) {
         // console.log(line);
-        let {color = 'red', size = 1} = options
+        let {color = 'red', size = this.trajSize} = options
         let ctx = this.getContext();
         ctx.fillStyle = color;
         line.forEach((point, ii) => {
@@ -579,6 +580,8 @@ class windowCanvas {
                     burns: sat.burns
                 })
             )
+            this.satellites[this.satellites.length - 1].drawCurrentPosition();
+            this.satellites[this.satellites.length - 1].calcTraj();
         })
         this.mm = mm;
         this.timeDelta = timeDelta;
@@ -2804,6 +2807,7 @@ function getRelativeData(n_target, n_origin) {
     sunAngle = 180 - sunAngle; // Appropriate for USSF
     rangeRate = math.dot(relVel, relPos) * 1000 / range;
     tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
+    // console.log(mainWindow.satellites[n_origin], mainWindow.satellites[n_target]);
     let relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
     poca = math.min(findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory));
     toca = relPosHis.findIndex(element => element === poca);
