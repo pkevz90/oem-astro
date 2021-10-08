@@ -152,8 +152,8 @@ class windowCanvas {
             ctx.stroke();
         }
     }
-    getCurrentSun() {
-        return math.squeeze(math.multiply(rotationMatrices(-this.scenarioTime * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
+    getCurrentSun(t = this.scenarioTime) {
+        return math.squeeze(math.multiply(rotationMatrices(-t * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
     }
     getInitSun() {
         return this.#initSun;
@@ -353,7 +353,7 @@ class windowCanvas {
     drawPlot() {
         if (this.#state.search('plot') === -1) return;
         
-        generateData()
+        setTimeout(generateData(), 1);
         let ctx = this.getContext();
         let pos = {...this.#frameCenter.plot};
         pos.w = pos.w * 0.8;
@@ -361,13 +361,16 @@ class windowCanvas {
         let data = math.transpose(this.plotSettings.data);
         let limits = {
             x: [math.min(data[0]), math.max(data[0])],
-            y: [math.min(data[1]), math.max(data[1])]
+            y: [math.min(data[1]), math.max(data[1])],
+            ySun: [0, 180]
         }
         for (let ii = 0; ii < data[0].length; ii++) {
             let x = (data[0][ii] - limits.x[0]) * this.#cnvs.width * pos.w / (limits.x[1] - limits.x[0]) + this.#cnvs.width * (pos.x - pos.w / 2);
             let y = -(data[1][ii] - limits.y[0]) * this.#cnvs.height * pos.h / (limits.y[1] - limits.y[0]) + this.#cnvs.height * (pos.y + pos.h / 2);
+            let ySun = -(data[2][ii] - limits.ySun[0]) * this.#cnvs.height * pos.h / (limits.ySun[1] - limits.ySun[0]) + this.#cnvs.height * (pos.y + pos.h / 2);
             ctx.beginPath();
             ctx.arc(x,y,2,0,Math.PI * 2)
+            ctx.arc(x,ySun,1,0,Math.PI * 2)
             ctx.fill();
         }
     }
@@ -2949,9 +2952,9 @@ function generateData(sat1 = 1, sat2 = 0) {
     if (mainWindow.satellites.length < 2) return;
     mainWindow.plotSettings.data = [];
     let state1 = mainWindow.satellites[sat1].currentPosition();
-    for (let tMan = 900; tMan < 86164; tMan += 900) {
-
+    for (let tMan = 900; tMan < 86164; tMan += 1800) {
         let curTime = mainWindow.desired.scenarioTime;
+        let curSun = mainWindow.getCurrentSun(curTime + tMan);
         let state2 = mainWindow.satellites[sat2].currentPosition({time: curTime + tMan});
         let dir = hcwFiniteBurnOneBurn({
             x: state1.r[0],
@@ -2969,7 +2972,8 @@ function generateData(sat1 = 1, sat2 = 0) {
             zd: 0
         }, tMan, mainWindow.satellites[1].a);
         if (dir && dir.t > 0 && dir.t < 1) {
-            mainWindow.plotSettings.data.push([tMan, dir.t[0] * tMan * mainWindow.satellites[sat1].a]);
+            let sunAngle = math.acos(math.dot([dir.F.xd, dir.F.yd, dir.F.zd], curSun) / math.norm([dir.F.xd, dir.F.yd, dir.F.zd])) * 180 / Math.PI;
+            mainWindow.plotSettings.data.push([tMan, dir.t[0] * tMan * mainWindow.satellites[sat1].a, sunAngle]);
         }
     }
 }
