@@ -6,7 +6,8 @@ class windowCanvas {
     #frameCenter= {
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
         ci: {x: 0.5, y: 1, w: 1, h: 0},
-        rc: {x: 0, y: 0.5, w: 0, h: 0}
+        rc: {x: 0, y: 0.5, w: 0, h: 0},
+        plot: {x: 0, y: 0, w: 0, h: 0}
     };
     frameMove = undefined;
     #initSun = [1, 0, 0.2];
@@ -17,6 +18,7 @@ class windowCanvas {
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
         ci: {x: 0.5, y: 1, w: 1, h: 0},
         rc: {x: 0, y: 1, w: 0, h: 0},
+        plot: {x: 0, y: 0, w: 0, h: 0}
     };
     burnStatus = {
         type: false,
@@ -100,6 +102,9 @@ class windowCanvas {
         time: 3600,
         distance: 10
     };
+    plotSettings = {
+        data: undefined
+    }
     curvilinear = true;
     panelOpen = false;
     constructor(cnvs) {
@@ -179,10 +184,11 @@ class windowCanvas {
         this.#plotCenter = center;
     }
     setFrameCenter(options) {
-        let {ri = this.#frameCenter.ri, ci = this.#frameCenter.ci, rc = this.#frameCenter.rc} = options;
+        let {ri = this.#frameCenter.ri, ci = this.#frameCenter.ci, rc = this.#frameCenter.rc, plot = rc = this.#frameCenter.plot} = options;
         this.desired.ri = ri;
         this.desired.ci = ci;
         this.desired.rc = rc;
+        this.desired.plot = plot;
     }
     updateSettings() {
         for (const frame in this.#frameCenter) {
@@ -342,6 +348,27 @@ class windowCanvas {
             ctx.strokeStyle = 'black';
             ctx.fillText('C', origin.rc.x, origin.rc.y - this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2 - this.#cnvs.width * this.#frameCenter.rc.w / 60)
             ctx.fillText('R', origin.rc.x + this.#cnvs.height * axesLength * this.#frameCenter.rc.h / 2 + this.#cnvs.width * this.#frameCenter.rc.w / 80, origin.rc.y)
+        }
+    }
+    drawPlot() {
+        if (this.#state.search('plot') === -1) return;
+        
+        generateData()
+        let ctx = this.getContext();
+        let pos = {...this.#frameCenter.plot};
+        pos.w = pos.w * 0.8;
+        pos.h = pos.h * 0.8;
+        let data = math.transpose(this.plotSettings.data);
+        let limits = {
+            x: [math.min(data[0]), math.max(data[0])],
+            y: [math.min(data[1]), math.max(data[1])]
+        }
+        for (let ii = 0; ii < data[0].length; ii++) {
+            let x = (data[0][ii] - limits.x[0]) * this.#cnvs.width * pos.w / (limits.x[1] - limits.x[0]) + this.#cnvs.width * (pos.x - pos.w / 2);
+            let y = -(data[1][ii] - limits.y[0]) * this.#cnvs.height * pos.h / (limits.y[1] - limits.y[0]) + this.#cnvs.height * (pos.y + pos.h / 2);
+            ctx.beginPath();
+            ctx.arc(x,y,2,0,Math.PI * 2)
+            ctx.fill();
         }
     }
     drawCurve(line, options = {}) {
@@ -767,8 +794,6 @@ class Satellite {
     }
 }
 
-
-
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
 mainWindow.fillWindow();
 
@@ -776,6 +801,7 @@ mainWindow.fillWindow();
     mainWindow.clear();
     mainWindow.updateSettings();
     mainWindow.drawAxes();
+    mainWindow.drawPlot();
     // mainWindow.drawOrbitCurve();
     mainWindow.showData();
     mainWindow.showTime();
@@ -852,6 +878,24 @@ window.addEventListener('keydown', key => {
                 })
                 break;
             case 'ri ci rc': 
+                mainWindow.setState('ri ci rc plot');
+                mainWindow.setFrameCenter({
+                    ri: {
+                        x: 0.75, y: 0.25, w: 0.5, h: 0.5
+                    },
+                    rc: {
+                        x: 0.25, y: 0.75, w:0.50, h: 0.5
+                    },
+                    ci: {
+                        x: 0.75, y: 0.75, w: 0.5, h: 0.5
+                    },
+                    plot: {
+                        x: 0.25, y: 0.25, w: 0.5, h: 0.5
+                    }
+                })
+                console.log('hey');
+                break;
+            case 'ri ci rc plot': 
                 mainWindow.setState('ci rc');
                 mainWindow.setFrameCenter({
                     ri: {
@@ -862,6 +906,9 @@ window.addEventListener('keydown', key => {
                     },
                     ci: {
                         x: 0.75, y: 0.5, w: 0.5, h: 1
+                    },
+                    plot: {
+                        x: 0, y: 0, w: 0, h: 0
                     }
                 })
                 break;
@@ -2267,7 +2314,6 @@ function calcBurns() {
         time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].waypoint.tranTime
     })
     if (mainWindow.burnStatus.type === 'waypoint' && !cross) {
-        // sat.burns[this.burnStatus.burn].waypoint.tranTime = burn.time;
         sat.burns[this.burnStatus.burn].waypoint.target = {
             r: mousePosition[this.burnStatus.frame].r,
             i: mousePosition[this.burnStatus.frame].i,
@@ -2897,4 +2943,33 @@ function drawCurve(ctx, points) {
         ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
     }
     ctx.stroke();
+}
+
+function generateData(sat1 = 1, sat2 = 0) {
+    if (mainWindow.satellites.length < 2) return;
+    mainWindow.plotSettings.data = [];
+    let state1 = mainWindow.satellites[sat1].currentPosition();
+    for (let tMan = 900; tMan < 86164; tMan += 900) {
+
+        let curTime = mainWindow.desired.scenarioTime;
+        let state2 = mainWindow.satellites[sat2].currentPosition({time: curTime + tMan});
+        let dir = hcwFiniteBurnOneBurn({
+            x: state1.r[0],
+            y: state1.i[0],
+            z: state1.c[0],
+            xd: state1.rd[0],
+            yd: state1.id[0],
+            zd: state1.cd[0]
+        }, {
+            x: state2.r[0],
+            y: state2.i[0],
+            z: state2.c[0],
+            xd: 0,
+            yd: 0,
+            zd: 0
+        }, tMan, mainWindow.satellites[1].a);
+        if (dir && dir.t > 0 && dir.t < 1) {
+            mainWindow.plotSettings.data.push([tMan, dir.t[0] * tMan * mainWindow.satellites[sat1].a]);
+        }
+    }
 }
