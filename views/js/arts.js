@@ -152,8 +152,8 @@ class windowCanvas {
             ctx.stroke();
         }
     }
-    getCurrentSun() {
-        return math.squeeze(math.multiply(rotationMatrices(-this.scenarioTime * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
+    getCurrentSun(t = this.scenarioTime) {
+        return math.squeeze(math.multiply(rotationMatrices(-t * this.mm * 180 / Math.PI, 3), math.transpose([this.#initSun])));
     }
     getInitSun() {
         return this.#initSun;
@@ -184,7 +184,7 @@ class windowCanvas {
         this.#plotCenter = center;
     }
     setFrameCenter(options) {
-        let {ri = this.#frameCenter.ri, ci = this.#frameCenter.ci, rc = this.#frameCenter.rc, plot = rc = this.#frameCenter.plot} = options;
+        let {ri = this.#frameCenter.ri, ci = this.#frameCenter.ci, rc = this.#frameCenter.rc, plot = this.#frameCenter.plot} = options;
         this.desired.ri = ri;
         this.desired.ci = ci;
         this.desired.rc = rc;
@@ -352,8 +352,8 @@ class windowCanvas {
     }
     drawPlot() {
         if (this.#state.search('plot') === -1) return;
-        
-        generateData()
+        setTimeout(generateData(), 1);
+        if (!this.plotSettings.data) return;
         let ctx = this.getContext();
         let pos = {...this.#frameCenter.plot};
         pos.w = pos.w * 0.8;
@@ -366,8 +366,10 @@ class windowCanvas {
         for (let ii = 0; ii < data[0].length; ii++) {
             let x = (data[0][ii] - limits.x[0]) * this.#cnvs.width * pos.w / (limits.x[1] - limits.x[0]) + this.#cnvs.width * (pos.x - pos.w / 2);
             let y = -(data[1][ii] - limits.y[0]) * this.#cnvs.height * pos.h / (limits.y[1] - limits.y[0]) + this.#cnvs.height * (pos.y + pos.h / 2);
+            let ySun = -(data[2][ii]) * this.#cnvs.height * pos.h / 180 + this.#cnvs.height * (pos.y + pos.h / 2);
             ctx.beginPath();
             ctx.arc(x,y,2,0,Math.PI * 2)
+            ctx.arc(x,ySun,4,0,Math.PI * 2)
             ctx.fill();
         }
     }
@@ -893,7 +895,6 @@ window.addEventListener('keydown', key => {
                         x: 0.25, y: 0.25, w: 0.5, h: 0.5
                     }
                 })
-                console.log('hey');
                 break;
             case 'ri ci rc plot': 
                 mainWindow.setState('ci rc');
@@ -1398,9 +1399,14 @@ function parseState(button) {
         alert('Please include all six states (R I C Rd Id Cd)');
         return;
     } 
-    text.forEach((t, ii) => {
-        stateInputs[ii+6].value = ((ii > 2) ? 1000 : 1) * t;
-    })
+    for (let ii = 0; ii < 6; ii++) {
+        stateInputs[ii+6].value = ((ii > 2) ? 1000 : 1) * Number(text[ii]);
+    }
+    if (text.length === 9) {
+        let initSun = [Number(text[6]), Number(text[7]), Number(text[8])]
+        initSun = math.dotDivide(initSun, math.norm(initSun));
+        mainWindow.setInitSun(initSun);
+    }
     initStateFunction(stateInputs[6]);
 }
 //------------------------------------------------------------------
@@ -2603,7 +2609,7 @@ function editSatellite(button) {
         z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
     };
     let color = el.children[2].children[3].getElementsByTagName('input')[0].value;
-    let name = el.children[2].children[4].getElementsByTagName('input')[0].value;
+    let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
     let shape = el.children[2].children[1].getElementsByTagName('select')[0].value;
     let a = Number(el.children[2].children[2].getElementsByTagName('input')[0].value) / 1e6;
     state = {
@@ -2949,7 +2955,7 @@ function generateData(sat1 = 1, sat2 = 0) {
     if (mainWindow.satellites.length < 2) return;
     mainWindow.plotSettings.data = [];
     let state1 = mainWindow.satellites[sat1].currentPosition();
-    for (let tMan = 900; tMan < 86164; tMan += 900) {
+    for (let tMan = 900; tMan < 86164; tMan += 1800) {
 
         let curTime = mainWindow.desired.scenarioTime;
         let state2 = mainWindow.satellites[sat2].currentPosition({time: curTime + tMan});
@@ -2969,7 +2975,8 @@ function generateData(sat1 = 1, sat2 = 0) {
             zd: 0
         }, tMan, mainWindow.satellites[1].a);
         if (dir && dir.t > 0 && dir.t < 1) {
-            mainWindow.plotSettings.data.push([tMan, dir.t[0] * tMan * mainWindow.satellites[sat1].a]);
+            sunAngle = math.acos(math.dot([-dir.F.xd, -dir.F.yd, -dir.F.zd], mainWindow.getCurrentSun(curTime + tMan)) / math.norm([dir.F.xd, dir.F.yd, dir.F.zd])) * 180 / Math.PI;
+            mainWindow.plotSettings.data.push([tMan, dir.t[0] * tMan * mainWindow.satellites[sat1].a, sunAngle]);
         }
     }
 }
