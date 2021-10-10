@@ -26,26 +26,6 @@ html, body {
     transition: fill-opacity 500ms;
 }
 
-#add-satellite {
-    position: fixed;
-    z-index: 3;
-    height: 8%;
-    /* width: 5%; */
-    top: 10%;
-    right: 4%;
-}
-#add-satellite, #plus-sign {      
-    transition: fill 125ms;
-}
-#add-satellite:hover {
-    fill: black;
-    cursor: pointer;
-
-}
-#add-satellite:hover #plus-sign {
-    fill: white;
-    stroke: white;
-}
 #radial-intrack-plot {
     position: fixed;
     width: 100%;
@@ -94,6 +74,19 @@ html, body {
     background: black;
     cursor: pointer;
   }
+
+#add-satellite {
+    position: fixed;
+    height: auto;
+    border: 1px solid black;
+    z-index: 3;
+    bottom: 15.5%;
+    right: 1%;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+}
 
 #options {
     position: fixed;
