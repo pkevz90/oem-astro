@@ -352,7 +352,7 @@ class windowCanvas {
     }
     drawPlot() {
         if (this.#state.search('plot') === -1) return;
-        setTimeout(generateData(), 1);
+        setTimeout(generateDataImpulsive(), 1);
         if (!this.plotSettings.data) return;
         let ctx = this.getContext();
         let pos = {...this.#frameCenter.plot};
@@ -361,17 +361,33 @@ class windowCanvas {
         let data = math.transpose(this.plotSettings.data);
         let limits = {
             x: [math.min(data[0]), math.max(data[0])],
-            y: [math.min(data[1]), math.max(data[1])]
+            y: [0, math.max(data[1])]
         }
+        let sunLine = [], dVline = [];
         for (let ii = 0; ii < data[0].length; ii++) {
             let x = (data[0][ii] - limits.x[0]) * this.#cnvs.width * pos.w / (limits.x[1] - limits.x[0]) + this.#cnvs.width * (pos.x - pos.w / 2);
             let y = -(data[1][ii] - limits.y[0]) * this.#cnvs.height * pos.h / (limits.y[1] - limits.y[0]) + this.#cnvs.height * (pos.y + pos.h / 2);
             let ySun = -(data[2][ii]) * this.#cnvs.height * pos.h / 180 + this.#cnvs.height * (pos.y + pos.h / 2);
-            ctx.beginPath();
-            ctx.arc(x,y,2,0,Math.PI * 2)
-            ctx.arc(x,ySun,4,0,Math.PI * 2)
-            ctx.fill();
+            sunLine.push({x, y: ySun}); dVline.push({x, y}); 
         }
+        // Fix click on plot
+        this.getContext().strokeStyle = 'rgb(204,164,61)';
+        drawCurve(this.getContext(), sunLine);
+        this.getContext().strokeStyle = 'black';
+        drawCurve(this.getContext(), dVline);
+        ctx.rect(this.#frameCenter.plot.w * this.#cnvs.width * 0.1, this.#frameCenter.plot.h * this.#cnvs.height * 0.1, pos.w * this.#cnvs.width, pos.h * this.#cnvs.height);
+        ctx.stroke();
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'hanging';
+        ctx.fillText('15 min', this.#frameCenter.plot.w * this.#cnvs.width * 0.1, this.#frameCenter.plot.h* this.#cnvs.height * 0.9 + 10)
+        ctx.fillText('180 deg', this.#frameCenter.plot.w * this.#cnvs.width * 0.9 + 5, this.#frameCenter.plot.h* this.#cnvs.height * 0.1)
+        ctx.textAlign = 'right';
+        ctx.fillText('1440 min', this.#frameCenter.plot.w * this.#cnvs.width * 0.9, this.#frameCenter.plot.h* this.#cnvs.height * 0.9 + 10)
+        ctx.fillText((limits.y[1] * 1000).toFixed(1) + ' m/s', this.#frameCenter.plot.w * this.#cnvs.width * 0.1 - 5, this.#frameCenter.plot.h* this.#cnvs.height * 0.1)
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('0 m/s', this.#frameCenter.plot.w * this.#cnvs.width * 0.1 - 5, this.#frameCenter.plot.h* this.#cnvs.height * 0.9)
+        ctx.textAlign = 'left';
+        ctx.fillText('0 deg', this.#frameCenter.plot.w * this.#cnvs.width * 0.9 + 5, this.#frameCenter.plot.h* this.#cnvs.height * 0.9)
     }
     drawCurve(line, options = {}) {
         // console.log(line);
@@ -989,8 +1005,8 @@ window.addEventListener('wheel', event => {
 })
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
-    // console.log(ricCoor);
     let sat = 0, check;
+    if (ricCoor === undefined) return;
     while (sat < mainWindow.satellites.length) {
         check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
         mainWindow.currentTarget = false;
@@ -2955,7 +2971,7 @@ function generateData(sat1 = 1, sat2 = 0) {
     if (mainWindow.satellites.length < 2) return;
     mainWindow.plotSettings.data = [];
     let state1 = mainWindow.satellites[sat1].currentPosition();
-    for (let tMan = 900; tMan < 86164; tMan += 1800) {
+    for (let tMan = 900; tMan < 86164; tMan += 3600) {
 
         let curTime = mainWindow.desired.scenarioTime;
         let state2 = mainWindow.satellites[sat2].currentPosition({time: curTime + tMan});
@@ -2978,5 +2994,24 @@ function generateData(sat1 = 1, sat2 = 0) {
             sunAngle = math.acos(math.dot([-dir.F.xd, -dir.F.yd, -dir.F.zd], mainWindow.getCurrentSun(curTime + tMan)) / math.norm([dir.F.xd, dir.F.yd, dir.F.zd])) * 180 / Math.PI;
             mainWindow.plotSettings.data.push([tMan, dir.t[0] * tMan * mainWindow.satellites[sat1].a, sunAngle]);
         }
+    }
+}
+function generateDataImpulsive(sat1 = 1, sat2 = 0) {
+    if (mainWindow.satellites.length < 2) return;
+    mainWindow.plotSettings.data = [];
+    let state1 = mainWindow.satellites[sat1].currentPosition();
+    for (let tMan = 900; tMan < 86400; tMan += 3600) {
+
+        let curTime = mainWindow.desired.scenarioTime;
+        let state2 = mainWindow.satellites[sat2].currentPosition({time: curTime + tMan});
+        let outputV = proxOpsTargeter([state1.r, state1.i, state1.c], [state2.r, state2.i, state2.c], tMan)
+        let v1 = outputV[0];
+        let v2 = outputV[1];
+        // console.log(v1,v2);
+        sunAngle = math.acos(math.dot([-v2[0][0], -v2[1][0], -v2[2][0]], mainWindow.getCurrentSun(curTime + tMan)) / math.norm([-v2[0][0], -v2[1][0], -v2[2][0]]) / math.norm(mainWindow.getCurrentSun(curTime + tMan))) * 180 / Math.PI;
+        if (isNaN(sunAngle)) {
+
+        }
+        mainWindow.plotSettings.data.push([tMan, math.norm(math.squeeze(math.subtract(v1, [state1.rd, state1.id, state1.cd]))), sunAngle]);
     }
 }
