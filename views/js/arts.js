@@ -382,7 +382,7 @@ class windowCanvas {
         ctx.fillText('15 min', this.#frameCenter.plot.w * this.#cnvs.width * 0.1, this.#frameCenter.plot.h* this.#cnvs.height * 0.9 + 10)
         ctx.fillText('180 deg', this.#frameCenter.plot.w * this.#cnvs.width * 0.9 + 5, this.#frameCenter.plot.h* this.#cnvs.height * 0.1)
         ctx.textAlign = 'right';
-        ctx.fillText('1440 min', this.#frameCenter.plot.w * this.#cnvs.width * 0.9, this.#frameCenter.plot.h* this.#cnvs.height * 0.9 + 10)
+        ctx.fillText('240 min', this.#frameCenter.plot.w * this.#cnvs.width * 0.9, this.#frameCenter.plot.h* this.#cnvs.height * 0.9 + 10)
         ctx.fillText((limits.y[1] * 1000).toFixed(1) + ' m/s', this.#frameCenter.plot.w * this.#cnvs.width * 0.1 - 5, this.#frameCenter.plot.h* this.#cnvs.height * 0.1)
         ctx.textBaseline = 'bottom';
         ctx.fillText('0 m/s', this.#frameCenter.plot.w * this.#cnvs.width * 0.1 - 5, this.#frameCenter.plot.h* this.#cnvs.height * 0.9)
@@ -837,8 +837,8 @@ mainWindow.fillWindow();
     if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
         drawVulnerabilityZone();
     }
-    mainWindow.recordFunction();
     // console.timeEnd('sats')
+    mainWindow.recordFunction();
     // mainWindow.drawMouse(mainWindow.mousePosition);
     window.requestAnimationFrame(animationLoop)
 })()
@@ -896,19 +896,34 @@ window.addEventListener('keydown', key => {
                 })
                 break;
             case 'ri ci rc': 
-                mainWindow.setState('ri ci rc plot');
+                // mainWindow.setState('ri ci rc plot');
+                mainWindow.setState('ci rc');
+                // mainWindow.setFrameCenter({
+                //     ri: {
+                //         x: 0.75, y: 0.25, w: 0.5, h: 0.5
+                //     },
+                //     rc: {
+                //         x: 0.25, y: 0.75, w:0.50, h: 0.5
+                //     },
+                //     ci: {
+                //         x: 0.75, y: 0.75, w: 0.5, h: 0.5
+                //     },
+                //     plot: {
+                //         x: 0.25, y: 0.25, w: 0.5, h: 0.5
+                //     }
+                // })
                 mainWindow.setFrameCenter({
                     ri: {
-                        x: 0.75, y: 0.25, w: 0.5, h: 0.5
+                        x: 0.5, y: 0, w: 1, h: 0
                     },
                     rc: {
-                        x: 0.25, y: 0.75, w:0.50, h: 0.5
+                        x: 0.25, y: 0.5, w:0.50, h: 1
                     },
                     ci: {
-                        x: 0.75, y: 0.75, w: 0.5, h: 0.5
+                        x: 0.75, y: 0.5, w: 0.5, h: 1
                     },
                     plot: {
-                        x: 0.25, y: 0.25, w: 0.5, h: 0.5
+                        x: 0, y: 0, w: 0, h: 0
                     }
                 })
                 break;
@@ -1212,7 +1227,7 @@ document.getElementById('add-start-time').addEventListener('input', event => {
     });
     document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
 })
-document.getElementById('add-tran-time').addEventListener('input', event => {
+document.getElementById('add-tran-time').addEventListener('input', () => {
     let startTime = new Date(document.getElementById('add-start-time').value).getTime();
     let dt = startTime - mainWindow.startDate.getTime() + Number(document.getElementById('add-tran-time').value) * 60000;
     let crossState = mainWindow.satellites[document.getElementById('satellite-way-select').value].currentPosition({
@@ -1224,7 +1239,7 @@ document.getElementById('satellite-way-select').addEventListener('input', event 
     generateBurnTable(event.target.value)
     event.target.style.color = mainWindow.satellites[event.target.value].color;
 })
-document.getElementById('data-button').addEventListener('click', (click) => {
+document.getElementById('data-button').addEventListener('click', () => {
     if (mainWindow.satellites.length < 2) {
         return;
     }
@@ -1404,7 +1419,10 @@ function changeBurnType() {
 function parseState(button) {
     let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input');
     let text = document.getElementById('parse-text').value;
-    text = text.split(/ +/);
+    text = text.split(/ {2,}/)
+    if (isNaN(Number(text[0]))) {
+        mainWindow.startDate = new Date(text.shift())
+    }
     if (text[0] === "") text.shift();
     if (text[text.length - 1] === "") text.pop();
     text = text.filter(t => {
@@ -1421,7 +1439,8 @@ function parseState(button) {
     if (text.length === 9) {
         let initSun = [Number(text[6]), Number(text[7]), Number(text[8])]
         initSun = math.dotDivide(initSun, math.norm(initSun));
-        mainWindow.setInitSun(initSun);
+        // console.log([-initSun[2], initSun[0], -initSun[1]]);
+        mainWindow.setInitSun([-initSun[2], initSun[0], -initSun[1]]);
     }
     initStateFunction(stateInputs[6]);
 }
@@ -2553,6 +2572,7 @@ function initStateFunction(el) {
         nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000 * rmoes.z * mainWindow.mm * Math.cos(rmoes.m * Math.PI / 180)).toFixed(3);
     }
     else if (el.id === 'add-satellite-button') {
+        let newTitle = '';
         let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
         let position = {
             r: Number(inputs[7].value), 
@@ -2573,19 +2593,25 @@ function initStateFunction(el) {
             color,
             name
         }));
+        newTitle += mainWindow.satellites[0].name;
+        for (let ii = 1; ii < mainWindow.satellites.length; ii++){
+            newTitle += ' / ' + mainWindow.satellites[ii].name;
+        }
+        document.title = newTitle;
         closeAll();
     }
     else {
         if (el.classList.contains('panel-button')) {
             nodes = el.parentNode.parentNode.children[1];
         }
+        let cartInputs = nodes.getElementsByTagName('input');
         let state = {
-            r: Number(nodes.children[1].children[0].getElementsByTagName('input')[0].value),
-            i: Number(nodes.children[1].children[1].getElementsByTagName('input')[0].value),
-            c: Number(nodes.children[1].children[2].getElementsByTagName('input')[0].value),
-            rd: Number(nodes.children[1].children[3].getElementsByTagName('input')[0].value) / 1000,
-            id: Number(nodes.children[1].children[4].getElementsByTagName('input')[0].value) / 1000,
-            cd: Number(nodes.children[1].children[5].getElementsByTagName('input')[0].value) / 1000
+            r: Number(cartInputs[6].value),
+            i: Number(cartInputs[7].value),
+            c: Number(cartInputs[8].value),
+            rd: Number(cartInputs[9].value) / 1000,
+            id: Number(cartInputs[10].value) / 1000,
+            cd: Number(cartInputs[11].value) / 1000
         };
         if (el.classList.contains('panel-button')) {
             let a = Math.pow(398600.4418 / Math.pow(mainWindow.mm, 2), 1/3);
@@ -2595,17 +2621,17 @@ function initStateFunction(el) {
             state.rd = rotState[0];
             state.id = rotState[1];
             rotState = math.squeeze(math.multiply(rotationMatrices(-ang, 3), [[state.r], [0], [0]]));
-            nodes.children[1].children[0].getElementsByTagName('input')[0].value = (rotState[0]).toFixed(3);
-            nodes.children[1].children[1].getElementsByTagName('input')[0].value = (state.i + rotState[1]).toFixed(3);
-            nodes.children[1].children[3].getElementsByTagName('input')[0].value = (state.rd * 1000).toFixed(3);
-            nodes.children[1].children[4].getElementsByTagName('input')[0].value = (state.id * 1000).toFixed(3);
+            cartInputs[6].value = (rotState[0]).toFixed(3);
+            cartInputs[7].value = (state.i + rotState[1]).toFixed(3);
+            cartInputs[9].value = (state.rd * 1000).toFixed(3);
+            cartInputs[10].value = (state.id * 1000).toFixed(3);
         }
-        nodes.children[0].children[1].getElementsByTagName('input')[0].value = (4 * state.r + 2 * state.id / mainWindow.mm).toFixed(3);
-        nodes.children[0].children[2].getElementsByTagName('input')[0].value = (state.i - 2 * state.rd / mainWindow.mm).toFixed(3);
-        nodes.children[0].children[0].getElementsByTagName('input')[0].value = (2 * Math.sqrt(Math.pow(3 * state.r + 2 * state.id / mainWindow.mm, 2) + Math.pow(state.rd / mainWindow.mm, 2))).toFixed(3);
-        nodes.children[0].children[3].getElementsByTagName('input')[0].value = (Math.atan2(state.rd, 3 * mainWindow.mm * state.r + 2 * state.id) * 180 / Math.PI).toFixed(3);
-        nodes.children[0].children[5].getElementsByTagName('input')[0].value = (Math.atan2(state.c, state.cd / mainWindow.mm) * 180 / Math.PI).toFixed(3);
-        nodes.children[0].children[4].getElementsByTagName('input')[0].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / mainWindow.mm, 2))).toFixed(3);
+        cartInputs[1].value = (4 * state.r + 2 * state.id / mainWindow.mm).toFixed(3);
+        cartInputs[2].value = (state.i - 2 * state.rd / mainWindow.mm).toFixed(3);
+        cartInputs[0].value = (2 * Math.sqrt(Math.pow(3 * state.r + 2 * state.id / mainWindow.mm, 2) + Math.pow(state.rd / mainWindow.mm, 2))).toFixed(3);
+        cartInputs[3].value = (Math.atan2(state.rd, 3 * mainWindow.mm * state.r + 2 * state.id) * 180 / Math.PI).toFixed(3);
+        cartInputs[5].value = (Math.atan2(state.c, state.cd / mainWindow.mm) * 180 / Math.PI).toFixed(3);
+        cartInputs[4].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / mainWindow.mm, 2))).toFixed(3);
     }
     
 }
@@ -3000,7 +3026,7 @@ function generateDataImpulsive(sat1 = 1, sat2 = 0) {
     if (mainWindow.satellites.length < 2) return;
     mainWindow.plotSettings.data = [];
     let state1 = mainWindow.satellites[sat1].currentPosition();
-    for (let tMan = 900; tMan < 86400; tMan += 3600) {
+    for (let tMan = 900; tMan < 14400; tMan += 3600) {
 
         let curTime = mainWindow.desired.scenarioTime;
         let state2 = mainWindow.satellites[sat2].currentPosition({time: curTime + tMan});
