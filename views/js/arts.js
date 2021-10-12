@@ -1425,6 +1425,12 @@ function parseState(button) {
     }
     if (text[0] === "") text.shift();
     if (text[text.length - 1] === "") text.pop();
+    if (text.length > 9) {
+        mainWindow.mm = Math.sqrt(398600.4418 / (Number(text.pop() ** 3)));
+        mainWindow.scenarioLength = 2 * Math.PI / mainWindow.mm / 3600 * 2;
+        document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
+        mainWindow.timeDelta = 0.006 * 2 * Math.PI / mainWindow.mm;
+    }
     text = text.filter(t => {
         return Number(t) !== NaN;
     });
