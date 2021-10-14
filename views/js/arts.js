@@ -2674,9 +2674,9 @@ function editSatellite(button) {
             .PI / 180,
         z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
     };
-    let color = mainWindow.satellites[button.nextSibling.selectedIndex].name;
+    let color = mainWindow.satellites[button.nextSibling.selectedIndex].color;
     let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
-    let shape = mainWindow.satellites[button.nextSibling.selectedIndex].name;
+    let shape = mainWindow.satellites[button.nextSibling.selectedIndex].shape;
     let a = mainWindow.satellites[button.nextSibling.selectedIndex].a;
     state = {
         r: -state.a / 2 * Math.cos(state.b) + state.x,
