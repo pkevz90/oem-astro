@@ -1024,6 +1024,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
         if (newTime && newTime < mainWindow.scenarioLength && newTime > 0) {
             mainWindow.desired.scenarioTime = newTime * 3600;
             mainWindow.scenarioTime = newTime * 3600;
+            document.getElementById('time-slider-range').value = newTime * 3600;
         }
         return
     }
