@@ -1,3 +1,6 @@
+// Various housekeepin to not change html
+document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
+document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
 class windowCanvas {
     cnvs;
     plotWidth = 200;
@@ -1463,6 +1466,7 @@ function parseState(button) {
 // Adding functions to handle data planels, etc.
 //------------------------------------------------------------------
 function openPanel(button) {
+    if (button.id === 'edit-select') return;
     mainWindow.panelOpen = true;
     if (button.id === 'burns') {
         if (mainWindow.satellites.length === 0) {
@@ -2652,6 +2656,11 @@ function initStateFunction(el) {
 }
 
 function editSatellite(button) {
+    if (button.innerText === 'Delete') {
+        mainWindow.satellites.splice(button.nextSibling.selectedIndex,1);
+        closeAll();
+        return;
+    }
     if (button.nextSibling.selectedIndex < 0) return;
     let n = mainWindow.mm;
     el = button.parentNode.parentNode.parentNode;
@@ -2665,10 +2674,10 @@ function editSatellite(button) {
             .PI / 180,
         z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
     };
-    let color = el.children[2].children[3].getElementsByTagName('input')[0].value;
+    let color = mainWindow.satellites[button.nextSibling.selectedIndex].name;
     let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
-    let shape = el.children[2].children[1].getElementsByTagName('select')[0].value;
-    let a = Number(el.children[2].children[2].getElementsByTagName('input')[0].value) / 1e6;
+    let shape = mainWindow.satellites[button.nextSibling.selectedIndex].name;
+    let a = mainWindow.satellites[button.nextSibling.selectedIndex].a;
     state = {
         r: -state.a / 2 * Math.cos(state.b) + state.x,
         i: state.a * Math.sin(state.b) + state.y,
