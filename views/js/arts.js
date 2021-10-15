@@ -1169,6 +1169,56 @@ function handleContextClick(button) {
         mainWindow.satellites[chaserSat].genBurns();
         document.getElementById('context-menu')?.remove();
     }
+    else if (button.id === 'sun-maneuver') {
+        let innerString = '';
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (ii === button.parentElement.sat) continue;
+            innerString += `<div onclick="handleContextClick(this)" class="context-item" id="execute-sun" sat="${ii}">${mainWindow.satellites[ii].name}</div>`
+        }
+        innerString += `<div class="context-item" >Distance: <input type="Number" style="width: 3em; font-size: 1em"> km</div>`;
+        innerString += `<div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
+
+        button.parentElement.innerHTML = innerString;
+    }
+    else if (button.id === 'execute-sun') {
+        let inputs = button.parentElement.getElementsByTagName('input');
+        if (inputs[0].value < 0 || inputs[0].value === '') {
+            inputs[0].style.backgroundColor = 'rgb(255,150,150)';
+            return;
+        }
+        if (inputs[1].value < 0 || inputs[1].value === '') {
+            inputs[1].style.backgroundColor = 'rgb(255,150,150)';
+            return;
+        }
+        let tof = Number(inputs[1].value) * 3600;
+        let range = Number(inputs[0].value);
+        let sun = math.dotMultiply(range, mainWindow.getCurrentSun(mainWindow.desired.scenarioTime + tof));
+        console.log(sun);
+        let targetSat = button.getAttribute('sat');
+        let chaserSat = button.parentElement.sat;
+        mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
+            return burn.time < mainWindow.scenarioTime;
+        })
+        let target = mainWindow.satellites[targetSat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
+        mainWindow.satellites[sat].burns.push({
+            time: mainWindow.desired.scenarioTime,
+            direction: {
+                r: 0,
+                i: 0,
+                c: 0
+            },
+            waypoint: {
+                tranTime: tof,
+                target: {
+                    r: target.r[0] + sun[0],
+                    i: target.i[0] + sun[1],
+                    c: target.c[0] + sun[2],
+                }
+            }
+        })
+        mainWindow.satellites[chaserSat].genBurns();
+        document.getElementById('context-menu')?.remove();
+    }
 }
 
 function changePlanType(box) {
@@ -3079,7 +3129,7 @@ function getRelativeData(n_target, n_origin) {
         .getVelocityArray()));
     range = math.norm(relPos);
     sunAngle = math.squeeze(math.multiply(rotationMatrices(-mainWindow.scenarioTime * mainWindow.mm * 180 / Math.PI, 3), math.transpose([mainWindow.getInitSun()])));
-    sunAngle = math.acos(math.dot(relPos, sunAngle) / range) * 180 / Math.PI;
+    sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
     sunAngle = 180 - sunAngle; // Appropriate for USSF
     rangeRate = math.dot(relVel, relPos) * 1000 / range;
     tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
