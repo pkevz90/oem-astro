@@ -1841,7 +1841,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = mainWindow.mm) 
         [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
         [math.norm(math.squeeze(dv1)) / a0 / tf]
     ];
-    if (Xret[2] < 1e-6) {
+    if (Xret[2] < 1e-9) {
         return {
             r: 0,
             i: 0,
