@@ -1022,26 +1022,57 @@ window.addEventListener('wheel', event => {
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
 })
 document.oncontextmenu = function(event) {
-    setTimeout(document.getElementById('context-menu')?.remove(), 100);
-    let ctxMenu = document.createElement('div');
-    ctxMenu.style.position = 'fixed';
-    ctxMenu.id = 'context-menu';
-    ctxMenu.style.zIndex = 10;
+    if (mainWindow.panelOpen) {
+        return false;
+    }
+    let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
+    let activeSat = false;
+    for (sat = 0; sat < mainWindow.satellites.length; sat++) {
+        let check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
+        if (check.ri || check.rc || check.ci) {
+            activeSat = sat;
+            break;
+        }
+    }
+    let ctxMenu;
+    if (document.getElementById('context-menu') === null) {
+        ctxMenu = document.createElement('div');
+        ctxMenu.style.position = 'fixed';
+        ctxMenu.id = 'context-menu';
+        ctxMenu.style.zIndex = 10;
+        ctxMenu.style.backgroundColor = 'black';
+        ctxMenu.style.cursor = 'pointer';
+        ctxMenu.style.borderRadius = '15px';
+        ctxMenu.style.transform = 'scale(0)';
+        ctxMenu.style.fontSize = '1.5em';
+        document.getElementsByTagName('body')[0].appendChild(ctxMenu);
+    }
+    ctxMenu = document.getElementById('context-menu');
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
-    ctxMenu.style.backgroundColor = 'black';
-    ctxMenu.style.cursor = 'pointer';
-    ctxMenu.style.borderRadius = '15px';
-    ctxMenu.style.transform = 'scale(0)';
-    ctxMenu.style.fontSize = '1.5em';
 
-    ctxMenu.innerHTML = `
-        <div class="context-item" id="add-satellite" onclick="openPanel(this)">Add New Satellite</div>
-        <div class="context-item" onclick="openPanel(this)" id="burns">Burns</div>
-        <div class="context-item" onclick="openPanel(this)" id="options">Options</div>
-        <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
-    `
-    document.getElementsByTagName('body')[0].appendChild(ctxMenu);
+    if (activeSat !== false) {
+        ctxMenu.sat = activeSat;
+        ctxMenu.innerHTML = `
+            <div class="context-item">R: ${mainWindow.satellites[activeSat].curPos.r.toFixed(2)} km</div>
+            <div class="context-item">I: ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)} km</div>
+            <div class="context-item">C: ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)} km</div>
+            <div class="context-item">V<sub>R</sub>: ${(mainWindow.satellites[activeSat].curPos.rd*1000).toFixed(2)} m/s</div>
+            <div class="context-item">V<sub>I</sub>: ${(mainWindow.satellites[activeSat].curPos.id*1000).toFixed(2)} m/s</div>
+            <div class="context-item">V<sub>C</sub>: ${(mainWindow.satellites[activeSat].curPos.cd*1000).toFixed(2)} m/s</div>
+            <div class="context-item">Manuever Options</div>
+        `
+        
+    }
+    else {
+        ctxMenu.innerHTML = `
+            <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
+            <div class="context-item" onclick="openPanel(this)" id="burns">Maneuver List</div>
+            <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
+            <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
+        `
+
+    }
     
     setTimeout(() => ctxMenu.style.transform = 'scale(1)', 10);
     return false;
@@ -1052,7 +1083,8 @@ function changePlanType(box) {
 }
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     // Close context menu if open
-    document.getElementById('context-menu')?.remove();
+    if (event.button !== 2) document.getElementById('context-menu')?.remove();
+    else return;
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
         let newTime = Number(prompt('Enter scenario time in hours past start:'))

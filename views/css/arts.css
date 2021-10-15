@@ -98,7 +98,8 @@ html, body {
 }
 
 #context-menu {
-    transition: 250ms transform;
+    /* transition: 250ms transform 250ms top 250ms left; */
+    transition: 250ms all;
     transform-origin: top left;
 }
 
