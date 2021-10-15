@@ -75,7 +75,7 @@ html, body {
     cursor: pointer;
   }
 
-#add-satellite {
+/* #add-satellite {
     position: fixed;
     height: auto;
     border: 1px solid black;
@@ -86,9 +86,23 @@ html, body {
     cursor: pointer;
     transition: 0.2s;
     font-weight: 900;
+} */
+
+.context-item {
+    padding: 15px;
+    color: white;
+    transition: 250ms background-color;
+}
+.context-item:hover {
+    background-color: rgb(50,50,50);
 }
 
-#options {
+#context-menu {
+    transition: 250ms transform;
+    transform-origin: top left;
+}
+
+/* #options {
     position: fixed;
     height: auto;
     border: 1px solid black;
@@ -99,7 +113,7 @@ html, body {
     cursor: pointer;
     transition: 0.2s;
     font-weight: 900;
-}
+} */
 .side-button {
     padding: 1vh 2vh;
     border-radius: 20px;
@@ -111,7 +125,7 @@ html, body {
 .blurred {
     backdrop-filter: blur(10px);
 }
-#burns {
+/* #burns {
     position: fixed;
     height: auto;
     border: 1px solid black;
@@ -122,7 +136,7 @@ html, body {
     cursor: pointer;
     transition: 0.2s;
     font-weight: 900;
-}
+} */
 #maneuver-type-slider {
     position: fixed;
     height: auto;
