@@ -708,6 +708,7 @@ class Satellite {
                 let point2 = [burn.location.r[0] + dispDist * burn.direction.r / mag, burn.location.i[0] + dispDist * burn.direction.i / mag, burn.location.c[0] + dist * burn.direction.c / mag]
                 point2 = mainWindow.convertToPixels(point2);
                 ctx.strokeStyle = this.color;
+                ctx.font = 'bold 19.7px serif';
                 let textWidth = ctx.measureText((1000*mag).toFixed(1) + ' m/s').width;
                 let textHeight = 20;
                 // console.log(Math.abs(burn.location.r) , (mainWindow.getPlotHeight() * fC.ri.h / 2), (Math.abs(location.i) < (mainWindow.getPlotWidth() * fC.ri.w / 2)));
@@ -1020,6 +1021,22 @@ window.addEventListener('wheel', event => {
     }
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
 })
+document.oncontextmenu = function(event) {
+    // let ctxMenu = document.createElement('div');
+    // ctxMenu.style.position = 'fixed';
+    // ctxMenu.style.zIndex = 10;
+    // ctxMenu.style.top = event.clientY +'px';
+    // ctxMenu.style.left = event.clientX + 'px';
+    // ctxMenu.style.backgroundColor = 'black';
+    // ctxMenu.style.cursor = 'pointer';
+    // ctxMenu.innerHTML = `
+    //     <div id="add-satellite-2" onclick="openPanel(this)" style="padding: 15px; color: white; border-radius: 10px;">Add Satellite</div>
+    //     <div style="padding: 15px; color: white; border-radius: 10px;">Burns</div>
+    //     <div style="padding: 15px; color: white; border-radius: 10px;">Options</div>
+    // `
+    // document.getElementsBzyTagName('body')[0].appendChild(ctxMenu);
+    return false;
+}
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
@@ -1489,7 +1506,7 @@ function openPanel(button) {
         selectEl.selectedIndex = chosenSat;
         selectEl.style.color = mainWindow.satellites[chosenSat].color;
     }
-    else if (button.id === 'add-satellite') {
+    else if (button.id === 'add-satellite' || button.id === 'add-satellite-2') {
         let selectEl = document.getElementById('edit-select');
         selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = `Sat-${mainWindow.satellites.length+1}`;
         document.getElementById('parse-text').value = "";
