@@ -1054,13 +1054,9 @@ document.oncontextmenu = function(event) {
     if (activeSat !== false) {
         ctxMenu.sat = activeSat;
         ctxMenu.innerHTML = `
-            <div class="context-item">R: ${mainWindow.satellites[activeSat].curPos.r.toFixed(2)} km</div>
-            <div class="context-item">I: ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)} km</div>
-            <div class="context-item">C: ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)} km</div>
-            <div class="context-item">V<sub>R</sub>: ${(mainWindow.satellites[activeSat].curPos.rd*1000).toFixed(2)} m/s</div>
-            <div class="context-item">V<sub>I</sub>: ${(mainWindow.satellites[activeSat].curPos.id*1000).toFixed(2)} m/s</div>
-            <div class="context-item">V<sub>C</sub>: ${(mainWindow.satellites[activeSat].curPos.cd*1000).toFixed(2)} m/s</div>
-            <div class="context-item">Manuever Options</div>
+            <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)">Manuever Options</div>
+            <div class="context-item">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
+            <div class="context-item">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div>
         `
         
     }
@@ -1076,6 +1072,103 @@ document.oncontextmenu = function(event) {
     
     setTimeout(() => ctxMenu.style.transform = 'scale(1)', 10);
     return false;
+}
+
+function handleContextClick(button) {
+    if (button.id === 'maneuver-options') {
+        button.parentElement.innerHTML = `
+            <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>
+        `
+    }
+    else if (button.id === 'waypoint-maneuver') {
+        button.parentElement.innerHTML = `
+            <div class="context-item" >Target: (<input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">) km</div>
+            <div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="execute-waypoint">Execute</div>
+        `
+    }
+    else if (button.id === 'execute-waypoint') {
+        let inputs = button.parentElement.getElementsByTagName('input');
+        let bad = false;
+        for (let ii = 0; ii < inputs.length; ii++) {
+            if (inputs[ii].value === '' || (ii === 3 && inputs[ii].value < 0)) {
+                inputs[ii].style.backgroundColor = 'rgb(255,150,150)';
+                bad = true;
+            }
+            else {
+                inputs[ii].style.backgroundColor = 'white';
+            }
+        }
+        if (bad) return;
+        let sat = button.parentElement.sat;
+        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+            return burn.time < mainWindow.scenarioTime;
+        })
+        mainWindow.satellites[sat].burns.push({
+            time: mainWindow.desired.scenarioTime,
+            direction: {
+                r: 0,
+                i: 0,
+                c: 0
+            },
+            waypoint: {
+                tranTime: Number(inputs[3].value) * 3600,
+                target: {
+                    r: Number(inputs[0].value),
+                    i: Number(inputs[1].value),
+                    c: Number(inputs[2].value),
+                }
+            }
+        })
+        mainWindow.satellites[sat].genBurns();
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'intercept-maneuver') {
+        let innerString = '';
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (ii === button.parentElement.sat) continue;
+            innerString += `<div onclick="handleContextClick(this)" class="context-item" id="execute-intercept" sat="${ii}">${mainWindow.satellites[ii].name}</div>`
+        }
+        innerString += `<div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
+
+        button.parentElement.innerHTML = innerString;
+
+    }
+    else if (button.id === 'execute-intercept') {
+        let inputs = button.parentElement.getElementsByTagName('input')[0];
+        if (inputs.value < 0 || inputs.value === '') {
+            inputs.style.backgroundColor = 'rgb(255,150,150)';
+            return;
+        }
+        let tof = Number(inputs.value) * 3600;
+        let targetSat = button.getAttribute('sat');
+        let chaserSat = button.parentElement.sat;
+        mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
+            return burn.time < mainWindow.scenarioTime;
+        })
+        let target = mainWindow.satellites[targetSat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
+        mainWindow.satellites[sat].burns.push({
+            time: mainWindow.desired.scenarioTime,
+            direction: {
+                r: 0,
+                i: 0,
+                c: 0
+            },
+            waypoint: {
+                tranTime: tof,
+                target: {
+                    r: target.r[0],
+                    i: target.i[0],
+                    c: target.c[0],
+                }
+            }
+        })
+        mainWindow.satellites[chaserSat].genBurns();
+        document.getElementById('context-menu')?.remove();
+    }
 }
 
 function changePlanType(box) {
@@ -1537,7 +1630,7 @@ function openPanel(button) {
         if (mainWindow.satellites.length === 0) {
             return;
         }
-        mainWindow.scenarioTime_des = mainWindow.scenarioLength*3600;
+        mainWindow.desired.scenarioTime = mainWindow.scenarioLength*3600;
         let selectEl = document.getElementById('satellite-way-select');
         let chosenSat = Number(selectEl.value);
         generateBurnTable(chosenSat);
@@ -1590,7 +1683,7 @@ function openPanel(button) {
 function closeAll() {
     mainWindow.panelOpen = false;
     let buttons = document.getElementsByClassName('panel');
-    mainWindow.scenarioTime_des = Number(document.getElementById('time-slider-range').value);
+    mainWindow.desired.scenarioTime = Number(document.getElementById('time-slider-range').value);
     for (let jj = 0; jj < buttons.length; jj++) {
         buttons[jj].classList.add('hidden');
     }
