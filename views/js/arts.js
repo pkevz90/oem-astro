@@ -1,6 +1,10 @@
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
+document.getElementById('export-option-button').remove();
+document.getElementsByTagName('label')[0].remove();
+document.getElementById('data-button').remove();
+document.getElementById('upload-options-button').remove();
 class windowCanvas {
     cnvs;
     plotWidth = 200;
@@ -1055,25 +1059,26 @@ document.oncontextmenu = function(event) {
     if (activeSat !== false) {
         ctxMenu.sat = activeSat;
         ctxMenu.innerHTML = `
-            <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)">Manuever Options</div>
-            <div class="context-item">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
-            <div class="context-item">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div>
-            <div class="context-item">Export Burns</div>`
+            <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
+            <div class="context-item" onmouseover="handleContextClick(event)">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
+            <div class="context-item" onmouseover="handleContextClick(event)">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div>
+            <div class="context-item" onmouseover="handleContextClick(event)">Export Burns</div>
+            <div class="context-item" id="prop-options" onmouseover="handleContextClick(event)">Propagate To</div>
+            `
         
     }
     else {
         ctxMenu.innerHTML = `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
-            <div class="context-item" onclick="openPanel(this)" id="burns">Maneuver List</div>
+            ${mainWindow.satellites.length > 0 ? '<div class="context-item" onclick="openPanel(this)" id="burns">Maneuver List</div>' : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
-            <div class="context-item" onclick="openPanel(this)" id="data">Display Data</div>
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="openDataTab()" id="data">Display Data</div>' : ''}
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
-            <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept=".sas" onchange="uploadScenario()"></div>
+            <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept=".sas" onchange="uploadScenario(event)"></div>
             <div class="context-item" onclick="exportScenario()">Export Scenario</div>
             `
 
     }
-    console.log(ctxMenu.offsetWidth);
     if ((ctxMenu.offsetHeight + event.clientY) > window.innerHeight) {
         ctxMenu.style.top = (window.innerHeight - ctxMenu.offsetHeight) + 'px';
     }
@@ -1084,7 +1089,41 @@ document.oncontextmenu = function(event) {
     return false;
 }
 
+function addSubMenu(element, innerHtml) {
+    let origNode = element;
+
+    // let newTop = element.offsetTop + element.parentNode.offsetTop;
+    let newTop = element.offsetTop;
+    // let newLeft = element.parentNode.offsetLeft + element.parentNode.offsetWidth;  
+    let newLeft = element.parentNode.offsetWidth;
+    while (origNode.parentNode.offsetTop !== undefined) {
+        origNode = origNode.parentNode;
+        newTop += origNode.offsetTop;
+        newLeft += origNode.offsetLeft;
+    }                                                                                                                                                                                                     
+    let ctxMenu = document.createElement('div');
+    ctxMenu.style.position = 'fixed';
+    ctxMenu.style.zIndex = 10;
+    ctxMenu.classList.add('sub-menu')
+    ctxMenu.style.backgroundColor = 'black';
+    ctxMenu.style.cursor = 'pointer';
+    ctxMenu.style.borderRadius = '15px';
+    ctxMenu.style.fontSize = '1.5em';
+    ctxMenu.style.minWidth = '263px';
+    ctxMenu.style.top = newTop +'px';
+    ctxMenu.style.left = newLeft + 'px';
+    ctxMenu.innerHTML = innerHtml;
+    document.getElementsByTagName('body')[0].appendChild(ctxMenu);
+}   
+
 function handleContextClick(button) {
+    // console.log(button);
+    if (button.type === 'mouseover') {
+        let subList = document.getElementsByClassName('sub-menu');
+        for (let ii = 0; ii < subList.length; ii++) {
+            subList[ii].remove();
+        }
+    }
     if (button.id === 'maneuver-options') {
         button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
@@ -1092,6 +1131,36 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>
             <div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>
         `
+    }
+    else if (button?.target?.id === 'prop-options') {
+        let newInnerHTML = `
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-crossing">Next Plane-Crossing</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-maxcross">Next Max Cross-Track</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-max-sun">To Max Sun</div>
+        `
+        // console.log(button);
+        addSubMenu(button.target, newInnerHTML);
+    }
+    else if (button.id === 'prop-crossing' || button.id === 'prop-maxcross') {
+        let type = button.id.split('-')[1];
+        let sat = document.getElementById('context-menu').sat;
+        let state = mainWindow.satellites[sat].currentPosition();
+        let m0 =  Math.atan2(state.c, state.cd / mainWindow.mm);
+        if (type === 'crossing') {
+            if (m0 < 0) {
+                let dt = -m0 / mainWindow.mm;
+                mainWindow.desired.scenarioTime += dt;
+            }
+            else {
+                let dt = (Math.PI-m0) / mainWindow.mm;
+                mainWindow.desired.scenarioTime += dt;
+            }
+        }
+        else if (type === 'maxcross') {
+
+        }
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
     }
     else if (button.id === 'waypoint-maneuver') {
         button.parentElement.innerHTML = `
@@ -1235,7 +1304,9 @@ function changePlanType(box) {
     mainWindow.burnType = box.checked ? 'waypoint' : 'manual';
 }
 document.getElementById('main-plot').addEventListener('mousedown', event => {
-    // Close context menu if open
+    // Close context menu if 
+    let subList = document.getElementsByClassName('sub-menu');
+    for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
     if (event.button !== 2) document.getElementById('context-menu')?.remove();
     else return;
     // Check if clicked on time
@@ -1468,11 +1539,11 @@ document.getElementById('satellite-way-select').addEventListener('input', event 
     generateBurnTable(event.target.value)
     event.target.style.color = mainWindow.satellites[event.target.value].color;
 })
-document.getElementById('data-button').addEventListener('click', () => {
+function openDataTab() {
     if (mainWindow.satellites.length < 2) {
         return;
     }
-    document.getElementById('options-panel').classList.toggle("hidden")
+    document.getElementById('context-menu')?.remove();
     let dataSel = document.getElementById('data-select');
     while (dataSel.firstChild) {
         dataSel.removeChild(dataSel.firstChild);
@@ -1488,7 +1559,7 @@ document.getElementById('data-button').addEventListener('click', () => {
         })
     })
     document.getElementById('data-panel').classList.toggle("hidden");
-})
+}
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
     let el = click.target;
     el = el.parentNode.parentNode;
