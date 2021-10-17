@@ -13,7 +13,7 @@ class windowCanvas {
         plot: {x: 0, y: 0, w: 0, h: 0}
     };
     frameMove = undefined;
-    initSun = [1, 0, 0.2];
+    initSun = [1, 0, 0];
     desired = {
         scenarioTime: 0,
         plotCenter: 0,
@@ -1045,6 +1045,7 @@ document.oncontextmenu = function(event) {
         ctxMenu.style.borderRadius = '15px';
         ctxMenu.style.transform = 'scale(0)';
         ctxMenu.style.fontSize = '1.5em';
+        ctxMenu.style.minWidth = '263px';
         document.getElementsByTagName('body')[0].appendChild(ctxMenu);
     }
     ctxMenu = document.getElementById('context-menu');
@@ -1057,7 +1058,7 @@ document.oncontextmenu = function(event) {
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)">Manuever Options</div>
             <div class="context-item">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
             <div class="context-item">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div>
-        `
+            <div class="context-item">Export Burns</div>`
         
     }
     else {
@@ -1065,11 +1066,20 @@ document.oncontextmenu = function(event) {
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
             <div class="context-item" onclick="openPanel(this)" id="burns">Maneuver List</div>
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
+            <div class="context-item" onclick="openPanel(this)" id="data">Display Data</div>
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
-        `
+            <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept=".sas" onchange="uploadScenario()"></div>
+            <div class="context-item" onclick="exportScenario()">Export Scenario</div>
+            `
 
     }
-    
+    console.log(ctxMenu.offsetWidth);
+    if ((ctxMenu.offsetHeight + event.clientY) > window.innerHeight) {
+        ctxMenu.style.top = (window.innerHeight - ctxMenu.offsetHeight) + 'px';
+    }
+    if ((ctxMenu.offsetWidth + event.clientX) > window.innerWidth) {
+        ctxMenu.style.left = (window.innerWidth - ctxMenu.offsetWidth) + 'px';
+    }
     setTimeout(() => ctxMenu.style.transform = 'scale(1)', 10);
     return false;
 }
@@ -1342,9 +1352,9 @@ document.getElementById('main-plot').addEventListener('mousemove', event => {
         mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
     }
 })
-document.getElementById('export-option-button').addEventListener('click', () => {
-    downloadFile('scenario.sas', JSON.stringify(mainWindow.getData()));
-})
+function exportScenario(name = 'scenario.sas') {
+    downloadFile(name, JSON.stringify(mainWindow.getData()));
+}
 function downloadFile(filename, text) {
     var pom = document.createElement('a');
     pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -1549,9 +1559,10 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
     }
     closeAll();
 })
-document.getElementById('upload-options-button').addEventListener('change', event => {
+function uploadScenario() {
     loadFileAsText(event.path[0].files[0])
-})
+}
+
 document.getElementById('export-burns').addEventListener('click', () => {
     let selectEl = document.getElementById('satellite-way-select').value, time;
     time = new Date(mainWindow.startDate.getTime()).toString();
@@ -1678,6 +1689,7 @@ function openPanel(button) {
     mainWindow.panelOpen = true;
     if (button.id === 'burns') {
         if (mainWindow.satellites.length === 0) {
+            mainWindow.panelOpen = false;
             return;
         }
         mainWindow.desired.scenarioTime = mainWindow.scenarioLength*3600;
