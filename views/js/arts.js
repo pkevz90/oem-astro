@@ -1060,10 +1060,10 @@ document.oncontextmenu = function(event) {
         ctxMenu.sat = activeSat;
         ctxMenu.innerHTML = `
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
-            <div class="context-item" onmouseover="handleContextClick(event)">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
-            <div class="context-item" onmouseover="handleContextClick(event)">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div>
-            <div class="context-item" onmouseover="handleContextClick(event)">Export Burns</div>
-            <div class="context-item" id="prop-options" onmouseover="handleContextClick(event)">Propagate To</div>
+            <div class="context-item">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
+            <div class="context-item">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
+            <div class="context-item">Export Burns</div>
             `
         
     }
@@ -1118,12 +1118,6 @@ function addSubMenu(element, innerHtml) {
 
 function handleContextClick(button) {
     // console.log(button);
-    if (button.type === 'mouseover') {
-        let subList = document.getElementsByClassName('sub-menu');
-        for (let ii = 0; ii < subList.length; ii++) {
-            subList[ii].remove();
-        }
-    }
     if (button.id === 'maneuver-options') {
         button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
@@ -1132,15 +1126,12 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>
         `
     }
-    else if (button?.target?.id === 'prop-options') {
-        let newInnerHTML = `
+    else if (button.id === 'prop-options') {
+        button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="prop-crossing">Next Plane-Crossing</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="prop-maxcross">Next Max Cross-Track</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="prop-max-sun">To Max Sun</div>
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>' : ''}
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-maxsun">To Max Sun</div>' : ''}
         `
-        // console.log(button);
-        addSubMenu(button.target, newInnerHTML);
     }
     else if (button.id === 'prop-crossing' || button.id === 'prop-maxcross') {
         let type = button.id.split('-')[1];
@@ -1157,9 +1148,24 @@ function handleContextClick(button) {
                 mainWindow.desired.scenarioTime += dt;
             }
         }
-        else if (type === 'maxcross') {
-
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
+    }
+    else if (button.id === 'prop-poca' || button.id === 'prop-maxsun') {
+        let newInnerHTML = `
+            <div class="context-item">Prop to ${button.id === 'prop-poca' ? 'POCA' : 'Best Sun'}</div>
+        `;
+        let sat = document.getElementById('context-menu').sat;
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (sat === ii) continue;
+            newInnerHTML += `<div class="context-item"  onclick="handleContextClick(this)" sat="${ii}" id="${button.id}-execute">${mainWindow.satellites[ii].name}</div>`
         }
+        button.parentElement.innerHTML = newInnerHTML;
+    }
+    else if (button.id === 'prop-poca-execute') {
+        let data = getRelativeData(button.getAttribute('sat'),document.getElementById('context-menu').sat);
+        data = data.toca*mainWindow.timeDelta;
+        mainWindow.desired.scenarioTime = data;
+
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
     }
     else if (button.id === 'waypoint-maneuver') {
