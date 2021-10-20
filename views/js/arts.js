@@ -1278,13 +1278,16 @@ function handleContextClick(button) {
         let tof = Number(inputs[1].value) * 3600;
         let range = Number(inputs[0].value);
         let sun = math.dotMultiply(range, mainWindow.getCurrentSun(mainWindow.desired.scenarioTime + tof));
-        console.log(sun);
         let targetSat = button.getAttribute('sat');
         let chaserSat = button.parentElement.sat;
         mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
         let target = mainWindow.satellites[targetSat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
+        let sunCircle = drawAngleCircle(range, 30, tof)[15];
+        target.r = [Number(target.r) + sunCircle[0]];
+        target.i = [Number(target.i) + sunCircle[1]];
+        target.c = [Number(target.c) + sunCircle[2]];
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
@@ -3361,4 +3364,32 @@ function generateDataImpulsive(sat1 = 1, sat2 = 0) {
         }
         mainWindow.plotSettings.data.push([tMan, math.norm(math.squeeze(math.subtract(v1, [state1.rd, state1.id, state1.cd]))), sunAngle]);
     }
+}
+
+function findRotationMatrix(v1 = [1, 0, 0], v2 = mainWindow.getCurrentSun(mainWindow.scenarioTime + 7200)) {
+    v1 = math.dotDivide(v1, math.norm(v1));
+    v2 = math.dotDivide(v2, math.norm(v2));
+    let eulerAxis = math.cross(v1, v2);
+    eulerAxis = math.dotDivide(eulerAxis, math.norm(eulerAxis));
+    let x = eulerAxis[0], y = eulerAxis[1], z = eulerAxis[2];
+    let eulerAngle = math.acos(math.dot(v1,v2));
+    if (eulerAngle < 1e-7) return false;
+    let c = math.cos(eulerAngle), s = math.sin(eulerAngle);
+    return [[c + x*x*(1-c), x*y*(1-c)-z*s, x*z*(1-c)+y*s],
+             [y*x*(1-c)+z*s, c + y*y*(1-c), y*z*(1-c)-x*s],
+             [x*z*(1-c)-y*s, z*y*(1-c)+x*s, c + z*z*(1-c)]]
+}
+
+function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
+    angle = angle * Math.PI / 180;
+    let circleR = r * Math.sin(angle * 2);
+    let reducedR = r * Math.cos(angle * 2);
+    let circleCoor = [];
+    let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
+    if (!R) R = [[1,0,0],[0,1,0],[0,0,1]];
+    for (let ii = 0; ii <= 360; ii+=15) {
+        let tempAngle = [reducedR, Math.cos(ii * Math.PI / 180) * circleR, Math.sin(ii * Math.PI / 180) * circleR]
+        circleCoor.push(math.transpose(math.multiply(R, math.transpose(tempAngle))));
+    }
+    return circleCoor;
 }
