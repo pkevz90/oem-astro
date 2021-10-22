@@ -3402,9 +3402,13 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
     let circleCoor = [];
     let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
     if (!R) R = [[1,0,0],[0,1,0],[0,0,1]];
-    for (let ii = 0; ii <= 360; ii+=5) {
-        let tempAngle = [reducedR, Math.cos(ii * Math.PI / 180) * circleR, Math.sin(ii * Math.PI / 180) * circleR]
-        circleCoor.push(math.transpose(math.multiply(R, math.transpose(tempAngle))));
+    for (let jj = 0; jj <= angle; jj += angle / 10) {
+        circleR = r * Math.sin(jj);
+        reducedR = r * Math.cos(jj);
+        for (let ii = 0; ii <= 360; ii+=5) {
+            let tempAngle = [reducedR, Math.cos(ii * Math.PI / 180) * circleR, Math.sin(ii * Math.PI / 180) * circleR]
+            circleCoor.push(math.transpose(math.multiply(R, math.transpose(tempAngle))));
+        }
     }
     return circleCoor;
 }
