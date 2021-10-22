@@ -1261,6 +1261,7 @@ function handleContextClick(button) {
             innerString += `<div onclick="handleContextClick(this)" class="context-item" id="execute-sun" sat="${ii}">${mainWindow.satellites[ii].name}</div>`
         }
         innerString += `<div class="context-item" >Distance: <input type="Number" style="width: 3em; font-size: 1em"> km</div>`;
+        innerString += `<div class="context-item" >CATS: <input type="Number" style="width: 3em; font-size: 1em"> deg</div>`;
         innerString += `<div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
 
         button.parentElement.innerHTML = innerString;
@@ -1275,9 +1276,10 @@ function handleContextClick(button) {
             inputs[1].style.backgroundColor = 'rgb(255,150,150)';
             return;
         }
-        let tof = Number(inputs[1].value) * 3600;
+        let tof = Number(inputs[2].value) * 3600;
         let range = Number(inputs[0].value);
-        let sun = math.dotMultiply(range, mainWindow.getCurrentSun(mainWindow.desired.scenarioTime + tof));
+        let cats = Number(inputs[1].value);
+        // let sun = math.dotMultiply(range, mainWindow.getCurrentSun(mainWindow.desired.scenarioTime + tof));
         let targetSat = button.getAttribute('sat');
         let chaserSat = button.parentElement.sat;
         mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
@@ -1285,7 +1287,7 @@ function handleContextClick(button) {
         })
         let origin = mainWindow.satellites[chaserSat].currentPosition();
         let target = mainWindow.satellites[targetSat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
-        let sunCircle = drawAngleCircle(range, 90, tof);
+        let sunCircle = drawAngleCircle(range, cats, tof);
         let minWay = 100000, minIndex;
         for (let ii = 0; ii < sunCircle.length; ii++) {
             let newTarget = {
