@@ -1283,11 +1283,24 @@ function handleContextClick(button) {
         mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
+        let origin = mainWindow.satellites[chaserSat].currentPosition();
         let target = mainWindow.satellites[targetSat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
-        let sunCircle = drawAngleCircle(range, 30, tof)[15];
-        target.r = [Number(target.r) + sunCircle[0]];
-        target.i = [Number(target.i) + sunCircle[1]];
-        target.c = [Number(target.c) + sunCircle[2]];
+        let sunCircle = drawAngleCircle(range, 90, tof);
+        let minWay = 100000, minIndex;
+        for (let ii = 0; ii < sunCircle.length; ii++) {
+            let newTarget = {
+                r: [Number(target.r) + sunCircle[ii][0]],
+                i: [Number(target.i) + sunCircle[ii][1]],
+                c: [Number(target.c) + sunCircle[ii][2]],
+            }
+            let dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
+            minIndex = dV < minWay ? ii : minIndex;
+            minWay = dV < minWay ? dV : minWay;
+        }
+        console.log(minWay);
+        target.r = [Number(target.r) + sunCircle[minIndex][0]];
+        target.i = [Number(target.i) + sunCircle[minIndex][1]];
+        target.c = [Number(target.c) + sunCircle[minIndex][2]];
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
@@ -1298,9 +1311,9 @@ function handleContextClick(button) {
             waypoint: {
                 tranTime: tof,
                 target: {
-                    r: target.r[0] + sun[0],
-                    i: target.i[0] + sun[1],
-                    c: target.c[0] + sun[2],
+                    r: target.r[0],
+                    i: target.i[0],
+                    c: target.c[0],
                 }
             }
         })
@@ -3382,14 +3395,19 @@ function findRotationMatrix(v1 = [1, 0, 0], v2 = mainWindow.getCurrentSun(mainWi
 
 function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
     angle = angle * Math.PI / 180;
-    let circleR = r * Math.sin(angle * 2);
-    let reducedR = r * Math.cos(angle * 2);
+    let circleR = r * Math.sin(angle);
+    let reducedR = r * Math.cos(angle);
     let circleCoor = [];
     let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
     if (!R) R = [[1,0,0],[0,1,0],[0,0,1]];
-    for (let ii = 0; ii <= 360; ii+=15) {
+    for (let ii = 0; ii <= 360; ii+=5) {
         let tempAngle = [reducedR, Math.cos(ii * Math.PI / 180) * circleR, Math.sin(ii * Math.PI / 180) * circleR]
         circleCoor.push(math.transpose(math.multiply(R, math.transpose(tempAngle))));
     }
     return circleCoor;
+}
+
+function findDvFiniteBurn(r1, r2, a, tf) {
+    let dir = hcwFiniteBurnOneBurn({x: r1.r[0], y: r1.i[0], z: r1.c[0], xd: r1.rd[0], yd: r1.id[0], zd: r1.cd[0]}, {x: r2.r[0], y: r2.i[0], z: r2.c[0], xd: 0, yd: 0, zd: 0}, tf, a);
+    return dir ? dir.t[0]*tf*a : 10000;
 }
