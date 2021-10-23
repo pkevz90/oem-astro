@@ -1149,6 +1149,7 @@ function handleContextClick(button) {
             }
         }
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-poca' || button.id === 'prop-maxsun') {
         let newInnerHTML = `
@@ -1160,6 +1161,7 @@ function handleContextClick(button) {
             newInnerHTML += `<div class="context-item"  onclick="handleContextClick(this)" sat="${ii}" id="${button.id}-execute">${mainWindow.satellites[ii].name}</div>`
         }
         button.parentElement.innerHTML = newInnerHTML;
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-poca-execute') {
         let data = getRelativeData(button.getAttribute('sat'),document.getElementById('context-menu').sat);
@@ -1170,9 +1172,18 @@ function handleContextClick(button) {
     }
     else if (button.id === 'waypoint-maneuver') {
         button.parentElement.innerHTML = `
-            <div class="context-item" >Target: (<input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">) km</div>
             <div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" >Target: (<input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">) km</div>
             <div class="context-item" onclick="handleContextClick(this)" id="execute-waypoint">Execute</div>
+        `
+       document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'direction-maneuver') {
+        button.parentElement.innerHTML = `
+            <div class="context-item" >R: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >I: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >C: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="execute-direction">Execute</div>
         `
     }
     else if (button.id === 'execute-waypoint') {
@@ -1200,15 +1211,70 @@ function handleContextClick(button) {
                 c: 0
             },
             waypoint: {
-                tranTime: Number(inputs[3].value) * 3600,
+                tranTime: Number(inputs[0].value) * 3600,
                 target: {
-                    r: Number(inputs[0].value),
-                    i: Number(inputs[1].value),
-                    c: Number(inputs[2].value),
+                    r: Number(inputs[1].value),
+                    i: Number(inputs[2].value),
+                    c: Number(inputs[3].value),
                 }
             }
         })
         mainWindow.satellites[sat].genBurns();
+        let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
+        if (math.norm([checkBurn.direction.r, checkBurn.direction.i, checkBurn.direction.c]) < 1e-8) {
+            mainWindow.satellites[sat].burns.pop();
+            mainWindow.satellites[sat].genBurns();
+            showScreenAlert('Waypoint outside kinematic reach of satellite with given time of flight');
+            return;
+        }
+        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + Number(inputs[3].value) * 3600;
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'execute-direction') {
+        let inputs = button.parentElement.getElementsByTagName('input');
+        for (let ii = 0; ii < inputs.length; ii++) {
+            if (inputs[ii].value === '') {
+                inputs[ii].value = 0;
+            }
+        }
+        let sat = button.parentElement.sat;
+        mainWindow.satellites[sat].burns.push({
+            time: mainWindow.desired.scenarioTime,
+            direction: {
+                r: Number(inputs[0].value) / 1000,
+                i: Number(inputs[1].value) / 1000,
+                c: Number(inputs[2].value) / 1000
+            },
+            waypoint: {
+                tranTime: 0,
+                target: {
+                    r: 0,
+                    i: 0,
+                    c: 0,
+                }
+            }
+        })
+        let tof = 1.5*math.norm([ Number(inputs[0].value),  Number(inputs[1].value),  Number(inputs[2].value)]) / 1000 / mainWindow.satellites[sat].a;
+        tof = tof > 10800 ? tof : 10800;
+        let wayPos = mainWindow.satellites[sat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
+        mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
+            tranTime: tof,
+            target: {
+                r: wayPos.r[0],
+                i: wayPos.i[0],
+                c: wayPos.c[0]
+            }
+        }
+        // mainWindow.satellites[sat].burns.sort((a, b) => {
+        //     return a.time - b.time;
+        // })
+        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+            return burn.time < mainWindow.scenarioTime;
+        })
+        mainWindow.satellites[sat].genBurns();
+        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + 3600;
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'intercept-maneuver') {
@@ -1252,6 +1318,8 @@ function handleContextClick(button) {
             }
         })
         mainWindow.satellites[chaserSat].genBurns();
+        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + tof;
+        document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'sun-maneuver') {
@@ -1296,10 +1364,13 @@ function handleContextClick(button) {
                 c: [Number(target.c) + sunCircle[ii][2]],
             }
             let dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
-            minIndex = dV < minWay ? ii : minIndex;
-            minWay = dV < minWay ? dV : minWay;
+            if (dV < minWay) {
+                minWay = dV;
+                minIndex = ii;
+                // console.log(dV);
+            }
         }
-        console.log(minWay);
+        if (minWay > 100) return;
         target.r = [Number(target.r) + sunCircle[minIndex][0]];
         target.i = [Number(target.i) + sunCircle[minIndex][1]];
         target.c = [Number(target.c) + sunCircle[minIndex][2]];
@@ -1320,8 +1391,29 @@ function handleContextClick(button) {
             }
         })
         mainWindow.satellites[chaserSat].genBurns();
+        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + tof;
+        document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
     }
+}
+
+function showScreenAlert(message = 'test alert') {
+    
+    let alertMessage = document.createElement('div');
+    alertMessage.classList.add('screen-alert');
+    alertMessage.innerText = message;
+    document.getElementsByTagName('body')[0].appendChild(alertMessage);
+    setTimeout(() => {
+        document.getElementsByClassName('screen-alert')[0].style.bottom = '85%';
+    },50)
+    setTimeout(() => {
+        document.getElementsByClassName('screen-alert')[0].style.bottom = '100%';
+        document.getElementsByClassName('screen-alert')[0].style.opacity = '0';
+        setTimeout(() => {
+            document.getElementsByClassName('screen-alert')[0].remove();
+        }, 500)
+    }, 3000)
+
 }
 
 function changePlanType(box) {
@@ -3240,10 +3332,13 @@ function getRelativeData(n_target, n_origin) {
     sunAngle = 180 - sunAngle; // Appropriate for USSF
     rangeRate = math.dot(relVel, relPos) * 1000 / range;
     tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
-    // console.log(mainWindow.satellites[n_origin], mainWindow.satellites[n_target]);
-    let relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
-    poca = math.min(findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory));
-    toca = relPosHis.findIndex(element => element === poca);
+    let relPosHis;
+    try {
+        relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
+        poca = math.min(relPosHis);
+        toca = relPosHis.findIndex(element => element === poca);
+    }
+    catch (err) {console.log(err)}
     return {
         sunAngle,
         rangeRate,
@@ -3402,12 +3497,16 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
     let circleCoor = [];
     let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
     if (!R) R = [[1,0,0],[0,1,0],[0,0,1]];
-    for (let jj = 0; jj <= angle; jj += angle / 10) {
-        circleR = r * Math.sin(jj);
-        reducedR = r * Math.cos(jj);
-        for (let ii = 0; ii <= 360; ii+=5) {
-            let tempAngle = [reducedR, Math.cos(ii * Math.PI / 180) * circleR, Math.sin(ii * Math.PI / 180) * circleR]
-            circleCoor.push(math.transpose(math.multiply(R, math.transpose(tempAngle))));
+    let ranges = math.range(r / 2, r, r / 10, true)._data;
+    let angles = math.range(0, angle, angle / 50, true)._data;
+    for (let jj = 0; jj <= angles.length; jj ++) {
+        for (let kk = 0; kk <= ranges.length; kk ++) {
+            circleR = ranges[kk] * Math.sin(angles[jj]);
+            reducedR = ranges[kk] * Math.cos(angles[jj]);
+            for (let ii = 0; ii <= 360; ii+=5) {
+                let tempAngle = [reducedR, Math.cos(ii * Math.PI / 180) * circleR, Math.sin(ii * Math.PI / 180) * circleR]
+                circleCoor.push(math.transpose(math.multiply(R, math.transpose(tempAngle))));
+            }
         }
     }
     return circleCoor;

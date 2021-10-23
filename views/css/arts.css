@@ -75,18 +75,21 @@ html, body {
     cursor: pointer;
   }
 
-/* #add-satellite {
+.screen-alert {
     position: fixed;
-    height: auto;
-    border: 1px solid black;
-    z-index: 3;
-    bottom: 15.5%;
-    right: 1%;
-    text-align: center;
-    cursor: pointer;
-    transition: 0.2s;
+    background-color: hsl(201, 10%, 47%);
+    color: white;
+    bottom: 115%;
+    width: 70%;
+    left: 15%;
+    opacity: 1;
+    padding: 2%;
     font-weight: 900;
-} */
+    border-radius: 10px;
+    box-shadow: 5px 5px 10px black;
+    text-align: center;
+    transition: bottom 500ms, opacity 500ms;
+}
 
 .context-item {
     padding: 15px;
