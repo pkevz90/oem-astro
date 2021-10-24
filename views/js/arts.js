@@ -1122,8 +1122,8 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
             <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
     }
     else if (button.id === 'prop-options') {
