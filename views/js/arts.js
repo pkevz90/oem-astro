@@ -1238,7 +1238,11 @@ function handleContextClick(button) {
                 inputs[ii].value = 0;
             }
         }
+        console.log(inputs[0].value, inputs[1].value, inputs[2].value);
         let sat = button.parentElement.sat;
+        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+            return burn.time < mainWindow.scenarioTime;
+        })
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
@@ -1269,9 +1273,6 @@ function handleContextClick(button) {
         // mainWindow.satellites[sat].burns.sort((a, b) => {
         //     return a.time - b.time;
         // })
-        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
-            return burn.time < mainWindow.scenarioTime;
-        })
         mainWindow.satellites[sat].genBurns();
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
