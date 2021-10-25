@@ -1060,10 +1060,10 @@ document.oncontextmenu = function(event) {
         ctxMenu.sat = activeSat;
         ctxMenu.innerHTML = `
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
-            <div class="context-item">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
-            <div class="context-item">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
             <div class="context-item">Export Burns</div>
+            <div style="padding: 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
+            <div style="padding: 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
             `
         
     }
@@ -1161,7 +1161,6 @@ function handleContextClick(button) {
             newInnerHTML += `<div class="context-item"  onclick="handleContextClick(this)" sat="${ii}" id="${button.id}-execute">${mainWindow.satellites[ii].name}</div>`
         }
         button.parentElement.innerHTML = newInnerHTML;
-        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-poca-execute') {
         let data = getRelativeData(button.getAttribute('sat'),document.getElementById('context-menu').sat);
@@ -1169,12 +1168,13 @@ function handleContextClick(button) {
         mainWindow.desired.scenarioTime = data;
 
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'waypoint-maneuver') {
         button.parentElement.innerHTML = `
             <div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>
             <div class="context-item" >Target: (<input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">) km</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="execute-waypoint">Execute</div>
+            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="execute-waypoint" tabindex="0">Execute</div>
         `
        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
@@ -1183,8 +1183,9 @@ function handleContextClick(button) {
             <div class="context-item" >R: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
             <div class="context-item" >I: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
             <div class="context-item" >C: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="execute-direction">Execute</div>
+            <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-direction" tabindex="0">Execute</div>
         `
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
     else if (button.id === 'execute-waypoint') {
         let inputs = button.parentElement.getElementsByTagName('input');
@@ -1238,7 +1239,6 @@ function handleContextClick(button) {
                 inputs[ii].value = 0;
             }
         }
-        console.log(inputs[0].value, inputs[1].value, inputs[2].value);
         let sat = button.parentElement.sat;
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
@@ -1348,7 +1348,6 @@ function handleContextClick(button) {
         let tof = Number(inputs[2].value) * 3600;
         let range = Number(inputs[0].value);
         let cats = Number(inputs[1].value);
-        // let sun = math.dotMultiply(range, mainWindow.getCurrentSun(mainWindow.desired.scenarioTime + tof));
         let targetSat = button.getAttribute('sat');
         let chaserSat = button.parentElement.sat;
         mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
@@ -1371,7 +1370,10 @@ function handleContextClick(button) {
                 // console.log(dV);
             }
         }
-        if (minWay > 100) return;
+        if (minWay > 100) {
+            showScreenAlert('No Solution Found')
+            return;
+        };
         target.r = [Number(target.r) + sunCircle[minIndex][0]];
         target.i = [Number(target.i) + sunCircle[minIndex][1]];
         target.c = [Number(target.c) + sunCircle[minIndex][2]];
@@ -3499,12 +3501,12 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
     let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
     if (!R) R = [[1,0,0],[0,1,0],[0,0,1]];
     let ranges = math.range(r / 2, r, r / 10, true)._data;
-    let angles = math.range(0, angle, angle / 50, true)._data;
+    let angles = math.range(0, angle, angle / 25, true)._data;
     for (let jj = 0; jj <= angles.length; jj ++) {
         for (let kk = 0; kk <= ranges.length; kk ++) {
             circleR = ranges[kk] * Math.sin(angles[jj]);
             reducedR = ranges[kk] * Math.cos(angles[jj]);
-            for (let ii = 0; ii <= 360; ii+=5) {
+            for (let ii = 0; ii <= 360; ii+=15) {
                 let tempAngle = [reducedR, Math.cos(ii * Math.PI / 180) * circleR, Math.sin(ii * Math.PI / 180) * circleR]
                 circleCoor.push(math.transpose(math.multiply(R, math.transpose(tempAngle))));
             }

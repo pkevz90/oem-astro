@@ -104,6 +104,8 @@ html, body {
     /* transition: 250ms transform 250ms top 250ms left; */
     transition: 250ms all;
     transform-origin: top left;
+    border-radius: 50px;
+    box-shadow:  12px 12px 12px #575757
 }
 
 /* #options {
