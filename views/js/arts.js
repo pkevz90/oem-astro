@@ -1122,6 +1122,7 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
             <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="dsk-maneuver">DSK</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
@@ -1184,6 +1185,13 @@ function handleContextClick(button) {
             <div class="context-item" >I: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
             <div class="context-item" >C: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
             <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-direction" tabindex="0">Execute</div>
+        `
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'dsk-maneuver') {
+        button.parentElement.innerHTML = `
+            <div class="context-item" >Time: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-dsk" tabindex="0">Execute</div>
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
@@ -1276,6 +1284,38 @@ function handleContextClick(button) {
         mainWindow.satellites[sat].genBurns();
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'execute-dsk') {
+        let inputs = button.parentElement.getElementsByTagName('input');
+        if (inputs[0].value === '') {
+            inputs[0].style.backgroundColor = 'rgb(255,150,150)';
+            return;
+        }
+        let sat = button.parentElement.sat;
+        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+            return burn.time < mainWindow.scenarioTime;
+        })
+        let curPos = mainWindow.satellites[sat].curPos;
+        mainWindow.satellites[sat].burns.push({
+            time: mainWindow.desired.scenarioTime,
+            direction: {
+                r: 0,
+                i: 0,
+                c: 0
+            },
+            waypoint: {
+                tranTime: Number(inputs[0].value) * 3600,
+                target: {
+                    r: curPos.r,
+                    i: curPos.i,
+                    c: curPos.c,
+                }
+            }
+        })
+        mainWindow.satellites[sat].genBurns();
+        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'intercept-maneuver') {
