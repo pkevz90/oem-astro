@@ -822,6 +822,8 @@ class Satellite {
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
 mainWindow.fillWindow();
 
+
+
 (function animationLoop() {
     mainWindow.clear();
     mainWindow.updateSettings();
@@ -849,6 +851,10 @@ mainWindow.fillWindow();
     // mainWindow.drawMouse(mainWindow.mousePosition);
     window.requestAnimationFrame(animationLoop)
 })()
+setTimeout(() => {
+    if (mainWindow.satellites.length > 0 || mainWindow.panelOpen) return;
+    showScreenAlert('start-screen')
+}, 5000)
 //------------------------------------------------------------------
 // Adding event listeners for window objects
 //------------------------------------------------------------------
@@ -1444,10 +1450,19 @@ function showScreenAlert(message = 'test alert') {
     
     let alertMessage = document.createElement('div');
     alertMessage.classList.add('screen-alert');
-    alertMessage.innerText = message;
+    if (message === 'start-screen') {
+        alertMessage.innerHTML = `
+            Options to get started
+            <div style="display: inline; color: black; width: 60%;"><label class="panel-button hoverable noselect" for="upload-options-button">Import .SAS File</div><input onchange="uploadScenario(event)" style="display: none;" id="upload-options-button" type="file" accept=".sas"></div>
+            <div onclick="openPanel(this)" id="add-satellite" style="color: black; width: 60%; display: inline" class="panel-button hoverable noselect" >Add New Satellite</div>
+        `
+    }
+    else {
+        alertMessage.innerText = message;
+    }
     document.getElementsByTagName('body')[0].appendChild(alertMessage);
     setTimeout(() => {
-        document.getElementsByClassName('screen-alert')[0].style.bottom = '85%';
+        document.getElementsByClassName('screen-alert')[0].style.bottom = message === 'start-screen' ? '60%' : '85%';
     },50)
     setTimeout(() => {
         document.getElementsByClassName('screen-alert')[0].style.bottom = '100%';
@@ -1455,7 +1470,7 @@ function showScreenAlert(message = 'test alert') {
         setTimeout(() => {
             document.getElementsByClassName('screen-alert')[0].remove();
         }, 500)
-    }, 3000)
+    },message === 'start-screen' ? 60000 : 3000)
 
 }
 
@@ -1790,6 +1805,8 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
     closeAll();
 })
 function uploadScenario() {
+    let screenAlert = document.getElementsByClassName('screen-alert');
+    if (screenAlert.length > 0) screenAlert[0].remove();
     loadFileAsText(event.path[0].files[0])
 }
 
@@ -1915,6 +1932,8 @@ function parseState(button) {
 //------------------------------------------------------------------
 function openPanel(button) {
     document.getElementById('context-menu')?.remove();
+    let screenAlert = document.getElementsByClassName('screen-alert');
+    if (screenAlert.length > 0) screenAlert[0].remove();
     if (button.id === 'edit-select') return;
     mainWindow.panelOpen = true;
     if (button.id === 'burns') {
