@@ -753,8 +753,9 @@ class Satellite {
     // currentPosition = getSatCurrentPosition;
     currentPosition = getCurrentPosition;
     drawCurrentPosition() {
+        if (!this.stateHistory) return;
         let cur = this.currentPosition(mainWindow.scenarioTime);
-        cur = {r: cur.r, i: cur.i, c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
+        cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
         this.curPos = cur;
         mainWindow.drawSatLocation(cur, {size: this.size, color: this.color, shape: this.shape, name: this.name});
     }
@@ -2301,6 +2302,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = mainWindow.mm) 
         [stateFinal.yd],
         [stateFinal.zd]
     ];
+    // console.log(state, stateFinal);
     let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
     let v1 = v[0],
         yErr, S, dX = 1,
@@ -2510,7 +2512,7 @@ function calcTwoBurn(options = {}) {
     return outBurns;
 }
 
-function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001, n = mainWindow.mm) {
+function oneBurnFiniteHcwOld(state, alpha, phi, tB, t, a0 = 0.00001, n = mainWindow.mm) {
     x0 = state.x;
     xd0 = state.xd;
     y0 = state.y;
@@ -2537,6 +2539,22 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001, n = mainWindow
         xd: xdF,
         yd: ydF,
         zd: zdF
+    };
+
+}
+
+function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001, n = mainWindow.mm) {
+    state = [state.x, state.y, state.z, state.xd, state.yd, state.zd];
+    let direction = [a0 * Math.cos(alpha) * Math.cos(phi), a0 * Math.sin(alpha) * Math.cos(phi), a0 * Math.sin(phi)];
+    state = runge_kutta(twoBodyRpo, state, t * tB, direction);
+    state = runge_kutta(twoBodyRpo, state, t - t * tB); 
+    return {
+        x: state[0],
+        y: state[1],
+        z: state[2],
+        xd: state[3],
+        yd: state[4],
+        zd: state[5]
     };
 
 }
@@ -2840,14 +2858,15 @@ function calcBurns() {
     if (!this.mousePosition) return;
     let mousePosition = this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
-    let crossState = sat.currentPosition({
-        time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].waypoint.tranTime
-    })
+    // let crossState = sat.currentPosition({
+    //     time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].waypoint.tranTime
+    // })
+    // console.log(`Waypoint Time: ${sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].waypoint.tranTime}`);
     if (mainWindow.burnStatus.type === 'waypoint' && !cross) {
         sat.burns[this.burnStatus.burn].waypoint.target = {
             r: mousePosition[this.burnStatus.frame].r,
             i: mousePosition[this.burnStatus.frame].i,
-            c: crossState.c[0]
+            c: sat.burns[this.burnStatus.burn].waypoint.target.c
         }
     } else {
         sat.burns[this.burnStatus.burn].direction = {
@@ -2874,7 +2893,7 @@ function calcBurns() {
         sat.burns[this.burnStatus.burn].waypoint.tranTime = tranTime;
         let targetState = sat.currentPosition({
             time: sat.burns[this.burnStatus.burn].time + tranTime,
-            burnStop: this.burnStatus.burn + 1
+            burn: this.burnStatus.burn
         });
         sat.burns[this.burnStatus.burn].waypoint.target = {
             r: cross ? sat.burns[this.burnStatus.burn].waypoint.target.r : targetState.r[0],
@@ -3670,19 +3689,28 @@ function calcSatTwoBody(allBurns = false) {
 }
 
 function getCurrentPosition(options = {}) {
-    let {time = mainWindow.scenarioTime} = options;
-    let stateIndex = mainWindow.satellites[0].stateHistory.findIndex(el => {
-        return el.t > time
+    let {time = mainWindow.scenarioTime, burn} = options;
+    let stateIndex;
+    stateIndex = this.stateHistory.findIndex(el => {
+        return el.t > (burn !== undefined ? this.burns[burn].time : time)
     }) - 1;
-    console.log(time, stateIndex);
     let refState = [
-        mainWindow.satellites[0].stateHistory[stateIndex].r,
-        mainWindow.satellites[0].stateHistory[stateIndex].i,
-        mainWindow.satellites[0].stateHistory[stateIndex].c,
-        mainWindow.satellites[0].stateHistory[stateIndex].rd,
-        mainWindow.satellites[0].stateHistory[stateIndex].id,
-        mainWindow.satellites[0].stateHistory[stateIndex].cd,
+        this.stateHistory[stateIndex].r,
+        this.stateHistory[stateIndex].i,
+        this.stateHistory[stateIndex].c,
+        this.stateHistory[stateIndex].rd,
+        this.stateHistory[stateIndex].id,
+        this.stateHistory[stateIndex].cd,
     ]
-    refState = runge_kutta(twoBodyRpo, refState, time - mainWindow.satellites[0].stateHistory[stateIndex].t);
+    if (burn !== undefined) {
+        refState = runge_kutta(twoBodyRpo, refState, this.burns[burn].time - this.stateHistory[stateIndex].t);
+        let direction = [this.burns[burn].direction.r, this.burns[burn].direction.i, this.burns[burn].direction.c];
+        let burnTime = math.norm(direction) / this.a;
+        direction = math.dotMultiply(this.a, math.dotDivide(direction, math.norm(direction)));
+        refState = runge_kutta(twoBodyRpo, refState, burnTime, direction);
+        refState = runge_kutta(twoBodyRpo, refState, time - this.burns[burn].time - burnTime);
+        return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
+    }
+    refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t);
     return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
 }
