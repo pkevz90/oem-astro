@@ -1277,7 +1277,7 @@ function handleContextClick(button) {
         })
         let tof = 1.5*math.norm([ Number(inputs[0].value),  Number(inputs[1].value),  Number(inputs[2].value)]) / 1000 / mainWindow.satellites[sat].a;
         tof = tof > 10800 ? tof : 10800;
-        let wayPos = mainWindow.satellites[sat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
+        let wayPos = mainWindow.satellites[sat].currentPosition({time: mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].time + tof, burn: mainWindow.satellites[sat].burns.length-1});
         mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
             tranTime: tof,
             target: {
@@ -3630,7 +3630,6 @@ function runge_kutta(eom, state, dt, a = [0,0,0]) {
     let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a});
     return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
 }
-
 
 function calcSatTwoBody(allBurns = false) {
     let t_calc, currentState, satBurn;
