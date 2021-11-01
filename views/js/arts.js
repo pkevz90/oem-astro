@@ -5,6 +5,7 @@ document.getElementById('export-option-button').remove();
 document.getElementsByTagName('label')[0].remove();
 document.getElementById('data-button').remove();
 document.getElementById('upload-options-button').remove();
+document.getElementsByClassName('panel-button')[0].remove()
 class windowCanvas {
     cnvs;
     plotWidth = 200;
@@ -112,6 +113,7 @@ class windowCanvas {
     plotSettings = {
         data: undefined
     }
+    precise = false;
     curvilinear = true;
     panelOpen = false;
     constructor(cnvs) {
@@ -2543,11 +2545,21 @@ function oneBurnFiniteHcwOld(state, alpha, phi, tB, t, a0 = 0.00001, n = mainWin
 
 }
 
-function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001, n = mainWindow.mm) {
+function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001) {
     state = [state.x, state.y, state.z, state.xd, state.yd, state.zd];
     let direction = [a0 * Math.cos(alpha) * Math.cos(phi), a0 * Math.sin(alpha) * Math.cos(phi), a0 * Math.sin(phi)];
-    state = runge_kutta(twoBodyRpo, state, t * tB, direction);
-    state = runge_kutta(twoBodyRpo, state, t - t * tB); 
+    if (!mainWindow.burnStatus.type) {
+        for (let ii = 0; ii < 5; ii++) {
+            state = runge_kutta(twoBodyRpo, state, t * tB / 5, direction);
+        }
+        for (let ii = 0; ii < 15; ii++) {
+            state = runge_kutta(twoBodyRpo, state, (t - t * tB)/15); 
+        }
+    }
+    else {
+        state = runge_kutta(twoBodyRpo, state, t * tB, direction);
+        state = runge_kutta(twoBodyRpo, state, t - t * tB); 
+    }
     return {
         x: state[0],
         y: state[1],
@@ -3710,6 +3722,52 @@ function getCurrentPosition(options = {}) {
         refState = runge_kutta(twoBodyRpo, refState, time - this.burns[burn].time - burnTime);
         return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
     }
-    refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t);
+    let isTimeDuringBurn = this.burns.filter(burn => {
+        let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
+        return time > burn.time && time < burnEnd;
+    });
+    let isIndexDuringBurn = this.burns.filter(burn => {
+        let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
+        return this.stateHistory[stateIndex].t > burn.time && this.stateHistory[stateIndex].t < burnEnd;
+    });
+    let isSurroundsBurn = this.burns.filter(burn => {
+        let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
+        return this.stateHistory[stateIndex].t < burn.time && time > burnEnd;
+    });
+    if (isTimeDuringBurn.length > 0 && isIndexDuringBurn.length > 0) {
+        let direction = isTimeDuringBurn[0].direction;
+        direction = [direction.r, direction.i, direction.c];
+        direction = math.dotDivide(direction, math.norm(direction) / this.a);
+        refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t, direction);
+    }
+    else if (isTimeDuringBurn.length > 0) {
+        let direction = isTimeDuringBurn[0].direction;
+        direction = [direction.r, direction.i, direction.c];
+        direction = math.dotDivide(direction, math.norm(direction) / this.a);
+        refState = runge_kutta(twoBodyRpo, refState, isTimeDuringBurn[0].time - this.stateHistory[stateIndex].t);
+        refState = runge_kutta(twoBodyRpo, refState, time - isTimeDuringBurn[0].time, direction);
+    }
+    else if (isIndexDuringBurn.length > 0) {
+        let direction = isIndexDuringBurn[0].direction;
+        direction = [direction.r, direction.i, direction.c];
+        let burnEnd = math.norm(direction) / this.a + isIndexDuringBurn[0].time;
+        direction = math.dotDivide(direction, math.norm(direction) / this.a);
+        refState = runge_kutta(twoBodyRpo, refState, burnEnd - this.stateHistory[stateIndex].t, direction);
+        refState = runge_kutta(twoBodyRpo, refState, time - burnEnd);
+
+    }
+    else if (isSurroundsBurn.length > 0) {
+        let direction = isSurroundsBurn[0].direction;
+        direction = [direction.r, direction.i, direction.c];
+        let burnEnd = math.norm(direction) / this.a + isSurroundsBurn[0].time;
+        direction = math.dotDivide(direction, math.norm(direction) / this.a);
+        refState = runge_kutta(twoBodyRpo, refState, isSurroundsBurn[0].time - this.stateHistory[stateIndex].t);
+        refState = runge_kutta(twoBodyRpo, refState, burnEnd - isSurroundsBurn[0].time, direction);
+        refState = runge_kutta(twoBodyRpo, refState, time - burnEnd);
+
+    }
+    else {
+        refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t);
+    }
     return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
 }
