@@ -3705,6 +3705,7 @@ function getCurrentPosition(options = {}) {
     stateIndex = this.stateHistory.findIndex(el => {
         return el.t > (burn !== undefined ? this.burns[burn].time : time)
     }) - 1;
+    stateIndex = stateIndex < 0 ? this.stateHistory.length - 1: stateIndex;
     let refState = [
         this.stateHistory[stateIndex].r,
         this.stateHistory[stateIndex].i,
