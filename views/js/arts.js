@@ -5,7 +5,19 @@ document.getElementById('export-option-button').remove();
 document.getElementsByTagName('label')[0].remove();
 document.getElementById('data-button').remove();
 document.getElementById('upload-options-button').remove();
-document.getElementsByClassName('panel-button')[0].remove()
+document.getElementsByClassName('panel-button')[0].remove();
+document.getElementsByTagName('input')[16].setAttribute('list','name-list');
+/*
+var listDiv = document.createElement('div');
+listDiv.innerHTML = `
+    <datalist id="name-list">
+    <option value="Sat1">
+    <option value="Sat2">
+    <option value="Sat3">
+    </datalist>
+`
+document.getElementsByTagName('body')[0].append(listDiv);
+*/
 class windowCanvas {
     cnvs;
     plotWidth = 200;
@@ -659,6 +671,16 @@ class windowCanvas {
         this.getContext().lineWidth = 6.049;
     }
 }
+
+// <input list="browsers" name="browser" id="browser">
+
+// <datalist id="browsers">
+//   <option value="Edge">
+//   <option value="Firefox">
+//   <option value="Chrome">
+//   <option value="Opera">
+//   <option value="Safari">
+// </datalist>
 
 class Satellite {
     position;
