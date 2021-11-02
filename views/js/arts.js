@@ -1400,6 +1400,7 @@ function handleContextClick(button) {
         let cats = Number(inputs[1].value);
         let targetSat = button.getAttribute('sat');
         let chaserSat = button.parentElement.sat;
+        mainWindow.burnStatus.type = 'sun';
         mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
@@ -1414,6 +1415,7 @@ function handleContextClick(button) {
                 c: [Number(target.c) + sunCircle[ii][2]],
             }
             let dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
+            // console.log(dV);
             if (dV < minWay) {
                 minWay = dV;
                 minIndex = ii;
@@ -1447,6 +1449,7 @@ function handleContextClick(button) {
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + tof;
         document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
+        mainWindow.burnStatus.type = false;
     }
 }
 
@@ -3069,6 +3072,8 @@ function table2burns(object) {
         });
     }
     mainWindow.satellites[object].burns = [...burns];
+    
+    mainWindow.satellites[object].genBurns();
     mainWindow.satellites[object].genBurns();
 }
 
@@ -3591,8 +3596,8 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
     let circleCoor = [];
     let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
     if (!R) R = [[1,0,0],[0,1,0],[0,0,1]];
-    let ranges = math.range(r / 2, r, r / 10, true)._data;
-    let angles = math.range(0, angle, angle / 25, true)._data;
+    let ranges = math.range(r / 2, r, r / 6, true)._data;
+    let angles = math.range(0, angle, angle / 15, true)._data;
     for (let jj = 0; jj <= angles.length; jj ++) {
         for (let kk = 0; kk <= ranges.length; kk ++) {
             circleR = ranges[kk] * Math.sin(angles[jj]);
@@ -3611,19 +3616,11 @@ function findDvFiniteBurn(r1, r2, a, tf) {
     return dir ? dir.t[0]*tf*a : 10000;
 }
 
-function propTwoBodyRpo(state = [0, 0, 0, 0, 0, 0.16]) {
-    let stateHist = [];
-    let dt = 600;
-    for (let t = 0; t < 86164; t += dt) {
-        stateHist.push({t, r: state[0], i: state[1], c: state[2], rd: state[3], id: state[4], cd: state[5]});
-        state = runge_kutta(twoBodyRpo, state, dt);
-    }
-    return stateHist;
-}
-
 function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
     let {mu = 398600.4418, r0 = 42164, a = [0,0,0]} = options;
-    let n = Math.sqrt(mu / r0 ** 3);
+    // let n = Math.sqrt(mu / r0 ** 3);
+    let n = mainWindow.mm;
+    r0 = (mu / n**2) ** (1/3);
     let x = state[0], y = state[1], z = state[2], dx = state[3], dy = state[4], dz = state[5];
     return [
         dx,
