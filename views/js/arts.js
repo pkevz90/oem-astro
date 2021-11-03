@@ -2128,23 +2128,8 @@ function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
 }
 
 function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = mainWindow.mm) {
-    state = [
-        [stateInit.x],
-        [stateInit.y],
-        [stateInit.z],
-        [stateInit.xd],
-        [stateInit.yd],
-        [stateInit.zd]
-    ];
-    stateFinal = [
-        [stateFinal.x],
-        [stateFinal.y],
-        [stateFinal.z],
-        [stateFinal.xd],
-        [stateFinal.yd],
-        [stateFinal.zd]
-    ];
-    // console.log(state, stateFinal);
+    let state = math.transpose([Object.values(stateInit)]);
+    stateFinal = math.transpose([Object.values(stateFinal)]);
     let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
     let v1 = v[0],
         yErr, S, dX = 1,
@@ -2177,15 +2162,9 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = mainWindow.mm) 
             [stateFinal[2][0] - F.z]
         ];
         S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, n);
-        // sInv = math.multiply(math.transpose(S), math.inv(math.multiply(S, math.transpose(S))));
-        // dX = math.multiply(sInv, yErr);
         dX = math.multiply(math.inv(S), yErr);
-        // console.log(X,F)
         X = math.add(X, dX)
-        if (errCount > 30) {
-            // console.log(X)
-            return false;
-        }
+        if (errCount > 30) return false;
         errCount++;
     }
     if (X[2] > 1 || X[2] < 0) return false;
@@ -2431,12 +2410,6 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
     mC = math.dotDivide(math.subtract(m2, m1), 0.01);
     mFinal = mC;
     //phi
-    m1 = oneBurnFiniteHcw(state, alpha, phi, tB, tF, a, n);
-    m1 = [
-        [m1.x],
-        [m1.y],
-        [m1.z]
-    ];
     m2 = oneBurnFiniteHcw(state, alpha, phi + 0.01, tB, tF, a, n);
     m2 = [
         [m2.x],
@@ -2446,12 +2419,6 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
     m = math.dotDivide(math.subtract(m2, m1), 0.01);
     mC = math.concat(mC, m);
     //tB
-    m1 = oneBurnFiniteHcw(state, alpha, phi, tB, tF, a, n);
-    m1 = [
-        [m1.x],
-        [m1.y],
-        [m1.z]
-    ];
     m2 = oneBurnFiniteHcw(state, alpha, phi, tB + 0.01, tF, a, n);
     m2 = [
         [m2.x],
