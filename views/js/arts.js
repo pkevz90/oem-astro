@@ -2393,8 +2393,8 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001) {
         for (let ii = 0; ii < 5; ii++) {
             state = runge_kutta(twoBodyRpo, state, t * tB / 5, direction);
         }
-        for (let ii = 0; ii < 15; ii++) {
-            state = runge_kutta(twoBodyRpo, state, (t - t * tB)/15); 
+        for (let ii = 0; ii < 5; ii++) {
+            state = runge_kutta(twoBodyRpo, state, (t - t * tB)/5); 
         }
     }
     else {
