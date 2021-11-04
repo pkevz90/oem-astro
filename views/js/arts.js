@@ -1986,7 +1986,7 @@ function openPanel(button) {
     }
     else if (button.id === 'add-satellite' || button.id === 'add-satellite-2') {
         let selectEl = document.getElementById('edit-select');
-        selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = `Sat-${mainWindow.satellites.length+1}`;
+        selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = '';
         document.getElementById('parse-text').value = "";
         while (selectEl.firstChild) {
             selectEl.removeChild(selectEl.firstChild);
@@ -2895,7 +2895,7 @@ function initStateFunction(el) {
         let shape = el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value;
         let a = Number(inputs[14].value) / 1e6;
         let color = inputs[15].value;
-        let name = inputs[16].value;
+        let name = inputs[16].value === '' ? `Sat-${mainWindow.satellites.length+1}` : inputs[16].value;
         mainWindow.satellites.push(new Satellite({
             position,
             shape,
