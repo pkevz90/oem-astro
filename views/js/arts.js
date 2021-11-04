@@ -1310,18 +1310,18 @@ function handleContextClick(button) {
         })
         let tof = 1.5*math.norm([ Number(inputs[0].value),  Number(inputs[1].value),  Number(inputs[2].value)]) / 1000 / mainWindow.satellites[sat].a;
         tof = tof > 10800 ? tof : 10800;
-        let wayPos = mainWindow.satellites[sat].currentPosition({time: mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].time + tof, burn: mainWindow.satellites[sat].burns.length-1});
+        let position = mainWindow.satellites[sat].currentPosition();
+        position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
+        let direction = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
+        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.satellites[sat].a)
         mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
             tranTime: tof,
             target: {
-                r: wayPos.r[0],
-                i: wayPos.i[0],
-                c: wayPos.c[0]
+                r: wayPos.x,
+                i: wayPos.y,
+                c: wayPos.z
             }
         }
-        // mainWindow.satellites[sat].burns.sort((a, b) => {
-        //     return a.time - b.time;
-        // })
         mainWindow.satellites[sat].genBurns();
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
