@@ -1511,11 +1511,11 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     else return;
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
-        let newTime = Number(prompt('Enter scenario time in hours past start:', (mainWindow.desired.scenarioTime / 3600).toFixed(3)))
-        if (newTime && newTime < mainWindow.scenarioLength && newTime > 0) {
-            mainWindow.desired.scenarioTime = newTime * 3600;
-            mainWindow.scenarioTime = newTime * 3600;
-            document.getElementById('time-slider-range').value = newTime * 3600;
+        let newTime = Number(prompt('Enter scenario time in seconds past start:', (mainWindow.desired.scenarioTime).toFixed(3)))
+        if (newTime && newTime/3600 < mainWindow.scenarioLength && newTime > 0) {
+            mainWindow.desired.scenarioTime = newTime;
+            mainWindow.scenarioTime = newTime;
+            document.getElementById('time-slider-range').value = newTime;
         }
         return
     }
