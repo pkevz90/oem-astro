@@ -1431,7 +1431,6 @@ function handleContextClick(button) {
         let cats = Number(inputs[1].value);
         let targetSat = button.getAttribute('sat');
         let chaserSat = button.parentElement.sat;
-        mainWindow.burnStatus.type = 'sun';
         mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
@@ -1480,7 +1479,6 @@ function handleContextClick(button) {
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + tof;
         document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
-        mainWindow.burnStatus.type = false;
     }
 }
 
