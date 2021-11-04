@@ -2986,6 +2986,8 @@ function editSatellite(button) {
     });
     mainWindow.satellites[button.nextSibling.selectedIndex] = sat;
     mainWindow.satellites[button.nextSibling.selectedIndex].calcTraj();
+    let curPos = mainWindow.satellites[button.nextSibling.selectedIndex].currentPosition();
+    mainWindow.satellites[button.nextSibling.selectedIndex].curPos = {r: curPos.r[0], i: curPos.i[0], c: curPos.c[0], rd: curPos.rd[0], id: curPos.id[0], cd: curPos.cd[0]}
     closeAll();
 }
 
