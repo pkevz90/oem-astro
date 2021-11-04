@@ -48,7 +48,7 @@ class windowCanvas {
         burn: null,
         frame: null
     };
-    trajSize = 2;
+    trajSize = 1;
     encoder;
     mm = 2 * Math.PI / 86164;
     timeDelta = 0.006*86164;
@@ -413,7 +413,6 @@ class windowCanvas {
         ctx.fillText('0 deg', this.frameCenter.plot.w * this.cnvs.width * 0.9 + 5, this.frameCenter.plot.h* this.cnvs.height * 0.9)
     }
     drawCurve(line, options = {}) {
-        // console.log(line);
         let {color = 'red', size = this.trajSize} = options
         let ctx = this.getContext();
         ctx.fillStyle = color;
@@ -674,15 +673,6 @@ class windowCanvas {
     }
 }
 
-// <input list="browsers" name="browser" id="browser">
-
-// <datalist id="browsers">
-//   <option value="Edge">
-//   <option value="Firefox">
-//   <option value="Chrome">
-//   <option value="Opera">
-//   <option value="Safari">
-// </datalist>
 
 class Satellite {
     position;
@@ -1521,7 +1511,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     else return;
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
-        let newTime = Number(prompt('Enter scenario time in hours past start:'))
+        let newTime = Number(prompt('Enter scenario time in hours past start:', (mainWindow.desired.scenarioTime / 3600).toFixed(3)))
         if (newTime && newTime < mainWindow.scenarioLength && newTime > 0) {
             mainWindow.desired.scenarioTime = newTime * 3600;
             mainWindow.scenarioTime = newTime * 3600;
