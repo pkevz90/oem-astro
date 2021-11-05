@@ -778,13 +778,13 @@ class Satellite {
         // Check if clicked on current position of object
         let out = {};
         if (position.ri) {
-            out.ri = math.norm([this.curPos.r - position.ri.r, this.curPos.i - position.ri.i]) < (mainWindow.getPlotWidth() / 40);
+            out.ri = math.norm([this.curPos.r - position.ri.r, this.curPos.i - position.ri.i]) < (mainWindow.getPlotWidth() / 80);
         }
         if (position.ci) {
-            out.ci = math.norm([this.curPos.c - position.ci.c, this.curPos.i - position.ci.i]) < (mainWindow.getPlotWidth() / 40);
+            out.ci = math.norm([this.curPos.c - position.ci.c, this.curPos.i - position.ci.i]) < (mainWindow.getPlotWidth() / 80);
         }
         if (position.rc) {
-            out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < (mainWindow.getPlotWidth() / 40);
+            out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < (mainWindow.getPlotWidth() / 80);
         }
         return out
     }
@@ -853,14 +853,12 @@ function sleep(milliseconds) {
     mainWindow.updateSettings();
     mainWindow.drawAxes();
     mainWindow.drawPlot();
-    // mainWindow.drawOrbitCurve();
     mainWindow.showData();
     mainWindow.showTime();
     mainWindow.showLocation();
     if (mainWindow.burnStatus.type) {
         mainWindow.calculateBurn();
     }
-    // console.time('sats')
     mainWindow.satellites.forEach(sat => {
         sat.checkInBurn()
         sat.drawTrajectory();
@@ -870,10 +868,7 @@ function sleep(milliseconds) {
     if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
         drawVulnerabilityZone();
     }
-    // console.timeEnd('sats')
     mainWindow.recordFunction();
-    // mainWindow.drawMouse(mainWindow.mousePosition);
-    // sleep(stopWaypoint)
     window.requestAnimationFrame(animationLoop)
 })()
 setTimeout(() => {
