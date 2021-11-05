@@ -2653,10 +2653,6 @@ function calcBurns() {
     if (!this.mousePosition) return;
     let mousePosition = this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
-    // let crossState = sat.currentPosition({
-    //     time: sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].waypoint.tranTime
-    // })
-    // console.log(`Waypoint Time: ${sat.burns[this.burnStatus.burn].time + sat.burns[this.burnStatus.burn].waypoint.tranTime}`);
     if (mainWindow.burnStatus.type === 'waypoint' && !cross) {
         sat.burns[this.burnStatus.burn].waypoint.target = {
             r: mousePosition[this.burnStatus.frame].r,
@@ -2686,27 +2682,29 @@ function calcBurns() {
             }
         }
         sat.burns[this.burnStatus.burn].waypoint.tranTime = tranTime;
+        let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
         let targetState = sat.currentPosition({
-            time: sat.burns[this.burnStatus.burn].time + tranTime,
-            burn: this.burnStatus.burn
+            time: sat.burns[this.burnStatus.burn].time
         });
+        targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / tranTime, tranTime, sat.a);
         sat.burns[this.burnStatus.burn].waypoint.target = {
-            r: cross ? sat.burns[this.burnStatus.burn].waypoint.target.r : targetState.r[0],
-            i: cross ? sat.burns[this.burnStatus.burn].waypoint.target.i : targetState.i[0],
-            c: targetState.c[0]
+            r: cross ? sat.burns[this.burnStatus.burn].waypoint.target.r : targetState.x,
+            i: cross ? sat.burns[this.burnStatus.burn].waypoint.target.i : targetState.y,
+            c: targetState.z
         }
         if (true) {
             // Reset cross-track waypoint values in future to natural motion
             for (let hh = this.burnStatus.burn + 1; hh < sat.burns.length; hh++) {
                 targetState = sat.currentPosition({
-                    time: sat.burns[hh].time + sat.burns[hh].waypoint.tranTime,
-                    burnStop: this.burnStatus.burn + 1
+                    time: sat.burns[hh].time
                 });
-                sat.burns[hh].waypoint.target.c = targetState.c[0];
+                dir = [sat.burns[hh].direction.r, sat.burns[hh].direction.i, 0];
+                sat.burns[hh].direction.c = 0;
+                targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / sat.burns[hh].waypoint.tranTime, sat.burns[hh].waypoint.tranTime, sat.a);
+                sat.burns[hh].waypoint.target.c = targetState.z;
             }
         }
     }
-    // Draw burn 
     let mag = math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c])
     let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location)[this.burnStatus.frame];
     let ctx = this.getContext();
