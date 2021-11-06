@@ -649,6 +649,15 @@ class windowCanvas {
             )
             this.satellites[this.satellites.length - 1].drawCurrentPosition();
             this.satellites[this.satellites.length - 1].calcTraj();
+            this.satellites[this.satellites.length - 1].curPos = this.satellites[this.satellites.length - 1].currentPosition();
+            this.satellites[this.satellites.length - 1].curPos = {
+                r: this.satellites[this.satellites.length - 1].curPos.r[0],
+                i: this.satellites[this.satellites.length - 1].curPos.i[0],
+                c: this.satellites[this.satellites.length - 1].curPos.c[0],
+                rd: this.satellites[this.satellites.length - 1].curPos.rd[0],
+                id: this.satellites[this.satellites.length - 1].curPos.id[0],
+                cd: this.satellites[this.satellites.length - 1].curPos.cd[0]
+            }
         })
         this.mm = mm;
         this.timeDelta = timeDelta;
@@ -1883,6 +1892,7 @@ function loadFileAsText(fileToLoad) {
         textFromFileLoaded = JSON.parse(textFromFileLoaded);
         // mainWindow = JSON.parse(JSON.stringify(textFromFileLoaded));
         mainWindow.loadDate(textFromFileLoaded);
+        mainWindow.setAxisWidth('set', mainWindow.plotWidth);
     };
 
     fileReader.readAsText(fileToLoad, "UTF-8");
@@ -3263,7 +3273,7 @@ function getRelativeData(n_target, n_origin) {
 
 function findMinDistance(vector1, vector2) {
     let outVec = [];
-    for (let jj = 0; jj < vector1.length; jj++) {
+    for (let jj = 0; jj < Math.min(vector1.length, vector2.length); jj++) {
         outVec.push(math.norm([vector1[jj].r - vector2[jj].r, vector1[jj].i - vector2[jj].i, vector1[jj].c -
             vector2[jj].c
         ]));
