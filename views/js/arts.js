@@ -31,6 +31,7 @@ class windowCanvas {
         rc: {x: 0, y: 0.5, w: 0, h: 0},
         plot: {x: 0, y: 0, w: 0, h: 0}
     };
+    normalizeDirection = true;
     frameMove = undefined;
     initSun = [1, 0, 0];
     desired = {
@@ -1286,12 +1287,19 @@ function handleContextClick(button) {
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
+        let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
+        if (mainWindow.normalizeDirection) {
+            let rot1 = rotationMatrices(mainWindow.satellites[sat].curPos.i / 42164, 3, 'rad');
+            let rot2 = rotationMatrices(-mainWindow.satellites[sat].curPos.c / 42164, 2, 'rad');
+            dir = math.transpose(math.multiply(rot1, math.transpose([dir])))[0];
+            dir = math.transpose(math.multiply(rot2, math.transpose([dir])))[0];
+        }
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
-                r: Number(inputs[0].value) / 1000,
-                i: Number(inputs[1].value) / 1000,
-                c: Number(inputs[2].value) / 1000
+                r: dir[0],
+                i: dir[1],
+                c: dir[2]
             },
             waypoint: {
                 tranTime: 0,
@@ -1306,7 +1314,7 @@ function handleContextClick(button) {
         tof = tof > 10800 ? tof : 10800;
         let position = mainWindow.satellites[sat].currentPosition();
         position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
-        let direction = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
+        let direction = dir;
         let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.satellites[sat].a)
         mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
             tranTime: tof,
@@ -2601,7 +2609,9 @@ function proxOpsTargeter(r1, r2, t) {
 }
 
 function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
-    angle *= Math.PI / 180;
+    if (type === 'deg') {
+        angle *= Math.PI / 180;
+    }
     let rotMat;
     if (axis === 1) {
         rotMat = [
