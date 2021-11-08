@@ -413,6 +413,23 @@ class windowCanvas {
         ctx.textAlign = 'left';
         ctx.fillText('0 deg', this.frameCenter.plot.w * this.cnvs.width * 0.9 + 5, this.frameCenter.plot.h* this.cnvs.height * 0.9)
     }
+    drawInertialOrbit() {
+        if (this.plotWidth < 2000) return;
+        let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
+        let delAngle = this.plotWidth / a;
+        let circleTop = this.convertToPixels([0, 0, 0]).ri;
+        let circleCenter = this.convertToPixels([-a, 0, 0]).ri;
+        let ctx = this.getContext();
+        let oldLineWidth = ctx.lineWidth;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = oldLineWidth;
+
+    }
     drawCurve(line, options = {}) {
         let {color = 'red', size = this.trajSize} = options
         let ctx = this.getContext();
@@ -863,6 +880,7 @@ function sleep(milliseconds) {
     mainWindow.updateSettings();
     mainWindow.drawAxes();
     mainWindow.drawPlot();
+    mainWindow.drawInertialOrbit();
     mainWindow.showData();
     mainWindow.showTime();
     mainWindow.showLocation();
@@ -1125,6 +1143,8 @@ document.oncontextmenu = function(event) {
     return false;
 }
 
+
+
 function addSubMenu(element, innerHtml) {
     let origNode = element;
 
@@ -1288,9 +1308,10 @@ function handleContextClick(button) {
             return burn.time < mainWindow.scenarioTime;
         })
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
+        let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
         if (mainWindow.normalizeDirection) {
-            let rot1 = rotationMatrices(mainWindow.satellites[sat].curPos.i / 42164, 3, 'rad');
-            let rot2 = rotationMatrices(-mainWindow.satellites[sat].curPos.c / 42164, 2, 'rad');
+            let rot1 = rotationMatrices(mainWindow.satellites[sat].curPos.i / a, 3, 'rad');
+            let rot2 = rotationMatrices(-mainWindow.satellites[sat].curPos.c / a, 2, 'rad');
             dir = math.transpose(math.multiply(rot1, math.transpose([dir])))[0];
             dir = math.transpose(math.multiply(rot2, math.transpose([dir])))[0];
         }
