@@ -126,7 +126,8 @@ class windowCanvas {
         distance: 10
     };
     plotSettings = {
-        data: undefined
+        data: undefined,
+        type: undefined
     }
     precise = false;
     curvilinear = true;
@@ -376,7 +377,6 @@ class windowCanvas {
     }
     drawPlot() {
         if (this.state.search('plot') === -1) return;
-        setTimeout(generateDataImpulsive(), 1);
         if (!this.plotSettings.data) return;
         let ctx = this.getContext();
         let pos = {...this.frameCenter.plot};
@@ -387,31 +387,26 @@ class windowCanvas {
             x: [math.min(data[0]), math.max(data[0])],
             y: [0, math.max(data[1])]
         }
-        let sunLine = [], dVline = [];
+        let dataLine = [];
         for (let ii = 0; ii < data[0].length; ii++) {
             let x = (data[0][ii] - limits.x[0]) * this.cnvs.width * pos.w / (limits.x[1] - limits.x[0]) + this.cnvs.width * (pos.x - pos.w / 2);
             let y = -(data[1][ii] - limits.y[0]) * this.cnvs.height * pos.h / (limits.y[1] - limits.y[0]) + this.cnvs.height * (pos.y + pos.h / 2);
-            let ySun = -(data[2][ii]) * this.cnvs.height * pos.h / 180 + this.cnvs.height * (pos.y + pos.h / 2);
-            sunLine.push({x, y: ySun}); dVline.push({x, y}); 
+            dataLine.push({x, y}); 
         }
         // Fix click on plot
-        this.getContext().strokeStyle = 'rgb(204,164,61)';
-        drawCurve(this.getContext(), sunLine);
         this.getContext().strokeStyle = 'black';
-        drawCurve(this.getContext(), dVline);
-        ctx.rect(this.frameCenter.plot.w * this.cnvs.width * 0.1, this.frameCenter.plot.h * this.cnvs.height * 0.1, pos.w * this.cnvs.width, pos.h * this.cnvs.height);
+        drawCurve(this.getContext(), dataLine);
+        ctx.rect(this.cnvs.width * this.frameCenter.plot.x - this.cnvs.width * pos.w / 2, this.cnvs.height * this.frameCenter.plot.y - this.cnvs.height * pos.h / 2, this.cnvs.width * pos.w , this.cnvs.height * pos.h)
         ctx.stroke();
         ctx.textAlign = 'left';
         ctx.textBaseline = 'hanging';
-        ctx.fillText('15 min', this.frameCenter.plot.w * this.cnvs.width * 0.1, this.frameCenter.plot.h* this.cnvs.height * 0.9 + 10)
-        ctx.fillText('180 deg', this.frameCenter.plot.w * this.cnvs.width * 0.9 + 5, this.frameCenter.plot.h* this.cnvs.height * 0.1)
+        ctx.fillText('0', (this.frameCenter.plot.x - this.frameCenter.plot.w / 2) * this.cnvs.width + this.frameCenter.plot.w * 0.1  * this.cnvs.width, (this.frameCenter.plot.y - this.frameCenter.plot.h / 2) * this.cnvs.height + this.frameCenter.plot.h * 0.9  * this.cnvs.height + 10)
         ctx.textAlign = 'right';
-        ctx.fillText('240 min', this.frameCenter.plot.w * this.cnvs.width * 0.9, this.frameCenter.plot.h* this.cnvs.height * 0.9 + 10)
-        ctx.fillText((limits.y[1] * 1000).toFixed(1) + ' m/s', this.frameCenter.plot.w * this.cnvs.width * 0.1 - 5, this.frameCenter.plot.h* this.cnvs.height * 0.1)
+        ctx.fillText(limits.x[1] + ' u', (this.frameCenter.plot.x - this.frameCenter.plot.w / 2) * this.cnvs.width + this.frameCenter.plot.w * 0.9  * this.cnvs.width, (this.frameCenter.plot.y - this.frameCenter.plot.h / 2) * this.cnvs.height + this.frameCenter.plot.h * 0.9  * this.cnvs.height + 10)
+        ctx.fillText(limits.y[1].toFixed(1) + 'u', (this.frameCenter.plot.x - this.frameCenter.plot.w / 2) * this.cnvs.width + this.frameCenter.plot.w * 0.1  * this.cnvs.width, (this.frameCenter.plot.y - this.frameCenter.plot.h / 2) * this.cnvs.height + this.frameCenter.plot.h * 0.1  * this.cnvs.height)
         ctx.textBaseline = 'bottom';
-        ctx.fillText('0 m/s', this.frameCenter.plot.w * this.cnvs.width * 0.1 - 5, this.frameCenter.plot.h* this.cnvs.height * 0.9)
-        ctx.textAlign = 'left';
-        ctx.fillText('0 deg', this.frameCenter.plot.w * this.cnvs.width * 0.9 + 5, this.frameCenter.plot.h* this.cnvs.height * 0.9)
+        ctx.fillText('0 u', (this.frameCenter.plot.x - this.frameCenter.plot.w / 2) * this.cnvs.width + this.frameCenter.plot.w * 0.1  * this.cnvs.width - 5, (this.frameCenter.plot.y - this.frameCenter.plot.h / 2) * this.cnvs.height + this.frameCenter.plot.h * 0.9  * this.cnvs.height)
+        // ctx.fillText('0 u', this.frameCenter.plot.w * this.cnvs.width * 0.1 - 5, this.frameCenter.plot.h* this.cnvs.height * 0.9)
     }
     drawInertialOrbit() {
         if (this.plotWidth < 2000) return;
@@ -1047,6 +1042,20 @@ window.addEventListener('keydown', key => {
                     }
                 })
                 break;
+            default:  
+                mainWindow.setState('ri');
+                mainWindow.setFrameCenter({
+                    ri: {
+                        x: 0.5, y: 0.5, w: 1, h: 1
+                    },
+                    ci: {
+                        x: 0.5, y: 1, w: 1, h: 0
+                    },
+                    rc: {
+                        x: 0, y: 1, w: 0, h: 0
+                    }
+                })
+                break;       
         }
     }
     else if (key.key === 'n') {
@@ -1115,6 +1124,7 @@ document.oncontextmenu = function(event) {
         ctxMenu.innerHTML = `
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="data-options">Graph Data</div>' : ''}
             <div class="context-item">Export Burns</div>
             <div style="padding: 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
             <div style="padding: 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
@@ -1141,39 +1151,9 @@ document.oncontextmenu = function(event) {
     }
     setTimeout(() => ctxMenu.style.transform = 'scale(1)', 10);
     return false;
-}
-
-
-
-function addSubMenu(element, innerHtml) {
-    let origNode = element;
-
-    // let newTop = element.offsetTop + element.parentNode.offsetTop;
-    let newTop = element.offsetTop;
-    // let newLeft = element.parentNode.offsetLeft + element.parentNode.offsetWidth;  
-    let newLeft = element.parentNode.offsetWidth;
-    while (origNode.parentNode.offsetTop !== undefined) {
-        origNode = origNode.parentNode;
-        newTop += origNode.offsetTop;
-        newLeft += origNode.offsetLeft;
-    }                                                                                                                                                                                                     
-    let ctxMenu = document.createElement('div');
-    ctxMenu.style.position = 'fixed';
-    ctxMenu.style.zIndex = 10;
-    ctxMenu.classList.add('sub-menu')
-    ctxMenu.style.backgroundColor = 'black';
-    ctxMenu.style.cursor = 'pointer';
-    ctxMenu.style.borderRadius = '15px';
-    ctxMenu.style.fontSize = '1.5em';
-    ctxMenu.style.minWidth = '263px';
-    ctxMenu.style.top = newTop +'px';
-    ctxMenu.style.left = newLeft + 'px';
-    ctxMenu.innerHTML = innerHtml;
-    document.getElementsByTagName('body')[0].appendChild(ctxMenu);
-}   
+} 
 
 function handleContextClick(button) {
-    // console.log(button);
     if (button.id === 'maneuver-options') {
         button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
@@ -1189,6 +1169,26 @@ function handleContextClick(button) {
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-maxsun">To Max Sun</div>' : ''}
         `
+    }
+    else if (button.id === 'data-options') {
+        button.parentElement.innerHTML = `
+            <div class="context-item" onclick="handleContextClick(this)" id="plot-range">Range</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="plot-cats">CATS</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="plot-relvel">Relative Velocity</div>
+            `
+    }
+    else if (button.id?.split('-')[0] === 'plot') {
+        let newInnerHTML = ``;
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (ii === Number(document.getElementById('context-menu').sat)) continue;
+            newInnerHTML += `<div class="context-item"  onclick="handleContextClick(this)" sat="${ii}" id="data-plot-execute">${button.id.split('-')[1] === 'range' ? 'Range' : button.id.split('-')[1] === 'cats' ? 'CATS' : 'Relative Velocity'} To ${mainWindow.satellites[ii].name}</div>`
+        }
+        button.parentElement.innerHTML = newInnerHTML;
+    }
+    else if (button.id === 'data-plot-execute') {
+        let target = button.getAttribute('sat');
+        let origin = button.parentElement.sat;
+        plotRelativeData(button.innerHTML.split(' To ')[0], origin, target);
     }
     else if (button.id === 'prop-crossing' || button.id === 'prop-maxcross') {
         let type = button.id.split('-')[1];
@@ -1503,6 +1503,28 @@ function handleContextClick(button) {
         document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
     }
+}
+
+function plotRelativeData(data, origin, target) {
+    mainWindow.plotSettings.data = [];
+    for (let ii = 1; ii < 10; ii++) {
+        mainWindow.plotSettings.data.push([ii, ii ** 2]);
+    }
+    mainWindow.setState('ri plot');
+    mainWindow.setFrameCenter({
+        ri: {
+            x: 0.5, y: 0.25, w: 1, h: 0.5
+        },
+        rc: {
+            x: 0.25, y: 0.5, w:0, h: 0
+        },
+        ci: {
+            x: 0.75, y: 0.5, w: 0, h: 0
+        },
+        plot: {
+            x: 0.5, y: 0.75, w: 1, h: 0.5
+        }
+    })
 }
 
 function showScreenAlert(message = 'test alert') {
