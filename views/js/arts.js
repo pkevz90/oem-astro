@@ -395,9 +395,10 @@ class windowCanvas {
         }
         // Fix click on plot
         this.getContext().strokeStyle = 'black';
-        drawCurve(this.getContext(), dataLine);
         ctx.rect(this.cnvs.width * this.frameCenter.plot.x - this.cnvs.width * pos.w / 2, this.cnvs.height * this.frameCenter.plot.y - this.cnvs.height * pos.h / 2, this.cnvs.width * pos.w , this.cnvs.height * pos.h)
         ctx.stroke();
+        ctx.lineWidth = 1;
+        drawCurve(this.getContext(), dataLine);
         ctx.textAlign = 'left';
         ctx.textBaseline = 'hanging';
         ctx.fillText('0', (this.frameCenter.plot.x - this.frameCenter.plot.w / 2) * this.cnvs.width + this.frameCenter.plot.w * 0.1  * this.cnvs.width, (this.frameCenter.plot.y - this.frameCenter.plot.h / 2) * this.cnvs.height + this.frameCenter.plot.h * 0.9  * this.cnvs.height + 10)
@@ -407,6 +408,7 @@ class windowCanvas {
         ctx.textBaseline = 'bottom';
         ctx.fillText('0 u', (this.frameCenter.plot.x - this.frameCenter.plot.w / 2) * this.cnvs.width + this.frameCenter.plot.w * 0.1  * this.cnvs.width - 5, (this.frameCenter.plot.y - this.frameCenter.plot.h / 2) * this.cnvs.height + this.frameCenter.plot.h * 0.9  * this.cnvs.height)
         // ctx.fillText('0 u', this.frameCenter.plot.w * this.cnvs.width * 0.1 - 5, this.frameCenter.plot.h* this.cnvs.height * 0.9)
+        ctx.lineWidth = 3.67;
     }
     drawInertialOrbit() {
         if (this.plotWidth < 2000) return;
@@ -1189,6 +1191,7 @@ function handleContextClick(button) {
         let target = button.getAttribute('sat');
         let origin = button.parentElement.sat;
         plotRelativeData(button.innerHTML.split(' To ')[0], origin, target);
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-crossing' || button.id === 'prop-maxcross') {
         let type = button.id.split('-')[1];
@@ -1507,13 +1510,20 @@ function handleContextClick(button) {
 
 function plotRelativeData(data, origin, target) {
     mainWindow.plotSettings.data = [];
-    for (let ii = 1; ii < 10; ii++) {
-        mainWindow.plotSettings.data.push([ii, ii ** 2]);
+    for (let ii = 0; ii < mainWindow.scenarioLength * 3600; ii += mainWindow.scenarioLength * 3600 / 200) {
+        let r1 = mainWindow.satellites[origin].currentPosition({time: ii});
+        let r2 = mainWindow.satellites[target].currentPosition({time: ii});
+        if (data === 'Range') {
+            mainWindow.plotSettings.data.push([ii / 3600, math.norm([r1.r[0] - r2.r[0], r1.i[0] - r2.i[0], r1.c[0] - r2.c[0]])]);
+        }
+        else {
+            mainWindow.plotSettings.data.push([ii / 3600, math.norm([r1.rd[0] - r2.rd[0], r1.id[0] - r2.id[0], r1.cd[0] - r2.cd[0]])]);
+        }
     }
     mainWindow.setState('ri plot');
     mainWindow.setFrameCenter({
         ri: {
-            x: 0.5, y: 0.25, w: 1, h: 0.5
+            x: 0.5, y: 0.75, w: 1, h: 0.5
         },
         rc: {
             x: 0.25, y: 0.5, w:0, h: 0
@@ -1522,7 +1532,7 @@ function plotRelativeData(data, origin, target) {
             x: 0.75, y: 0.5, w: 0, h: 0
         },
         plot: {
-            x: 0.5, y: 0.75, w: 1, h: 0.5
+            x: 0.5, y: 0.25, w: 1, h: 0.5
         }
     })
 }
