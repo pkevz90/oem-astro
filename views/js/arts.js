@@ -1516,6 +1516,11 @@ function plotRelativeData(data, origin, target) {
         if (data === 'Range') {
             mainWindow.plotSettings.data.push([ii / 3600, math.norm([r1.r[0] - r2.r[0], r1.i[0] - r2.i[0], r1.c[0] - r2.c[0]])]);
         }
+        else if (data === 'CATS') {
+            let cats = mainWindow.getCurrentSun(ii);
+            let relVector = [r1.r[0] - r2.r[0], r1.i[0] - r2.i[0], r1.c[0] - r2.c[0]];
+            mainWindow.plotSettings.data.push([ii / 3600, Math.acos((math.dot(cats, relVector) / math.norm(relVector))) * 180 / Math.PI]);
+        }
         else {
             mainWindow.plotSettings.data.push([ii / 3600, math.norm([r1.rd[0] - r2.rd[0], r1.id[0] - r2.id[0], r1.cd[0] - r2.cd[0]])]);
         }
