@@ -2977,12 +2977,27 @@ function initStateFunction(el) {
             z:  Number(nodes.children[0].children[4].getElementsByTagName('input')[0].value),
             m:  Number(nodes.children[0].children[5].getElementsByTagName('input')[0].value)
         }
-        nodes.children[1].children[0].getElementsByTagName('input')[0].value = (-rmoes.ae / 2 * Math.cos(rmoes.b * Math.PI / 180) + rmoes.x).toFixed(3);
-        nodes.children[1].children[1].getElementsByTagName('input')[0].value = (rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) + rmoes.y).toFixed(3);
-        nodes.children[1].children[2].getElementsByTagName('input')[0].value = (rmoes.z * Math.sin(rmoes.m * Math.PI / 180)).toFixed(3);
-        nodes.children[1].children[3].getElementsByTagName('input')[0].value = (1000 * rmoes.ae * mainWindow.mm / 2 * Math.sin(rmoes.b * Math.PI / 180)).toFixed(3);
-        nodes.children[1].children[4].getElementsByTagName('input')[0].value = (1000 * rmoes.ae * mainWindow.mm * Math.cos(rmoes.b * Math.PI / 180) - 1500 * rmoes.x * mainWindow.mm).toFixed(3);
-        nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000 * rmoes.z * mainWindow.mm * Math.cos(rmoes.m * Math.PI / 180)).toFixed(3);
+        let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
+        let x = -rmoes.ae / 2 * Math.cos(rmoes.b * Math.PI / 180) + rmoes.x + a;
+        let y = rmoes.ae * Math.sin(rmoes.b * Math.PI / 180);
+        let z = rmoes.z * Math.sin(rmoes.m * Math.PI / 180);
+        let xd = rmoes.ae * mainWindow.mm / 2 * Math.sin(rmoes.b * Math.PI / 180);
+        let yd = rmoes.ae * mainWindow.mm * Math.cos(rmoes.b * Math.PI / 180) - 1.5 * rmoes.x * mainWindow.mm;
+        let zd = rmoes.z * mainWindow.mm * Math.cos(rmoes.m * Math.PI / 180);
+        let position = math.multiply(rotationMatrices(rmoes.y, 3), math.transpose([[x, y, z]]));
+        x = position[0][0] - a;
+        y = position[1][0];
+        z = position[2][0];
+        let velocity = math.multiply(rotationMatrices(rmoes.y, 3), math.transpose([[xd, yd, zd]]));
+        xd = velocity[0][0];
+        yd = velocity[1][0];
+        zd = velocity[2][0];
+        nodes.children[1].children[0].getElementsByTagName('input')[0].value = x.toFixed(3)
+        nodes.children[1].children[1].getElementsByTagName('input')[0].value = y.toFixed(3);
+        nodes.children[1].children[2].getElementsByTagName('input')[0].value = z.toFixed(3);
+        nodes.children[1].children[3].getElementsByTagName('input')[0].value = (1000*xd).toFixed(3);
+        nodes.children[1].children[4].getElementsByTagName('input')[0].value = (1000*yd).toFixed(3);
+        nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000*zd).toFixed(3);
     }
     else if (el.id === 'add-satellite-button') {
         let newTitle = '';
