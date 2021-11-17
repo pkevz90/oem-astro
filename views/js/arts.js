@@ -9,6 +9,11 @@ document.getElementById('data-button').remove();
 document.getElementById('upload-options-button').remove();
 document.getElementsByClassName('panel-button')[0].remove();
 document.getElementsByTagName('input')[16].setAttribute('list','name-list');
+let addButton = document.getElementById('add-satellite-button');
+let newNode = addButton.cloneNode();
+newNode.id = 'add-launch-button';
+newNode.innerText = 'Add Launch';
+addButton.parentNode.insertBefore(newNode, addButton);
 /*
 var listDiv = document.createElement('div');
 listDiv.innerHTML = `
@@ -423,6 +428,12 @@ class windowCanvas {
         ctx.beginPath();
         ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
         ctx.stroke();
+        circleTop = this.convertToPixels([-a+6371, 0, 0]).ri;
+        ctx.fillStyle = 'green';
+        ctx.beginPath();
+        ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
+        ctx.fill();
+        ctx.fillStyle = 'black';
         ctx.globalAlpha = 1;
         ctx.lineWidth = oldLineWidth;
 
@@ -1426,6 +1437,12 @@ function handleContextClick(button) {
             }
         })
         mainWindow.satellites[chaserSat].genBurns();
+        let dir = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].direction;
+        if (math.norm([dir.r, dir.i, dir.c]) < 1e-6) {
+            mainWindow.satellites[sat].burns.pop();
+            mainWindow.satellites[sat].genBurns();
+            showScreenAlert('Intercept solution not found');
+        }
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + tof;
         document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
@@ -3021,6 +3038,51 @@ function initStateFunction(el) {
             color,
             name
         }));
+        newTitle += mainWindow.satellites[0].name;
+        for (let ii = 1; ii < mainWindow.satellites.length; ii++){
+            newTitle += ' / ' + mainWindow.satellites[ii].name;
+        }
+        document.title = newTitle;
+        closeAll();
+    }
+    else if (el.id === 'add-launch-button') {
+        let newTitle = '';
+        let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
+        let r1 = 42164, r2 = 6700;
+        let position = {
+            r: 0,
+            i: 0,
+            c: 0,
+            rd: 0,
+            id: (398600.4418 * (2 / r1 - 2 / (r1 + r2))) ** (1/2) - (398600.4418 / r1) ** (1/2),
+            cd: 0
+        }
+        let shape = el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value;
+        let a = 0.001;
+        let color = inputs[15].value;
+        let name = inputs[16].value === '' ? `Sat-${mainWindow.satellites.length+1}` : inputs[16].value;
+        mainWindow.satellites.push(new Satellite({
+            position,
+            shape,
+            a,
+            color,
+            name
+        }));
+        mainWindow.scenarioLength = Math.PI * ((r1 + r2) ** 3 / 8 / 398600.4418) ** (1/2) / 3600;
+        mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143;
+        document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
+        mainWindow.satellites[mainWindow.satellites.length - 1].calcTraj();
+        let endState = mainWindow.satellites[mainWindow.satellites.length - 1].stateHistory[mainWindow.satellites[mainWindow.satellites.length - 1].stateHistory.length - 1];
+        mainWindow.satellites[mainWindow.satellites.length - 1].position = {
+            r: endState.r,
+            i: -endState.i,
+            c: endState.c,
+            rd: -endState.rd,
+            id: endState.id,
+            cd: endState.cd
+        }
+        mainWindow.satellites[mainWindow.satellites.length - 1].calcTraj();
+
         newTitle += mainWindow.satellites[0].name;
         for (let ii = 1; ii < mainWindow.satellites.length; ii++){
             newTitle += ' / ' + mainWindow.satellites[ii].name;
