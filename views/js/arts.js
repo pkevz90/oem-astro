@@ -3735,3 +3735,132 @@ function getCurrentPosition(options = {}) {
     }
     return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
 }
+
+function testLambertProblem(long = 0, lat = 0) {
+    let r2 = [0, 42164, 0, -((398600.4418 / 42164) ** (1/2)), 0, 0];
+    let r1 = [Math.cos(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(lat * Math.PI / 180) * 6371];
+    let tof = 3 * 3600;
+
+    let rEnd = math.squeeze(math.multiply(rotationMatrices(360 * tof / 86164, 3),math.transpose([r2.slice(0,3)])));
+
+    let res = solveLambertsProblem(r1,rEnd, tof, 0, 1);
+    let res2 = Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, res.v1);
+    mainWindow.scenarioLength = tof / 3600;
+    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143;
+    document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
+    mainWindow.satellites.push(new Satellite({
+        position: {r: res2.rHcw[0][0], i: res2.rHcw[1][0], c: res2.rHcw[2][0], rd: res2.drHcw[0][0], id: res2.drHcw[1][0], cd: res2.drHcw[2][0]}
+    }));
+}
+
+function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
+    let r1 = math.norm(r1_vec);
+    let r2 = math.norm(r2_vec);
+    let cosNu = math.dot(r1_vec, r2_vec) / r1 / r2;
+    let sinNu = Math.sqrt(1 - cosNu**2);
+    let mu = 3.986004418e5;
+    if (!long) sinNu *= -1;
+    k = r1 * r2 * (1 - cosNu);
+    el = r1 + r2;
+    m = r1 * r2 * (1 + cosNu);
+    let p_i  = k / (el + Math.sqrt(2 * m));
+    let p_ii  = k / (el - Math.sqrt(2 * m));
+    let p;
+    let del = 0.0001;
+    if (long) p = p_i + del;
+    else p = p_ii - del;
+    
+    // console.log({cosNu, sinNu, k, el, m, p, p_i, p_ii});
+    let t = 0;
+
+    function tof(p) {
+        let a = m * k * p / ((2 * m - el**2) * p**2 + 2 * k * el * p - k**2);
+        let f = 1 - r2 / p * (1 - cosNu);
+        let g = r1 * r2 * sinNu / Math.sqrt(mu * p);
+        let fdot = Math.sqrt(mu / p) * ((1 - cosNu) / sinNu) * ((1 - cosNu) / p - 1 / r1 - 1 / r2);
+        let gdot = 1 - r1 / p * (1 - cosNu);
+        let cosE, sinE, E, df;
+        if (a > 0) {
+            cosE = 1 - r1 / a * (1-f);
+            sinE = -r1 * r2 * fdot / Math.sqrt(mu * a);
+            E = Math.acos(cosE);
+            if (sinE < 0) E = 2 * Math.PI - E;
+            if  (E < 0) E += 2 * Math.PI;
+            else if (E > (2 * Math.PI)) E -= 2 * Math.PI;
+        }
+        else {
+            df = Math.acosh(1 - r1 / a * (1 - f));
+            sinE = Math.sinh(df);
+        }
+
+        if (a > 0) t = g + Math.sqrt(a**3 / mu) * (2 * Math.PI*Nrev + E - sinE);
+        else t = g + Math.sqrt((-a)**3 / mu) * (Math.sinh(df) - df);
+        return {t,f,gdot,g,sinE,a}
+    }
+    function iterateP(t, p, sinE, g, a) {
+        let dtdp;
+        if (a > 0) dtdp = -g / (2 * p) - 1.5 * a * (t - g) * ((k**2 + (2 * m - el**2) * p**2)/m/k/p/p) + Math.sqrt(a**3 / mu) * 2 * k * sinE / p / (k - el * p);
+        else  dtdp = -g / (2 * p) - 1.5 * a * (t - g) * ((k**2 + (2 * m - el**2) * p**2)/m/k/p/p) + Math.sqrt((-a)**3 / mu) * 2 * k * sinE / p / (k - el * p);
+        return p - (t - tMan) / dtdp;
+    }
+    let returnedValues;
+    // console.log(p);
+    // console.log(tof(p));
+    while (Math.abs(t-tMan) > 1e-6) {
+        returnedValues = tof(p);
+
+        p = iterateP(returnedValues.t, p, returnedValues.sinE, returnedValues.g, returnedValues.a);
+    }
+    // console.log(returnedValues);
+    let v1 = math.dotDivide(math.subtract(r2_vec, math.dotMultiply(returnedValues.f, r1_vec)), returnedValues.g);
+    let v2 = math.dotDivide(math.subtract(math.dotMultiply(returnedValues.gdot, r2_vec),r1_vec), returnedValues.g);
+    return {v1, v2}
+}
+
+function Eci2Ric(rC, drC, rD, drD) {
+    let h = math.cross(rC, drC);
+    let ricX = math.dotDivide(rC, math.norm(rC));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+
+    let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+    let ricYd = math.cross(ricZ, ricXd);
+    let ricZd = [0,0,0];
+
+    let C = [ricX, ricY, ricZ];
+    let Cd = [ricXd, ricYd, ricZd];
+    return {
+        rHcw: math.multiply(C, math.transpose([math.subtract(rD, rC)])),
+        drHcw: math.add(math.multiply(Cd, math.transpose([math.subtract(rD, rC)])), math.multiply(C, math.transpose([math.subtract(drD, drC)])))
+    }
+}
+
+// void Eci2Ric(Vector3d r_chief, Vector3d dr_chief, Vector3d r_deputy, Vector3d dr_deputy, Vector3d& r_HCW, Vector3d& dr_HCW)
+// {
+// 	/*
+// 	Algorithm converts a deputy state in the inertial frame to a state in the relative frame
+// 	*/
+	
+// 	Vector3d h, rci_X, rci_Xd, rci_Y, rci_Yd, rci_Z, rci_Zd;
+// 	Matrix3d C, Cd;
+// 	h = r_chief.cross(dr_chief);
+
+// 	rci_X = r_chief / r_chief.norm();
+// 	rci_Z = h / h.norm();
+// 	rci_Y = rci_Z.cross(rci_X);
+
+// 	rci_Xd = (1 / r_chief.norm())*(dr_chief - rci_X.dot(dr_chief)*rci_X);
+// 	rci_Yd = rci_Z.cross(rci_Xd);
+// 	rci_Zd << 0, 0, 0;
+
+// 	C << rci_X(0), rci_X(1), rci_X(2),
+// 		rci_Y(0), rci_Y(1), rci_Y(2),
+// 		rci_Z(0), rci_Z(1), rci_Z(2);
+// 	Cd << rci_Xd(0), rci_Xd(1), rci_Xd(2),
+// 		rci_Yd(0), rci_Yd(1), rci_Yd(2),
+// 		rci_Zd(0), rci_Zd(1), rci_Zd(2);
+// 	cout << "C\n" << C << "\nCd\n" << Cd << endl;
+// 	r_HCW = C*(r_deputy - r_chief);
+// 	dr_HCW = Cd*(r_deputy - r_chief) + C*(dr_deputy - dr_chief);
+
+// }
