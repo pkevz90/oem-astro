@@ -3046,48 +3046,49 @@ function initStateFunction(el) {
         closeAll();
     }
     else if (el.id === 'add-launch-button') {
-        let newTitle = '';
-        let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
-        let r1 = 42164, r2 = 6700;
-        let position = {
-            r: 0,
-            i: 0,
-            c: 0,
-            rd: 0,
-            id: (398600.4418 * (2 / r1 - 2 / (r1 + r2))) ** (1/2) - (398600.4418 / r1) ** (1/2),
-            cd: 0
-        }
-        let shape = el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value;
-        let a = 0.001;
-        let color = inputs[15].value;
-        let name = inputs[16].value === '' ? `Sat-${mainWindow.satellites.length+1}` : inputs[16].value;
-        mainWindow.satellites.push(new Satellite({
-            position,
-            shape,
-            a,
-            color,
-            name
-        }));
-        mainWindow.scenarioLength = Math.PI * ((r1 + r2) ** 3 / 8 / 398600.4418) ** (1/2) / 3600;
-        mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143;
-        document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
-        mainWindow.satellites[mainWindow.satellites.length - 1].calcTraj();
-        let endState = mainWindow.satellites[mainWindow.satellites.length - 1].stateHistory[mainWindow.satellites[mainWindow.satellites.length - 1].stateHistory.length - 1];
-        mainWindow.satellites[mainWindow.satellites.length - 1].position = {
-            r: endState.r,
-            i: -endState.i,
-            c: endState.c,
-            rd: -endState.rd,
-            id: endState.id,
-            cd: endState.cd
-        }
-        mainWindow.satellites[mainWindow.satellites.length - 1].calcTraj();
+        testLambertProblem();
+        // let newTitle = '';
+        // let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
+        // let r1 = 42164, r2 = 6700;
+        // let position = {
+        //     r: 0,
+        //     i: 0,
+        //     c: 0,
+        //     rd: 0,
+        //     id: (398600.4418 * (2 / r1 - 2 / (r1 + r2))) ** (1/2) - (398600.4418 / r1) ** (1/2),
+        //     cd: 0
+        // }
+        // let shape = el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value;
+        // let a = 0.001;
+        // let color = inputs[15].value;
+        // let name = inputs[16].value === '' ? `Sat-${mainWindow.satellites.length+1}` : inputs[16].value;
+        // mainWindow.satellites.push(new Satellite({
+        //     position,
+        //     shape,
+        //     a,
+        //     color,
+        //     name
+        // }));
+        // mainWindow.scenarioLength = Math.PI * ((r1 + r2) ** 3 / 8 / 398600.4418) ** (1/2) / 3600;
+        // mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143;
+        // document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
+        // mainWindow.satellites[mainWindow.satellites.length - 1].calcTraj();
+        // let endState = mainWindow.satellites[mainWindow.satellites.length - 1].stateHistory[mainWindow.satellites[mainWindow.satellites.length - 1].stateHistory.length - 1];
+        // mainWindow.satellites[mainWindow.satellites.length - 1].position = {
+        //     r: endState.r,
+        //     i: -endState.i,
+        //     c: endState.c,
+        //     rd: -endState.rd,
+        //     id: endState.id,
+        //     cd: endState.cd
+        // }
+        // mainWindow.satellites[mainWindow.satellites.length - 1].calcTraj();
 
-        newTitle += mainWindow.satellites[0].name;
-        for (let ii = 1; ii < mainWindow.satellites.length; ii++){
-            newTitle += ' / ' + mainWindow.satellites[ii].name;
-        }
-        document.title = newTitle;
+        // newTitle += mainWindow.satellites[0].name;
+        // for (let ii = 1; ii < mainWindow.satellites.length; ii++){
+        //     newTitle += ' / ' + mainWindow.satellites[ii].name;
+        // }
+        // document.title = newTitle;
         closeAll();
     }
     else {
@@ -3736,10 +3737,13 @@ function getCurrentPosition(options = {}) {
     return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
 }
 
-function testLambertProblem(long = 0, lat = 0) {
+function testLambertProblem() {
+    var long = prompt("Longitude relative to satellite", "0");
+    var lat = prompt("Latitude", "0");
+    let tof = prompt('Time of Flight', 5.3);
+    tof *= 3600;
     let r2 = [0, 42164, 0, -((398600.4418 / 42164) ** (1/2)), 0, 0];
     let r1 = [Math.cos(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(lat * Math.PI / 180) * 6371];
-    let tof = 3 * 3600;
 
     let rEnd = math.squeeze(math.multiply(rotationMatrices(360 * tof / 86164, 3),math.transpose([r2.slice(0,3)])));
 
