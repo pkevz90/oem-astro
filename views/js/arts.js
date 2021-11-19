@@ -2203,14 +2203,20 @@ function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
         phi) * Math.sin(n * t)) / Math.pow(n, 2);
 }
 
-function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, n = mainWindow.mm) {
+function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess, n = mainWindow.mm) {
     let state = math.transpose([Object.values(stateInit)]);
     stateFinal = math.transpose([Object.values(stateFinal)]);
     let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
     let v1 = v[0],
         yErr, S, dX = 1,
         F;
-    let dv1 = math.subtract(v1, state.slice(3, 6));
+    let dv1;
+    if (!guess) {
+        dv1 = math.subtract(v1, state.slice(3, 6));
+    }
+    else {
+        dv1 = guess;
+    }
     let Xret = [
         [Math.atan2(dv1[1][0], dv1[0][0])],
         [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
@@ -3740,20 +3746,34 @@ function getCurrentPosition(options = {}) {
 function testLambertProblem() {
     var long = prompt("Longitude relative to satellite", "0");
     var lat = prompt("Latitude", "0");
-    let tof = prompt('Time of Flight', 5.3);
-    tof *= 3600;
+    let tof =  5.3 * 3600;
+    let checkValue = 1000;
     let r2 = [0, 42164, 0, -((398600.4418 / 42164) ** (1/2)), 0, 0];
-    let r1 = [Math.cos(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(lat * Math.PI / 180) * 6371];
-
+    let r1 = [-Math.sin(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.cos(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(lat * Math.PI / 180) * 6371];
+    console.log(math.cross(r1, [0,0,-2*Math.PI / 86164]), Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, math.cross(r1, [0,0,-2*Math.PI / 86164])));
+    let origHcw = Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, math.cross(r1, [0,0,-2*Math.PI / 86164]));
+    let kk = 0;
+    while (math.abs(checkValue) > 1e-6 && kk < 100) {
+        let tof2 = tof + 0.1;
+        let tof1 = tof;
+        let rEnd2 = math.squeeze(math.multiply(rotationMatrices(360 * tof2 / 86164, 3),math.transpose([r2.slice(0,3)])));
+        let rEnd1 = math.squeeze(math.multiply(rotationMatrices(360 * tof1 / 86164, 3),math.transpose([r2.slice(0,3)])));
+        let res2 = solveLambertsProblem(r1,rEnd2, tof2, 0, 1);
+        let res1 = solveLambertsProblem(r1,rEnd1, tof1, 0, 1);
+        let dRes = (math.dot(rEnd2, res2.v2) - math.dot(rEnd1, res1.v2)) / 0.1;
+        tof += (0 - math.dot(rEnd1, res1.v2)) / dRes;
+        kk++;
+    }
     let rEnd = math.squeeze(math.multiply(rotationMatrices(360 * tof / 86164, 3),math.transpose([r2.slice(0,3)])));
-
     let res = solveLambertsProblem(r1,rEnd, tof, 0, 1);
-    let res2 = Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, res.v1);
+    let resHcw = Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, res.v1);
     mainWindow.scenarioLength = tof / 3600;
-    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143;
+    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334;
     document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
+    mainWindow.setAxisWidth('set',180000)
     mainWindow.satellites.push(new Satellite({
-        position: {r: res2.rHcw[0][0], i: res2.rHcw[1][0], c: res2.rHcw[2][0], rd: res2.drHcw[0][0], id: res2.drHcw[1][0], cd: res2.drHcw[2][0]}
+        position: {r: resHcw.rHcw[0][0], i: resHcw.rHcw[1][0], c: resHcw.rHcw[2][0], rd: resHcw.drHcw[0][0], id: resHcw.drHcw[1][0], cd: resHcw.drHcw[2][0]},
+        a: 0.05
     }));
 }
 
