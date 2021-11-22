@@ -2208,7 +2208,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess, n = mainWind
     stateFinal = math.transpose([Object.values(stateFinal)]);
     let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
     let v1 = v[0],
-        yErr, S, dX = 1,
+        yErr= [100], S, dX = 1,
         F;
     let dv1;
     if (!guess) {
@@ -2454,8 +2454,8 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001) {
         for (let ii = 0; ii < 5; ii++) {
             state = runge_kutta(twoBodyRpo, state, t * tB / 5, direction);
         }
-        for (let ii = 0; ii < 5; ii++) {
-            state = runge_kutta(twoBodyRpo, state, (t - t * tB)/5); 
+        for (let ii = 0; ii < 20; ii++) {
+            state = runge_kutta(twoBodyRpo, state, (t - t * tB)/20); 
         }
     }
     else {
@@ -3750,7 +3750,6 @@ function testLambertProblem() {
     let checkValue = 1000;
     let r2 = [0, 42164, 0, -((398600.4418 / 42164) ** (1/2)), 0, 0];
     let r1 = [-Math.sin(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.cos(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(lat * Math.PI / 180) * 6371];
-    console.log(math.cross(r1, [0,0,-2*Math.PI / 86164]), Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, math.cross(r1, [0,0,-2*Math.PI / 86164])));
     let origHcw = Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, math.cross(r1, [0,0,-2*Math.PI / 86164]));
     let kk = 0;
     while (math.abs(checkValue) > 1e-6 && kk < 100) {
@@ -3767,13 +3766,22 @@ function testLambertProblem() {
     let rEnd = math.squeeze(math.multiply(rotationMatrices(360 * tof / 86164, 3),math.transpose([r2.slice(0,3)])));
     let res = solveLambertsProblem(r1,rEnd, tof, 0, 1);
     let resHcw = Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, res.v1);
+    // {
+    //     let stateInit = {x: resHcw.rHcw[0][0], y: resHcw.rHcw[1][0], z: resHcw.rHcw[2][0], xd: origHcw.drHcw[0][0], yd: origHcw.drHcw[1][0], zd: origHcw.drHcw[2][0]}
+    //     let stateFinal = {x: 0, y: 0, z: 0, xd: 0, yd: 0, zd: 0};
+    //     let tf = tof;
+    //     let a0 = 0.025;
+    //     let guess = [[(resHcw.drHcw[0] - origHcw.drHcw[0])],[(resHcw.drHcw[1] - origHcw.drHcw[1])],[(resHcw.drHcw[2] - origHcw.drHcw[2])]]
+    //     let a = hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess)
+    //     console.log(a);
+    // }
     mainWindow.scenarioLength = tof / 3600;
     mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334;
     document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
     mainWindow.setAxisWidth('set',180000)
     mainWindow.satellites.push(new Satellite({
         position: {r: resHcw.rHcw[0][0], i: resHcw.rHcw[1][0], c: resHcw.rHcw[2][0], rd: resHcw.drHcw[0][0], id: resHcw.drHcw[1][0], cd: resHcw.drHcw[2][0]},
-        a: 0.05
+        a: 0.025
     }));
 }
 
