@@ -314,7 +314,6 @@ class windowCanvas {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         this.drawBorder();
-        // console.log(axesLength * this.plotHeight);
         if (this.state.search('ri') !== -1) {
             ctx.lineWidth = this.cnvs.width * this.frameCenter.ri.w / 200;
             ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.ri.w / 40 + 'px serif';
@@ -334,7 +333,13 @@ class windowCanvas {
             ctx.fillText('I', origin.ri.x - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.cnvs.width * this.frameCenter.ri.w / 80, origin.ri.y)
         }
         if (this.state.search('ci') !== -1) {
+            
             ctx.lineWidth = this.cnvs.width * this.frameCenter.ci.w / 200;
+            ctx.fillStyle = 'white';
+            ctx.fillRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
+            // console.log(ctx.lineWidth);
+            ctx.strokeRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
+            ctx.fillStyle = 'black ';
             ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.ci.w / 40 + 'px serif';
             let drawX = math.abs(this.plotCenter) < this.plotWidth / 2* this.frameCenter.ci.w;
             let drawY = this.plotCenter + this.plotWidth / 2 * this.frameCenter.ci.w;
@@ -362,6 +367,12 @@ class windowCanvas {
             if (drawY > this.plotHeight / 2 * this.frameCenter.ci.h * axesLength) ctx.fillText('I', origin.ci.x - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.cnvs.width * this.frameCenter.ci.w / 80, origin.ci.y)
         }
         if (this.state.search('rc') !== -1) {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(this.frameCenter.rc.x * this.cnvs.width - this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height - this.frameCenter.rc.h / 2 * this.cnvs.height, this.frameCenter.rc.x * this.cnvs.width + this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height + this.frameCenter.rc.h / 2 * this.cnvs.height);
+            // console.log(ctx.lineWidth);
+            ctx.strokeRect(this.frameCenter.rc.x * this.cnvs.width - this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height - this.frameCenter.rc.h / 2 * this.cnvs.height, this.frameCenter.rc.x * this.cnvs.width + this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height + this.frameCenter.rc.h / 2 * this.cnvs.height);
+            ctx.fillStyle = 'black ';
+            
             ctx.lineWidth = this.cnvs.width * this.frameCenter.rc.w / 200;
             ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.rc.w / 40 + 'px serif';
             ctx.beginPath()
@@ -418,11 +429,13 @@ class windowCanvas {
     drawInertialOrbit() {
         if (this.plotWidth < 2000) return;
         let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
-        let delAngle = this.plotWidth / a;
+        // let delAngle = this.plotWidth / a;
         let circleTop = this.convertToPixels([0, 0, 0]).ri;
         let circleCenter = this.convertToPixels([-a, 0, 0]).ri;
         let ctx = this.getContext();
         let oldLineWidth = ctx.lineWidth;
+        let oldStyle = ctx.strokeStyle;
+        ctx.strokeStyle = 'black';
         ctx.lineWidth = 1;
         ctx.globalAlpha = 0.5;
         ctx.beginPath();
@@ -436,6 +449,7 @@ class windowCanvas {
         ctx.fillStyle = 'black';
         ctx.globalAlpha = 1;
         ctx.lineWidth = oldLineWidth;
+        ctx.strokeStyle = oldStyle;
 
     }
     drawCurve(line, options = {}) {
@@ -886,11 +900,12 @@ function sleep(milliseconds) {
   }
 
 (function animationLoop() {
+    // console.time()
     mainWindow.clear();
     mainWindow.updateSettings();
+    mainWindow.drawInertialOrbit(); 
     mainWindow.drawAxes();
     mainWindow.drawPlot();
-    mainWindow.drawInertialOrbit();
     mainWindow.showData();
     mainWindow.showTime();
     mainWindow.showLocation();
@@ -906,6 +921,7 @@ function sleep(milliseconds) {
     if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
         drawVulnerabilityZone();
     }
+    // console.timeEnd()
     mainWindow.recordFunction();
     window.requestAnimationFrame(animationLoop)
 })()
@@ -3417,7 +3433,7 @@ function getRelativeData(n_target, n_origin) {
     }
     catch (err) {console.log(err)}
     
-    console.log(poca, toca);
+    // console.log(poca, toca);
     return {
         sunAngle,
         rangeRate,
