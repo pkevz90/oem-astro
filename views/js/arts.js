@@ -535,10 +535,12 @@ class windowCanvas {
             ctx.font = req.textSize + 'px Courier';
             y_location += req.textSize*1.1;
             req.data.forEach(d => {
-                ctx.fillText(this.relativeData.data[d].name + ': ' + relDataIn[d].toFixed(
-                    1) + ' ' + this.relativeData.data[d].units, req.positionX*this.cnvs.width / 100,
-                    y_location);
-                y_location += req.textSize*1.1;
+                if (relDataIn[d] !== undefined) {
+                    ctx.fillText(this.relativeData.data[d].name + ': ' + relDataIn[d].toFixed(
+                        1) + ' ' + this.relativeData.data[d].units, req.positionX*this.cnvs.width / 100,
+                        y_location);
+                    y_location += req.textSize*1.1;
+                }
             })
             })
             ctx.lineWidth = oldWidth;
@@ -1072,7 +1074,9 @@ window.addEventListener('keydown', key => {
         }
     }
     else if (key.key === 'n') {
-        let newSat = new Satellite();
+        let newSat = new Satellite({
+            name: 'Sat-' + (mainWindow.satellites.length + 1)
+        });
         newSat.calcTraj();
         mainWindow.satellites.push(newSat)
     }
@@ -3412,6 +3416,8 @@ function getRelativeData(n_target, n_origin) {
         toca = relPosHis.findIndex(element => element === poca);
     }
     catch (err) {console.log(err)}
+    
+    console.log(poca, toca);
     return {
         sunAngle,
         rangeRate,
@@ -3746,35 +3752,27 @@ function getCurrentPosition(options = {}) {
 function testLambertProblem() {
     var long = prompt("Longitude relative to satellite", "0");
     var lat = prompt("Latitude", "0");
-    let tof =  5.3 * 3600;
     let checkValue = 1000;
-    let r2 = [0, 42164, 0, -((398600.4418 / 42164) ** (1/2)), 0, 0];
+    let semiAxis = (398600.4418 / mainWindow.mm**2)**(1/3);
+    let periodOrbit = 2 * Math.PI * (semiAxis ** 3 / 398600.4418) ** (1/2)
+    let tof =  periodOrbit * 0.25 * 0.75;
+    let r2 = [0, semiAxis, 0, -((398600.4418 / semiAxis) ** (1/2)), 0, 0];
     let r1 = [-Math.sin(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.cos(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(lat * Math.PI / 180) * 6371];
-    let origHcw = Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, math.cross(r1, [0,0,-2*Math.PI / 86164]));
     let kk = 0;
     while (math.abs(checkValue) > 1e-6 && kk < 100) {
         let tof2 = tof + 0.1;
         let tof1 = tof;
-        let rEnd2 = math.squeeze(math.multiply(rotationMatrices(360 * tof2 / 86164, 3),math.transpose([r2.slice(0,3)])));
-        let rEnd1 = math.squeeze(math.multiply(rotationMatrices(360 * tof1 / 86164, 3),math.transpose([r2.slice(0,3)])));
+        let rEnd2 = math.squeeze(math.multiply(rotationMatrices(360 * tof2 / periodOrbit, 3),math.transpose([r2.slice(0,3)])));
+        let rEnd1 = math.squeeze(math.multiply(rotationMatrices(360 * tof1 / periodOrbit, 3),math.transpose([r2.slice(0,3)])));
         let res2 = solveLambertsProblem(r1,rEnd2, tof2, 0, 1);
         let res1 = solveLambertsProblem(r1,rEnd1, tof1, 0, 1);
         let dRes = (math.dot(rEnd2, res2.v2) - math.dot(rEnd1, res1.v2)) / 0.1;
-        tof += (0 - math.dot(rEnd1, res1.v2)) / dRes;
+        tof += 0.1*(0 - math.dot(rEnd1, res1.v2)) / dRes;
         kk++;
     }
-    let rEnd = math.squeeze(math.multiply(rotationMatrices(360 * tof / 86164, 3),math.transpose([r2.slice(0,3)])));
+    let rEnd = math.squeeze(math.multiply(rotationMatrices(360 * tof / periodOrbit, 3),math.transpose([r2.slice(0,3)])));
     let res = solveLambertsProblem(r1,rEnd, tof, 0, 1);
     let resHcw = Eci2Ric(r2.slice(0,3), r2.slice(3,6), r1, res.v1);
-    // {
-    //     let stateInit = {x: resHcw.rHcw[0][0], y: resHcw.rHcw[1][0], z: resHcw.rHcw[2][0], xd: origHcw.drHcw[0][0], yd: origHcw.drHcw[1][0], zd: origHcw.drHcw[2][0]}
-    //     let stateFinal = {x: 0, y: 0, z: 0, xd: 0, yd: 0, zd: 0};
-    //     let tf = tof;
-    //     let a0 = 0.025;
-    //     let guess = [[(resHcw.drHcw[0] - origHcw.drHcw[0])],[(resHcw.drHcw[1] - origHcw.drHcw[1])],[(resHcw.drHcw[2] - origHcw.drHcw[2])]]
-    //     let a = hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess)
-    //     console.log(a);
-    // }
     mainWindow.scenarioLength = tof / 3600;
     mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334;
     document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
