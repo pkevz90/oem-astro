@@ -3020,27 +3020,22 @@ function initStateFunction(el) {
             z:  Number(nodes.children[0].children[4].getElementsByTagName('input')[0].value),
             m:  Number(nodes.children[0].children[5].getElementsByTagName('input')[0].value)
         }
-        let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
-        let x = -rmoes.ae / 2 * Math.cos(rmoes.b * Math.PI / 180) + rmoes.x + a;
-        let y = rmoes.ae * Math.sin(rmoes.b * Math.PI / 180);
-        let z = rmoes.z * Math.sin(rmoes.m * Math.PI / 180);
-        let xd = rmoes.ae * mainWindow.mm / 2 * Math.sin(rmoes.b * Math.PI / 180);
-        let yd = rmoes.ae * mainWindow.mm * Math.cos(rmoes.b * Math.PI / 180) - 1.5 * rmoes.x * mainWindow.mm;
-        let zd = rmoes.z * mainWindow.mm * Math.cos(rmoes.m * Math.PI / 180);
-        let position = math.multiply(rotationMatrices(rmoes.y, 3), math.transpose([[x, y, z]]));
-        x = position[0][0] - a;
-        y = position[1][0];
-        z = position[2][0];
-        let velocity = math.multiply(rotationMatrices(rmoes.y, 3), math.transpose([[xd, yd, zd]]));
-        xd = velocity[0][0];
-        yd = velocity[1][0];
-        zd = velocity[2][0];
-        nodes.children[1].children[0].getElementsByTagName('input')[0].value = x.toFixed(3)
-        nodes.children[1].children[1].getElementsByTagName('input')[0].value = y.toFixed(3);
-        nodes.children[1].children[2].getElementsByTagName('input')[0].value = z.toFixed(3);
-        nodes.children[1].children[3].getElementsByTagName('input')[0].value = (1000*xd).toFixed(3);
-        nodes.children[1].children[4].getElementsByTagName('input')[0].value = (1000*yd).toFixed(3);
-        nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000*zd).toFixed(3);
+        let origSemi = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
+        let coeInit = Coe2PosVelObject({
+            a: origSemi + rmoes.x,
+            e: rmoes.ae / 2 / origSemi,
+            i: rmoes.z / origSemi,
+            raan: rmoes.y / origSemi  -0 * Math.PI / 180,
+            arg: 0 * Math.PI / 180,
+            tA: 0 * Math.PI / 180
+        })
+        let ricInit = Eci2Ric([42164.1401, 0, 0], [0, 3.07466117598, 0], [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
+        nodes.children[1].children[0].getElementsByTagName('input')[0].value = ricInit.rHcw[0][0].toFixed(3)
+        nodes.children[1].children[1].getElementsByTagName('input')[0].value = ricInit.rHcw[1][0].toFixed(3);
+        nodes.children[1].children[2].getElementsByTagName('input')[0].value = ricInit.rHcw[2][0].toFixed(3);
+        nodes.children[1].children[3].getElementsByTagName('input')[0].value = (1000*ricInit.drHcw[0][0]).toFixed(3);
+        nodes.children[1].children[4].getElementsByTagName('input')[0].value = (1000*ricInit.drHcw[1][0]).toFixed(3);
+        nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000*ricInit.drHcw[2][0]).toFixed(3);
     }
     else if (el.id === 'add-satellite-button') {
         let newTitle = '';
@@ -3881,32 +3876,44 @@ function Eci2Ric(rC, drC, rD, drD) {
     }
 }
 
-// void Eci2Ric(Vector3d r_chief, Vector3d dr_chief, Vector3d r_deputy, Vector3d dr_deputy, Vector3d& r_HCW, Vector3d& dr_HCW)
-// {
-// 	/*
-// 	Algorithm converts a deputy state in the inertial frame to a state in the relative frame
-// 	*/
-	
-// 	Vector3d h, rci_X, rci_Xd, rci_Y, rci_Yd, rci_Z, rci_Zd;
-// 	Matrix3d C, Cd;
-// 	h = r_chief.cross(dr_chief);
-
-// 	rci_X = r_chief / r_chief.norm();
-// 	rci_Z = h / h.norm();
-// 	rci_Y = rci_Z.cross(rci_X);
-
-// 	rci_Xd = (1 / r_chief.norm())*(dr_chief - rci_X.dot(dr_chief)*rci_X);
-// 	rci_Yd = rci_Z.cross(rci_Xd);
-// 	rci_Zd << 0, 0, 0;
-
-// 	C << rci_X(0), rci_X(1), rci_X(2),
-// 		rci_Y(0), rci_Y(1), rci_Y(2),
-// 		rci_Z(0), rci_Z(1), rci_Z(2);
-// 	Cd << rci_Xd(0), rci_Xd(1), rci_Xd(2),
-// 		rci_Yd(0), rci_Yd(1), rci_Yd(2),
-// 		rci_Zd(0), rci_Zd(1), rci_Zd(2);
-// 	cout << "C\n" << C << "\nCd\n" << Cd << endl;
-// 	r_HCW = C*(r_deputy - r_chief);
-// 	dr_HCW = Cd*(r_deputy - r_chief) + C*(dr_deputy - dr_chief);
-
-// }
+function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, log = false) {
+    let p = coe.a * (1 - coe.e * coe.e);
+    let cTa = Math.cos(coe.tA);
+    let sTa = Math.sin(coe.tA);
+    let r = [
+        [p * cTa / (1 + coe.e * cTa)],
+        [p * sTa / (1 + coe.e * cTa)],
+        [0]
+    ];
+    if (log) {
+        console.log(r);
+    }
+    let constA = Math.sqrt(398600.4418 / p);
+    let v = [
+        [-constA * sTa],
+        [(coe.e + cTa) * constA],
+        [0]
+    ];
+    let cRa = Math.cos(coe.raan);
+    let sRa = Math.sin(coe.raan);
+    let cAr = Math.cos(coe.arg);
+    let sAr = Math.sin(coe.arg);
+    let cIn = Math.cos(coe.i);
+    let sin = Math.sin(coe.i);
+    R = [
+        [cRa * cAr - sRa * sAr * cIn, -cRa * sAr - sRa * cAr * cIn, sRa * sin],
+        [sRa * cAr + cRa * sAr * cIn, -sRa * sAr + cRa * cAr * cIn, -cRa * sin],
+        [sAr * sin, cAr * sin, cIn]
+    ];
+    r = math.multiply(R, r);
+    v = math.multiply(R, v);
+    let state = [r, v];
+    return {
+        x: state[0][0][0],
+        y: state[0][1][0],
+        z: state[0][2][0],
+        vx: state[1][0][0],
+        vy: state[1][1][0],
+        vz: state[1][2][0]
+    };
+}
