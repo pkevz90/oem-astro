@@ -3025,11 +3025,11 @@ function initStateFunction(el) {
             a: origSemi + rmoes.x,
             e: rmoes.ae / 2 / origSemi,
             i: rmoes.z / origSemi,
-            raan: rmoes.y / origSemi  -0 * Math.PI / 180,
-            arg: 0 * Math.PI / 180,
-            tA: 0 * Math.PI / 180
+            raan: rmoes.y / origSemi - rmoes.m * Math.PI / 180 - rmoes.b * 0*Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi,
+            arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180,
+            tA: rmoes.b * Math.PI / 180
         })
-        let ricInit = Eci2Ric([42164.1401, 0, 0], [0, 3.07466117598, 0], [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
+        let ricInit = Eci2Ric([origSemi, 0, 0], [0, (398600.4418 / origSemi ) ** (1/2), 0], [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
         nodes.children[1].children[0].getElementsByTagName('input')[0].value = ricInit.rHcw[0][0].toFixed(3)
         nodes.children[1].children[1].getElementsByTagName('input')[0].value = ricInit.rHcw[1][0].toFixed(3);
         nodes.children[1].children[2].getElementsByTagName('input')[0].value = ricInit.rHcw[2][0].toFixed(3);
@@ -3068,48 +3068,6 @@ function initStateFunction(el) {
     }
     else if (el.id === 'add-launch-button') {
         testLambertProblem();
-        // let newTitle = '';
-        // let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
-        // let r1 = 42164, r2 = 6700;
-        // let position = {
-        //     r: 0,
-        //     i: 0,
-        //     c: 0,
-        //     rd: 0,
-        //     id: (398600.4418 * (2 / r1 - 2 / (r1 + r2))) ** (1/2) - (398600.4418 / r1) ** (1/2),
-        //     cd: 0
-        // }
-        // let shape = el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value;
-        // let a = 0.001;
-        // let color = inputs[15].value;
-        // let name = inputs[16].value === '' ? `Sat-${mainWindow.satellites.length+1}` : inputs[16].value;
-        // mainWindow.satellites.push(new Satellite({
-        //     position,
-        //     shape,
-        //     a,
-        //     color,
-        //     name
-        // }));
-        // mainWindow.scenarioLength = Math.PI * ((r1 + r2) ** 3 / 8 / 398600.4418) ** (1/2) / 3600;
-        // mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143;
-        // document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
-        // mainWindow.satellites[mainWindow.satellites.length - 1].calcTraj();
-        // let endState = mainWindow.satellites[mainWindow.satellites.length - 1].stateHistory[mainWindow.satellites[mainWindow.satellites.length - 1].stateHistory.length - 1];
-        // mainWindow.satellites[mainWindow.satellites.length - 1].position = {
-        //     r: endState.r,
-        //     i: -endState.i,
-        //     c: endState.c,
-        //     rd: -endState.rd,
-        //     id: endState.id,
-        //     cd: endState.cd
-        // }
-        // mainWindow.satellites[mainWindow.satellites.length - 1].calcTraj();
-
-        // newTitle += mainWindow.satellites[0].name;
-        // for (let ii = 1; ii < mainWindow.satellites.length; ii++){
-        //     newTitle += ' / ' + mainWindow.satellites[ii].name;
-        // }
-        // document.title = newTitle;
         closeAll();
     }
     else {
@@ -3155,10 +3113,9 @@ function editSatellite(button) {
         return;
     }
     if (button.nextSibling.selectedIndex < 0) return;
-    let n = mainWindow.mm;
     el = button.parentNode.parentNode.parentNode;
-    let state = {
-        a: Number(el.children[1].children[1].children[0].children[0].getElementsByTagName('input')[0].value),
+    let rmoes = {
+        ae: Number(el.children[1].children[1].children[0].children[0].getElementsByTagName('input')[0].value),
         x: Number(el.children[1].children[1].children[0].children[1].getElementsByTagName('input')[0].value),
         y: Number(el.children[1].children[1].children[0].children[2].getElementsByTagName('input')[0].value),
         b: Number(el.children[1].children[1].children[0].children[3].getElementsByTagName('input')[0].value) * Math
@@ -3167,17 +3124,28 @@ function editSatellite(button) {
             .PI / 180,
         z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
     };
+    let origSemi = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
+    let coeInit = Coe2PosVelObject({
+        a: origSemi + rmoes.x,
+        e: rmoes.ae / 2 / origSemi,
+        i: rmoes.z / origSemi,
+        raan: rmoes.y / origSemi - rmoes.m * Math.PI / 180 - rmoes.b * 0*Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi,
+        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180,
+        tA: rmoes.b * Math.PI / 180
+    })
+    let ricInit = Eci2Ric([origSemi, 0, 0], [0, (398600.4418 / origSemi ) ** (1/2), 0], [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
+        
     let color = mainWindow.satellites[button.nextSibling.selectedIndex].color;
     let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
     let shape = mainWindow.satellites[button.nextSibling.selectedIndex].shape;
     let a = mainWindow.satellites[button.nextSibling.selectedIndex].a;
     state = {
-        r: -state.a / 2 * Math.cos(state.b) + state.x,
-        i: state.a * Math.sin(state.b) + state.y,
-        c: state.z * Math.sin(state.m),
-        rd: state.a * n / 2 * Math.sin(state.b),
-        id: state.a * n * Math.cos(state.b) - 1.5 * state.x * n,
-        cd: state.z * n * Math.cos(state.m),
+        r: ricInit.rHcw[0][0],
+        i: ricInit.rHcw[1][0],
+        c: ricInit.rHcw[2][0],
+        rd: ricInit.drHcw[0][0],
+        id: ricInit.drHcw[1][0],
+        cd: ricInit.drHcw[2][0],
     }
     let sat = new Satellite({
         position: state,
