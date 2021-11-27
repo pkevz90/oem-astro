@@ -14,6 +14,16 @@ let newNode = addButton.cloneNode();
 newNode.id = 'add-launch-button';
 newNode.innerText = 'Add Launch';
 addButton.parentNode.insertBefore(newNode, addButton);
+// document.getElementsByClassName('rmoe')[1].parentNodeinnerHTML = 'a'
+document.getElementsByClassName('rmoe')[1].parentNode.innerHTML = `
+    Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> deg/day
+`
+document.getElementsByClassName('rmoe')[2].parentNode.innerHTML = `
+    Rel Long <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> deg
+`
+document.getElementsByClassName('rmoe')[4].parentNode.innerHTML = `
+    Plane Diff <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> deg
+`
 /*
 var listDiv = document.createElement('div');
 listDiv.innerHTML = `
