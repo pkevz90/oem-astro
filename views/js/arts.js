@@ -16,7 +16,7 @@ newNode.innerText = 'Add Launch';
 addButton.parentNode.insertBefore(newNode, addButton);
 // document.getElementsByClassName('rmoe')[1].parentNodeinnerHTML = 'a'
 document.getElementsByClassName('rmoe')[1].parentNode.innerHTML = `
-    Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> deg/day
+    Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> degs/rev
 `
 document.getElementsByClassName('rmoe')[2].parentNode.innerHTML = `
     Rel Long <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> deg
@@ -3018,6 +3018,21 @@ function table2burns(object) {
     mainWindow.satellites[object].genBurns();
 }
 
+function rmoeToRic(rmoes) {
+    let origSemi = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
+    let origPeriod = 2 * Math.PI / mainWindow.mm;
+    let initMm = mainWindow.mm + (rmoes.x * Math.PI  / 180) / origPeriod;
+    let coeInit = Coe2PosVelObject({
+        a: (398600.4418 / initMm ** 2)**(1/3),
+        e: rmoes.ae / 2 / origSemi,
+        i: rmoes.z *Math.PI / 180,
+        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 - rmoes.b * 0*Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi,
+        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180,
+        tA: rmoes.b * Math.PI / 180
+    })
+    return Eci2Ric([origSemi, 0, 0], [0, (398600.4418 / origSemi ) ** (1/2), 0], [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
+}
+
 function initStateFunction(el) {
     let nodes; // Set nodes to top div under initial state to grab inputs
     nodes = el.parentNode.parentNode.parentNode;
@@ -3030,16 +3045,7 @@ function initStateFunction(el) {
             z:  Number(nodes.children[0].children[4].getElementsByTagName('input')[0].value),
             m:  Number(nodes.children[0].children[5].getElementsByTagName('input')[0].value)
         }
-        let origSemi = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
-        let coeInit = Coe2PosVelObject({
-            a: origSemi + rmoes.x,
-            e: rmoes.ae / 2 / origSemi,
-            i: rmoes.z / origSemi,
-            raan: rmoes.y / origSemi - rmoes.m * Math.PI / 180 - rmoes.b * 0*Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi,
-            arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180,
-            tA: rmoes.b * Math.PI / 180
-        })
-        let ricInit = Eci2Ric([origSemi, 0, 0], [0, (398600.4418 / origSemi ) ** (1/2), 0], [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
+        ricInit = rmoeToRic(rmoes)
         nodes.children[1].children[0].getElementsByTagName('input')[0].value = ricInit.rHcw[0][0].toFixed(3)
         nodes.children[1].children[1].getElementsByTagName('input')[0].value = ricInit.rHcw[1][0].toFixed(3);
         nodes.children[1].children[2].getElementsByTagName('input')[0].value = ricInit.rHcw[2][0].toFixed(3);
@@ -3134,16 +3140,8 @@ function editSatellite(button) {
             .PI / 180,
         z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
     };
-    let origSemi = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
-    let coeInit = Coe2PosVelObject({
-        a: origSemi + rmoes.x,
-        e: rmoes.ae / 2 / origSemi,
-        i: rmoes.z / origSemi,
-        raan: rmoes.y / origSemi - rmoes.m * Math.PI / 180 - rmoes.b * 0*Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi,
-        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180,
-        tA: rmoes.b * Math.PI / 180
-    })
-    let ricInit = Eci2Ric([origSemi, 0, 0], [0, (398600.4418 / origSemi ) ** (1/2), 0], [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
+    
+    ricInit = rmoeToRic(rmoes)
         
     let color = mainWindow.satellites[button.nextSibling.selectedIndex].color;
     let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
