@@ -437,7 +437,7 @@ class windowCanvas {
         ctx.lineWidth = 3.67;
     }
     drawInertialOrbit() {
-        if (this.plotWidth < 2000) return;
+        // if (this.plotWidth < 2000) return;
         let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
         // let delAngle = this.plotWidth / a;
         let circleTop = this.convertToPixels([0, 0, 0]).ri;
@@ -452,7 +452,7 @@ class windowCanvas {
         ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
         ctx.stroke();
         circleTop = this.convertToPixels([-a+6371, 0, 0]).ri;
-        ctx.fillStyle = 'green';
+        ctx.fillStyle = 'rgb(0,60,0)';
         ctx.beginPath();
         ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
         ctx.fill();
@@ -1209,6 +1209,8 @@ function handleContextClick(button) {
     else if (button.id === 'prop-options') {
         button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="prop-crossing">Next Plane-Crossing</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-perigee">Next Perigee</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-apogee">Next Apogee</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-maxsun">To Max Sun</div>' : ''}
         `
@@ -1248,6 +1250,27 @@ function handleContextClick(button) {
                 let dt = (Math.PI-m0) / mainWindow.mm;
                 mainWindow.desired.scenarioTime += dt;
             }
+        }
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'prop-apogee' || button.id === 'prop-perigee') {
+        let sat = document.getElementById('context-menu').sat;
+        rHcw = [mainWindow.satellites[sat].curPos.r, mainWindow.satellites[sat].curPos.i, mainWindow.satellites[sat].curPos.c]
+        drHcw = [mainWindow.satellites[sat].curPos.rd, mainWindow.satellites[sat].curPos.id, mainWindow.satellites[sat].curPos.cd]
+        let eciCoor = Ric2Eci(rHcw, drHcw)
+        let coes = PosVel2CoeNew(eciCoor.rEcci, eciCoor.drEci);
+        if (coes.e < 1e-4) {
+            showScreenAlert('Error: Orbit Near Circular');
+            return;
+        }
+        let mm = (398600.4418 / coes.a ** 3) ** (1/2)
+        if (button.id === 'prop-apogee') {
+            if (coes.tA > Math.PI) coes.tA -= 2*Math.PI;
+            mainWindow.desired.scenarioTime += (Math.PI - coes.tA) / mm;
+        }
+        else {
+            mainWindow.desired.scenarioTime += (2 * Math.PI - coes.tA) / mm;
         }
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         document.getElementById('context-menu')?.remove();
@@ -3763,7 +3786,7 @@ function testLambertProblem() {
     mainWindow.scenarioLength = tof / 3600;
     mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334;
     document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
-    mainWindow.setAxisWidth('set',180000)
+    mainWindow.setAxisWidth('set',(semiAxis-6371) * 1.1 * 2)
     mainWindow.satellites.push(new Satellite({
         position: {r: resHcw.rHcw[0][0], i: resHcw.rHcw[1][0], c: resHcw.rHcw[2][0], rd: resHcw.drHcw[0][0], id: resHcw.drHcw[1][0], cd: resHcw.drHcw[2][0]},
         a: 0.025
@@ -3891,5 +3914,96 @@ function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA:
         vx: state[1][0][0],
         vy: state[1][1][0],
         vz: state[1][2][0]
+    };
+}
+
+function Ric2Eci(rHcw = [0,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0]) {
+    let h = math.cross(rC, drC);
+    let ricX = math.dotDivide(rC, math.norm(rC));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+
+    let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+    let ricYd = math.cross(ricZ, ricXd);
+    let ricZd = [0,0,0];
+
+    let C = math.transpose([ricX, ricY, ricZ]);
+    let Cd = math.transpose([ricXd, ricYd, ricZd]);
+    let rEci = math.squeeze(math.multiply(C, math.transpose([rHcw])))
+    let drEci = math.squeeze(math.add(math.multiply(Cd, math.transpose([rHcw])), math.multiply(C, math.transpose([drHcw]))))
+    return {
+        rEcci: math.add(rEci, rC),
+        drEci: math.add(drEci, drC)
+    }
+}
+
+function PosVel2CoeNew(r, v) {
+    let mu = 398600.4418;
+    let rn = math.norm(r);
+    let vn = math.norm(v);
+    let h = math.cross(r, v);
+    let hn = math.norm(h);
+    let n = math.cross([0, 0, 1], h);
+    let nn = math.norm(n);
+    if (nn < 1e-6) {
+        n = [1, 0, 0];
+        nn = 1;
+    }
+    var epsilon = vn * vn / 2 - mu / rn;
+    let a = -mu / 2 / epsilon;
+    let e = math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn));
+    let en = math.norm(e);
+    if (en < 1e-6) {
+        e = [1, 0, 0];
+        en = 0;
+    }
+    let inc = Math.acos(math.dot(h, [0, 0, 1]) / hn);
+    let ra = Math.acos(math.dot(n, [1, 0, 0]) / nn);
+    if (n[1] < 0) {
+        ra = 2 * Math.PI - ra;
+    }
+
+    let ar, arDot;
+    if (en === 0) {
+        arDot = math.dot(n, e) / nn;
+    } else {
+        arDot = math.dot(n, e) / en / nn;
+    }
+    if (arDot > 1) {
+        ar = 0;
+    } else if (arDot < -1) {
+        ar = Math.PI;
+    } else {
+        ar = Math.acos(arDot);
+    }
+    if (e[2] < 0) {
+        ar = 2 * Math.PI - ar;
+    } else if (inc < 1e-6 && e[1] < 0) {
+        ar = 2 * Math.PI - ar;
+    }
+    let ta, taDot;
+    if (en === 0) {
+        taDot = math.dot(r, e) / rn;
+    } else {
+        taDot = math.dot(r, e) / rn / en;
+    }
+    if (taDot > 1) {
+        ta = 0;
+    } else if (taDot < -1) {
+        ta = Math.PI;
+    } else {
+        ta = Math.acos(taDot);
+    }
+    if (math.dot(v, e) > 1e-6) {
+        ta = 2 * Math.PI - ta;
+    }
+    // console.log([a,en,inc,ra,ar,ta])
+    return {
+        a: a,
+        e: en,
+        i: inc,
+        raan: ra,
+        arg: ar,
+        tA: ta
     };
 }
