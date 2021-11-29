@@ -1287,10 +1287,28 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = newInnerHTML;
     }
     else if (button.id === 'prop-poca-execute') {
+        let sat1 = button.getAttribute('sat'), sat2 = document.getElementById('context-menu').sat;
         let data = getRelativeData(button.getAttribute('sat'),document.getElementById('context-menu').sat);
+        let tGuess = data.toca*mainWindow.timeDelta + 600;
         data = data.toca*mainWindow.timeDelta;
-        mainWindow.desired.scenarioTime = data;
+        for (let ii = 0; ii < 100; ii++) {
+            let pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess})
+            let pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess})
+            let dr = [pos1.r[0] - pos2.r[0], pos1.i[0] - pos2.i[0], pos1.c[0] - pos2.c[0]]
+            let dv = [pos1.rd[0] - pos2.rd[0], pos1.id[0] - pos2.id[0], pos1.cd[0] - pos2.cd[0]]
+            let rr1 = math.dot(dr,dv) / math.norm(dr)
+            pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess + 0.1})
+            pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess + 0.1})
+            dr = [pos1.r[0] - pos2.r[0], pos1.i[0] - pos2.i[0], pos1.c[0] - pos2.c[0]]
+            dv = [pos1.rd[0] - pos2.rd[0], pos1.id[0] - pos2.id[0], pos1.cd[0] - pos2.cd[0]]
+            let rr2 = math.dot(dr,dv) / math.norm(dr)
+            dr = (rr2 - rr1) / 0.1
+            tGuess -= rr1 / dr
+            tGuess = tGuess < 0 ? 0 : tGuess
+            // console.log(tGuess, dr, rr1);
 
+        }
+        mainWindow.desired.scenarioTime = tGuess
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         document.getElementById('context-menu')?.remove();
     }
@@ -3769,6 +3787,7 @@ function testLambertProblem() {
     let r2 = [0, semiAxis, 0, -((398600.4418 / semiAxis) ** (1/2)), 0, 0];
     let r1 = [-Math.sin(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.cos(long * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 6371, Math.sin(lat * Math.PI / 180) * 6371];
     let kk = 0;
+    let tofHis = [];
     while (math.abs(checkValue) > 1e-6 && kk < 100) {
         let tof2 = tof + 0.1;
         let tof1 = tof;
@@ -3776,7 +3795,18 @@ function testLambertProblem() {
         let rEnd1 = math.squeeze(math.multiply(rotationMatrices(360 * tof1 / periodOrbit, 3),math.transpose([r2.slice(0,3)])));
         let res2 = solveLambertsProblem(r1,rEnd2, tof2, 0, 1);
         let res1 = solveLambertsProblem(r1,rEnd1, tof1, 0, 1);
+        if (res2 === 'collinear' || res1 === 'collinear') {
+            showScreenAlert('Points are collinear, bug being worked, using last successful iteration')
+            tof = tofHis[tofHis.length-1]
+            break;
+        }
+        else if (res2 === 'no solution' || res1 === 'no solution') {
+            showScreenAlert('Unknown error, using last successful ieteration')
+            tof = tofHis[tofHis.length-1]
+            return
+        }
         let dRes = (math.dot(rEnd2, res2.v2) - math.dot(rEnd1, res1.v2)) / 0.1;
+        tofHis.push(tof)
         tof += 0.1*(0 - math.dot(rEnd1, res1.v2)) / dRes;
         kk++;
     }
@@ -3797,6 +3827,7 @@ function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
     let r1 = math.norm(r1_vec);
     let r2 = math.norm(r2_vec);
     let cosNu = math.dot(r1_vec, r2_vec) / r1 / r2;
+    if (Math.abs(cosNu + 1) < 1e-3) return 'collinear'
     let sinNu = Math.sqrt(1 - cosNu**2);
     let mu = 3.986004418e5;
     if (!long) sinNu *= -1;
@@ -3846,10 +3877,13 @@ function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
     let returnedValues;
     // console.log(p);
     // console.log(tof(p));
+    let count = 0
     while (Math.abs(t-tMan) > 1e-6) {
         returnedValues = tof(p);
 
         p = iterateP(returnedValues.t, p, returnedValues.sinE, returnedValues.g, returnedValues.a);
+        count++
+        if (count > 1000) return 'no solution'
     }
     // console.log(returnedValues);
     let v1 = math.dotDivide(math.subtract(r2_vec, math.dotMultiply(returnedValues.f, r1_vec)), returnedValues.g);
