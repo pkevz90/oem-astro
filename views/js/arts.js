@@ -64,6 +64,14 @@ class windowCanvas {
         burn: null,
         frame: null
     };
+    originOrbit = {
+        a: (398600.4418 / (2 * Math.PI / 86164) ** 2) ** (1/3),
+        e: 0,
+        i: 0,
+        raan: 0,
+        arg: 0,
+        tA: 0
+    }
     trajSize = 1;
     encoder;
     mm = 2 * Math.PI / 86164;
@@ -1925,6 +1933,7 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let date = inputs[0].value;
     let sun = inputs[3].value;
     mainWindow.mm = Math.sqrt(398600.4418 / Math.pow(Number(inputs[2].value), 3));
+    mainWindow.originOrbit.a = Number(inputs[2].value)
     mainWindow.scenarioLength = Number(inputs[1].value);
     document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
     // let repeat = inputs[9].checked;
@@ -3624,8 +3633,33 @@ function findDvFiniteBurn(r1, r2, a, tf) {
     return dir ? dir.t[0]*tf*a : 10000;
 }
 
+function propTrueAnomaly(tA = 0, a = 10000, e = 0.1, time = 3600) {
+    function True2Eccentric(e, ta) {
+        return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+    }
+    function Eccentric2True(e,E) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
+    }
+    
+    function solveKeplersEquation(M,e) {
+        let E = M;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+            E -= del;
+        }
+        return E;
+    }
+
+    let eccA = True2Eccentric(e, tA)
+    let meanA = eccA - e * Math.sin(eccA)
+    meanA += Math.sqrt(398600.4418 / (a ** 3)) * time
+    eccA = solveKeplersEquation(meanA, e)
+    return Eccentric2True(e, eccA) * 180 / Math.PI
+}
+
 function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
-    let {mu = 398600.4418, r0 = 42164, a = [0,0,0]} = options;
+    let {mu = 398600.4418, r0 = 42164, a = [0,0,0], time= 0} = options;
     // let n = Math.sqrt(mu / r0 ** 3);
     let n = mainWindow.mm;
     r0 = (mu / n**2) ** (1/3);
