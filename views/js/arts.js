@@ -3655,30 +3655,45 @@ function propTrueAnomaly(tA = 0, a = 10000, e = 0.1, time = 3600) {
     let meanA = eccA - e * Math.sin(eccA)
     meanA += Math.sqrt(398600.4418 / (a ** 3)) * time
     eccA = solveKeplersEquation(meanA, e)
-    return Eccentric2True(e, eccA) * 180 / Math.PI
+    return Eccentric2True(e, eccA)
 }
 
 function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
     let {mu = 398600.4418, r0 = 42164, a = [0,0,0], time= 0} = options;
-    // let n = Math.sqrt(mu / r0 ** 3);
-    let n = mainWindow.mm;
-    r0 = (mu / n**2) ** (1/3);
+    let n, ndot;
+    if (mainWindow.originOrbit.e > 1e-6) {
+        let inertChief = {...mainWindow.originOrbit}
+        inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
+        inertChief = Coe2PosVelObject(inertChief, true)
+        let r = math.norm([inertChief.x, inertChief.y, inertChief.z])
+        let radRate = math.dot([inertChief.x, inertChief.y, inertChief.z], [inertChief.vx, inertChief.vy, inertChief.vz]) / r
+        let tanRate = (math.norm([inertChief.vx, inertChief.vy, inertChief.vz]) ** 2 - radRate ** 2) ** (1/2)
+        
+        n = tanRate / r
+        ndot = -2 * radRate * n / r
+        r0 = r;
+    }
+    else {
+        n = mainWindow.mm
+        ndot = 0
+        r0 = (398600.4418 / n **2) **(1/3)
+    }
     let x = state[0], y = state[1], z = state[2], dx = state[3], dy = state[4], dz = state[5];
     return [
         dx,
         dy,
         dz,
-        -mu * (r0 + x) / ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5) + mu / r0 ** 2 + 2 * n * dy + n ** 2 * x + a[0],
-        -mu * y / ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5) - 2 * n * dx + n ** 2 * y + a[1],
+        -mu * (r0 + x) / ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5) + mu / r0 ** 2 + 2 * n * dy + n ** 2 * x + ndot * y +  a[0],
+        -mu * y / ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5) - 2 * n * dx - ndot * x + n ** 2 * y + a[1],
         -mu * z / ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5) + a[2]
     ];
 }
 
-function runge_kutta(eom, state, dt, a = [0,0,0]) {
-    let k1 = eom(state, {a});
-    let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a});
-    let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)), {a});
-    let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a});
+function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
+    let k1 = eom(state, {a, time});
+    let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a, time: time + dt/2});
+    let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)), {a, time: time + dt/2});
+    let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a, time: time + dt});
     return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
 }
 
@@ -3715,24 +3730,24 @@ function calcSatTwoBody(allBurns = false) {
                     t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
                 } 
                 t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !allBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
-                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc);
+                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc, [0,0,0], t_calc);
                 t_calc += this.burns[satBurn].time - t_calc;
                 let direction = [this.burns[satBurn].direction.r, this.burns[satBurn].direction.i, this.burns[satBurn].direction.c];
 
                 direction = math.dotMultiply(this.a, math.dotDivide(direction, math.norm(direction)));
                 while ((this.burns[satBurn].time + t_burn - t_calc) > mainWindow.timeDelta) {
                     t_calc += mainWindow.timeDelta;
-                    currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, direction);
+                    currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, direction, t_calc);
                     this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
                 }
-                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time + t_burn - t_calc, direction);
+                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time + t_burn - t_calc, direction, t_calc);
                 t_calc += mainWindow.timeDelta;
-                currentState = runge_kutta(twoBodyRpo, currentState, t_calc - this.burns[satBurn].time - t_burn);
+                currentState = runge_kutta(twoBodyRpo, currentState, t_calc - this.burns[satBurn].time - t_burn, [0,0,0], t_calc);
                 satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
                 continue;
             }
         }
-        currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta);
+        currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, [0,0,0], t_calc);
         t_calc += mainWindow.timeDelta;
     }
 }
@@ -3943,7 +3958,7 @@ function Eci2Ric(rC, drC, rD, drD) {
     }
 }
 
-function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, log = false) {
+function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, peri = false) {
     let p = coe.a * (1 - coe.e * coe.e);
     let cTa = Math.cos(coe.tA);
     let sTa = Math.sin(coe.tA);
@@ -3952,15 +3967,21 @@ function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA:
         [p * sTa / (1 + coe.e * cTa)],
         [0]
     ];
-    if (log) {
-        console.log(r);
-    }
     let constA = Math.sqrt(398600.4418 / p);
     let v = [
         [-constA * sTa],
         [(coe.e + cTa) * constA],
         [0]
     ];
+    if (peri) return {
+        
+        x: r[0][0],
+        y: r[1][0],
+        z: r[2][0],
+        vx: v[0][0],
+        vy: v[1][0],
+        vz: v[2][0]
+    }
     let cRa = Math.cos(coe.raan);
     let sRa = Math.sin(coe.raan);
     let cAr = Math.cos(coe.arg);
