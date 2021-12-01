@@ -2097,7 +2097,26 @@ function parseState(button) {
     if (text[0] === "") text.shift();
     if (text[text.length - 1] === "") text.pop();
     if (text.length > 9) {
-        mainWindow.mm = Math.sqrt(398600.4418 / (Number(text.pop() ** 3)));
+        if (text.length > 12) {
+            let tA = Number(text.pop() * Math.PI / 180)
+            let arg = Number(text.pop() * Math.PI / 180)
+            let raan = Number(text.pop() * Math.PI / 180)
+            let i = Number(text.pop() * Math.PI / 180)
+            let e = Number(text.pop())
+            let a = Number(text.pop())
+            mainWindow.originOrbit = {
+                a,
+                arg,
+                e,
+                i,
+                raan,
+                tA
+            }
+            mainWindow.mm = Math.sqrt(398600.4418 / (Number(a ** 3)));
+        }
+        else {
+            mainWindow.mm = Math.sqrt(398600.4418 / (Number(text.pop() ** 3)));
+        }
         mainWindow.scenarioLength = 2 * Math.PI / mainWindow.mm / 3600 * 2;
         document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
         mainWindow.timeDelta = 0.006 * 2 * Math.PI / mainWindow.mm;
