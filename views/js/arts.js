@@ -1429,7 +1429,7 @@ function handleContextClick(button) {
         let position = mainWindow.satellites[sat].currentPosition();
         position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
         let direction = dir;
-        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.satellites[sat].a)
+        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.scenarioTime, mainWindow.satellites[sat].a)
         mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
             tranTime: tof,
             target: {
@@ -2283,7 +2283,7 @@ function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
         phi) * Math.sin(n * t)) / Math.pow(n, 2);
 }
 
-function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess, n = mainWindow.mm) {
+function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainWindow.mm) {
     let state = math.transpose([Object.values(stateInit)]);
     stateFinal = math.transpose([Object.values(stateFinal)]);
     let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
@@ -2291,7 +2291,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess, n = mainWind
         yErr= [100], S, dX = 1,
         F;
     let dv1;
-    if (!guess) {
+    if (!false) {
         dv1 = math.subtract(v1, state.slice(3, 6));
     }
     else {
@@ -2308,7 +2308,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess, n = mainWind
             i: 0,
             c: 0,
             t: [0],
-            F: oneBurnFiniteHcw(stateInit, Xret[0][0], Xret[1][0], Xret[2][0], tf, a0, n)
+            F: oneBurnFiniteHcw(stateInit, Xret[0][0], Xret[1][0], Xret[2][0], tf, time, a0)
         }
     }
     let X = Xret.slice();
@@ -2317,7 +2317,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess, n = mainWind
     }
     let errCount = 0, sInv;
     while (math.norm(math.squeeze(dX)) > 1e-6) {
-        F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, a0, n);
+        F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0);
         yErr = [
             [stateFinal[0][0] - F.x],
             [stateFinal[1][0] - F.y],
@@ -2495,52 +2495,15 @@ function calcTwoBurn(options = {}) {
     return outBurns;
 }
 
-function oneBurnFiniteHcwOld(state, alpha, phi, tB, t, a0 = 0.00001, n = mainWindow.mm) {
-    x0 = state.x;
-    xd0 = state.xd;
-    y0 = state.y;
-    yd0 = state.yd;
-    z0 = state.z;
-    zd0 = state.zd;
-    // console.log(x0,y0,z0)
-    let xM = radialPosClosed(x0, xd0, yd0, a0, alpha, phi, tB * t, n);
-    let xdM = radialVelClosed(x0, xd0, yd0, a0, alpha, phi, tB * t, n);
-    let yM = intrackPosClosed(x0, xd0, y0, yd0, a0, alpha, phi, tB * t, n);
-    let ydM = intrackVelClosed(x0, xd0, yd0, a0, alpha, phi, tB * t, n);
-    let zM = crosstrackPosClosed(z0, zd0, a0, phi, tB * t, n);
-    let zdM = crosstrackVelClosed(z0, zd0, a0, phi, tB * t, n);
-    let xF = radialPosClosed(xM, xdM, ydM, 0, 0, 0, t - tB * t, n);
-    let xdF = radialVelClosed(xM, xdM, ydM, 0, 0, 0, t - tB * t, n);
-    let yF = intrackPosClosed(xM, xdM, yM, ydM, 0, 0, 0, t - tB * t, n);
-    let ydF = intrackVelClosed(xM, xdM, ydM, 0, 0, 0, t - tB * t, n);
-    let zF = crosstrackPosClosed(zM, zdM, 0, 0, t - tB * t, n);
-    let zdF = crosstrackVelClosed(zM, zdM, 0, 0, t - tB * t, n);
-    return {
-        x: xF,
-        y: yF,
-        z: zF,
-        xd: xdF,
-        yd: ydF,
-        zd: zdF
-    };
-
-}
-
-function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001) {
+function oneBurnFiniteHcw(state, alpha, phi, tB, t, time = 0, a0 = 0.00001) {
     state = [state.x, state.y, state.z, state.xd, state.yd, state.zd];
     let direction = [a0 * Math.cos(alpha) * Math.cos(phi), a0 * Math.sin(alpha) * Math.cos(phi), a0 * Math.sin(phi)];
-    // if (!mainWindow.burnStatus.type) {
-    if (true) {
-        for (let ii = 0; ii < 5; ii++) {
-            state = runge_kutta(twoBodyRpo, state, t * tB / 5, direction);
-        }
-        for (let ii = 0; ii < 20; ii++) {
-            state = runge_kutta(twoBodyRpo, state, (t - t * tB)/20); 
-        }
+
+    for (let ii = 0; ii < 5; ii++) {
+        state = runge_kutta(twoBodyRpo, state, t * tB / 5, direction, time  + t * tB * ii / 5)
     }
-    else {
-        state = runge_kutta(twoBodyRpo, state, t * tB, direction);
-        state = runge_kutta(twoBodyRpo, state, t - t * tB); 
+    for (let ii = 0; ii < 20; ii++) {
+        state = runge_kutta(twoBodyRpo, state, (t - t * tB)/20, [0,0,0], time + t * tB + (t - t * tB) * ii/20); 
     }
     return {
         x: state[0],
@@ -2553,17 +2516,17 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, t, a0 = 0.00001) {
 
 }
 
-function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
+function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, time, n) {
     let m1, m2, mC, mFinal = [];
     //alpha
     let phi2 = math.abs(Math.cos(phi)) < 1e-6 ? 89 * Math.PI / 180 : phi;
-    m1 = oneBurnFiniteHcw(state, alpha, phi2, tB, tF, a, n);
+    m1 = oneBurnFiniteHcw(state, alpha, phi2, tB, tF, time, a);
     m1 = [
         [m1.x],
         [m1.y],
         [m1.z]
     ];
-    m2 = oneBurnFiniteHcw(state, alpha + 0.01, phi2, tB, tF, a, n);
+    m2 = oneBurnFiniteHcw(state, alpha + 0.01, phi2, tB, tF, time, a);
     m2 = [
         [m2.x],
         [m2.y],
@@ -2572,7 +2535,7 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
     mC = math.dotDivide(math.subtract(m2, m1), 0.01);
     mFinal = mC;
     //phi
-    m2 = oneBurnFiniteHcw(state, alpha, phi + 0.01, tB, tF, a, n);
+    m2 = oneBurnFiniteHcw(state, alpha, phi + 0.01, tB, tF, time, a);
     m2 = [
         [m2.x],
         [m2.y],
@@ -2581,7 +2544,7 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, n) {
     m = math.dotDivide(math.subtract(m2, m1), 0.01);
     mC = math.concat(mC, m);
     //tB
-    m2 = oneBurnFiniteHcw(state, alpha, phi, tB + 0.01, tF, a, n);
+    m2 = oneBurnFiniteHcw(state, alpha, phi, tB + 0.01, tF, time, a);
     m2 = [
         [m2.x],
         [m2.y],
@@ -2806,7 +2769,7 @@ function generateBurns(all = false) {
             let n = math.ceil((this.burns[ii].time - time) / mainWindow.timeDelta)
             let delta = (this.burns[ii].time - time) / n;
             for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta);
+                position = runge_kutta(twoBodyRpo, position, delta, [0,0,0], time + delta * ii);
             }
         }
         else {
@@ -2816,19 +2779,16 @@ function generateBurns(all = false) {
             dirLast = math.dotMultiply(this.a, math.dotDivide(dirLast, math.norm(dirLast)));
             let delta = tBurnLast / n;
             for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta, dirLast);
+                position = runge_kutta(twoBodyRpo, position, delta, dirLast, time + delta * ii);
             }
+            let nOld = n + 0;
             n = math.ceil((this.burns[ii].time - time - tBurnLast) / mainWindow.timeDelta)
             delta = (this.burns[ii].time - time - tBurnLast) / n;
             for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta);
+                position = runge_kutta(twoBodyRpo, position, delta, [0,0,0], time + nOld * delta + ii * delta);
             }
         }
         time = this.burns[ii].time;
-        // let r1 = this.currentPosition({
-        //     time: this.burns[ii].time
-        // });
-        // this.burns[ii].location = {...r1};
         this.burns[ii].location = {
             r: [position[0]],
             i: [position[1]],
@@ -2851,7 +2811,7 @@ function generateBurns(all = false) {
             xd: 0,
             yd: 0,
             zd: 0
-        }, this.burns[ii].waypoint.tranTime, this.a);
+        }, this.burns[ii].waypoint.tranTime, this.a, time);
         if (dir && dir.t > 0 && dir.t < 1) {
             this.burns[ii].direction.r = dir.r;
             this.burns[ii].direction.i = dir.i;
@@ -2901,7 +2861,7 @@ function calcBurns() {
         let targetState = sat.currentPosition({
             time: sat.burns[this.burnStatus.burn].time
         });
-        targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / tranTime, tranTime, sat.a);
+        targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / tranTime, tranTime, sat.burns[this.burnStatus.burn].time, sat.a);
         sat.burns[this.burnStatus.burn].waypoint.target = {
             r: cross ? sat.burns[this.burnStatus.burn].waypoint.target.r : targetState.x,
             i: cross ? sat.burns[this.burnStatus.burn].waypoint.target.i : targetState.y,
@@ -2914,7 +2874,7 @@ function calcBurns() {
             });
             dir = [sat.burns[hh].direction.r, sat.burns[hh].direction.i, 0];
             sat.burns[hh].direction.c = 0;
-            targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / sat.burns[hh].waypoint.tranTime, sat.burns[hh].waypoint.tranTime, sat.a);
+            targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / sat.burns[hh].waypoint.tranTime, sat.burns[hh].waypoint.tranTime, sat.burns[hh].time, sat.a);
             sat.burns[hh].waypoint.target.c = targetState.z;
         }
     }
@@ -3768,12 +3728,12 @@ function getCurrentPosition(options = {}) {
         this.stateHistory[stateIndex].cd,
     ]
     if (burn !== undefined) {
-        refState = runge_kutta(twoBodyRpo, refState, this.burns[burn].time - this.stateHistory[stateIndex].t);
+        refState = runge_kutta(twoBodyRpo, refState, this.burns[burn].time - this.stateHistory[stateIndex].t, this.stateHistory[stateIndex].t);
         let direction = [this.burns[burn].direction.r, this.burns[burn].direction.i, this.burns[burn].direction.c];
         let burnTime = math.norm(direction) / this.a;
         direction = math.dotMultiply(this.a, math.dotDivide(direction, math.norm(direction)));
-        refState = runge_kutta(twoBodyRpo, refState, burnTime, direction);
-        refState = runge_kutta(twoBodyRpo, refState, time - this.burns[burn].time - burnTime);
+        refState = runge_kutta(twoBodyRpo, refState, burnTime, direction, this.burns[burn].time);
+        refState = runge_kutta(twoBodyRpo, refState, time - this.burns[burn].time - burnTime, this.burns[burn].time + burnTime);
         return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
     }
     let isTimeDuringBurn = this.burns.filter(burn => {
@@ -3792,22 +3752,22 @@ function getCurrentPosition(options = {}) {
         let direction = isTimeDuringBurn[0].direction;
         direction = [direction.r, direction.i, direction.c];
         direction = math.dotDivide(direction, math.norm(direction) / this.a);
-        refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t, direction);
+        refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t, direction, this.stateHistory[stateIndex].t);
     }
     else if (isTimeDuringBurn.length > 0) {
         let direction = isTimeDuringBurn[0].direction;
         direction = [direction.r, direction.i, direction.c];
         direction = math.dotDivide(direction, math.norm(direction) / this.a);
-        refState = runge_kutta(twoBodyRpo, refState, isTimeDuringBurn[0].time - this.stateHistory[stateIndex].t);
-        refState = runge_kutta(twoBodyRpo, refState, time - isTimeDuringBurn[0].time, direction);
+        refState = runge_kutta(twoBodyRpo, refState, isTimeDuringBurn[0].time - this.stateHistory[stateIndex].t, [0,0,0], this.stateHistory[stateIndex].t);
+        refState = runge_kutta(twoBodyRpo, refState, time - isTimeDuringBurn[0].time, direction, isTimeDuringBurn[0].time);
     }
     else if (isIndexDuringBurn.length > 0) {
         let direction = isIndexDuringBurn[0].direction;
         direction = [direction.r, direction.i, direction.c];
         let burnEnd = math.norm(direction) / this.a + isIndexDuringBurn[0].time;
         direction = math.dotDivide(direction, math.norm(direction) / this.a);
-        refState = runge_kutta(twoBodyRpo, refState, burnEnd - this.stateHistory[stateIndex].t, direction);
-        refState = runge_kutta(twoBodyRpo, refState, time - burnEnd);
+        refState = runge_kutta(twoBodyRpo, refState, burnEnd - this.stateHistory[stateIndex].t, direction, this.stateHistory[stateIndex].t);
+        refState = runge_kutta(twoBodyRpo, refState, time - burnEnd, [0,0,0], burnEnd);
 
     }
     else if (isSurroundsBurn.length > 0) {
@@ -3815,13 +3775,13 @@ function getCurrentPosition(options = {}) {
         direction = [direction.r, direction.i, direction.c];
         let burnEnd = math.norm(direction) / this.a + isSurroundsBurn[0].time;
         direction = math.dotDivide(direction, math.norm(direction) / this.a);
-        refState = runge_kutta(twoBodyRpo, refState, isSurroundsBurn[0].time - this.stateHistory[stateIndex].t);
-        refState = runge_kutta(twoBodyRpo, refState, burnEnd - isSurroundsBurn[0].time, direction);
-        refState = runge_kutta(twoBodyRpo, refState, time - burnEnd);
+        refState = runge_kutta(twoBodyRpo, refState, isSurroundsBurn[0].time - this.stateHistory[stateIndex].t, [0,0,0], this.stateHistory[stateIndex].t);
+        refState = runge_kutta(twoBodyRpo, refState, burnEnd - isSurroundsBurn[0].time, direction, isSurroundsBurn[0].time);
+        refState = runge_kutta(twoBodyRpo, refState, time - burnEnd, [0,0,0], burnEnd);
 
     }
     else {
-        refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t);
+        refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t, [0,0,0], this.stateHistory[stateIndex].t);
     }
     return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
 }
