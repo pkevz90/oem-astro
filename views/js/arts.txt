@@ -3673,7 +3673,6 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
     let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a, time: time + dt/2});
     let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)), {a, time: time + dt/2});
     let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a, time: time + dt});
-    // console.log(k1,k2,k3,k4);
     return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
 }
 
@@ -3711,7 +3710,6 @@ function calcSatTwoBody(allBurns = false) {
                 } 
                 t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !allBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
                 currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc, [0,0,0], t_calc);
-                // console.log(math.squeeze(currentState));
                 t_calc += this.burns[satBurn].time - t_calc;
                 let direction = [this.burns[satBurn].direction.r, this.burns[satBurn].direction.i, this.burns[satBurn].direction.c];
 
@@ -3721,15 +3719,9 @@ function calcSatTwoBody(allBurns = false) {
                     currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, direction, t_calc);
                     this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
                 }
-                // console.log(this.burns[satBurn].time + t_burn - t_calc);
-                if (t_burn > 1e-3) {
-                // if (true) {
-                    currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time + t_burn - t_calc, direction, t_calc);
-                    // showScreenAlert('Burn has magnitude of 0 m/s')
-                }
+                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time + t_burn - t_calc, direction, t_calc);
                 t_calc += mainWindow.timeDelta;
                 currentState = runge_kutta(twoBodyRpo, currentState, t_calc - this.burns[satBurn].time - t_burn, [0,0,0], t_calc);
-                // console.log(math.squeeze(currentState));
                 satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
                 continue;
             }
