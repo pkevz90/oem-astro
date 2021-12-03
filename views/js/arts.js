@@ -3681,6 +3681,7 @@ function calcSatTwoBody(allBurns = false) {
     let t_calc, currentState, satBurn;
     this.stateHistory = [];
     t_calc = 0;
+    // console.log(`Calc traj on ${this.name}`);
     currentState = [
         this.position.r,
         this.position.i,
@@ -3767,9 +3768,11 @@ function getCurrentPosition(options = {}) {
         let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
         return time > burn.time && time < burnEnd;
     });
+    // Check if reference time during burn
     let isIndexDuringBurn = this.burns.filter(burn => {
         let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
-        return this.stateHistory[stateIndex].t > burn.time && this.stateHistory[stateIndex].t < burnEnd;
+        // console.log(time, this.stateHistory[stateIndex].t , burn.time, this.stateHistory[stateIndex].t < burnEnd);
+        return this.stateHistory[stateIndex].t >= burn.time && this.stateHistory[stateIndex].t < burnEnd;
     });
     let isSurroundsBurn = this.burns.filter(burn => {
         let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
@@ -3810,6 +3813,7 @@ function getCurrentPosition(options = {}) {
     else {
         refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t, [0,0,0], this.stateHistory[stateIndex].t);
     }
+    // console.log(isTimeDuringBurn.length, isIndexDuringBurn.length, isSurroundsBurn.length);
     return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
 }
 
