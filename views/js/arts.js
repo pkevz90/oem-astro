@@ -3658,13 +3658,14 @@ function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
         r0 = (398600.4418 / n **2) **(1/3)
     }
     let x = state[0], y = state[1], z = state[2], dx = state[3], dy = state[4], dz = state[5];
+    let rT = ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5);
     return [
         dx,
         dy,
         dz,
-        -mu * (r0 + x) / ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5) + mu / r0 ** 2 + 2 * n * dy + n ** 2 * x + ndot * y +  a[0],
-        -mu * y / ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5) - 2 * n * dx - ndot * x + n ** 2 * y + a[1],
-        -mu * z / ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5) + a[2]
+        -mu * (r0 + x) / rT+ mu / r0 ** 2 + 2 * n * dy + n ** 2 * x + ndot * y +  a[0],
+        -mu * y / rT - 2 * n * dx - ndot * x + n ** 2 * y + a[1],
+        -mu * z / rT + a[2]
     ];
 }
 
