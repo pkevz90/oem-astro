@@ -3183,7 +3183,6 @@ function editSatellite(button) {
         id: Number(inputs[11].value),
         cd: Number(inputs[12].value),
     }
-    console.log(state);
     let sat = new Satellite({
         position: state,
         color,
