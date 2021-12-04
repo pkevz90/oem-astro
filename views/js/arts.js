@@ -742,7 +742,6 @@ class windowCanvas {
     }
 }
 
-
 class Satellite {
     position;
     curPos;
@@ -3170,20 +3169,21 @@ function editSatellite(button) {
         z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
     };
     
-    ricInit = rmoeToRic(rmoes)
+    let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
         
     let color = mainWindow.satellites[button.nextSibling.selectedIndex].color;
     let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
     let shape = mainWindow.satellites[button.nextSibling.selectedIndex].shape;
     let a = mainWindow.satellites[button.nextSibling.selectedIndex].a;
     state = {
-        r: ricInit.rHcw[0][0],
-        i: ricInit.rHcw[1][0],
-        c: ricInit.rHcw[2][0],
-        rd: ricInit.drHcw[0][0],
-        id: ricInit.drHcw[1][0],
-        cd: ricInit.drHcw[2][0],
+        r:  Number(inputs[7].value ),
+        i:  Number(inputs[8].value ),
+        c:  Number(inputs[9].value ),
+        rd: Number(inputs[10].value),
+        id: Number(inputs[11].value),
+        cd: Number(inputs[12].value),
     }
+    console.log(state);
     let sat = new Satellite({
         position: state,
         color,
