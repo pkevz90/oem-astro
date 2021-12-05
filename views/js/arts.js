@@ -152,6 +152,7 @@ class windowCanvas {
         data: undefined,
         type: undefined
     }
+    prop = 2
     precise = false;
     curvilinear = true;
     panelOpen = false;
@@ -933,9 +934,9 @@ function sleep(milliseconds) {
       }
     }
   }
-
+let timeFunction = false;
 (function animationLoop() {
-    // console.time()
+    if (timeFunction) console.time()
     mainWindow.clear();
     mainWindow.updateSettings();
     mainWindow.drawInertialOrbit(); 
@@ -956,7 +957,7 @@ function sleep(milliseconds) {
     if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
         drawVulnerabilityZone();
     }
-    // console.timeEnd()
+    if (timeFunction) console.timeEnd()
     mainWindow.recordFunction();
     window.requestAnimationFrame(animationLoop)
 })()
@@ -2916,6 +2917,7 @@ function calcBurns() {
             sat.burns[hh].direction.c = 0;
             targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / sat.burns[hh].waypoint.tranTime, sat.burns[hh].waypoint.tranTime, sat.burns[hh].time, sat.a);
             sat.burns[hh].waypoint.target.c = targetState.z;
+            // sat.burns[hh].waypoint.target.c = targetState.c[0];
         }
     }
     let mag = math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c])
@@ -3681,12 +3683,16 @@ function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
 }
 
 function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
+    if (mainWindow.prop === 4) {
+        let k1 = eom(state, {a, time});
+        let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a, time: time + dt/2});
+        let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)), {a, time: time + dt/2});
+        let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a, time: time + dt});
+        return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
+    }
     let k1 = eom(state, {a, time});
     let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a, time: time + dt/2});
-    let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)), {a, time: time + dt/2});
-    let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a, time: time + dt});
-    // console.log(k1,k2,k3,k4);
-    return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
+    return math.add(state, math.dotMultiply(dt, k2));
 }
 
 function calcSatTwoBody(allBurns = false) {
