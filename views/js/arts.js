@@ -902,6 +902,24 @@ class Satellite {
             a: this.a
         }
     }
+    propInitialState(dt) {
+        if (Math.abs(dt) > 200000) return
+        let propTime = dt / 5000;
+        let state = [this.position.r, this.position.i, this.position.c, this.position.rd, this.position.id, this.position.cd];
+        for (let ii = 0; ii < 5000; ii++) {
+            state = runge_kutta(twoBodyRpo, state, propTime)
+        }
+        this.position = {
+            r: state[0],
+            i: state[1],
+            c: state[2],
+            rd: state[3],
+            id: state[4],
+            cd: state[5]
+        }
+        this.burns = []
+        this.calcTraj();
+    }
 }
 
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
@@ -2091,7 +2109,10 @@ function parseState(button) {
     let text = document.getElementById('parse-text').value;
     text = text.split(/ {2,}/)
     if (isNaN(Number(text[0]))) {
+        let oldDate = mainWindow.startDate + 0;
         mainWindow.startDate = new Date(text.shift())
+        let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
+        mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
     }
     if (text[0] === "") text.shift();
     if (text[text.length - 1] === "") text.pop();
@@ -2115,6 +2136,7 @@ function parseState(button) {
         }
         else {
             mainWindow.mm = Math.sqrt(398600.4418 / (Number(text.pop() ** 3)));
+            mainWindow.originOrbit.a = (398600.4418 / mainWindow.mm ** 2) ** (1/3)
         }
         mainWindow.scenarioLength = 2 * Math.PI / mainWindow.mm / 3600 * 2;
         document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
@@ -3157,17 +3179,7 @@ function editSatellite(button) {
         return;
     }
     if (button.nextSibling.selectedIndex < 0) return;
-    el = button.parentNode.parentNode.parentNode;
-    let rmoes = {
-        ae: Number(el.children[1].children[1].children[0].children[0].getElementsByTagName('input')[0].value),
-        x: Number(el.children[1].children[1].children[0].children[1].getElementsByTagName('input')[0].value),
-        y: Number(el.children[1].children[1].children[0].children[2].getElementsByTagName('input')[0].value),
-        b: Number(el.children[1].children[1].children[0].children[3].getElementsByTagName('input')[0].value) * Math
-            .PI / 180,
-        m: Number(el.children[1].children[1].children[0].children[5].getElementsByTagName('input')[0].value) * Math
-            .PI / 180,
-        z: Number(el.children[1].children[1].children[0].children[4].getElementsByTagName('input')[0].value)
-    };
+    let el = button.parentNode.parentNode.parentNode;
     
     let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
         
@@ -3179,9 +3191,9 @@ function editSatellite(button) {
         r:  Number(inputs[7].value ),
         i:  Number(inputs[8].value ),
         c:  Number(inputs[9].value ),
-        rd: Number(inputs[10].value),
-        id: Number(inputs[11].value),
-        cd: Number(inputs[12].value),
+        rd: Number(inputs[10].value) / 1000,
+        id: Number(inputs[11].value) / 1000,
+        cd: Number(inputs[12].value) / 1000,
     }
     let sat = new Satellite({
         position: state,
