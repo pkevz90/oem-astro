@@ -1589,7 +1589,6 @@ function handleContextClick(button) {
             if (dV < minWay) {
                 minWay = dV;
                 minIndex = ii;
-                // console.log(dV);
             }
         }
         if (minWay > 100) {
@@ -2959,7 +2958,7 @@ function generateBurnTable(object = 0) {
         addedElement.innerHTML = `
             <td>${new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[burn].time * 1000).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
+            <td title="${'r: ' + (1000*mainWindow.satellites[object].burns[burn].direction.r).toFixed(3) + '  i: ' + (1000*mainWindow.satellites[object].burns[burn].direction.i).toFixed(3) + '  c: ' + (1000*mainWindow.satellites[object].burns[burn].direction.c).toFixed(3) + ' m/s'}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
             <td><span>${(mainWindow.satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
             <td class="edit-button ctrl-switch">Edit</td>
         `;
@@ -3030,7 +3029,7 @@ function waypoints2table(waypoints) {
         addedElement.innerHTML = `
             <td>${new Date(point.time).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span></td>
+            <td title="test"><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span></td>
             <td><span>${(point.tranTime).toFixed(3)}</span></td>
             <td class="edit-button ctrl-switch" onclick="editButtonFunction(event)">Edit</td>
         `;
@@ -3606,7 +3605,8 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
     let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
     if (!R) R = [[1,0,0],[0,1,0],[0,0,1]];
     let ranges = math.range(r / 2, r, r / 6, true)._data;
-    let angles = math.range(0, angle, angle / 15, true)._data;
+    ranges = [r]
+    let angles = math.range(0, angle, angle / 8, true)._data;
     for (let jj = 0; jj <= angles.length; jj ++) {
         for (let kk = 0; kk <= ranges.length; kk ++) {
             circleR = ranges[kk] * Math.sin(angles[jj]);
