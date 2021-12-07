@@ -2955,10 +2955,11 @@ function generateBurnTable(object = 0) {
     let r1, r2, v, addedElement;
     for (let burn = 0; burn < mainWindow.satellites[object].burns.length; burn++) {
         addedElement = document.createElement('tr');
+        addedElement.classList.add('tool-container')
         addedElement.innerHTML = `
             <td>${new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[burn].time * 1000).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td title="${'r: ' + (1000*mainWindow.satellites[object].burns[burn].direction.r).toFixed(3) + '  i: ' + (1000*mainWindow.satellites[object].burns[burn].direction.i).toFixed(3) + '  c: ' + (1000*mainWindow.satellites[object].burns[burn].direction.c).toFixed(3) + ' m/s'}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
+            <td onclick="this.classList.toggle('tooltip')"class="" title="${'r: ' + (1000*mainWindow.satellites[object].burns[burn].direction.r).toFixed(3) + '  i: ' + (1000*mainWindow.satellites[object].burns[burn].direction.i).toFixed(3) + '  c: ' + (1000*mainWindow.satellites[object].burns[burn].direction.c).toFixed(3) + ' m/s'}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
             <td><span>${(mainWindow.satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
             <td class="edit-button ctrl-switch">Edit</td>
         `;
