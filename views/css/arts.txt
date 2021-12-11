@@ -1,0 +1,378 @@
+html, body {
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+}
+
+.tool-container {
+    position: relative;
+}
+
+.tooltip::after {
+    content: attr(title);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-25%, -50%);
+    background-color: white;
+    color: black;
+    border: 1px solid black;
+    padding: 5px;
+    border-radius: 10px;
+    font-size: 0.75em;
+    z-index: 10;
+}
+
+#burn-type-control:hover {
+    transform: rotate(10deg);
+}
+
+.striked-through {
+    text-decoration: line-through;
+}
+
+#burn-type-control {
+    position: fixed;
+    z-index: 3;
+    height: 10%;
+    /* width: 5%; */
+    top: 20%;
+    right: 2.25%;
+    cursor: pointer;
+    transition: transform 500ms, right 500ms;
+}
+#manual-arrows, #way-arrows {
+    transition: fill-opacity 500ms;
+}
+
+#radial-intrack-plot {
+    position: fixed;
+    width: 100%;
+    top: 0%;
+    left: 0%;
+    height: 100%;
+    border-bottom: 1px solid black;
+}
+#time-slider {
+    position: fixed;
+    top: 1%;
+    left: 1%;
+    width:100%;
+    margin: 0;
+    cursor: pointer;
+}
+.center {
+    text-align: center;
+}
+#time-slider input {
+    -webkit-appearance: none;
+    width: 98%;
+    height: 25px;
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+}
+#time-slider input:hover {
+    opacity: 1;
+}
+
+#time-slider input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    background: black;
+    cursor: pointer;
+  }
+  
+#time-slider input::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    background: black;
+    cursor: pointer;
+  }
+
+.screen-alert {
+    position: fixed;
+    background-color: hsl(201, 10%, 47%);
+    color: white;
+    bottom: 115%;
+    width: 70%;
+    left: 15%;
+    opacity: 1;
+    padding: 2%;
+    font-weight: 900;
+    border-radius: 10px;
+    box-shadow: 5px 5px 10px black;
+    text-align: center;
+    transition: bottom 500ms, opacity 500ms;
+}
+
+.context-item {
+    padding: 15px;
+    color: white;
+    transition: 250ms background-color;
+}
+.context-item:hover {
+    background-color: rgb(50,50,50);
+}
+
+#context-menu {
+    /* transition: 250ms transform 250ms top 250ms left; */
+    transition: 250ms all;
+    transform-origin: top left;
+    border-radius: 50px;
+    box-shadow:  12px 12px 12px #575757
+}
+
+/* #options {
+    position: fixed;
+    height: auto;
+    border: 1px solid black;
+    z-index: 3;
+    bottom: 2%;
+    right: 1%;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+} */
+.side-button {
+    padding: 1vh 2vh;
+    border-radius: 20px;
+    line-height: 2vh;
+    font-size: 3vh;
+    width: 15vh;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.4);
+}
+.blurred {
+    backdrop-filter: blur(10px);
+}
+/* #burns {
+    position: fixed;
+    height: auto;
+    border: 1px solid black;
+    z-index: 3;
+    bottom: 11%;
+    right: 1%;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+} */
+#maneuver-type-slider {
+    position: fixed;
+    height: auto;
+    width: auto;
+    padding: 0.5% 1%;
+    z-index: 3;
+    bottom: 25%;
+    right: 2.5%;
+    border-radius: 2vw;
+    text-align: center;
+    line-height: 2vh;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+    font-size: 2vh;
+}
+#kinematic-slider {
+    position: fixed;
+    height: auto;
+    width: auto;
+    padding: 0.5% 1%;
+    z-index: 3;
+    bottom: 36%;
+    right: 2.5%;
+    border-radius: 2vw;
+    text-align: center;
+    line-height: 2vw;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+    font-size: 1.5vw;
+}
+#instructions {
+    position: fixed;
+    height: auto;
+    border: 1px solid black;
+    z-index: 3;
+    bottom: 6.5%;
+    right: 1%;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+}
+.hoverable:hover {
+    background-color: black;
+    color: white;
+}
+.hoverable:active {
+    background-color: gray;
+    color: white;
+}
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Safari */
+        -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* Internet Explorer/Edge */
+                user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome and Opera */
+}
+.panel-button {
+    height: auto;
+    width: 100%;
+    padding: 0.5% 1%;
+    border: 1px solid black;
+    margin: 0.5% 1%;
+    z-index: 3;
+    bottom: 22.5%;
+    right: 2.5%;
+    border-radius: 2vw;
+    background: white;
+    text-align: center;
+    line-height: 2vw;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 900;
+    font-size: 1.5vw;
+}
+#instructions-panel, #data-panel, #optimize-panel {
+    position: fixed;
+    display: flex;
+    z-index: 4;
+    background-color: white;
+    border: 10px solid black;
+    border-radius: 30px;
+    width: 50%;
+    height: auto;
+    padding: 4%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    justify-content: space-around;
+}
+
+.m-fadeIn {
+    visibility: visible;
+    opacity: 1;
+    transition: visibility 0s linear 0s, opacity 300ms;
+}
+.hidden {
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s linear 500ms, opacity 500ms;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 2vh;
+  }
+  
+  .switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  input:checked + .slider {
+    background-color: #000;
+  }
+  
+  input:focus + .slider {
+    box-shadow: 0 0 1px #000;
+  }
+  
+  input:checked + .slider:before {
+    -webkit-transform: translateX(20px);
+    -ms-transform: translateX(20px);
+    transform: translateX(20px);
+  }
+
+  .edit-button, #add-waypoint-button {
+      cursor: pointer;
+      border: 1px solid black;
+      border-radius: 10px;
+  }
+  .edit-button:hover, #add-waypoint-button:hover {
+    background-color: black;
+    color: white;
+  }
+  #add-waypoint-button {
+      padding: 0.5% 2%;
+      margin-left: 7%;
+      background-color: white;
+  }
+
+  .full-page-menu {
+    position: fixed;
+    top: 0%;
+    left: 0%;
+    height: 100%;
+    width: 100%;
+    backdrop-filter: blur(10px);
+    z-index: 4;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    overflow-y: scroll;
+  }
+
+  .title-text {
+      font-size: 3em;
+  }
+  
+   table {
+       text-align: center;
+   }
+
+   .add-value {
+       flex-basis: auto;
+       margin-top: 20px;
+       font-size: 1.5vw;
+       padding: 20px;
+    }
+    .add-value input {
+        font-size: 1em;
+    }
+
+    input, select {
+      border-radius: 7px;
+      text-align: center;
+      padding: 3px;
+      outline: none;
+      border-color: rgba(0,0,0,0.25);
+      transition: border-radius 250ms, backgroud-color 250ms;
+      /* box-shadow: 2px 2px 5px black; */
+    }
+    input::selection {
+        background: rgba(0,0,0,0);
+    }
+
+    input:focus, select:focus {
+        border-color: rgba(0,0,0,1);
+        border-radius: 0px;
+        background-color: rgb(240,240,240);
+    }
+    
+    select {
+        width: 100%;
+        font-size: 1.5em;
+    }
+    @media (max-width: 1100px) {
+        .add-value, .add-value input {
+            font-size: 1em;
+        }
+    }
+   td {
+       font-size: 2.5vw;
+    } 
+   th {
+    font-size: 3vw;
+    }
