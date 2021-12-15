@@ -1694,8 +1694,10 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     else return;
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
-        let newTime = Number(prompt('Enter scenario time in seconds past start:', (mainWindow.desired.scenarioTime).toFixed(3)))
-        if (newTime && newTime/3600 < mainWindow.scenarioLength && newTime > 0) {
+        let newTime = prompt('Enter scenario time in HH:MM:SS past start:')
+        newTime = newTime.split(":")
+        newTime = Number(newTime[0]) * 3600 + (newTime[1] !== undefined ? Number(newTime[1]) * 60 : 0) + (newTime[2] !== undefined ? Number(newTime[2]) : 0)
+        if (newTime/3600 < mainWindow.scenarioLength && newTime > 0) {
             mainWindow.desired.scenarioTime = newTime;
             mainWindow.scenarioTime = newTime;
             document.getElementById('time-slider-range').value = newTime;
