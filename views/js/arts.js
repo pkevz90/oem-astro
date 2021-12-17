@@ -2540,12 +2540,15 @@ function calcTwoBurn(options = {}) {
 function oneBurnFiniteHcw(state, alpha, phi, tB, t, time = 0, a0 = 0.00001) {
     state = [state.x, state.y, state.z, state.xd, state.yd, state.zd];
     let direction = [a0 * Math.cos(alpha) * Math.cos(phi), a0 * Math.sin(alpha) * Math.cos(phi), a0 * Math.sin(phi)];
-
-    for (let ii = 0; ii < 5; ii++) {
-        state = runge_kutta(twoBodyRpo, state, t * tB / 5, direction, time  + t * tB * ii / 5)
+    let numBurnPoints = math.ceil(t * tB / mainWindow.timeDelta)
+    let numDriftPoints = math.ceil((t - t * tB) / mainWindow.timeDelta)
+    numBurnPoints = numBurnPoints < 1 ? 1 : numBurnPoints;
+    numDriftPoints = numDriftPoints < 1 ? 1 : numDriftPoints;
+    for (let ii = 0; ii < numBurnPoints; ii++) {
+        state = runge_kutta(twoBodyRpo, state, t * tB / numBurnPoints, direction, time  + t * tB * ii / numBurnPoints)
     }
-    for (let ii = 0; ii < 20; ii++) {
-        state = runge_kutta(twoBodyRpo, state, (t - t * tB)/20, [0,0,0], time + t * tB + (t - t * tB) * ii/20); 
+    for (let ii = 0; ii < numDriftPoints; ii++) {
+        state = runge_kutta(twoBodyRpo, state, (t - t * tB)/numDriftPoints, [0,0,0], time + t * tB + (t - t * tB) * ii/numDriftPoints); 
     }
     return {
         x: state[0],
