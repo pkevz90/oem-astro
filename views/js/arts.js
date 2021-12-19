@@ -2970,14 +2970,14 @@ function generateBurnTable(object = 0) {
     addStartTime.value = new Date(new Date(endTime).toString().split(' GMT')[0].substring(4) + 'Z').toISOString().substr(0, 19);
 
     if (mainWindow.satellites[object].burns.length === 0) return;
-    let r1, r2, v, addedElement;
+    let addedElement;
     for (let burn = 0; burn < mainWindow.satellites[object].burns.length; burn++) {
         addedElement = document.createElement('tr');
         addedElement.classList.add('tool-container')
         addedElement.innerHTML = `
             <td>${new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[burn].time * 1000).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td onclick="this.classList.toggle('tooltip')"class="" title="${'r: ' + (1000*mainWindow.satellites[object].burns[burn].direction.r).toFixed(3) + '  i: ' + (1000*mainWindow.satellites[object].burns[burn].direction.i).toFixed(3) + '  c: ' + (1000*mainWindow.satellites[object].burns[burn].direction.c).toFixed(3) + ' m/s'}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
+            <td onclick="addToolTip(this)" class="" title="${'r: ' + (1000*mainWindow.satellites[object].burns[burn].direction.r).toFixed(3) + '  i: ' + (1000*mainWindow.satellites[object].burns[burn].direction.i).toFixed(3) + '  c: ' + (1000*mainWindow.satellites[object].burns[burn].direction.c).toFixed(3) + ' m/s'}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
             <td><span>${(mainWindow.satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
             <td class="edit-button ctrl-switch">Edit</td>
         `;
@@ -2987,6 +2987,11 @@ function generateBurnTable(object = 0) {
     for (let button = 0; button < editButtons.length; button++) {
         editButtons[button].addEventListener('click', editButtonFunction);
     }
+}
+
+function addToolTip(element) {
+    if (element.getElementsByTagName('input').length > 0) return;
+    element.classList.toggle('tooltip')
 }
 
 function editButtonFunction(event) {
@@ -3048,7 +3053,7 @@ function waypoints2table(waypoints) {
         addedElement.innerHTML = `
             <td>${new Date(point.time).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td title="test"><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span></td>
+            <td><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span></td>
             <td><span>${(point.tranTime).toFixed(3)}</span></td>
             <td class="edit-button ctrl-switch" onclick="editButtonFunction(event)">Edit</td>
         `;

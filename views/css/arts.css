@@ -13,11 +13,11 @@ html, body {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-25%, -50%);
+    transform: translate(-50%, -50%);
     background-color: white;
     color: black;
     border: 1px solid black;
-    padding: 5px;
+    padding: 5px 15px;
     border-radius: 10px;
     font-size: 0.75em;
     z-index: 10;
