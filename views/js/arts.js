@@ -1340,11 +1340,19 @@ function handleContextClick(button) {
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'waypoint-maneuver') {
-        button.parentElement.innerHTML = `
+        let sat = button.parentElement.sat;
+        console.log(sat);
+        let html = `
             <div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>
             <div class="context-item" >Target: (<input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">) km</div>
-            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="execute-waypoint" tabindex="0">Execute</div>
+            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-waypoint" tabindex="0">RIC Origin</div>
         `
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (sat === ii) continue
+            html += `<div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="${ii}" id="execute-waypoint" tabindex="0">${mainWindow.satellites[ii].name}</div>`
+        
+        }
+        button.parentElement.innerHTML = html
        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
     else if (button.id === 'direction-maneuver') {
@@ -1364,6 +1372,7 @@ function handleContextClick(button) {
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
     else if (button.id === 'execute-waypoint') {
+        let target = button.getAttribute('target')
         let inputs = button.parentElement.getElementsByTagName('input');
         let bad = false;
         for (let ii = 0; ii < inputs.length; ii++) {
@@ -1380,6 +1389,9 @@ function handleContextClick(button) {
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
+        let origin = target === 'origin' ? {r: [0], i: [0], c: [0]} : mainWindow.satellites[target].currentPosition({
+            time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
+        })
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
@@ -1390,9 +1402,9 @@ function handleContextClick(button) {
             waypoint: {
                 tranTime: Number(inputs[0].value) * 3600,
                 target: {
-                    r: Number(inputs[1].value),
-                    i: Number(inputs[2].value),
-                    c: Number(inputs[3].value),
+                    r: Number(inputs[1].value) + origin.r[0],
+                    i: Number(inputs[2].value) + origin.i[0],
+                    c: Number(inputs[3].value) + origin.c[0],
                 }
             }
         })
