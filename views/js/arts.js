@@ -962,6 +962,7 @@ let timeFunction = false;
     window.requestAnimationFrame(animationLoop)
 })()
 setTimeout(() => {
+    return
     if (mainWindow.satellites.length > 0 || mainWindow.panelOpen) return;
     showScreenAlert('start-screen')
 }, 5000)
@@ -1426,6 +1427,7 @@ function handleContextClick(button) {
             dir = math.transpose(math.multiply(rot1, math.transpose([dir])))[0];
             dir = math.transpose(math.multiply(rot2, math.transpose([dir])))[0];
         }
+        let position = mainWindow.satellites[sat].currentPosition();
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
@@ -1444,7 +1446,6 @@ function handleContextClick(button) {
         })
         let tof = 1.5*math.norm([ Number(inputs[0].value),  Number(inputs[1].value),  Number(inputs[2].value)]) / 1000 / mainWindow.satellites[sat].a;
         tof = tof > 10800 ? tof : 10800;
-        let position = mainWindow.satellites[sat].currentPosition();
         position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
         let direction = dir;
         let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.scenarioTime, mainWindow.satellites[sat].a)
@@ -4110,4 +4111,64 @@ function PosVel2CoeNew(r, v) {
         arg: ar,
         tA: ta
     };
+}
+
+function addTestSatellites() {
+    mainWindow.satellites.push(new Satellite({
+        position: {
+            r: -640.5,
+            i: 7321.7,
+            c: 0,
+            rd: 0,
+            id: 0,
+            cd: 0 
+        },
+        a: 0.1,
+        name: 'Chaser'
+    }))
+    mainWindow.satellites.push(new Satellite({
+        position: {
+            r: 0,
+            i: 0,
+            c: 0,
+            rd: 0,
+            id: 0,
+            cd: 0 
+        },
+        a: 0.001,
+        name: 'Target'
+    }))
+}
+
+function testLambertSolutionMan() {
+    addTestSatellites()
+
+    let sat1 = 0, sat2 = 1, tf = 2*3600
+    mainWindow.satellites[sat1].calcTraj()
+    mainWindow.satellites[sat2].calcTraj()
+    let r1 = mainWindow.satellites[sat1].currentPosition()
+    let r2 = mainWindow.satellites[sat2].currentPosition()
+    r1 = math.squeeze([r1.r, r1.i, r1.c, r1.rd, r1.id, r1.cd])
+    r2 = math.squeeze([r2.r, r2.i, r2.c, r2.rd, r2.id, r2.cd])
+    let inertOrbit1 = [(398600.4418 / mainWindow.mm ** 2) ** (1/3), 0, 0, 0, (398600.4418 / (398600.4418 / mainWindow.mm ** 2) ** (1/3)) ** (1/2), 0]
+    let ang = tf * mainWindow.mm
+    let rot = rotationMatrices(ang, 3, 'rad')
+    let inertOrbit2 = math.squeeze(math.multiply(rot, math.transpose([inertOrbit1.slice(0,3)])).concat(math.multiply(rot, math.transpose([inertOrbit1.slice(3,6)]))))
+    // Convert both to inertial, r2 in future
+    // Ric2Eci(rHcw = [0,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0]) 
+    r1 = Ric2Eci(r1.slice(0,3), r1.slice(3,6), inertOrbit1.slice(0,3),inertOrbit1.slice(3,6)) 
+    r1 = r1.rEcci.concat(r1.drEci)
+    r2 = Ric2Eci(r2.slice(0,3), r2.slice(3,6), inertOrbit2.slice(0,3),inertOrbit2.slice(3,6)) 
+    r2 = r2.rEcci.concat(r2.drEci)
+    let lamSol = solveLambertsProblem(r1.slice(0,3), r2.slice(0,3), tf, 0, true)
+    let dV = math.subtract(lamSol.v1, r1.slice(3,6));
+    console.log(dV);
+    let h = math.cross(inertOrbit1.slice(0,3), inertOrbit1.slice(3,6));
+    let ricX = math.dotDivide(inertOrbit1.slice(0,3), math.norm(inertOrbit1.slice(0,3)));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+    let C = [ricX, ricY, ricZ];
+    dV = math.multiply(C, dV)
+    console.log(dV);
+
 }
