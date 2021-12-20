@@ -78,7 +78,7 @@ class windowCanvas {
     timeDelta = 0.006*86164;
     scenarioLength = 48;
     burnSensitivity = 0.3;
-    scenarioTime = 0;
+    scenarioTime = 0.1; // Dont know why but this prevents bugs with burning immediately
     startDate = new Date(document.getElementById('start-time').value);
     state = 'ri';
     burnType = 'waypoint';
@@ -1461,6 +1461,7 @@ function handleContextClick(button) {
         position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
         let direction = dir;
         let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.scenarioTime, mainWindow.satellites[sat].a)
+        
         mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
             tranTime: tof,
             target: {
@@ -1773,7 +1774,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                 burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
                 frame: Object.keys(check)[0]
             }
-            if (mainWindow.burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri') {
+            if (mainWindow.burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
                 mainWindow.desired.scenarioTime += 7200;
                 document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
             };
@@ -2855,6 +2856,7 @@ function generateBurns(all = false) {
             id: [position[4]],
             cd: [position[5]]
         }
+        if (this.a < 0.000001) continue;
         let dir = hcwFiniteBurnOneBurn({
             x: position[0],
             y: position[1],
@@ -2886,7 +2888,7 @@ function calcBurns() {
     if (!this.mousePosition) return;
     let mousePosition = this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
-    if (mainWindow.burnStatus.type === 'waypoint' && !cross) {
+    if (mainWindow.burnStatus.type === 'waypoint' && !cross && sat.a > 0.000001) {
         sat.burns[this.burnStatus.burn].waypoint.target = {
             r: mousePosition[this.burnStatus.frame].r,
             i: mousePosition[this.burnStatus.frame].i,
@@ -2903,7 +2905,7 @@ function calcBurns() {
         tranTime = tranTime < 10800 ? 10800 : tranTime;
         tranTime = cross ? sat.burns[this.burnStatus.burn].waypoint.tranTime : tranTime; 
         // If burn time is longer than 6 hrs (times 1.5), limit burn
-        if (tranTime > 32400) {
+        if (tranTime > 32400 && sat.a > 0.000001) {
             tranTime = 32400;
             let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
             dir = math.dotDivide(dir, math.norm(dir));
@@ -4133,18 +4135,6 @@ function PosVel2CoeNew(r, v) {
 function addTestSatellites() {
     mainWindow.satellites.push(new Satellite({
         position: {
-            r: -640.5,
-            i: 7321.7,
-            c: 0,
-            rd: 0,
-            id: 0,
-            cd: 0 
-        },
-        a: 0.1,
-        name: 'Chaser'
-    }))
-    mainWindow.satellites.push(new Satellite({
-        position: {
             r: 0,
             i: 0,
             c: 0,
@@ -4152,9 +4142,21 @@ function addTestSatellites() {
             id: 0,
             cd: 0 
         },
-        a: 0.001,
-        name: 'Target'
+        a: 0.0000001,
+        name: 'Chaser'
     }))
+    // mainWindow.satellites.push(new Satellite({
+    //     position: {
+    //         r: 0,
+    //         i: 0,
+    //         c: 0,
+    //         rd: 0,
+    //         id: 0,
+    //         cd: 0 
+    //     },
+    //     a: 0.001,
+    //     name: 'Target'
+    // }))
 }
 
 function testLambertSolutionMan() {
