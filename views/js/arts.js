@@ -52,6 +52,7 @@ class windowCanvas {
     desired = {
         scenarioTime: 0,
         plotCenter: 0,
+        plotWidth: 200,
         speed: 0.2,
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
         ci: {x: 0.5, y: 1, w: 1, h: 0},
@@ -219,15 +220,15 @@ class windowCanvas {
     }
     setAxisWidth(type = 'set', width) {
         if (type === 'set') {
-            this.plotWidth = width;
+            this.desired.plotWidth = width;
         }
         else if (type === 'increase') {
-            this.plotWidth *= 1.05;
+            this.desired.plotWidth *= 1.05;
         }
         else if (type === 'decrease') {
-            this.plotWidth /= 1.05;
+            this.desired.plotWidth /= 1.05;
         }
-        this.plotHeight = this.plotWidth * this.getRatio();
+        this.plotHeight = this.desired.plotWidth * this.getRatio();
     }
     setPlotCenter(center) {
         this.plotCenter = center;
@@ -248,6 +249,8 @@ class windowCanvas {
         }
         this.scenarioTime += (this.desired.scenarioTime - this.scenarioTime) * this.desired.speed 
         this.plotCenter += (this.desired.plotCenter - this.plotCenter) * this.desired.speed 
+        this.plotWidth += (this.desired.plotWidth - this.plotWidth) * this.desired.speed 
+        this.plotHeight = this.plotWidth * this.getRatio();
     }
     setSize(width, height) {
         this.cnvs.width = width;
@@ -3152,6 +3155,10 @@ function initStateFunction(el) {
             color,
             name
         }));
+        let newWidth = (Math.abs(position.i) * 2.2) > (Math.abs(position.r) * 2.4 / mainWindow.getRatio()) ? Math.abs(position.i) * 2.2 : Math.abs(position.r) * 2.4 / mainWindow.getRatio()
+        if (newWidth > mainWindow.desired.plotWidth) {
+            mainWindow.desired.plotWidth = newWidth
+        }
         newTitle += mainWindow.satellites[0].name;
         for (let ii = 1; ii < mainWindow.satellites.length; ii++){
             newTitle += ' / ' + mainWindow.satellites[ii].name;
