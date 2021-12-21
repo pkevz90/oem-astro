@@ -3012,10 +3012,13 @@ function generateBurnTable(object = 0) {
     for (let burn = 0; burn < mainWindow.satellites[object].burns.length; burn++) {
         addedElement = document.createElement('tr');
         addedElement.classList.add('tool-container')
+        let burnDir = [1000*mainWindow.satellites[object].burns[burn].direction.r, 1000*mainWindow.satellites[object].burns[burn].direction.i, 1000*mainWindow.satellites[object].burns[burn].direction.c]
+        let rot = translateFrames(object, {time: mainWindow.satellites[object].burns[burn].time})
+        burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
         addedElement.innerHTML = `
             <td>${new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[burn].time * 1000).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td onclick="addToolTip(this)" class="" title="${'r: ' + (1000*mainWindow.satellites[object].burns[burn].direction.r).toFixed(3) + '  i: ' + (1000*mainWindow.satellites[object].burns[burn].direction.i).toFixed(3) + '  c: ' + (1000*mainWindow.satellites[object].burns[burn].direction.c).toFixed(3) + ' m/s'}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
+            <td onclick="addToolTip(this)" class="" title="${'r: ' + burnDir[0].toFixed(3) + '  i: ' + burnDir[1].toFixed(3) + '  c: ' + burnDir[2].toFixed(3) + ' m/s'}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
             <td><span>${(mainWindow.satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
             <td class="edit-button ctrl-switch">Edit</td>
         `;
@@ -3850,12 +3853,11 @@ function getCurrentPosition(options = {}) {
     }
     let isTimeDuringBurn = this.burns.filter(burn => {
         let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
-        return time > burn.time && time < burnEnd;
+        return time >= burn.time && time < burnEnd;
     });
     // Check if reference time during burn
     let isIndexDuringBurn = this.burns.filter(burn => {
         let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
-        // console.log(time, this.stateHistory[stateIndex].t , burn.time, this.stateHistory[stateIndex].t < burnEnd);
         return this.stateHistory[stateIndex].t >= burn.time && this.stateHistory[stateIndex].t < burnEnd;
     });
     let isSurroundsBurn = this.burns.filter(burn => {
