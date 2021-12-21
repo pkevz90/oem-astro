@@ -1435,12 +1435,9 @@ function handleContextClick(button) {
             return burn.time < mainWindow.scenarioTime;
         })
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
-        let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
         if (mainWindow.normalizeDirection) {
-            let rot1 = rotationMatrices(mainWindow.satellites[sat].curPos.i / a, 3, 'rad');
-            let rot2 = rotationMatrices(-mainWindow.satellites[sat].curPos.c / a, 2, 'rad');
-            dir = math.transpose(math.multiply(rot1, math.transpose([dir])))[0];
-            dir = math.transpose(math.multiply(rot2, math.transpose([dir])))[0];
+            let rot = translateFrames(sat)
+            dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
         }
         let position = mainWindow.satellites[sat].currentPosition();
         mainWindow.satellites[sat].burns.push({
@@ -1636,6 +1633,42 @@ function handleContextClick(button) {
         document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
     }
+}
+
+function translateFrames(sat = 0, options={}) {
+    let {time = mainWindow.desired.scenarioTime} = options
+    let ricPos = mainWindow.satellites[sat].currentPosition({time})
+    ricPos = math.squeeze([ricPos.r, ricPos.i, ricPos.c, ricPos.rd, ricPos.id, ricPos.cd])
+    let inert = [
+        (398600.4418 / mainWindow.mm ** 2) ** (1/3),
+        0,
+        0,
+        0,
+        (398600.4418 / ((398600.4418 / mainWindow.mm ** 2) ** (1/3))) ** (1/2),
+        0
+    ]
+    let eciPos = Ric2Eci(ricPos.slice(0,3), ricPos.slice(3,6), inert.slice(0,3), inert.slice(3,6))
+    let h = math.cross(eciPos.rEcci, eciPos.drEci);
+    let ricX = math.dotDivide(eciPos.rEcci, math.norm(eciPos.rEcci));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+    let satFrame = [
+        ricX, ricY, ricZ
+    ]
+    h = math.cross(inert.slice(0,3), inert.slice(3,6));
+    ricX = math.dotDivide(inert.slice(0,3), math.norm(inert.slice(0,3)));
+    ricZ = math.dotDivide(h, math.norm(h));
+    ricY = math.cross(ricZ, ricX);
+    let inertFrame = [
+        ricX, ricY, ricZ
+    ]
+    return [
+        [math.dot(satFrame[0], inertFrame[0]), math.dot(satFrame[0], inertFrame[1]), math.dot(satFrame[0], inertFrame[2])],
+        [math.dot(satFrame[1], inertFrame[0]), math.dot(satFrame[1], inertFrame[1]), math.dot(satFrame[1], inertFrame[2])],
+        [math.dot(satFrame[2], inertFrame[0]), math.dot(satFrame[2], inertFrame[1]), math.dot(satFrame[2], inertFrame[2])]
+    ]
+
+    
 }
 
 function plotRelativeData(data, origin, target) {
