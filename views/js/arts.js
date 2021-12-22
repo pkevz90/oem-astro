@@ -800,7 +800,7 @@ class Satellite {
                 let point2 = [burn.location.r[0] + dispDist * burn.direction.r / mag, burn.location.i[0] + dispDist * burn.direction.i / mag, burn.location.c[0] + dist * burn.direction.c / mag]
                 point2 = mainWindow.convertToPixels(point2);
                 ctx.strokeStyle = this.color;
-                ctx.font = 'bold 19.7px serif';
+                ctx.font = 'bold 15px serif';
                 let textWidth = ctx.measureText((1000*mag).toFixed(1) + ' m/s').width;
                 let textHeight = 20;
                 // console.log(Math.abs(burn.location.r) , (mainWindow.getPlotHeight() * fC.ri.h / 2), (Math.abs(location.i) < (mainWindow.getPlotWidth() * fC.ri.w / 2)));
@@ -924,6 +924,24 @@ class Satellite {
         this.burns = []
         this.calcTraj();
     }
+}
+
+function testTimeDelta(dt = 500, time = 7200) {
+    let dtState = [0, 0, 0, 0.015, 0, 0.055]
+    let smallStepState = [...dtState]
+    // Find state with dt
+    let t = 0
+    while (t < time) {
+        dtState = runge_kutta(twoBodyRpo, dtState, dt)
+        t += dt
+    }
+    dtState = runge_kutta(twoBodyRpo, dtState, time - t)
+    t = 0
+    while (t < time) {
+        smallStepState = runge_kutta(twoBodyRpo, smallStepState, 1)
+        t += 1
+    }
+    return math.norm(math.subtract(smallStepState, dtState))
 }
 
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
@@ -1999,24 +2017,22 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let el = click.target;
     el = el.parentNode.parentNode;
     let inputs = el.getElementsByTagName('input');
+    console.log(inputs);
     let date = inputs[0].value;
     let sun = inputs[3].value;
     mainWindow.mm = Math.sqrt(398600.4418 / Math.pow(Number(inputs[2].value), 3));
     mainWindow.originOrbit.a = Number(inputs[2].value)
     mainWindow.scenarioLength = Number(inputs[1].value);
     document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
-    // let repeat = inputs[9].checked;
-    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / Number( inputs[10].value);
+    mainWindow.timeDelta = (2 * Math.PI / mainWindow.mm) / Number(inputs[10].value)
     mainWindow.satellites.forEach(sat => {
         sat.genBurns();
         sat.calcTraj();
     });
-    // encoder.setRepeat(repeat ? 0 : 1);
     sunIR = -Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
     sunC = Number(inputs[4].value) * Math.PI / 180;
     mainWindow.setInitSun([-Math.cos(sunIR) * Math.cos(sunC), Math.sin(sunIR) * Math.cos(sunC), Math.sin(sunC)]);
     mainWindow.startDate = new Date(date);
-    // mainWindow.nameFont = Number(inputs[11].value) / 100;
     closeAll();
 })
 document.getElementById('confirm-data-button').addEventListener('click', (click) => {
@@ -2938,11 +2954,11 @@ function calcBurns() {
                 mainWindow.burnSensitivity / 1000 : sat.burns[this.burnStatus.burn].direction.c
         }
         let tranTime = 1.5*math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c]) / sat.a;
-        tranTime = tranTime < 10800 ? 10800 : tranTime;
+        tranTime = tranTime < (2 * Math.PI / mainWindow.mm) * 0.12534 ? (2 * Math.PI / mainWindow.mm) * 0.12534 : tranTime;
         tranTime = cross ? sat.burns[this.burnStatus.burn].waypoint.tranTime : tranTime; 
-        // If burn time is longer than 6 hrs (times 1.5), limit burn
-        if (tranTime > 32400 && sat.a > 0.000001) {
-            tranTime = 32400;
+        // If burn time is longer than about an eighth of the orbit (times 1.5), limit burn
+        if (tranTime > (2 * Math.PI / mainWindow.mm) * 0.3) {
+            tranTime = (2 * Math.PI / mainWindow.mm) * 0.3;
             let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
             dir = math.dotDivide(dir, math.norm(dir));
             dir = math.dotMultiply(dir, (tranTime/1.5) * sat.a);
