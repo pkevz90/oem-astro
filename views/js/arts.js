@@ -2423,7 +2423,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
     if (X[2] > 1) {
         return false;
     }
-    let errCount = 0, sInv;
+    let errCount = 0;
     while (math.norm(math.squeeze(dX)) > 1e-6) {
         F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0);
         yErr = [
@@ -2434,7 +2434,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, n);
         dX = math.multiply(math.inv(S), yErr);
         X = math.add(X, dX)
-        if (errCount > 30) return false;
+        if (errCount > 10 || X[2][0] < 0) return false;
         errCount++;
     }
     if (X[2] > 1 || X[2] < 0) return false;
