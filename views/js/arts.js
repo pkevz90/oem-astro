@@ -24,6 +24,7 @@ document.getElementsByClassName('rmoe')[2].parentNode.innerHTML = `
 document.getElementsByClassName('rmoe')[4].parentNode.innerHTML = `
     Plane Diff <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> deg
 `
+document.getElementById('time-slider-range').max = 48*3600
 /*
 var listDiv = document.createElement('div');
 listDiv.innerHTML = `
@@ -805,7 +806,7 @@ class Satellite {
                 point2 = mainWindow.convertToPixels(point2);
                 ctx.strokeStyle = this.color;
                 ctx.font = 'bold 15px serif';
-                let textWidth = ctx.measureText((1000*mag).toFixed(1) + ' m/s').width;
+                let textWidth = ctx.measureText((1000*mag).toFixed(1)).width;
                 let textHeight = 20;
                 // console.log(Math.abs(burn.location.r) , (mainWindow.getPlotHeight() * fC.ri.h / 2), (Math.abs(location.i) < (mainWindow.getPlotWidth() * fC.ri.w / 2)));
                 if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i - mainWindow.getPlotCenter()) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
@@ -814,7 +815,7 @@ class Satellite {
                     ctx.lineTo(point2.ri.x, point2.ri.y);
                     mag2 = math.norm([point2.ri.x - point1.ri.x, point2.ri.y - point1.ri.y]);
                     if (mag2 > 1e-6) {
-                        ctx.fillText((1000*mag).toFixed(1) + ' m/s', -textWidth * (point2.ri.x - point1.ri.x) / mag2 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 + point1.ri.y)
+                        ctx.fillText((1000*mag).toFixed(1), -textWidth * (point2.ri.x - point1.ri.x) / mag2 / 1.4 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 / 1.4 + point1.ri.y)
                         ctx.stroke();
                     }
                 }
@@ -2939,6 +2940,7 @@ function calcBurns() {
     let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location)[this.burnStatus.frame];
     let ctx = this.getContext();
     ctx.strokeStyle = sat.color;
+    ctx.fillStyle = sat.color
     ctx.beginPath();
     ctx.moveTo(initPos.x, initPos.y);
     let dist = mag * 1000 / this.burnSensitivity;
@@ -2948,7 +2950,7 @@ function calcBurns() {
     ctx.stroke();
     let mag2 = math.norm([finalPos.x - initPos.x, finalPos.y - initPos.y]);
     
-    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 + initPos.y)
+    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
     sat.genBurns(true);
 }
 
