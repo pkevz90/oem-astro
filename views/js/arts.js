@@ -701,6 +701,12 @@ class windowCanvas {
         this.plotWidth = plotWidth;
         this.relativeData = relativeData;
         this.satellites = [];
+        this.mm = mm;
+        this.timeDelta = timeDelta;
+        this.scenarioLength = scenarioLength;
+        this.initSun = initSun;
+        this.startDate = new Date(startDate);
+        this.originOrbit = originOrbit
         satellites.forEach(sat =>{
             this.satellites.push(
                 new Satellite({
@@ -715,6 +721,7 @@ class windowCanvas {
             )
             this.satellites[this.satellites.length - 1].drawCurrentPosition();
             this.satellites[this.satellites.length - 1].calcTraj();
+            this.satellites[this.satellites.length - 1].genBurns(true);
             this.satellites[this.satellites.length - 1].curPos = this.satellites[this.satellites.length - 1].currentPosition();
             this.satellites[this.satellites.length - 1].curPos = {
                 r: this.satellites[this.satellites.length - 1].curPos.r[0],
@@ -725,12 +732,6 @@ class windowCanvas {
                 cd: this.satellites[this.satellites.length - 1].curPos.cd[0]
             }
         })
-        this.mm = mm;
-        this.timeDelta = timeDelta;
-        this.scenarioLength = scenarioLength;
-        this.initSun = initSun;
-        this.startDate = new Date(startDate);
-        this.originOrbit = originOrbit
         document.getElementById('time-slider-range').max = scenarioLength * 3600
 
     }
@@ -2874,70 +2875,6 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
 }
 
 function generateBurns(all = false) {
-    let start = mainWindow.burnStatus.type ? mainWindow.burnStatus.burn : 0;
-    let position = start === 0 ? {r: [this.position.r], i: [this.position.i], c: [this.position.c], rd: [this.position.rd], id: [this.position.id], cd: [this.position.cd]} : this.burns[start-1].location;
-    position = [position.r[0], position.i[0], position.c[0], position.rd[0], position.id[0], position.cd[0]];
-    let time = start === 0 ? 0 : this.burns[start - 1].time;
-    for (let ii = start; ii < this.burns.length; ii++) {
-        if (ii === 0) {
-            let n = math.ceil((this.burns[ii].time - time) / mainWindow.timeDelta)
-            let delta = (this.burns[ii].time - time) / n;
-            for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta, [0,0,0], time);
-                time += delta
-            }
-        }
-        else {
-            let dirLast = [this.burns[ii-1].direction.r, this.burns[ii-1].direction.i, this.burns[ii-1].direction.c];
-            let tBurnLast = math.norm(dirLast) / this.a;
-            let n = math.ceil(tBurnLast / mainWindow.timeDelta)
-            dirLast = math.dotMultiply(this.a, math.dotDivide(dirLast, math.norm(dirLast)));
-            let delta = tBurnLast / n;
-            for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta, dirLast, time);
-                time += delta
-            }
-            n = math.ceil((this.burns[ii].time - time) / mainWindow.timeDelta)
-            delta = (this.burns[ii].time - time) / n;
-            for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta, [0,0,0], time);
-                time += delta
-            }
-            console.log(time);
-        }
-        time = this.burns[ii].time;
-        console.log(time);
-        this.burns[ii].location = {
-            r: [position[0]],
-            i: [position[1]],
-            c: [position[2]],
-            rd: [position[3]],
-            id: [position[4]],
-            cd: [position[5]]
-        }
-        if (this.a < 0.000001) continue;
-        let dir = hcwFiniteBurnOneBurn({
-            x: position[0],
-            y: position[1],
-            z: position[2],
-            xd: position[3],
-            yd: position[4],
-            zd: position[5]
-        }, {
-            x: this.burns[ii].waypoint.target.r,
-            y: this.burns[ii].waypoint.target.i,
-            z: this.burns[ii].waypoint.target.c,
-            xd: 0,
-            yd: 0,
-            zd: 0
-        }, this.burns[ii].waypoint.tranTime, this.a, time);
-        if (dir && dir.t > 0 && dir.t < 1) {
-            this.burns[ii].direction.r = dir.r;
-            this.burns[ii].direction.i = dir.i;
-            this.burns[ii].direction.c = dir.c;
-        }
-    }
-
     this.calcTraj(true);
 }
 
@@ -3814,16 +3751,53 @@ function calcSatTwoBody(allBurns = false) {
         if (satBurn !== undefined) {
             if ((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
                 (mainWindow.scenarioTime + 0.5) || allBurns)) {
+                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc, [0,0,0], t_calc);
+                t_calc += this.burns[satBurn].time - t_calc;
+
+                // RecalcBurns
+                if (allBurns) {
+                    this.burns[satBurn].location  = {
+                        r: [currentState[0]],
+                        i: [currentState[1]],
+                        c: [currentState[2]],
+                        rd: [currentState[3]],
+                        id: [currentState[4]],
+                        cd: [currentState[5]],
+                    }  
+                    if (this.a > 0.000001){
+                        let dir = hcwFiniteBurnOneBurn({
+                            x: currentState[0],
+                            y: currentState[1],
+                            z: currentState[2],
+                            xd: currentState[3],
+                            yd: currentState[4],
+                            zd: currentState[5]
+                        }, {
+                            x: this.burns[satBurn].waypoint.target.r,
+                            y: this.burns[satBurn].waypoint.target.i,
+                            z: this.burns[satBurn].waypoint.target.c,
+                            xd: 0,
+                            yd: 0,
+                            zd: 0
+                        }, this.burns[satBurn].waypoint.tranTime, this.a, t_calc);
+                        if (dir && dir.t > 0 && dir.t < 1) {
+                            this.burns[satBurn].direction.r = dir.r;
+                            this.burns[satBurn].direction.i = dir.i;
+                            this.burns[satBurn].direction.c = dir.c;
+                        }
+                    }
+                } 
+
                 let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
                     .direction.i, this.burns[satBurn].direction.c
                 ]) / this.a;
+                
                 if (satBurn !== this.burns.length - 1) {
                     t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
                 } 
                 t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !allBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
-                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc, [0,0,0], t_calc);
+                
                 // console.log(math.squeeze(currentState));
-                t_calc += this.burns[satBurn].time - t_calc;
                 let direction = [this.burns[satBurn].direction.r, this.burns[satBurn].direction.i, this.burns[satBurn].direction.c];
 
                 direction = math.dotMultiply(this.a, math.dotDivide(direction, math.norm(direction)));
