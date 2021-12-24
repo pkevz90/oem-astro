@@ -682,7 +682,8 @@ class windowCanvas {
             timeDelta: this.timeDelta,
             scenarioLength: this.scenarioLength,
             initSun: this.initSun,
-            startDate: this.startDate
+            startDate: this.startDate,
+            originOrbit: this.originOrbit
         }
     }
     loadDate(data = {}) {
@@ -694,7 +695,8 @@ class windowCanvas {
             timeDelta = this.timeDelta,
             scenarioLength = this.scenarioLength,
             initSun = this.initSun,
-            startDate = this.startDate
+            startDate = this.startDate,
+            originOrbit = this.originOrbit
         } = data
         this.plotWidth = plotWidth;
         this.relativeData = relativeData;
@@ -728,7 +730,8 @@ class windowCanvas {
         this.scenarioLength = scenarioLength;
         this.initSun = initSun;
         this.startDate = new Date(startDate);
-        console.log(this.startDate);
+        this.originOrbit = originOrbit
+        document.getElementById('time-slider-range').max = scenarioLength * 3600
 
     }
     drawOrbitCurve() {
@@ -2874,13 +2877,14 @@ function generateBurns(all = false) {
     let start = mainWindow.burnStatus.type ? mainWindow.burnStatus.burn : 0;
     let position = start === 0 ? {r: [this.position.r], i: [this.position.i], c: [this.position.c], rd: [this.position.rd], id: [this.position.id], cd: [this.position.cd]} : this.burns[start-1].location;
     position = [position.r[0], position.i[0], position.c[0], position.rd[0], position.id[0], position.cd[0]];
-    let time = start === 0 ? 0 : this.burns[start - 1].time;
+    // let time = start === 0 ? 0 : this.burns[start - 1].time;
     for (let ii = start; ii < this.burns.length; ii++) {
         if (ii === 0) {
             let n = math.ceil((this.burns[ii].time - time) / mainWindow.timeDelta)
             let delta = (this.burns[ii].time - time) / n;
             for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta, [0,0,0], time + delta * ii);
+                position = runge_kutta(twoBodyRpo, position, delta, [0,0,0], time);
+                time += delta
             }
         }
         else {
@@ -2890,16 +2894,19 @@ function generateBurns(all = false) {
             dirLast = math.dotMultiply(this.a, math.dotDivide(dirLast, math.norm(dirLast)));
             let delta = tBurnLast / n;
             for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta, dirLast, time + delta * ii);
+                position = runge_kutta(twoBodyRpo, position, delta, dirLast, time);
+                time += delta
             }
-            let nOld = n + 0;
-            n = math.ceil((this.burns[ii].time - time - tBurnLast) / mainWindow.timeDelta)
-            delta = (this.burns[ii].time - time - tBurnLast) / n;
+            n = math.ceil((this.burns[ii].time - time) / mainWindow.timeDelta)
+            delta = (this.burns[ii].time - time) / n;
             for (let ii = 0; ii < n; ii++) {
-                position = runge_kutta(twoBodyRpo, position, delta, [0,0,0], time + nOld * delta + ii * delta);
+                position = runge_kutta(twoBodyRpo, position, delta, [0,0,0], time);
+                time += delta
             }
+            console.log(time);
         }
         time = this.burns[ii].time;
+        console.log(time);
         this.burns[ii].location = {
             r: [position[0]],
             i: [position[1]],
