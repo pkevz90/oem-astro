@@ -2877,7 +2877,7 @@ function generateBurns(all = false) {
     let start = mainWindow.burnStatus.type ? mainWindow.burnStatus.burn : 0;
     let position = start === 0 ? {r: [this.position.r], i: [this.position.i], c: [this.position.c], rd: [this.position.rd], id: [this.position.id], cd: [this.position.cd]} : this.burns[start-1].location;
     position = [position.r[0], position.i[0], position.c[0], position.rd[0], position.id[0], position.cd[0]];
-    // let time = start === 0 ? 0 : this.burns[start - 1].time;
+    let time = start === 0 ? 0 : this.burns[start - 1].time;
     for (let ii = start; ii < this.burns.length; ii++) {
         if (ii === 0) {
             let n = math.ceil((this.burns[ii].time - time) / mainWindow.timeDelta)
