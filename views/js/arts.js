@@ -2964,7 +2964,7 @@ function calcBurns() {
         tranTime = tranTime < (2 * Math.PI / mainWindow.mm) * 0.12534 ? (2 * Math.PI / mainWindow.mm) * 0.12534 : tranTime;
         tranTime = cross ? sat.burns[this.burnStatus.burn].waypoint.tranTime : tranTime; 
         // If burn time is longer than about an eighth of the orbit (times 1.5), limit burn
-        if (tranTime > (2 * Math.PI / mainWindow.mm) * 0.3) {
+        if (tranTime > (2 * Math.PI / mainWindow.mm) * 0.3 && sat.a > 0.000001) {
             tranTime = (2 * Math.PI / mainWindow.mm) * 0.3;
             let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
             dir = math.dotDivide(dir, math.norm(dir));
