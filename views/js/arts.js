@@ -2399,6 +2399,7 @@ function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
 function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainWindow.mm) {
     let state = math.transpose([Object.values(stateInit)]);
     stateFinal = math.transpose([Object.values(stateFinal)]);
+    
     let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
     let v1 = v[0],
         yErr= [100], S, dX = 1,
@@ -2410,6 +2411,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
     else {
         dv1 = guess;
     }
+    
     let Xret = [
         [Math.atan2(dv1[1][0], dv1[0][0])],
         [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
@@ -2439,7 +2441,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, n);
         dX = math.multiply(math.inv(S), yErr);
         X = math.add(X, dX)
-        if (errCount > 10 || X[2][0] < 0) return false;
+        if (errCount > 20 || X[2][0] < 0) return false;
         errCount++;
     }
     if (X[2] > 1 || X[2] < 0) return false;
@@ -2902,7 +2904,7 @@ function calcBurns() {
         tranTime = tranTime < (2 * Math.PI / mainWindow.mm) * 0.12534 ? (2 * Math.PI / mainWindow.mm) * 0.12534 : tranTime;
         tranTime = cross ? sat.burns[this.burnStatus.burn].waypoint.tranTime : tranTime; 
         // If burn time is longer than about an eighth of the orbit (times 1.5), limit burn
-        if (tranTime > (2 * Math.PI / mainWindow.mm) * 0.3 && sat.a > 0.000001) {
+        if (tranTime > (2 * Math.PI / mainWindow.mm) * 0.3 && sat.a > 0.000001 && !cross) {
             tranTime = (2 * Math.PI / mainWindow.mm) * 0.3;
             let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
             dir = math.dotDivide(dir, math.norm(dir));
