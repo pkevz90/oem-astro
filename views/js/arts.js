@@ -851,17 +851,44 @@ class Satellite {
         this.curPos = cur;
         mainWindow.drawSatLocation(cur, {size: this.size, color: this.color, shape: this.shape, name: this.name});
     }
-    checkClickProximity(position) {
-        // Check if clicked on current position of object
+    checkClickProximity(position, burns = false) {
+        // Check if clicked on current position of object, if burns flag is true, check click to current object burns
         let out = {};
         if (position.ri) {
-            out.ri = math.norm([this.curPos.r - position.ri.r, this.curPos.i - position.ri.i]) < (mainWindow.getPlotWidth() / 80);
+            if (burns) {
+                let burnsCheck = false
+                this.burns.forEach((burn, ii) => {
+                    burnsCheck = math.norm([burn.location.r[0] - position.ri.r, burn.location.i[0] - position.ri.i]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
+                })
+                out = burnsCheck
+            }
+            else {
+                out.ri = math.norm([this.curPos.r - position.ri.r, this.curPos.i - position.ri.i]) < (mainWindow.getPlotWidth() / 80);
+            }
         }
         if (position.ci) {
-            out.ci = math.norm([this.curPos.c - position.ci.c, this.curPos.i - position.ci.i]) < (mainWindow.getPlotWidth() / 80);
+            if (burns) {
+                let burnsCheck = false
+                this.burns.forEach((burn, ii) => {
+                    burnsCheck = math.norm([burn.location.c[0] - position.ci.c, burn.location.i[0] - position.ci.i]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
+                })
+                out = burnsCheck
+            }
+            else {
+                out.ci = math.norm([this.curPos.c - position.ci.c, this.curPos.i - position.ci.i]) < (mainWindow.getPlotWidth() / 80);
+            }
         }
         if (position.rc) {
-            out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < (mainWindow.getPlotWidth() / 80);
+            if (burns) {
+                let burnsCheck = false
+                this.burns.forEach((burn, ii) => {
+                    burnsCheck = math.norm([burn.location.c[0] - position.rc.c, burn.location.r[0] - position.rc.r]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
+                })
+                out = burnsCheck
+            }
+            else {
+                out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < (mainWindow.getPlotWidth() / 80);
+            }
         }
         return out
     }
@@ -1189,11 +1216,16 @@ document.oncontextmenu = function(event) {
         return false;
     }
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
-    let activeSat = false;
+    let activeSat = false, activeBurn = false;
     for (sat = 0; sat < mainWindow.satellites.length; sat++) {
         let check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
         if (check.ri || check.rc || check.ci) {
             activeSat = sat;
+            break;
+        }
+        check = mainWindow.satellites[sat].checkClickProximity(ricCoor, true);
+        if (check !== false) {
+            activeBurn = {sat, burn: check};
             break;
         }
     }
@@ -1227,6 +1259,13 @@ document.oncontextmenu = function(event) {
             `
         
     }
+    else if (false) {
+        ctxMenu.sat = activeSat;
+        ctxMenu.innerHTML = `
+            <div class="context-item" onclick="handleContextClick(this)" id="burn-time-change" sat="${activeBurn.sat}" burn="${activeBurn.burn}">Change Time</div>
+             `
+        
+    }
     else {
         ctxMenu.innerHTML = `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
@@ -1258,6 +1297,39 @@ function handleContextClick(button) {
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
+    }
+    else if (button.id === 'burn-time-change') {
+        let sat = button.getAttribute('sat')
+        let burn = button.getAttribute('burn')
+        button.parentElement.innerHTML = `
+            <div class="context-item" >Time Diff: <input type="Number" style="width: 3em; font-size: 1em"> mins</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="burn-time-execute" sat="${sat}" burn="${burn}">Execute</div>
+        `
+    }
+    else if (button.id === 'burn-time-execute') {
+        let sat = button.getAttribute('sat')
+        let burn = button.getAttribute('burn')
+        console.log();
+        let timeDiff = button.parentElement.getElementsByTagName('input')[0].value
+        if (timeDiff === '') {
+            button.parentElement.getElementsByTagName('input')[0].style.backgroundColor = 'rgb(255,150,150)';
+            return
+        }
+        let newTime = mainWindow.satellites[sat].burns[burn].time + Number(timeDiff) * 60
+        if (newTime < 0 || (newTime > mainWindow.scenarioLength * 3600)) {
+            button.parentElement.getElementsByTagName('input')[0].style.backgroundColor = 'rgb(255,150,150)';
+            return
+        }
+        // mainWindow.satellites[sat].burns[burn].time = newTime
+        let pos = mainWindow.satellites[sat].currentPosition({time: newTime})
+        position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
+        let direction = mainWindow.satellites[sat].burns[burn].direction
+        direction = [direction.r, direction.i, direction.c]
+        let tof = mainWindow.satellites[sat].burns[burn].waypoint.tranTime
+        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, newTime, mainWindow.satellites[sat].a)
+        
+        // mainWindow.satellites[sat].genBurns()
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-options') {
         button.parentElement.innerHTML = `
