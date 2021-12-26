@@ -354,6 +354,18 @@ class windowCanvas {
             ctx.strokeStyle = 'black';
             ctx.fillText('R', origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.cnvs.width * this.frameCenter.ri.w / 60)
             ctx.fillText('I', origin.ri.x - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.cnvs.width * this.frameCenter.ri.w / 80, origin.ri.y)
+
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            ctx.fillStyle = '#555 ';
+            ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.ri.w / 60 + 'px serif';
+            let dist = (mainWindow.desired.plotWidth / 2).toFixed(0) + 'km'
+            for (let letter = 0; letter < dist.length; letter++) {
+                ctx.fillText(dist[letter], 5, origin.ri.y - dist.length / 8 * this.cnvs.width * this.frameCenter.ri.w / 60 + letter * this.cnvs.width * this.frameCenter.ri.w / 60)
+            }
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'black';
         }
         if (this.state.search('ci') !== -1) {
             
@@ -1839,8 +1851,18 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     else return;
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
-        let newTime = prompt('Enter scenario time in HH:MM:SS past start:')
-        newTime = newTime.split(":")
+        let time = []
+        time.push('' + (math.floor(mainWindow.desired.scenarioTime / 3600) - new Date(mainWindow.startDate).getHours()))
+        time.push('' + math.floor((mainWindow.desired.scenarioTime - time[0] * 3600) / 60))
+        time.push('' + math.floor(mainWindow.desired.scenarioTime - time[0] * 3600 - time[1] * 60))
+        time = time.map(t => {
+            if (t.length === 1) {
+                return '0' + t
+            }
+            return t
+        })
+        let newTime = prompt('Enter scenario time in HH:MM:SS past start:', time.join(':'))
+        newTime = newTime.split(/[^0-9]/g)
         newTime = Number(newTime[0]) * 3600 + (newTime[1] !== undefined ? Number(newTime[1]) * 60 : 0) + (newTime[2] !== undefined ? Number(newTime[2]) : 0)
         if (newTime/3600 < mainWindow.scenarioLength && newTime > 0) {
             mainWindow.desired.scenarioTime = newTime;
