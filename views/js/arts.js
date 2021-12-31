@@ -606,20 +606,14 @@ class windowCanvas {
     showLocation() {
         try {
             let ctx = this.getContext();
-            ctx.textAlign = 'center';
+            ctx.textAlign = 'end';
+            ctx.textBaseline = 'bottom';
             ctx.font = 'bold ' + this.cnvs.height * 0.02 + 'px serif';
             if (!this.mousePosition) return;
             let ricCoor = this.convertToRic(this.mousePosition);
             let frame = Object.keys(ricCoor)[0];
-            ctx.font = 'bold ' + this.cnvs.height * 0.02 + 'px serif';
-            ctx.fillStyle = 'rgb(150,150,150)';
-            let angle = (this.mousePosition[0] - this.cnvs.width * 0.5) / this.cnvs.width / 0.45;
-            angle = Math.PI / 2 * angle ** 6;
-            angle = angle > Math.PI / 2 ? Math.PI / 2 : angle;
-            if (this.burnStatus.type === 'manual') return;
-            ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km`, this.mousePosition[0] - this.cnvs.height * 0.1*Math.cos(angle) , this.mousePosition[1] - this.cnvs.height * 0.1*Math.sin(angle))
-            ctx.fillText(`${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km`, this.mousePosition[0] + this.cnvs.height * 0.1*Math.cos(angle) , this.mousePosition[1] + this.cnvs.height * 0.1*Math.sin(angle))
-            
+            ctx.fillStyle = 'black';
+            ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km ${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km `, this.cnvs.width - 10, this.cnvs.height - 10)
         }
         catch (e) {
 
