@@ -827,7 +827,7 @@ class Satellite {
                     ctx.lineTo(point2.ri.x, point2.ri.y);
                     mag2 = math.norm([point2.ri.x - point1.ri.x, point2.ri.y - point1.ri.y]);
                     if (mag2 > 1e-6) {
-                        ctx.fillText((1000*mag).toFixed(1), -textWidth * (point2.ri.x - point1.ri.x) / mag2 / 1.4 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 / 1.4 + point1.ri.y)
+                        ctx.fillText((1000*mag).toFixed(1), -textWidth * (point2.ri.x - point1.ri.x) / mag2 / 1.2 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 / 1.2 + point1.ri.y)
                         ctx.stroke();
                     }
                 }
@@ -838,8 +838,10 @@ class Satellite {
                     ctx.lineTo(point2.ci.x, point2.ci.y);
                     ctx.stroke();
                     mag2 = math.norm([point2.ci.x - point1.ci.x, point2.ci.y - point1.ci.y]);
-                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -textWidth *(point2.ci.x - point1.ci.x) / mag2 + point1.ci.x, -textHeight*(point2.ci.y - point1.ci.y) / mag2 + point1.ci.y)
-                    ctx.stroke();
+                    if (mag2 > 1e-6) {
+                        ctx.fillText((1000*mag).toFixed(1), -textWidth * (point2.ci.x - point1.ci.x) / mag2 / 1.2 + point1.ci.x, -textHeight*(point2.ci.y - point1.ci.y) / mag2 / 1.2 + point1.ci.y)
+                        ctx.stroke();
+                    }
                 }
                 if (state.search('rc') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.rc.h / 2)) && (Math.abs(burn.location.r) < (mainWindow.getPlotWidth() * fC.rc.w / 2))) {
                     ctx.beginPath();
@@ -848,8 +850,10 @@ class Satellite {
                     ctx.stroke();
                     
                     mag2 = math.norm([point2.rc.x - point1.rc.x, point2.rc.y - point1.rc.y]);
-                    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -textWidth *(point2.rc.x - point1.rc.x) / mag2 + point1.rc.x, -textHeight*(point2.rc.y - point1.rc.y) / mag2 + point1.rc.y)
-                    ctx.stroke();
+                    if (mag2 > 1e-6) {
+                        ctx.fillText((1000*mag).toFixed(1), -textWidth * (point2.rc.x - point1.rc.x) / mag2 / 1.2 + point1.rc.x, -textHeight*(point2.rc.y - point1.rc.y) / mag2 / 1.2 + point1.rc.y)
+                        ctx.stroke();
+                    }
                 }
             }
         })
