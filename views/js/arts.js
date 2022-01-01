@@ -1226,7 +1226,9 @@ window.addEventListener('wheel', event => {
     }
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
 })
-document.oncontextmenu = function(event) {
+document.oncontextmenu = startContextClick
+
+function startContextClick(event) {
     if (mainWindow.panelOpen) {
         return false;
     }
@@ -1274,13 +1276,6 @@ document.oncontextmenu = function(event) {
             `
         
     }
-    else if (false) {
-        ctxMenu.sat = activeSat;
-        ctxMenu.innerHTML = `
-            <div class="context-item" onclick="handleContextClick(this)" id="burn-time-change" sat="${activeBurn.sat}" burn="${activeBurn.burn}">Change Time</div>
-             `
-        
-    }
     else {
         ctxMenu.innerHTML = `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
@@ -1301,7 +1296,7 @@ document.oncontextmenu = function(event) {
     }
     setTimeout(() => ctxMenu.style.transform = 'scale(1)', 10);
     return false;
-} 
+}
 
 function handleContextClick(button) {
     if (button.id === 'maneuver-options') {
