@@ -1,13 +1,18 @@
 mainWindow.touchHandler = {
     start: false,
-    n: 0
+    n: 0,
+    distance: false
 };
 document.getElementById('canvas-div').addEventListener('touchstart', event => {
+    console.log(event.touches);
+    if (event.touches.length > 1) {
+        mainWindow.touchHandler.distance = math.norm([event.touches[0].clientX - event.touches[1].clientX, event.touches[0].clientY - event.touches[1].clientY])
+        return
+    }
     mainWindow.touchHandler.start = {
         x: event.changedTouches[0].clientX,
         y: event.changedTouches[0].clientY
     }
-    console.log(event);
     if (mainWindow.touchHandler.n === 0) {
         setTimeout(() => {
             mainWindow.touchHandler.n = 0;
