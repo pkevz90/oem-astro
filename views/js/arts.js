@@ -358,10 +358,11 @@ class windowCanvas {
             ctx.textAlign = 'left';
             ctx.textBaseline = 'bottom';
             ctx.fillStyle = '#555 ';
-            ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.ri.w / 60 + 'px serif';
+            let fontSize = this.cnvs.height * this.frameCenter.ri.w / 20
+            ctx.font = 'bold ' + fontSize + 'px serif';
             let dist = (mainWindow.desired.plotWidth / 2).toFixed(0) + 'km'
             for (let letter = 0; letter < dist.length; letter++) {
-                ctx.fillText(dist[letter], 5, origin.ri.y - dist.length / 8 * this.cnvs.width * this.frameCenter.ri.w / 60 + letter * this.cnvs.width * this.frameCenter.ri.w / 60)
+                ctx.fillText(dist[letter], 5, origin.ri.y - dist.length / 5 * fontSize + letter * fontSize)
             }
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -599,9 +600,10 @@ class windowCanvas {
     showTime() {
         let ctx = this.getContext();
         ctx.textAlign = 'left';
-        ctx.font = 'bold ' + this.cnvs.height * 0.05 + 'px serif'
+        let fontSize = (this.cnvs.height < this.cnvs.width ? this.cnvs.height : this.cnvs.width) * 0.05
+        ctx.font = 'bold ' + fontSize + 'px serif'
         ctx.fillText(new Date(this.startDate.getTime() + this.scenarioTime * 1000).toString()
-            .split(' GMT')[0].substring(4), this.cnvs.width * 0.02, this.cnvs.height*0.96);
+            .split(' GMT')[0].substring(4), this.cnvs.width * 0.02, this.cnvs.height - fontSize);
     }
     showLocation() {
         try {
@@ -613,7 +615,7 @@ class windowCanvas {
             let ricCoor = this.convertToRic(this.mousePosition);
             let frame = Object.keys(ricCoor)[0];
             ctx.fillStyle = 'black';
-            ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km ${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km `, this.cnvs.width - 10, this.cnvs.height - 10)
+            ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km ${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km `, this.cnvs.width - 10, this.cnvs.height -  10)
         }
         catch (e) {
 
@@ -812,6 +814,8 @@ class Satellite {
                 point2 = mainWindow.convertToPixels(point2);
                 ctx.strokeStyle = this.color;
                 ctx.font = 'bold 15px serif';
+                ctx.textBaseline = 'middle'
+                ctx.textAlign = 'center'
                 let textWidth = ctx.measureText((1000*mag).toFixed(1)).width;
                 let textHeight = 20;
                 // console.log(Math.abs(burn.location.r) , (mainWindow.getPlotHeight() * fC.ri.h / 2), (Math.abs(location.i) < (mainWindow.getPlotWidth() * fC.ri.w / 2)));
@@ -1032,7 +1036,7 @@ setTimeout(() => {
 //------------------------------------------------------------------
 // Adding event listeners for window objects
 //------------------------------------------------------------------
-window.addEventListener('keydown', key => {
+function keydownFunction(key) {
     // key = key.key;
     // console.log(key.key);
     if (key.key === 'Control') {
@@ -1196,7 +1200,8 @@ window.addEventListener('keydown', key => {
         newSat.calcTraj();
         mainWindow.satellites.push(newSat)
     }
-})
+}
+window.addEventListener('keydown', keydownFunction)
 window.addEventListener('keyup', key => {
     key = key.key;
     if (key === 'Control') {
