@@ -3546,6 +3546,7 @@ function drawSatellite(satellite = {}) {
     }
     
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     let letterY = pixelPosition[1] + shapeHeight / 2 + (cnvs.height*0.025)*1.3 / 2;
     ctx.font = `${cnvs.height*0.025}px Courier`;
     ctx.fillText(name ? name : '', pixelPosition[0], letterY);
