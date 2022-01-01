@@ -339,7 +339,7 @@ class windowCanvas {
         this.drawBorder();
         if (this.state.search('ri') !== -1) {
             ctx.lineWidth = this.cnvs.width * this.frameCenter.ri.w / 200;
-            ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.ri.w / 40 + 'px serif';
+            ctx.font = 'bold ' + (this.cnvs.width > this.cnvs.height ? this.cnvs.width : this.cnvs.height) * this.frameCenter.ri.w / 40 + 'px serif';
             ctx.beginPath()
             ctx.moveTo(origin.ri.x, origin.ri.y);
             ctx.lineTo(origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2);
