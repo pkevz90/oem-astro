@@ -3043,7 +3043,8 @@ function calcBurns() {
     ctx.lineTo(finalPos.x, finalPos.y);
     ctx.stroke();
     let mag2 = math.norm([finalPos.x - initPos.x, finalPos.y - initPos.y]);
-    
+    ctx.textBaseline = "middle"
+    ctx.textAlign = 'center'
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
     sat.genBurns(true);
 }
