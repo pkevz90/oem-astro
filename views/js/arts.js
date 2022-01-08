@@ -2301,7 +2301,6 @@ function loadFileAsText(fileToLoad) {
     fileReader.onload = function (fileLoadedEvent) {
         var textFromFileLoaded = fileLoadedEvent.target.result;
         textFromFileLoaded = JSON.parse(textFromFileLoaded);
-        // mainWindow = JSON.parse(JSON.stringify(textFromFileLoaded));
         mainWindow.loadDate(textFromFileLoaded);
         mainWindow.setAxisWidth('set', mainWindow.plotWidth);
     };
@@ -3109,7 +3108,8 @@ function calcBurns() {
     ctx.lineTo(finalPos.x, finalPos.y);
     ctx.stroke();
     let mag2 = math.norm([finalPos.x - initPos.x, finalPos.y - initPos.y]);
-    
+    ctx.textBaseline = "middle"
+    ctx.textAlign = 'center'
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
     sat.genBurns(true);
 }
@@ -3405,7 +3405,7 @@ function drawPoints(options = {}) {
     let {
         color,
         points,
-        borderWidth = 2,
+        borderWidth = 1,
         borderColor = 'white',
         ctx = ctx,
         origin
@@ -3428,7 +3428,7 @@ function drawPoints(options = {}) {
 
 function drawSatellite(satellite = {}) {
     let {cnvs, ctx, pixelPosition, shape, color, size, name} = satellite;
-    let shapeHeight = size / 100 * cnvs.height;
+    let shapeHeight = size / 100 * (cnvs.height < cnvs.width ? cnvs.height: cnvs.width);
     let points;
     let a = shapeHeight / 2;
     let b = shapeHeight / 5;
@@ -3611,8 +3611,9 @@ function drawSatellite(satellite = {}) {
     }
     
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     let letterY = pixelPosition[1] + shapeHeight / 2 + (cnvs.height*0.025)*1.3 / 2;
-    ctx.font = `${cnvs.height*0.025}px Courier`;
+    ctx.font = `${(cnvs.height < cnvs.width ? cnvs.height : cnvs.width) *0.025}px Courier`;
     ctx.fillText(name ? name : '', pixelPosition[0], letterY);
 }
 
@@ -3754,6 +3755,7 @@ function generateData(sat1 = 1, sat2 = 0) {
         }
     }
 }
+
 function generateDataImpulsive(sat1 = 1, sat2 = 0) {
     if (mainWindow.satellites.length < 2) return;
     mainWindow.plotSettings.data = [];
@@ -4391,4 +4393,19 @@ function testLambertSolutionMan() {
     dV = math.multiply(C, dV)
     console.log(dV);
 
+}
+
+function setDefaultScenario(del = false) {
+    if (del) {
+        window.localStorage.removeItem('default')
+        return
+    }
+    window.localStorage.setItem('default', JSON.stringify(mainWindow.getData()))
+}
+
+function recoverDefaultScenario() {
+    if (window.localStorage.default === undefined) return
+    let textFromFileLoaded = JSON.parse(window.localStorage.getItem('default'));
+    mainWindow.loadDate(textFromFileLoaded);
+    mainWindow.setAxisWidth('set', mainWindow.plotWidth);
 }
