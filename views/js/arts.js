@@ -1304,9 +1304,18 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
             <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
             <div class="context-item" onclick="handleContextClick(this)" id="dsk-maneuver">DSK</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="drift-maneuver">Set Drift Rate</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
+    }
+    else if (button.id === 'drift-maneuver') { 
+        let html = `
+            <div class="context-item" >Drift Rate: <input type="Number" style="width: 3em; font-size: 1em"> deg/rev</div>
+            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="execute-drift" tabindex="0">Execute</div>
+        `
+        button.parentElement.innerHTML = html
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
     else if (button.id === 'burn-time-change') {
         let sat = button.getAttribute('sat')
@@ -1449,7 +1458,6 @@ function handleContextClick(button) {
     }
     else if (button.id === 'waypoint-maneuver') {
         let sat = button.parentElement.sat;
-        console.log(sat);
         let html = `
             <div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>
             <div class="context-item" >Target: (<input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">) km</div>
@@ -1461,7 +1469,65 @@ function handleContextClick(button) {
         
         }
         button.parentElement.innerHTML = html
-       document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'execute-drift') {
+        let sat = button.parentElement.sat;
+        let inputs = button.parentElement.getElementsByTagName('input');
+        let currentPos = mainWindow.satellites[sat].curPos
+        let eciPos = Ric2Eci([currentPos.r, currentPos.i, currentPos.c], [currentPos.rd, currentPos.id, currentPos.cd])
+        if (inputs[0].value === '') {
+            inputs[ii].style.backgroundColor = 'rgb(255,150,150)';
+            return
+        }
+        let driftRate = Number(inputs[0].value) * Math.PI / 180
+        let period = 2 * Math.PI / mainWindow.mm
+        // Convert drift rate to desired SMA
+        driftRate += 2 * Math.PI
+        driftRate /= period
+        driftRate = (398600.4418 / driftRate ** 2) ** (1/3)
+        let r = math.norm(eciPos.rEcci)
+        let energy = -398600.4418 / driftRate / 2
+        let vel = ((energy + 398600.4418 / r) * 2) ** (1/2)
+        let newVel = math.dotMultiply(vel, math.dotDivide(eciPos.drEci, math.norm(eciPos.drEci)))
+        console.log(r, vel, driftRate, period);
+        let newRic = Eci2Ric([(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0], eciPos.rEcci, newVel)
+        let direction = math.subtract(math.squeeze(newRic.drHcw), [currentPos.rd, currentPos.id, currentPos.cd])
+        let tof = 10800
+        position = {x: currentPos.r, y: currentPos.i, z: currentPos.c, xd: currentPos.rd, yd: currentPos.id, zd: currentPos.cd};
+        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.scenarioTime, mainWindow.satellites[sat].a)
+        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+            return burn.time < mainWindow.scenarioTime;
+        })
+        
+        mainWindow.satellites[sat].burns.push({
+            time: mainWindow.desired.scenarioTime,
+            direction: {
+                r: 0,
+                i: 0,
+                c: 0
+            },
+            waypoint: {
+                tranTime: 0,
+                target: {
+                    r: 0,
+                    i: 0,
+                    c: 0,
+                }
+            }
+        })
+        mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
+            tranTime: tof,
+            target: {
+                r: wayPos.x,
+                i: wayPos.y,
+                c: wayPos.z
+            }
+        }
+        mainWindow.satellites[sat].genBurns();
+        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + 3600;
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'direction-maneuver') {
         button.parentElement.innerHTML = `
