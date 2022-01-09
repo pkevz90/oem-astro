@@ -1037,8 +1037,7 @@ setTimeout(() => {
 // Adding event listeners for window objects
 //------------------------------------------------------------------
 function keydownFunction(key) {
-    // key = key.key;
-    // console.log(key.key);
+    key.key = key.key.toLowerCase()
     if (key.key === 'Control') {
         let buttons = document.getElementsByClassName('ctrl-switch');
         for (let ii = 0; ii < buttons.length; ii++) {
@@ -1056,6 +1055,7 @@ function keydownFunction(key) {
         }
     }
     if (mainWindow.panelOpen) return;
+    let shiftedNumbers = '!@#$%'
     if (key.key === ' ') {
         switch (mainWindow.getState()) {
             case 'ri': 
@@ -1199,6 +1199,18 @@ function keydownFunction(key) {
         });
         newSat.calcTraj();
         mainWindow.satellites.push(newSat)
+    }
+    else if (shiftedNumbers.search(key.key) !== '-1' && key.ctrlKey && key.shiftKey) {
+        let index = shiftedNumbers.search(key.key) + 1
+        if (key.key === 'Control' || key.key === 'Shift') return
+        recoverDefaultScenario(index)
+        showScreenAlert('Loaded default scenario ' + index)
+    }
+    else if (shiftedNumbers.search(key.key) !== '-1' && key.shiftKey) {
+        let index = shiftedNumbers.search(key.key) + 1
+        if (key.key === 'Control' || key.key === 'Shift') return
+        setDefaultScenario(index)
+        showScreenAlert('Saved as default scenario ' + index)
     }
 }
 window.addEventListener('keydown', keydownFunction)
@@ -1493,7 +1505,7 @@ function handleContextClick(button) {
         console.log(r, vel, driftRate, period);
         let newRic = Eci2Ric([(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0], eciPos.rEcci, newVel)
         let direction = math.subtract(math.squeeze(newRic.drHcw), [currentPos.rd, currentPos.id, currentPos.cd])
-        let tof = 10800
+        let tof = 0.125 * 2 * Math.PI / mainWindow.mm
         position = {x: currentPos.r, y: currentPos.i, z: currentPos.c, xd: currentPos.rd, yd: currentPos.id, zd: currentPos.cd};
         let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.scenarioTime, mainWindow.satellites[sat].a)
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
@@ -1503,9 +1515,9 @@ function handleContextClick(button) {
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
-                r: 0,
-                i: 0,
-                c: 0
+                r: direction[0],
+                i: direction[1],
+                c: direction[2]
             },
             waypoint: {
                 tranTime: 0,
@@ -3944,6 +3956,7 @@ function calcSatTwoBody(allBurns = false) {
                             yd: 0,
                             zd: 0
                         }, this.burns[satBurn].waypoint.tranTime, this.a, t_calc);
+                        console.log(dir);
                         if (dir && dir.t > 0 && dir.t < 1) {
                             this.burns[satBurn].direction.r = dir.r;
                             this.burns[satBurn].direction.i = dir.i;
@@ -4395,17 +4408,13 @@ function testLambertSolutionMan() {
 
 }
 
-function setDefaultScenario(del = false) {
-    if (del) {
-        window.localStorage.removeItem('default')
-        return
-    }
-    window.localStorage.setItem('default', JSON.stringify(mainWindow.getData()))
+function setDefaultScenario(index) {
+    window.localStorage.setItem(index, JSON.stringify(mainWindow.getData()))
 }
 
-function recoverDefaultScenario() {
-    if (window.localStorage.default === undefined) return
-    let textFromFileLoaded = JSON.parse(window.localStorage.getItem('default'));
+function recoverDefaultScenario(index) {
+    if (window.localStorage[index] === undefined) return
+    let textFromFileLoaded = JSON.parse(window.localStorage.getItem(index));
     mainWindow.loadDate(textFromFileLoaded);
     mainWindow.setAxisWidth('set', mainWindow.plotWidth);
 }
