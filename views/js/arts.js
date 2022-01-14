@@ -3960,7 +3960,7 @@ function calcSatTwoBody(allBurns = false) {
                             yd: 0,
                             zd: 0
                         }, this.burns[satBurn].waypoint.tranTime, this.a, t_calc);
-                        console.log(dir);
+                        // console.log(dir);
                         if (dir && dir.t > 0 && dir.t < 1) {
                             this.burns[satBurn].direction.r = dir.r;
                             this.burns[satBurn].direction.i = dir.i;
