@@ -1703,11 +1703,15 @@ function handleContextClick(button) {
                 i: [Number(target.i) + sunCircle[ii][1]],
                 c: [Number(target.c) + sunCircle[ii][2]],
             }
-            let dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
-            // console.log(dV);
-            if (dV < minWay) {
-                minWay = dV;
-                minIndex = ii;
+            // if (Number.isNaN(newTarget.r[0])) continue
+            let dV
+            try {
+                dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
+                if (dV < minWay) {
+                    minWay = dV;
+                    minIndex = ii;
+                } 
+            } catch (error) {
             }
         }
         if (minWay > 100) {
@@ -3748,6 +3752,8 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
 }
 
 function findDvFiniteBurn(r1, r2, a, tf) {
+    // console.log(r1,r2);
+    // console.log({x: r1.r[0], y: r1.i[0], z: r1.c[0], xd: r1.rd[0], yd: r1.id[0], zd: r1.cd[0]}, {x: r2.r[0], y: r2.i[0], z: r2.c[0], xd: 0, yd: 0, zd: 0}, tf, a);
     let dir = hcwFiniteBurnOneBurn({x: r1.r[0], y: r1.i[0], z: r1.c[0], xd: r1.rd[0], yd: r1.id[0], zd: r1.cd[0]}, {x: r2.r[0], y: r2.i[0], z: r2.c[0], xd: 0, yd: 0, zd: 0}, tf, a);
     return dir ? dir.t[0]*tf*a : 10000;
 }
