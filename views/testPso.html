@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSO Test</title>
+    <script src="../SupportLibraries/math.js"></script>
+    <script src="./js/pso_vz.js"></script>
+</head>
+<body>
+    <script>
+        function testOpt(x) {
+            // return x[0] ** 2 - 4 * x[0] - 1
+            return (x[0] ** 2 + x[1] - 11) ** 2 + (x[0] + x[1] ** 2 - 7) ** 2
+            // return 0.26 * (x[0] ** 2 + x[1] ** 2) - 0.48 * x[0] * x[1]
+            // return 0.5 + (math.sin(x[0] ** 2 + x[1] ** 2) ** 2 - 0.5) / math.abs(1 + 0.001 * (x[1] ** 2 + x[0] ** 2)) ** 2
+        }
+
+
+        let testPso = new pso({
+            opt_fuction: testOpt,
+            upper_bounds: [100,100],
+            // upper_bounds: [5],
+            lower_bounds: [-100,-100],
+            // lower_bounds: [-5],
+            n_part: 10
+        })
+
+        function run100(pso) {
+            for (let ii = 0; ii < 1000; ii++) {
+                pso.step()
+            }
+            console.log(pso.step());
+        }
+    </script>  
+</body>
+</html>
