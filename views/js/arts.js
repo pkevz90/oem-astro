@@ -1773,32 +1773,39 @@ function handleContextClick(button) {
         })
         let origin = mainWindow.satellites[chaserSat].currentPosition();
         let target = mainWindow.satellites[targetSat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
-        let sunCircle = drawAngleCircle(range, cats, tof);
-        let minWay = 100000, minIndex;
-        for (let ii = 0; ii < sunCircle.length; ii++) {
+        let opt_function = function(x, returnWaypoint = false) {
+            let r = x[0]
+            let cats = x[1]
+            let angle = x[2]
+            let tof = x[3]
+
+            let circleR = r * Math.sin(cats);
+            let reducedR = r * Math.cos(cats);
+            let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
+            // R = [[1,0,0],[0,1,0],[0,0,1]];
+            let tempAngle = [reducedR, Math.cos(angle) * circleR, Math.sin(angle) * circleR]
+            let waypoint = math.transpose(math.multiply(R, math.transpose(tempAngle)))
             let newTarget = {
-                r: [Number(target.r) + sunCircle[ii][0]],
-                i: [Number(target.i) + sunCircle[ii][1]],
-                c: [Number(target.c) + sunCircle[ii][2]],
+                r: [Number(target.r) + waypoint[0]],
+                i: [Number(target.i) + waypoint[1]],
+                c: [Number(target.c) + waypoint[2]]
             }
-            // if (Number.isNaN(newTarget.r[0])) continue
-            let dV
-            try {
-                dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
-                if (dV < minWay) {
-                    minWay = dV;
-                    minIndex = ii;
-                } 
-            } catch (error) {
-            }
+            if (returnWaypoint) return newTarget
+            let dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
+            return dV
         }
-        if (minWay > 100) {
-            showScreenAlert('No Solution Found')
-            return;
-        };
-        target.r = [Number(target.r) + sunCircle[minIndex][0]];
-        target.i = [Number(target.i) + sunCircle[minIndex][1]];
-        target.c = [Number(target.c) + sunCircle[minIndex][2]];
+        let sunPso = new pso({
+            upper_bounds: [range, cats * Math.PI / 180, 2 * Math.PI, tof],
+            lower_bounds: [range, 0, -2 * Math.PI, tof],
+            n_part: 10,
+            opt_fuction: opt_function
+        })
+        
+        for (ii = 0; ii < 20; ii++) {
+            sunPso.step()
+        }
+
+        target = opt_function(sunPso.bestGlobalPosition, true)
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
@@ -3812,7 +3819,7 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
     let reducedR = r * Math.cos(angle);
     let circleCoor = [];
     let R = findRotationMatrix([1,0,0], mainWindow.getCurrentSun(mainWindow.scenarioTime + tof));
-    if (!R) R = [[1,0,0],[0,1,0],[0,0,1]];
+    // R = [[1,0,0],[0,1,0],[0,0,1]];
     let ranges = math.range(r / 2, r, r / 6, true)._data;
     ranges = [r]
     let angles = math.range(0, angle, angle / 8, true)._data;

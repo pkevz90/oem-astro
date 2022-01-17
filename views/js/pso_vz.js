@@ -23,7 +23,8 @@ class pso {
             console.error('Upper and Lower bounds must be same length')
             return
         }
-        else if (this.opt_fuction === undefined) {
+        console.log(opt_fuction);
+        if (this.opt_fuction === undefined) {
             console.error('No optimizer function supplied')
             return
         }
