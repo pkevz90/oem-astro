@@ -1797,14 +1797,14 @@ function handleContextClick(button) {
         let sunPso = new pso({
             upper_bounds: [range, cats * Math.PI / 180, 2 * Math.PI, tof],
             lower_bounds: [range, 0, -2 * Math.PI, tof],
-            n_part: 10,
+            n_part: 20,
             opt_fuction: opt_function
         })
         
-        for (ii = 0; ii < 20; ii++) {
+        for (ii = 0; ii < 50; ii++) {
             sunPso.step()
+            console.log(sunPso.bestGlobabValue);
         }
-
         target = opt_function(sunPso.bestGlobalPosition, true)
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
