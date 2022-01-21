@@ -204,7 +204,7 @@ class windowCanvas {
         }
     }
     getCurrentSun(t = this.scenarioTime) {
-        return math.squeeze(math.multiply(rotationMatrices(-t * this.mm * 180 / Math.PI, 3), math.transpose([this.initSun])));
+        return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 2 * Math.PI / 365 / 24 / 86164), 3), math.transpose([this.initSun])));
     }
     getInitSun() {
         return this.initSun;
