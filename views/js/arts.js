@@ -564,19 +564,6 @@ class windowCanvas {
         let oldWidth = ctx.lineWidth;
         ctx.lineWidth = 1;
         this.relativeData.dataReqs.forEach(req => {
-            // Draw line between objects
-            let point1 = this.convertToPixels(this.satellites[req.origin].currentPosition());
-            let point2 = this.convertToPixels(this.satellites[req.target].currentPosition());
-            let start = this.relativeData.time * 0.05;
-            ctx.beginPath();
-            while (start < 1) {
-                // ctx.arc((point2.ri.x - point1.ri.x) * start + point1.ri.x, (point2.ri.y - point1.ri.y) * start + point1.ri.y, 1, 0, 2 * Math.PI);
-                ctx.moveTo((point2.ri.x - point1.ri.x) * start + point1.ri.x, (point2.ri.y - point1.ri.y) * start + point1.ri.y);
-                ctx.lineTo((point2.ri.x - point1.ri.x) * (start-0.03) + point1.ri.x, (point2.ri.y - point1.ri.y) * (start-0.03) + point1.ri.y);
-                
-                start += 0.05;
-            }
-            ctx.stroke();
             ctx.textAlign = 'left';
             ctx.font = "bold " + req.textSize + "pt Courier";
             let relDataIn = getRelativeData(req.origin, req.target);
