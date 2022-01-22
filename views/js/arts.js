@@ -3150,7 +3150,7 @@ function generateBurnTable(object = 0) {
         addedElement.innerHTML = `
             <td>${new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[burn].time * 1000).toString()
         .split(' GMT')[0].substring(4)}</td>
-            <td onclick="addToolTip(this)" class="" title="${'r: ' + burnDir[0].toFixed(3) + '  i: ' + burnDir[1].toFixed(3) + '  c: ' + burnDir[2].toFixed(3) + ' m/s'}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
+            <td onclick="addToolTip(this)" class="" title="${'r: ' + burnDir[0].toFixed(3) + '  i: ' + burnDir[1].toFixed(3) + '  c: ' + burnDir[2].toFixed(3) + ' dur: ' + (math.norm(burnDir) / mainWindow.satellites[object].a / 1000).toFixed(2)}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
             <td><span>${(mainWindow.satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
             <td class="edit-button ctrl-switch">Edit</td>
         `;
