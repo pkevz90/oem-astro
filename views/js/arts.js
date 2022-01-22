@@ -204,7 +204,7 @@ class windowCanvas {
         }
     }
     getCurrentSun(t = this.scenarioTime) {
-        return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 2 * Math.PI / 365 / 24 / 86164), 3), math.transpose([this.initSun])));
+        return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 360 / 365 / 86164), 3), math.transpose([this.initSun])));
     }
     getInitSun() {
         return this.initSun;
@@ -3634,7 +3634,7 @@ function getRelativeData(n_target, n_origin) {
     let relVel = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getVelocityArray(), mainWindow.satellites[n_target]
         .getVelocityArray()));
     range = math.norm(relPos);
-    sunAngle = math.squeeze(math.multiply(rotationMatrices(-mainWindow.scenarioTime * mainWindow.mm * 180 / Math.PI, 3), math.transpose([mainWindow.getInitSun()])));
+    sunAngle = mainWindow.getCurrentSun()
     sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
     sunAngle = 180 - sunAngle; // Appropriate for USSF
     rangeRate = math.dot(relVel, relPos) * 1000 / range;
