@@ -6,10 +6,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kalman Filter Testing</title>
     <script src="../SupportLibraries/math.min.js"></script>
-    <script src="./js/kalman_vz.js" defer></script>
+    <script src="./js/kalman_vz.js"></script>
 </head>
 <body>
     <script>
+        let f = new filter()
+        f.propState = runge_kutta
+        let realState = [[1, 10, 50, 0.004, 0.001, 0]]
+        let dt = 0.1
+        for (let ii = 0; ii < 10000; ii++) {
+            if (ii > 500 && ii < 2500) {
+                let a = [0,0,0]
+                realState = runge_kutta(realState, dt, a)
+                let obs = f.measurementFunction(realState)
+                f.step({obs, dt, a: a})
+            }
+            else {
+                realState = runge_kutta(realState, dt, [0,0,0])
+                let obs = f.measurementFunction(realState)
+                f.step({obs, dt, a: [0,0,0]})
+            
+            }
+        }
+
+        function twoBodyRpo(state = [[-1.89733896, 399.98, 0, 0, 0, 0]], options = {}) {
+            let {mu = 398600.4418, r0 = 42164, a = [0,0,0]} = options;
+            let n = (mu / r0 ** 3) ** (1/2)
+            let ndot = 0
+            let x = state[0][0], y = state[0][1], z = state[0][2], dx = state[0][3], dy = state[0][4], dz = state[0][5];
+            // console.log(x,y,z,dx,dy,dz);
+            let rT = ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5);
+            return [[
+                dx,
+                dy,
+                dz,
+                -mu * (r0 + x) / rT+ mu / r0 ** 2 + 2 * n * dy + n ** 2 * x + ndot * y +  a[0],
+                -mu * y / rT - 2 * n * dx - ndot * x + n ** 2 * y + a[1],
+                -mu * z / rT + a[2]
+            ]];
+        }
+
+        function runge_kutta(state, dt, a = [0,0,0]) {
+            eom = twoBodyRpo
+            let k1 = eom(state, {a});
+            console.log();
+            let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a});
+            return math.add(state, math.dotMultiply(dt, k2));
+        }
     </script>
 </body>
 </html>

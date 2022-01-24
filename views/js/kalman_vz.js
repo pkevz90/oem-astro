@@ -4,10 +4,10 @@ class filter {
             hFunction = this.measurementFunction,
             hGradFunction = this.measurementGradFunction,
             stateProp = this.propState,
-            estState = [[0, 10, 0.005, 0]],
-            R = [[(0.5 * Math.PI / 180)**2]],
-            Q = math.diag([0.0001 ** 2, 0.0001 ** 2, 0.000001 ** 2, 0.000001 ** 2]),
-            P = math.diag([1,1,1,1]),
+            estState = [[0, 10, 4, 0.005, 0, 0]],
+            R = [[(0.5 * Math.PI / 180)**2, 0], [0, (0.5 * Math.PI / 180)**2]],
+            Q = math.diag([0.00001 ** 2, 0.00001 ** 2, 0.00001 ** 2, 0.0000001 ** 2, 0.0000001 ** 2, 0.0000001 ** 2]),
+            P = math.diag([1,1,1,0.01 ** 2,0.01 ** 2,0.01 ** 2]),
             fFunction = this.genFMatrix
         } = options
         this.estState = estState
@@ -24,19 +24,22 @@ class filter {
         let nt = n * dt
         let ct = Math.cos(nt)
         let st = Math.sin(nt)
-        return [[4 - 3 * ct, 0, st / n, 2 * (1 - ct) / n],
-                [6 * (st - nt), 1, 2 * (ct - 1) / n, (4 * st - 3 * nt) / n],
-                [3 * n * st, 0, ct, 2 * st],
-                [6 * n * (ct - 1), 0, -2 * st, 4 * ct - 3]]
+        return [[4 - 3 * ct, 0, 0, st / n, 2 * (1 - ct) / n, 0],
+                [6 * (st - nt), 1, 0, 2 * (ct - 1) / n, (4 * st - 3 * nt) / n, 0],
+                [0, 0, ct, 0, 0, st / n],
+                [3 * n * st, 0, 0, ct, 2 * st, 0],
+                [6 * n * (ct - 1), 0, 0, -2 * st, 4 * ct - 3, 0],
+                [0, 0, -n * st, 0, 0, ct]]
     }
     measurementFunction(state) {
-        let x = -state[0][0], y = state[0][1]
-        return [[Math.atan2(y, x)]]
+        let x = state[0][0], y = state[0][1], z = state[0][2]
+        return [[Math.atan2(y, x)], [Math.atan2(z, (x ** 2 + y ** 2) ** (1/2))]]
     }
     measurementGradFunction(state) {
-        let x = -state[0][0], y = state[0][1]
+        let x = state[0][0], y = state[0][1], z = state[0][2]
         let d = (x ** 2 + y ** 2) ** (1/2)
-        return [[-y / d, x / d, 0, 0]]
+        return [[-y / d, x / d, 0, 0, 0, 0],
+                [-z * x / d / (x ** 2 + y ** 2 + z ** 2),  -z * y / d / (x ** 2 + y ** 2 + z ** 2), d / (x ** 2 + y ** 2 + z ** 2), 0, 0, 0]]
     }
     calcKalmanGain(H, P, R) {
         let S = math.add(math.multiply(H, P, math.transpose(H)), R)
@@ -59,18 +62,15 @@ class filter {
     }
 
     step(inputs) {
-        let {obs, dt} = inputs
-        this.estState = this.propState(this.estState, dt)
+        let {obs, dt, a} = inputs
+        this.estState = this.propState(this.estState, dt, a)
         this.P = this.propPMatrix(this.P, dt)
-
+        let sq = math.squeeze
         let estObs = this.measurementFunction(this.estState)
-        console.log(estObs);
+        console.log(sq(obs), sq(estObs));
         let H = this.measurementGradFunction(this.estState)
         let K = this.calcKalmanGain(H, this.P, this.R)
-        console.log(K, obs);
         this.estState = this.updateState(this.estState, K, estObs, obs)
         this.P = this.updatePMatrix(this.P, H, K)
-        console.log(this.estState)
-        console.log(this.P);
     }
 }
