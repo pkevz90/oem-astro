@@ -1226,7 +1226,9 @@ window.addEventListener('wheel', event => {
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
 })
 document.oncontextmenu = startContextClick
-
+let openInstructions = function() {
+    document.getElementById('instructions-panel').classList.toggle("hidden");
+}
 function startContextClick(event) {
     if (mainWindow.panelOpen) {
         return false;
@@ -1262,6 +1264,7 @@ function startContextClick(event) {
     ctxMenu = document.getElementById('context-menu');
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
+    
 
     if (activeSat !== false) {
         ctxMenu.sat = activeSat;
@@ -1284,6 +1287,7 @@ function startContextClick(event) {
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept=".sas" onchange="uploadScenario(event)"></div>
             <div class="context-item" onclick="exportScenario()">Export Scenario</div>
+            <div class="context-item" onclick="openPanel(this)" id="instructions">Instructions</div>
             `
 
     }
