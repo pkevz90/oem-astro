@@ -194,18 +194,6 @@ html, body {
     font-weight: 900;
     font-size: 1.5vw;
 }
-#asdfinstructions {
-    position: fixed;
-    height: auto;
-    border: 1px solid black;
-    z-index: 3;
-    bottom: 6.5%;
-    right: 1%;
-    text-align: center;
-    cursor: pointer;
-    transition: 0.2s;
-    font-weight: 900;
-}
 .hoverable:hover {
     background-color: black;
     color: white;
@@ -240,6 +228,10 @@ html, body {
     transition: 0.2s;
     font-weight: 900;
     font-size: 1.5vw;
+}
+#instructions-panel {
+    max-height: 400px;
+    overflow-y: scroll;
 }
 #instructions-panel, #data-panel, #optimize-panel {
     position: fixed;

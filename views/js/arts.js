@@ -1016,10 +1016,8 @@ let timeFunction = false;
     window.requestAnimationFrame(animationLoop)
 })()
 setTimeout(() => {
-    return
-    if (mainWindow.satellites.length > 0 || mainWindow.panelOpen) return;
-    showScreenAlert('start-screen')
-}, 5000)
+    showScreenAlert('Right-click to see planning options')
+}, 2000)
 //------------------------------------------------------------------
 // Adding event listeners for window objects
 //------------------------------------------------------------------

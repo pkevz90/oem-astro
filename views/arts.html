@@ -176,6 +176,8 @@
     </div>
     <div id="instructions-panel" class="hidden panel">
         <div>
+            
+            <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Close</div>
             <div style="font-size:2em; margin: 4%; font-weight: bold">Instructions</div>
             <ul>
                 <li>
@@ -191,9 +193,10 @@
                                 <li>Switch to manual burn direction on right-click menu to click and drag burn direction</li>
                                 <li>Open burns panel with right-click menu and manually insert RIC coordinate and TOF</li>
                                 <li>More burn options available within right-click menu</li>
+                                <li>Particle Swarm Optimization utilized to find best position to gain sun</li>
                             </ul>
                         </li>
-                        <li>Burns can be deleted by cntrl-clicking on the burn point</li>
+                        <li>Burns can be deleted by ctrl-clicking on the burn point</li>
                         <li>Limitations
                             <ul>
                                 <li>Burns durations are limited to 6 hours for mathematical stability</li>
@@ -213,7 +216,6 @@
                     </ul>
                 </li>
             </ul>
-            <div onclick="closeAll()" class="close-button panel-button hoverable noselect">Close</div>
         </div>
     </div>
     <div id="data-panel" class="hidden panel">
