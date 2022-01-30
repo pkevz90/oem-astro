@@ -5,10 +5,10 @@ class pso {
             upper_bounds = [0,0,0,0],
             lower_bounds = [1,1,1,1],
             loop_variable,
-            inertia = 0.7,
+            inertia = 0.85,
             phi_g = 0.1,
             phi_p = 0.1,
-            opt_fuction,
+            opt_fuction = (x) => x[0] ** 2 + x[1] ** 2,
         } = options
         this.particles = []
         this.upper = upper_bounds
@@ -52,6 +52,7 @@ class pso {
         // console.log(this.particles.map(part => part.position[0]));
         return [this.bestGlobabValue, this.bestGlobalPosition]
     }
+    
 }
 
 class particle {
@@ -64,10 +65,20 @@ class particle {
         this.bestPosition = math.zeros(upper.length)._data
         this.position = math.add(lower, math.dotMultiply(math.random([1,upper.length])[0], math.subtract(upper, lower)))
         this.velocity = math.zeros(upper.length)._data
+        this.velocity = this.velocity.map((dim, ii) => {
+            let delta = (upper[ii] - lower[ii]) * 0.05
+            return delta * this.randn_bm()
+        })
     }
 
     update() {
         this.position = math.add(this.position, this.velocity)
+    }
+    randn_bm() {
+        var u = 0, v = 0;
+        while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+        while(v === 0) v = Math.random();
+        return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
     }
 }
 

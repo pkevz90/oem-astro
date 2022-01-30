@@ -10,10 +10,11 @@
 </head>
 <body>
     <script>
-        let f = new filter_unscented()
-        f.propState = runge_kutta
-        let realState = [[1, 5, 0, 0.004, 0.001, 0]]
-        let P = [5, 5, 5, 0.005, 0.005, 0.005]
+        let f = new filter_unscented_rae()
+        f.propState = propRAE
+        let realState = [[1, 2.5, 0, 0.002, 0.001, 0]]
+        realState = convertCartesiantoRAE(realState)
+        let P = [5, 10 * Math.PI / 180, 10 * Math.PI / 180, 0.010, 0.1 * Math.PI / 180, 0.1 * Math.PI / 180]
         let estState = [[
             realState[0][0] + randn_bm() * P[0],
             realState[0][1] + randn_bm() * P[1],
@@ -25,11 +26,11 @@
         P = math.diag(P.map(p => p ** 2))
         f.P = P
         f.estState = estState
-        let dt = 0.05
-        for (let ii = 0; ii < 0; ii += dt) {
-            if (ii > 100 && ii < 120) {
-                let a = [0,0.000,0.001]
-                realState = runge_kutta(realState, dt, a)
+        let dt = 0.1
+        for (let ii = 0; ii < 300; ii += dt) {
+            if (ii > 100 && ii < 110) {
+                let a = [0,0.000,0.0005]
+                realState = propRAE(realState, dt, a)
                 let obs = f.measurementFunction(realState)
                 obs[0][0] += math.sqrt(f.R[0][0]) * f.randn_bm()
                 obs[1][0] += math.sqrt(f.R[1][1]) * f.randn_bm()

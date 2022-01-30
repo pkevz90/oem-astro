@@ -74,7 +74,7 @@ class windowCanvas {
         arg: 0,
         tA: 0
     }
-    trajSize = 1;
+    trajSize = 1.5;
     encoder;
     mm = 2 * Math.PI / 86164;
     timeDelta = 0.006*86164;
