@@ -1794,6 +1794,7 @@ function handleContextClick(button) {
             sunPso.step()
             console.log(sunPso.bestGlobabValue);
         }
+        console.log(sunPso.particles.map(part => part.position[1] * 180 / Math.PI));
         target = opt_function(sunPso.bestGlobalPosition, true)
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,

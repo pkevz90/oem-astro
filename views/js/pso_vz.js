@@ -46,10 +46,8 @@ class pso {
                 this.bestGlobabValue = p_val
                 this.bestGlobalPosition = part.position.slice()
             }
-            // console.log(part.bestPosition, part.position, math.dotMultiply(this.inertia, part.velocity), math.dotMultiply(math.random() * this.phi_g, math.subtract(this.bestGlobalPosition, part.position)), math.dotMultiply(math.random() * this.phi_p, math.subtract(part.bestPosition, part.position)));
             part.velocity = math.add(math.dotMultiply(this.inertia, part.velocity), math.dotMultiply(math.random() * this.phi_g, math.subtract(this.bestGlobalPosition, part.position)), math.dotMultiply(math.random() * this.phi_p, math.subtract(part.bestPosition, part.position)))
         })
-        // console.log(this.particles.map(part => part.position[0]));
         return [this.bestGlobabValue, this.bestGlobalPosition]
     }
     
@@ -69,10 +67,17 @@ class particle {
             let delta = (upper[ii] - lower[ii]) * 0.05
             return delta * this.randn_bm()
         })
+        this.upper = upper
+        this.lower = lower
     }
 
     update() {
         this.position = math.add(this.position, this.velocity)
+        this.position = this.position.map((dim, ii) => {
+            if (dim < this.lower[ii]) return this.lower[ii]
+            else if (dim > this.upper[ii]) return this.upper[ii]
+            return dim
+        })
     }
     randn_bm() {
         var u = 0, v = 0;
