@@ -5,7 +5,11 @@ cnvsInert.height = cnvsInert.clientHeight
 
 const earth = new Image()
 earth.src = './Media/earth_north.jpg'
-
+let latitude = 0
+function changeLatitude(button) {
+    latitude = button.value
+    updateInertial()
+}
 
 let sensors = [
     {
@@ -57,7 +61,7 @@ function updateInertial(sites = []) {
         ctxInert.fill()
     })
     ctxInert.translate(cnvsInert.width / 2, cnvsInert.height)
-    ctxInert.rotate(126*Math.PI/180);
+    ctxInert.rotate(latitude*Math.PI/180);
     let radius = 0.75 * cnvsInert.height * 6371 / 42164
     ctxInert.drawImage(earth, -radius, -radius, radius*2, radius*2);
 
@@ -68,9 +72,10 @@ function updateInertial(sites = []) {
     ctxInert.setLineDash([20, 10]);
     sensors.filter(s => s.lat > 0).forEach(s => {
         if (s.type === 'space') return
-        let delX = 6371 * Math.sin(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
+        let realLong = s.long - latitude
+        let delX = 6371 * Math.sin(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
         delX = 0.75 * cnvsInert.height * delX / 42164
-        let delY = 6371 * Math.cos(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
+        let delY = 6371 * Math.cos(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
         delY = 0.75 * cnvsInert.height * delY / 42164
         ctxInert.beginPath()
         ctxInert.moveTo(cnvsInert.width / 2 - delX, cnvsInert.height - delY)
@@ -85,10 +90,10 @@ function updateInertial(sites = []) {
     ctxInert.fill()
 }
 
-function updateRic(covariance) {
+function updateRic(covariance = [80, 60, 0]) {
     ctxRic.fillStyle = 'rgba(100,100,100,0.5)'
     ctxRic.beginPath()
-    ctxRic.ellipse(cnvsRic.width * 0.5, cnvsRic.height / 2, 40,20, 0, 0, 2 * Math.PI)
+    ctxRic.ellipse(cnvsRic.width * 0.5, cnvsRic.height / 2, 80,60, 0, 0, 2 * Math.PI)
     ctxRic.fill()
     ctxRic.strokeStyle = 'black'
     ctxRic.lineWidth = 2
@@ -110,51 +115,92 @@ function updateRic(covariance) {
     ctxRic.stroke()
 }
 
-function generateObs(sensors, tFinal, rate = 1/30, position = [0,0,0,0,0,0], noise = false) {
+function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], type = 'optical', noise = false) {
     let obs = []
     let positions = []
     sensors.forEach(s => {
-        positions.push({
-            r: -42164 + 6371 * Math.cos(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
-            i: 6371 * Math.sin(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
-            c: 6371 * Math.sin(s.lat * Math.PI / 180)
-        })
+        if (s.type === 'space') return
+        positions.push([
+            -42164 + 6371 * Math.cos(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
+            6371 * Math.sin(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
+            6371 * Math.sin(s.lat * Math.PI / 180)
+        ])
     })
     let t = 0
     while (t < tFinal) {
         for (let ii = 0; ii < positions.length; ii++) {
             obs.push({
-                az: 0,
-                el: 0
+                az: calcAz(positions[ii], satState),
+                el: calcEl(positions[ii], satState)
             })
             continue
         }
+        satState = propState(satState, 1 / rate)
         t += 1/rate
     }
+    return obs
+}
+
+function propState(state, dt) {
+    return state
 }
 
 function calcAz(stateOb, stateTar) {
-
+    let x = stateTar[0] - stateOb[0]
+    let y = stateTar[1] - stateOb[1]
+    return Math.atan2(y, x)
 }
 
 function calcEl(stateOb, stateTar) {
+    let x = stateTar[0] - stateOb[0]
+    let y = stateTar[1] - stateOb[1]
+    let z = stateTar[2] - stateOb[2]
+    return Math.atan2(z, (x ** 2 + y ** 2) ** (1/2))
 
 }
 
 function calcRange(stateOb, stateTar) {
-
+    let x = stateTar[0] - stateOb[0]
+    let y = stateTar[1] - stateOb[1]
+    let z = stateTar[2] - stateOb[2]
+    return (x ** 2 + y ** 2 + z ** 2) ** (1/2)
 }
 
 function calcRangeRate(stateOb, stateTar) {
 
 }
 
-function generateJacobian(obs) {
+function generateJacobian(estIn, tIn, rateIn) {
+    let estObs = generateObs(sensors, tIn, rateIn, esetIn)
+    let azList = estObs.map(ob => ob.az)
+    let elList = estObs.map(ob => ob.el)
+    let estObsList = math.concat(azList, elList)
+    let J = []
+    let delta = [0.1, 0.1, 0.1, 0.0001, 0.0001, 0.0001]
 
+    for (let ii = 0; ii < estIn.length; ii++) {
+        let delState = estIn.slice()
+        delState[ii] += delta[ii]
+        let delObs = generateObs(sensors, tIn, rateIn, delState)
+        let azList = delObs.map(ob => ob.az)
+        let elList = delObs.map(ob => ob.el)
+        let delObsList = math.concat(azList, elList)
+        J.push(math.dotDivide(math.subtract(delObsList, estObsList), delta[ii]))
+    }
+    return {J, estObsList}
 }
 
-function stepDiffCorrect() {
-
+function stepDiffCorrect(eState, time, rate, rObs) {
+    let {J, estObsList} = generateJacobian(eState, time, rate)
+    let midCalc = math.multiply(math.inv(math.multiply(math.transpose(J), J)), math.transpose(J))
+    let errCalc = math.subtract(rObs, estObsList)
+    midCalc = math.multiply(midCalc, errCalc)
+    eState[0] += midCalc[0][0]
+    eState[1] += midCalc[0][1]
+    eState[2] += midCalc[0][2]
+    eState[3] += midCalc[0][3]
+    eState[4] += midCalc[0][4]
+    eState[5] += midCalc[0][5]
 }
 
 earth.onload = () => updateInertial()
