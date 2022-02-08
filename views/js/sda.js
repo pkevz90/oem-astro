@@ -3,20 +3,24 @@ let ctxInert = cnvsInert.getContext('2d')
 cnvsInert.width = cnvsInert.clientWidth
 cnvsInert.height = cnvsInert.clientHeight
 
+const earth = new Image()
+earth.src = './Media/earth_north.jpg'
+
+
 let sensors = [
     {
-        lat: 0,
-        long: 45,
+        lat: 45,
+        long: 0,
         type: 'optical'
     },
     {
-        lat: 20,
+        lat: 30,
         long: -25,
         type: 'optical'
     },
     {
-        lat: 70,
-        long: -25,
+        lat: 30,
+        long: -70,
         type: 'optical'
     },
     {
@@ -32,16 +36,37 @@ cnvsRic.width = cnvsRic.clientWidth
 cnvsRic.height = cnvsRic.clientHeight
 
 function updateInertial(sites = []) {
-    let radius = 0.75 * cnvsInert.height * 6371 / 42164
-    ctxInert.fillStyle = 'green'
-    ctxInert.beginPath()
-    ctxInert.arc(cnvsInert.width / 2,cnvsInert.height,radius,0,2 * Math.PI)
-    ctxInert.fill()
+    ctxInert.clearRect(0,0,cnvsInert.width, cnvsInert.height)
+    ctxInert.save()
     ctxInert.strokeStyle = 'gray'
     
     ctxInert.fillStyle = 'black'
     ctxInert.setLineDash([20, 10]);
-    sensors.forEach(s => {
+    sensors.filter(s => s.lat < 0).forEach(s => {
+        if (s.type === 'space') return
+        let delX = 6371 * Math.sin(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
+        delX = 0.75 * cnvsInert.height * delX / 42164
+        let delY = 6371 * Math.cos(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
+        delY = 0.75 * cnvsInert.height * delY / 42164
+        ctxInert.beginPath()
+        ctxInert.moveTo(cnvsInert.width / 2 - delX, cnvsInert.height - delY)
+        ctxInert.lineTo(cnvsInert.width / 2, cnvsInert.height * 0.25)
+        ctxInert.stroke()
+        ctxInert.beginPath()
+        ctxInert.arc(cnvsInert.width / 2 - delX, cnvsInert.height - delY, 3, 0, 2 * Math.PI)
+        ctxInert.fill()
+    })
+    ctxInert.translate(cnvsInert.width / 2, cnvsInert.height)
+    ctxInert.rotate(126*Math.PI/180);
+    let radius = 0.75 * cnvsInert.height * 6371 / 42164
+    ctxInert.drawImage(earth, -radius, -radius, radius*2, radius*2);
+
+    ctxInert.restore()
+    ctxInert.strokeStyle = 'gray'
+    
+    ctxInert.fillStyle = 'black'
+    ctxInert.setLineDash([20, 10]);
+    sensors.filter(s => s.lat > 0).forEach(s => {
         if (s.type === 'space') return
         let delX = 6371 * Math.sin(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
         delX = 0.75 * cnvsInert.height * delX / 42164
@@ -121,7 +146,7 @@ function calcRange(stateOb, stateTar) {
 }
 
 function calcRangeRate(stateOb, stateTar) {
-    
+
 }
 
 function generateJacobian(obs) {
@@ -132,5 +157,5 @@ function stepDiffCorrect() {
 
 }
 
-updateInertial()
+earth.onload = () => updateInertial()
 updateRic()
