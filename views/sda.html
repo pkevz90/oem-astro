@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDA Simulator</title>
+    <style>
+        html, body, .display-container, canvas {
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .display-container {
+            display: grid;
+            grid-template-areas: 'inertial ric' 'inertial control';
+        }
+        .display-container div {
+            width: 50vw;
+        }
+        .display-ric, .display-control {
+            height: 50vh;
+        }
+        .display-inertial {
+            grid-area: inertial;
+        }
+        .display-ric {
+            grid-area: ric;
+        }
+        .display-obs {
+            grid-area: obs;
+        }
+        .display-control {
+            grid-area: control;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+        input, select, button {
+            width: 25%;
+            padding: 3px;
+            margin: 5px;
+            border-radius: 10px;
+        }
+        button {
+            cursor: pointer;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        button:hover {
+            background-color: black;
+            color: white;
+        }
+    </style>
+    <script src="./js/sda.js" defer></script>
+</head>
+<body>
+    <div class="display-container">
+        <div class="display-inertial">
+            <canvas id="inertial-canvas"></canvas>
+        </div>
+        <div class="display-ric">
+            <canvas id="ric-canvas"></canvas>
+        </div>
+        <div class="display-control">
+            <div>Origin Longitude<input placeholder="Origin Long (deg)" type="number" value="0"> deg</div>
+            <div>
+                <input placeholder="Sat R" type="number">
+                <input placeholder="Sat I" type="number" name="" id="">
+                <input placeholder="Sat C" type="number" name="" id="">
+                <input placeholder="Sat Rd" type="number" name="" id="">
+                <input placeholder="Sat Id" type="number" name="" id="">
+                <input placeholder="Sat Cd" type="number" name="" id="">
+            </div>
+            <div>
+                <div>
+                    <input placeholder="Lat" type="text">
+                    <input placeholder="Long" type="text">
+                    <input placeholder="Angle StD (deg)" type="text">
+                    <input placeholder="Range StD (m)" type="text">
+                    <select name="" id="">
+                        <option value="">Radar</option>
+                        <option value="">Optical</option>
+                        <option value="">Space</option>
+                    </select>
+                </div>
+                <button>
+                    Add Sensor
+                </button>
+            </div>
+            <div>
+                <input type="number" placeholder="Total Time">
+                <input type="number" placeholder="Freq" id=""> Hz
+                <button>
+                    Run
+                </button>
+            </div>
+        </div>
+        <div class="display-obs">
+            <canvas id="obs-canvas"></canvas>
+        </div>
+
+    </div>
+</body>
+</html>

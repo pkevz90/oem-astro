@@ -4419,3 +4419,63 @@ function recoverDefaultScenario(index) {
     mainWindow.loadDate(textFromFileLoaded);
     mainWindow.setAxisWidth('set', mainWindow.plotWidth);
 }
+
+function convertRAEtoCartesian(rae = [[10, 0, 0, 0, 0, 0.004]]) {
+    let r = rae[0][0],
+        az = rae[0][1],
+        el = rae[0][2],
+        rd = rae[0][3],
+        azd = rae[0][4],
+        eld = rae[0][5]
+    position = [[r * Math.cos(az) * Math.cos(el), r * Math.sin(az) * Math.cos(el), r * Math.sin(el)]]
+    velocity = [[rd * Math.cos(az) * Math.cos(el) - r * Math.sin(az) * Math.cos(el) * azd - r * Math.cos(az) * Math.sin(el) * eld,
+                 rd * Math.sin(az) * Math.cos(el) + r * Math.cos(az) * Math.cos(el) * azd - r * Math.sin(az) * Math.sin(el) * eld,
+                 rd * Math.sin(el) + r * Math.cos(el) * eld]]
+    return math.concat(position, velocity, 1);
+}
+
+function convertCartesiantoRAE(cart = [[10, 0, 0, 0, 0, 0.04]]) {
+    let r = cart[0][0],
+        i = cart[0][1],
+        c = cart[0][2],
+        rd = cart[0][3],
+        id = cart[0][4],
+        cd = cart[0][5]
+    let x1 = math.dotDivide([r, i, c], math.norm([r, i, c]))
+    let x2 = math.cross([0,0,1], [r, i, 0])
+    x2 = math.dotDivide(x2, math.norm(x2))
+    let x3 = math.cross(x1, x2)
+
+    let range = math.norm([r, i, c])
+    let vel = [rd, id, cd]
+    let rangeRate = math.dot(vel, x1)
+    let azRate = math.dot(vel, x2) / range
+    let elRate = math.dot(vel, x3) / range
+    // console.log(rangeRate, azRate, elRate);
+    return [[
+        range,
+        math.atan2(i, r),
+        math.atan2(c, math.norm([r, i])),
+        rangeRate,
+        azRate,
+        elRate
+    ]]
+}
+
+function copySat(sat = 0) {
+    let s = mainWindow.satellites[sat].curPos
+    let position = [[s.r, s.i, s.c, s.rd, s.id, s.cd]]
+    let rae = convertCartesiantoRAE(position)
+    rae[0][0] *= 1.5
+    rae[0][3] *= 1.5
+    position = convertRAEtoCartesian(rae)
+    mainWindow.satellites[sat].position = {
+        r: position[0][0],
+        i: position[0][1],
+        c: position[0][2],
+        rd: position[0][3],
+        id: position[0][4],
+        cd: position[0][5]
+    }
+    mainWindow.satellites[sat].calcTraj()
+}

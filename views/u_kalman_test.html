@@ -12,7 +12,7 @@
     <script>
         let f = new filter_unscented()
         f.propState = runge_kutta
-        let realState = [[1, 5, 0, 0.004, 0.001, 0]]
+        let realState = [[0, 10, 1, 0.00, 0.00, 0]]
         let P = [5, 5, 5, 0.005, 0.005, 0.005]
         let estState = [[
             realState[0][0] + randn_bm() * P[0],
@@ -22,13 +22,14 @@
             realState[0][4] + randn_bm() * P[4],
             realState[0][5] + randn_bm() * P[5],
         ]]
+        estState = [[0, 11, 0, 0, 0, 0]]
         P = math.diag(P.map(p => p ** 2))
         f.P = P
         f.estState = estState
-        let dt = 0.05
-        for (let ii = 0; ii < 0; ii += dt) {
-            if (ii > 100 && ii < 120) {
-                let a = [0,0.000,0.001]
+        let dt = 1
+        for (let ii = 0; ii < 4600; ii += dt) {
+            if (ii > 1000 && ii < 1010) {
+                let a = [0,0.000,0.000025]
                 realState = runge_kutta(realState, dt, a)
                 let obs = f.measurementFunction(realState)
                 obs[0][0] += math.sqrt(f.R[0][0]) * f.randn_bm()

@@ -171,8 +171,9 @@ class filter_unscented {
         for (let ii = 1; ii < this.sigma.length; ii++) {
             cross_corr = math.add(cross_corr, math.dotMultiply(this.weights[ii], math.multiply(math.transpose(math.subtract(this.sigma[ii], this.estState)), math.transpose(math.subtract(z_sigma[ii], z_hat)))))
         }
+        console.log(cross_corr);
         let k = math.multiply(cross_corr, math.inv(s))
-
+        console.log(k);
         return {k, z_hat, cross_corr, s}
 
     }
@@ -180,7 +181,9 @@ class filter_unscented {
         let {obs, dt = 1, a = [0,0,0]} = inputs
         this.generateSigmaPoints()
         this.propState_Cov(dt, a)
+        // console.log(this.estState, this.P);
         let out = this.calcGain()
+        console.log(out.k);
         console.log(math.squeeze(obs), math.squeeze(out.z_hat))
         this.P = math.subtract(this.P, math.multiply(out.k, out.s, math.transpose(out.k)))
         this.estState = math.add(math.transpose(this.estState), math.multiply(out.k, math.subtract(obs, out.z_hat)))
@@ -225,19 +228,15 @@ class filter_unscented {
 } 
 
 class filter_unscented_rae {
+    
     constructor(options = {}) {
         let {
-            hFunction = this.measurementFunction,
-            stateProp = this.propState,
             estState = [[0, 10, 4, 0.005, 0, 0]],
-            R = [[(0.05 * Math.PI / 180)**2, 0], [0, (0.05 * Math.PI / 180)**2]],
+            R = [[(0.05 * Math.PI / 180)**2, 0, 0], [0, (0.05 * Math.PI / 180)**2, 0], [0, 0, 0.5 ** 2]],
             Q = math.diag([0.0005 ** 2, 0.0005 ** 2, 0.0005 ** 2, 0.000001 ** 2, 0.000001 ** 2, 0.000001 ** 2]),
             P = math.diag([100,(10 * Math.PI / 180) ** 2,(10 * Math.PI / 180) ** 2,0.01 ** 2,(0.1 * Math.PI / 180) ** 2,(0.1 * Math.PI / 180) ** 2]),
         } = options
-        estState = convertCartesiantoRAE(estState)
         this.estState = estState
-        this.hFunction = hFunction
-        this.stateProp = stateProp
         this.R = R
         this.Q = Q
         this.P = P
@@ -263,11 +262,8 @@ class filter_unscented_rae {
     }
 
     measurementFunction(state) {
-        return [[state[0][1]], [state[0][2]]]
-    }
-    calcKalmanGain(H, P, R) {
-        let S = math.add(math.multiply(H, P, math.transpose(H)), R)
-        return math.multiply(P, math.transpose(H), math.inv(S))
+        // return [[state[0][1]], [state[0][2]]]
+        return [[state[0][1]], [state[0][2]], [state[0][0]]]
     }
     propState_Cov(dt, a) {
         this.sigma = this.sigma.map(point => {
@@ -298,7 +294,6 @@ class filter_unscented_rae {
             s = math.add(s, math.dotMultiply(this.weights[ii], math.multiply(math.subtract(z_sigma[ii], z_hat), math.transpose(math.subtract(z_sigma[ii], z_hat)))))
         }
         s = math.add(s, this.R)
-        // console.log(math.transpose(math.subtract(this.sigma[0], this.estState)), math.subtract(z_sigma[0], z_hat));
         let cross_corr = math.dotMultiply(this.weights[0], math.multiply(math.transpose(math.subtract(this.sigma[0], this.estState)), math.transpose(math.subtract(z_sigma[0], z_hat))))
 
         for (let ii = 1; ii < this.sigma.length; ii++) {
@@ -314,7 +309,6 @@ class filter_unscented_rae {
         this.generateSigmaPoints()
         this.propState_Cov(dt, a)
         let out = this.calcGain()
-        console.log(math.squeeze(obs), math.squeeze(out.z_hat))
         this.P = math.subtract(this.P, math.multiply(out.k, out.s, math.transpose(out.k)))
         this.estState = math.add(math.transpose(this.estState), math.multiply(out.k, math.subtract(obs, out.z_hat)))
         this.estState = math.transpose(this.estState)
