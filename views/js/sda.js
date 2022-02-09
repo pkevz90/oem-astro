@@ -13,11 +13,23 @@ function changeLatitude(button) {
 
 let sensors = [
     {
-        lat: 2.67,
-        long: 156.25,
+        lat: 0,
+        long: 10,
         r: 0.005 * Math.PI / 180,
-        type: 'optical'
+        type: 'space'
     }
+    // ,{
+    //     lat: 20.67,
+    //     long: 45,
+    //     r: 0.001 * Math.PI / 180,
+    //     type: 'optical'
+    // }
+    // ,{
+    //     lat: 20.67,
+    //     long: 15,
+    //     r: 0.005 * Math.PI / 180,
+    //     type: 'space'
+    // }
 ]
 
 let cnvsRic = document.getElementById('ric-canvas')
@@ -56,13 +68,21 @@ function updateInertial(sites = []) {
     
     ctxInert.fillStyle = 'black'
     ctxInert.setLineDash([20, 10]);
-    sensors.filter(s => s.lat > 0).forEach(s => {
-        if (s.type === 'space') return
+    sensors.filter(s => s.lat >= 0).forEach(s => {
+        let delX, delY
         let realLong = s.long - latitude
-        let delX = 6371 * Math.sin(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
-        delX = 0.75 * cnvsInert.height * delX / 42164
-        let delY = 6371 * Math.cos(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
-        delY = 0.75 * cnvsInert.height * delY / 42164
+        if (s.type === 'space') {
+            delX = 42164 * Math.sin(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180)
+            delX = 0.75 * cnvsInert.height * delX / 42164
+            delY = 42164 * Math.cos(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180)
+            delY = 0.75 * cnvsInert.height * delY / 42164
+        }
+        else {
+            delX = 6371 * Math.sin(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
+            delX = 0.75 * cnvsInert.height * delX / 42164
+            delY = 6371 * Math.cos(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
+            delY = 0.75 * cnvsInert.height * delY / 42164
+        }
         ctxInert.beginPath()
         ctxInert.moveTo(cnvsInert.width / 2 - delX, cnvsInert.height - delY)
         ctxInert.lineTo(cnvsInert.width / 2, cnvsInert.height * 0.25)
@@ -78,7 +98,7 @@ function updateInertial(sites = []) {
 
 function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]]) {
     
-    ctxRic.clearRect(0,0,ctxRic.width, ctxRic.height)
+    ctxRic.clearRect(0,0,cnvsRic.width, cnvsRic.height)
     let angle = math.atan2(vectors[2][0], vectors[2][1])
     let x = 80
     let y = x * values[1] / values[2]
@@ -110,16 +130,23 @@ function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], noi
     let obs = []
     let positions = []
     sensors.forEach(s => {
-        if (s.type === 'space') return
+        let realLong = s.long - latitude
+        if (s.type === 'space') {
+            positions.push([
+                -42164 + 42164 * Math.cos(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180),
+                42164 * Math.sin(realLong* Math.PI / 180) * Math.cos(0 * Math.PI / 180),
+                6371 * Math.sin(0 * Math.PI / 180)
+            ])
+            return
+        }
         positions.push([
-            -42164 + 6371 * Math.cos(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
-            6371 * Math.sin(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
-            6371 * Math.sin(s.lat * Math.PI / 180)
+            -42164 + 6371 * Math.cos(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180),
+            6371 * Math.sin(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180),
+            6371 * Math.sin(0 * Math.PI / 180)
         ])
     })
-    console.log(positions);
     let t = 0
-    while (t < tFinal) {
+    while (t <= tFinal) {
         for (let ii = 0; ii < positions.length; ii++) {
             obs.push({
                 az: calcAz(positions[ii], satState, noise ? sensors[ii].r : 0),
@@ -158,7 +185,7 @@ function calcRangeRate(stateOb, stateTar) {
 
 }
 
-function generateJacobian(estIn = [0,0,0,0,0,0], tIn=360, rateIn = 1/60) {
+function generateJacobian(estIn = [0,0,0,0,0,0], tIn=360, rateIn = 1/120) {
     let estObs = generateObs(sensors, tIn, rateIn, estIn)
     let estObsList = flattenObs(estObs)
     let J = []
@@ -233,15 +260,27 @@ function runAlgorith(finalT = 22264, rate = 1/120, realState = [0,0,0,0.002,-0.0
         std = math.dotMultiply(rms, p)
         ii++
     }
-    let {values, vectors} = math.eigs(std);
-    vectors = math.transpose(vectors)
 
-    console.log(math.dotPow(values, 0.5).slice(3,6));
-    console.log(math.squeeze(math.column(vectors, 5)));
-    console.log(math.squeeze(math.column(vectors, 4)));
-    console.log(math.squeeze(math.column(vectors, 3)));
-    updateRic(math.dotPow(values, 0.5).slice(3,6), vectors.slice(3,6))
-    console.log(estState);
+    let values, vectors
+    try {
+        let out = math.eigs(std);
+        values = out.values
+        vectors = out.vectors
+        vectors = math.transpose(vectors)
+        vectors = vectors.slice(3,6)
+    }
+    catch (err) {
+        values = [0,0,0,std[2][2], std[1][1], std[0][0]]
+        vectors = [
+            [0,0,1,0,0,0],
+            [0,1,0,0,0,0],
+            math.squeeze(powerIteration(std))
+        ]
+
+    }
+    console.log(std);
+    console.log(math.dotPow(values, 0.5), vectors);
+    updateRic(math.dotPow(values, 0.5).slice(3,6), vectors)
 }
 
 function randn_bm() {
@@ -250,6 +289,20 @@ function randn_bm() {
     while(v === 0) v = Math.random();
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
 }
+
+function powerIteration(A) {
+    let guess = math.zeros([A.length, 1])
+    guess[0][0] = 1
+    let ii = 0
+    while (ii < 15) {
+        guess = math.multiply(A, guess)
+        guess = math.dotDivide(guess, math.norm(math.squeeze(guess)))
+        ii++
+        // console.log(guess);
+    }
+    return guess
+}
+
 
 earth.onload = () => updateInertial()
 updateRic()

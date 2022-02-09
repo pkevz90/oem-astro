@@ -65,12 +65,8 @@
             text-align: center;
         }
         input {
-            transition-duration: 0.25s;
-            padding: 5px;
+            padding: 10px;
             text-align: center;
-        }
-        input:hover {
-            background-color: rgb(225,225,225);
             border-radius: 10px;
         }
         #data-cnvs {
@@ -83,6 +79,12 @@
             top: 240px;
             left: 551px;
         }
+        td {
+            text-align: center;
+        }
+        td input {
+            width: 5em;
+        }
     </style>
     <script src="../SupportLibraries/math.min.js"></script>
 </head>
@@ -92,372 +94,67 @@
             Drag ephemeris file into area...
         </div>
         <div id="parameters">
-            <div class="parameter-box">Range <input value="10000" type="number" style="width: 8ch;"> m</div> 
-            <div class="parameter-box">CATS  <input value="10" type="number" style="width: 6ch;"> deg</div>
-            <div class="parameter-box">Epoch Time <input id="des-date" type="datetime-local"></div>
+            <div class="parameter-box">Epoch Time <input id="des-date" type="datetime-local" value="2022-02-09T19:30"></div>
         </div>
-        <div>Error Standard Deviation (m) = Range (m) * <input id="range-factor" type="Number" style="width: 4em;" value="0.08"> * CATS_FACTOR(below) = <span id="error-std">100</span> m</div>
         <div>
-            <canvas id="data-cnvs" onmousedown="handleCnvsClick(event)" onmousemove="handleCnvsClick(event)" onmouseup="handleCnvsClick(event)"></canvas>
+            <div>
+                OD Covariance (km & km/s)
+            </div>
+            <table>
+                <tr>
+                    <td><input type="number" value="1"></td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td><input type="number" value="1"></td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td>x</td>
+                    <td><input type="number" value="1"></td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td><input type="number" value="0.001"></td>
+                    <td>x</td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td><input type="number" value="0.001"></td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td><input type="number" value="0.001"></td>
+                </tr>
+            </table>
         </div>
         <div id="altered-tle">
             <textarea cols="75" rows="2"></textarea>
         </div>
     </div>
-    <script>
-        let windowOptions = {
-            p_error_ground: 5000,
-            v_error_ground: 2,
-            p_error: null,
-            v_error: null,
-            inputData: null,
-            epochDate: null,
-            cats_data: [
-                [0.66, 1],
-                [36, 0.57],
-                [117, 2.38],
-            ],
-            activePoint: null
-        }
-        drawCanvas()
-        updateError()
-        function stringToCoes(oldTle) {
-            oldTle = oldTle.split(/\n/);
-            oldTle[0] = oldTle[0].split(/ +/);
-            oldTle[1] = oldTle[1].split(/ +/);
-            console.log(oldTle[0]);
-            return {
-                Number: oldTle[1][1],
-                epoch: Number(oldTle[0][2]) ? oldTle[0][2] : oldTle[0][3],
-                inc: Number(oldTle[1][2]),
-                raan: Number(oldTle[1][3]),
-                arg: Number(oldTle[1][5]),
-                mA: Number(oldTle[1][6]),
-                ecc: Number('0.' + oldTle[1][4]),
-                mm: oldTle[1][7],
-            }
-        }
-        function buttonClick() {
-            let oldTle = document.getElementById('main-area').value;
-            document.getElementById('main-area').style.color = "#000"
-            try {a
-                tle = stringToCoes(oldTle);
-            }
-            catch (e) {
-                console.log(e);
-                document.getElementById('main-area').style.color = "#ff0000"
-                document.getElementById('result-area').value = '';
-                return;
-            }
-            let error = Number(document.getElementById('uncertainty').value);
-            console.log(error);
-            error = Math.sqrt(error * error / 5);
-            tle.ecc = (tle.ecc + error / 42164 * normalRandom()).toFixed(7).split('.')[1];
-            tle.inc = (tle.inc + (error / 42164) * 180 / Math.PI * normalRandom()).toFixed(4);
-            tle.raan = (tle.raan + (error / 42164) * 180 / Math.PI * normalRandom()).toFixed(4);
-            tle.arg = (tle.arg + (error / 42164) * 180 / Math.PI * normalRandom()).toFixed(4);
-            tle.mA = (tle.mA + (error / 42164) * 180 / Math.PI * normalRandom()).toFixed(4);
-            while (tle.inc.split('.')[0].length < 3) {
-                tle.inc = '0' + tle.inc;
-            }
-            while (tle.raan.split('.')[0].length < 3) {
-                tle.raan = '0' + tle.raan;
-            }
-            while (tle.arg.split('.')[0].length < 3) {
-                tle.arg = '0' + tle.arg;
-            }
-            while (tle.mA.split('.')[0].length < 3) {
-                tle.mA = '0' + tle.mA;
-            }
-            let outString = `1 ${tle.Number}U          ${tle.epoch}  .00000000  00000-0  00000-0 0 00007\n2 ${tle.Number} ${tle.inc} ${tle.raan} ${tle.ecc} ${tle.arg} ${tle.mA} ${tle.mm}`
-            document.getElementById('result-area').value = outString;
-            document.getElementById('result-area').select();
-            document.execCommand("copy");
-        }
-
-        function normalRandom()
-        {
-            var val, u, v, s, mul;
-            spareRandom = null;
-            if(spareRandom !== null)
-            {
-                val = spareRandom;
-                spareRandom = null;
-            }
-            else
-            {
-                do
-                {
-                    u = Math.random()*2-1;
-                    v = Math.random()*2-1;
-
-                    s = u*u+v*v;
-                } while(s === 0 || s >= 1);
-
-                mul = Math.sqrt(-2 * Math.log(s) / s);
-
-                val = u * mul;
-                spareRandom = v * mul;
-            }
-            
-            return val;
-        }
-        function loadFileAsText(event) {
-            fileToLoad = event.path[0].files[0];
-            let ext = fileToLoad.name.split('.')[1];
-            let fileReader = new FileReader();
-            fileReader.onload = function (fileLoadedEvent) {
-                let text = fileLoadedEvent.target.result;
-                text = text.split('EphemerisTimePosVel');
-                text[1] = text[1].split(/\n+/);
-                text[0] = text[0] + 'EphemerisTimePosVel' + text[1][0];
-                text[1].shift();
-                windowOptions.inputData = text;
-                let date = text[0].substr(385);
-                windowOptions.epochDate = new Date(date.substr(0,date.search('UTCG') - 1));
-            };
-            if (ext === 'e') {
-                document.getElementById('e-date').style.visibility = 'visible';
-            }
-            fileReader.readAsText(fileToLoad, "UTF-8");
-        }
-    
-        function exportFile() {
-            let err_inputs = document.getElementById('parameters').getElementsByTagName('input');
-            let desDate = new Date(err_inputs[2].value);
-            if (desDate == 'Invalid Date') return;
-            let timeDiff = desDate - windowOptions.epochDate;
-            timeDiff /= 1000;
-            let timeLine = windowOptions.inputData[1].findIndex(line => {
-                return Number(line.split(/ +/)[1]) >= timeDiff;
-            });
-            console.log(desDate, windowOptions.epochDate);
-            console.log(timeLine);
-            windowOptions.inputData[1] = windowOptions.inputData[1].slice(timeLine,timeLine+1);
-            let state = windowOptions.inputData[1][0].split(/ +/);
-            // Get error sources
-            let total_error = Number(document.getElementById('error-std').innerText);
-            let p_error = Math.sqrt(Math.pow(total_error, 2) / 3);
-            let v_error = Math.sqrt(Math.pow(total_error / 2000, 2) / 3);
-            state[2] = Number(state[2]) + normalRandom() * p_error;
-            state[3] = Number(state[3]) + normalRandom() * p_error;
-            state[4] = Number(state[4]) + normalRandom() * p_error;
-            state[5] = Number(state[5]) + normalRandom() * v_error;
-            state[6] = Number(state[6]) + normalRandom() * v_error;
-            state[7] = Number(state[7]) + normalRandom() * v_error;
-            windowOptions.inputData[1] = `${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]} ${state[6]} ${state[7]}`; 
-            let outText = windowOptions.inputData[0] + '\n\n' + windowOptions.inputData[1] + '\n\n\n' + 'END Ephemeris';
-            downloadFile('corrupted.e', outText);
-        }
-
-        function handleMouseEnter(el) {
-            if (event.type === 'mouseleave') {
-                if (!document.getElementById('tle-area')) return;
-                if (document.getElementById('tle-area').value !== '') return;
-                el.target.innerHTML = 'Drag ephemeris file into area...';
-                return;
-            }
-            if (windowOptions.inputData) return;
-            if (document.getElementById('tle-area')) return;
-            el.target.innerHTML = 'Enter TLE Below <br> <textarea oninput="hanldeTle(this)" id="tle-area" rows="2" cols="75">';
-        }
-
-        function coesToTle(coes) {
-            return `1 ${coes.Number}U          ${coes.epoch}  .00000000  00000-0  00000-0 0 00006\n2 ${coes.Number} ${addZeros(coes.inc.toFixed(4), 3)} ${addZeros(coes.raan.toFixed(4), 3)} ${coes.ecc.toFixed(7).split('.')[1]} ${addZeros(coes.arg.toFixed(4), 3)} ${addZeros(coes.mA.toFixed(4), 3)} ${coes.mm}`
-        }
-
-        function introduceTleError(coes) {
-            let total_error = Number(document.getElementById('error-std').innerText) / 1000;
-            let p_error = Math.sqrt(Math.pow(total_error, 2) / 4);
-            console.log(p_error);
-            let a_sat = Math.pow(398600.4418 * Math.pow(86164*Number(coes.mm) / 2 / Math.PI, 2), 1/3);
-            p_error /= a_sat;
-            p_error *= 180 / Math.PI;
-            console.log(p_error);
-            coes.arg += p_error * normalRandom();
-            coes.inc += p_error * normalRandom();
-            coes.mA += p_error * normalRandom();
-            coes.raan += p_error * normalRandom();
-        }
-
-        function hanldeTle(el) {
-            try {
-                let coes = stringToCoes(el.value);
-                introduceTleError(coes)
-                document.getElementById('altered-tle').getElementsByTagName('textarea')[0].value =  coesToTle(coes);
-                navigator.clipboard.writeText(document.getElementById('altered-tle').getElementsByTagName('textarea')[0].value)
-            }
-            catch (e) {
-                console.error('TLE not recognized')
-            }
-        }
-
-        function testDrop(event) {
-            event.preventDefault();
-            fileToLoad = event.dataTransfer.files[0];
-            // event.target.innerText = fileToLoad.name;
-            let ext = fileToLoad.name.split('.')[1];
-            let fileReader = new FileReader();
-            fileReader.onload = function (fileLoadedEvent) {
-                let text = fileLoadedEvent.target.result;
-                text = text.split('EphemerisTimePosVel');
-                text[1] = text[1].split(/\n+/);
-                text[0] = text[0] + 'EphemerisTimePosVel' + text[1][0];
-                text[1].shift();
-                windowOptions.inputData = text;
-                let date = text[0].substr(text[0].search('point: ') + 6);
-                windowOptions.epochDate = new Date(date.substr(0,date.search('UTCG') - 1));
-                if (document.getElementById('des-date').value !== '') {
-                    exportFile();
-                }
-                else {
-                    document.getElementById('des-date').style.backgroundColor = 'rgb(255,200,200)'
-                }
-            };
-            fileReader.readAsText(fileToLoad, "UTF-8");
-        }
-
-        function getPos(el) {
-            for (var lx=0, ly=0;
-                el != null;
-                lx += el.offsetLeft, ly += el.offsetTop, el = el.offsetParent);
-            return {x: lx,y: ly};
-        }
-
-        function dragOverHandler(event) {
-            if (event.type === 'dragenter') {
-                event.target.classList.add('dragged-on');
-            }
-            else if (event.type === 'dragleave') {
-                event.target.classList.remove('dragged-on');
-
-            }
-            event.preventDefault();
-
-        }
-
-        function downloadFile(filename, text) {
-            var pom = document.createElement('a');
-            pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-            pom.setAttribute('download', filename);
-
-            if (document.createEvent) {
-                var event = document.createEvent('MouseEvents');
-                event.initEvent('click', true, true);
-                pom.dispatchEvent(event);
-            } else {
-                pom.click();
-            }
-        }
-    
-        function drawCanvas() {
-            let cnvs = document.getElementById('data-cnvs');
-            let ctx = cnvs.getContext('2d');
-            cnvs.width = 0.5 * window.innerWidth;
-            cnvs.height = 500;
-            ctx.strokeStyle = 'black';
-            ctx.fillStyle = 'black';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(cnvs.width * 0.2, cnvs.height * 0.1);
-            ctx.lineTo(cnvs.width * 0.2, cnvs.height * 0.8);
-            ctx.lineTo(cnvs.width * 0.8, cnvs.height * 0.8);
-            ctx.stroke();
-            // Label CATS angles
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            let graphWidth = cnvs.width * 0.6;
-            ctx.font = "15px Arial"
-            for (let ii = 0; ii <= 180; ii += 20) {
-                ctx.fillText(ii, cnvs.width * 0.2 + ii / 180 * graphWidth, cnvs.height * 0.8 + 12)
-            }
-            graphWidth = cnvs.height * 0.7;
-            for (let ii = 3; ii >= 0; ii -= 0.5) {
-                ctx.fillText(ii.toFixed(1), cnvs.width*0.2-18,cnvs.height * 0.1 + (3-ii) / 3 * graphWidth)
-            }
-            windowOptions.cats_data.forEach(point => {
-                ctx.beginPath();
-                ctx.arc(cnvs.width * 0.2 + point[0] / 180 * cnvs.width * 0.6, cnvs.height * 0.1 + (3-point[1]) / 3 * cnvs.height * 0.7, 5, 0, 2 * Math.PI);
-                ctx.fill();
-            })
-            let line = math.squeeze(calcCovariance(windowOptions.cats_data, 2)), y;
-            for (let x = 0; x <= 180.01; x += 0.1) {
-                // y = line[0] * Math.pow(x,4) + line[1] * Math.pow(x,3) + line[2] * Math.pow(x,2) + line[3] * Math.pow(x,1) + line[4]
-                y = line[0] * Math.pow(x,2) + line[1] * Math.pow(x,1) + line[2] * Math.pow(x,0);
-                ctx.beginPath();
-                ctx.arc(cnvs.width * 0.2 + x / 180 * cnvs.width * 0.6, cnvs.height * 0.1 + (3-y) / 3 * cnvs.height * 0.7, 0.25, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-        }
-
-        function calcCovariance(points, order, multiplyByY = true) {
-            let x = [],
-                y = [];
-            points.forEach(point => {
-                x.push(point[0]);
-                y.push(point[1]);
-            });
-            x = math.transpose([x]);
-            y = math.transpose([y]);
-            let a;
-            for (let ii = order; ii >= 0; ii--) {
-                if (ii === order) {
-                a = math.dotPow(x, ii);
-                } else {
-                a = math.concat(a, math.dotPow(x, ii));
-                }
-            }
-            if (multiplyByY) {
-                a = math.multiply(math.multiply(math.inv(math.multiply(math.transpose(a), a)), math.transpose(a)), y);
-            }
-            else {
-                a = math.inv(math.multiply(math.transpose(a), a));
-            }
-            return a;
-        }
-
-        function handleCnvsClick(event) {
-            let cnvs = document.getElementById('data-cnvs');
-            let x = (event.offsetX - 0.2*cnvs.width) / 0.6 / cnvs.width * 180;
-            let y = 3-(event.offsetY - 0.1*cnvs.height) / 0.7 / cnvs.height * 3;
-            updateError();
-            if (event.type === 'mousemove') {
-                if (windowOptions.activePoint === null) return;
-                windowOptions.cats_data[windowOptions.activePoint] = [x, y];
-                drawCanvas()
-                return;
-            }
-            else if (event.type === 'mouseup') {
-                windowOptions.activePoint = null;
-                return;
-            }
-            windowOptions.activePoint === null;
-            windowOptions.cats_data.forEach((point, ii) => { 
-                let xPx = cnvs.width * 0.2 + point[0] / 180 * cnvs.width * 0.6;
-                let yPx = cnvs.height * 0.1 + (3-point[1]) / 3 * cnvs.height * 0.7;
-                if (math.norm([xPx - event.offsetX, yPx - event.offsetY]) < 5) {
-                    windowOptions.activePoint = ii;
-                }
-            })
-        }
-        
-        function updateError() {
-            let err_inputs = document.getElementById('parameters').getElementsByTagName('input');
-            err_inputs = [Number(err_inputs[0].value), Number(err_inputs[1].value)]
-            let linePoints = math.squeeze(calcCovariance(windowOptions.cats_data, 2));
-            let error = linePoints[0] * Math.pow(err_inputs[1], 2) + linePoints[1] * err_inputs[1] + linePoints[2];
-            error = err_inputs[0] * Number(document.getElementById('range-factor').value) * error;
-            document.getElementById('error-std').innerText = error.toFixed(0)
-        }
-        
-        function addZeros(num, dec) {
-            let alteredNum = num.split('.');
-            while (alteredNum[0].length < dec) {
-                alteredNum[0] = '0' + alteredNum[0]
-            }
-            console.log(alteredNum);
-            return alteredNum[0] + '.' + alteredNum[1];
-        }
-    </script>
+    <script src="./js/tleRandomizer.js"></script>
 </body>
 </html>
