@@ -13,24 +13,10 @@ function changeLatitude(button) {
 
 let sensors = [
     {
-        lat: 45,
-        long: 0,
+        lat: 2.67,
+        long: 156.25,
+        r: 0.005 * Math.PI / 180,
         type: 'optical'
-    },
-    {
-        lat: 30,
-        long: -25,
-        type: 'optical'
-    },
-    {
-        lat: 30,
-        long: -70,
-        type: 'optical'
-    },
-    {
-        type: 'space',
-        position: [0, -10000, 0],
-        velocity: [0,0,0]
     }
 ]
 
@@ -90,10 +76,15 @@ function updateInertial(sites = []) {
     ctxInert.fill()
 }
 
-function updateRic(covariance = [80, 60, 0]) {
+function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]]) {
+    
+    ctxRic.clearRect(0,0,ctxRic.width, ctxRic.height)
+    let angle = math.atan2(vectors[2][0], vectors[2][1])
+    let x = 80
+    let y = x * values[1] / values[2]
     ctxRic.fillStyle = 'rgba(100,100,100,0.5)'
     ctxRic.beginPath()
-    ctxRic.ellipse(cnvsRic.width * 0.5, cnvsRic.height / 2, 80,60, 0, 0, 2 * Math.PI)
+    ctxRic.ellipse(cnvsRic.width * 0.5, cnvsRic.height / 2, x,y, angle, 0, 2 * Math.PI)
     ctxRic.fill()
     ctxRic.strokeStyle = 'black'
     ctxRic.lineWidth = 2
@@ -115,7 +106,7 @@ function updateRic(covariance = [80, 60, 0]) {
     ctxRic.stroke()
 }
 
-function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], type = 'optical', noise = false) {
+function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], noise = false) {
     let obs = []
     let positions = []
     sensors.forEach(s => {
@@ -126,36 +117,33 @@ function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], typ
             6371 * Math.sin(s.lat * Math.PI / 180)
         ])
     })
+    console.log(positions);
     let t = 0
     while (t < tFinal) {
         for (let ii = 0; ii < positions.length; ii++) {
             obs.push({
-                az: calcAz(positions[ii], satState),
-                el: calcEl(positions[ii], satState)
+                az: calcAz(positions[ii], satState, noise ? sensors[ii].r : 0),
+                el: calcEl(positions[ii], satState, noise ? sensors[ii].r : 0)
             })
             continue
         }
-        satState = propState(satState, 1 / rate)
+        satState = runge_kutta([satState], 1 / rate)
         t += 1/rate
     }
     return obs
 }
 
-function propState(state, dt) {
-    return state
-}
-
-function calcAz(stateOb, stateTar) {
+function calcAz(stateOb, stateTar, noise = 0) {
     let x = stateTar[0] - stateOb[0]
     let y = stateTar[1] - stateOb[1]
-    return Math.atan2(y, x)
+    return Math.atan2(y, x) + randn_bm() * noise
 }
 
-function calcEl(stateOb, stateTar) {
+function calcEl(stateOb, stateTar, noise = 0) {
     let x = stateTar[0] - stateOb[0]
     let y = stateTar[1] - stateOb[1]
     let z = stateTar[2] - stateOb[2]
-    return Math.atan2(z, (x ** 2 + y ** 2) ** (1/2))
+    return Math.atan2(z, (x ** 2 + y ** 2) ** (1/2)) + randn_bm() * noise
 
 }
 
@@ -170,11 +158,9 @@ function calcRangeRate(stateOb, stateTar) {
 
 }
 
-function generateJacobian(estIn, tIn, rateIn) {
-    let estObs = generateObs(sensors, tIn, rateIn, esetIn)
-    let azList = estObs.map(ob => ob.az)
-    let elList = estObs.map(ob => ob.el)
-    let estObsList = math.concat(azList, elList)
+function generateJacobian(estIn = [0,0,0,0,0,0], tIn=360, rateIn = 1/60) {
+    let estObs = generateObs(sensors, tIn, rateIn, estIn)
+    let estObsList = flattenObs(estObs)
     let J = []
     let delta = [0.1, 0.1, 0.1, 0.0001, 0.0001, 0.0001]
 
@@ -182,12 +168,17 @@ function generateJacobian(estIn, tIn, rateIn) {
         let delState = estIn.slice()
         delState[ii] += delta[ii]
         let delObs = generateObs(sensors, tIn, rateIn, delState)
-        let azList = delObs.map(ob => ob.az)
-        let elList = delObs.map(ob => ob.el)
-        let delObsList = math.concat(azList, elList)
+        let delObsList = flattenObs(delObs)
         J.push(math.dotDivide(math.subtract(delObsList, estObsList), delta[ii]))
     }
+    J = math.transpose(J)
     return {J, estObsList}
+}
+
+function flattenObs(obsObject) {
+    let azList = obsObject.map(ob => ob.az)
+    let elList = obsObject.map(ob => ob.el)
+    return math.concat(azList, elList)
 }
 
 function stepDiffCorrect(eState, time, rate, rObs) {
@@ -195,12 +186,69 @@ function stepDiffCorrect(eState, time, rate, rObs) {
     let midCalc = math.multiply(math.inv(math.multiply(math.transpose(J), J)), math.transpose(J))
     let errCalc = math.subtract(rObs, estObsList)
     midCalc = math.multiply(midCalc, errCalc)
-    eState[0] += midCalc[0][0]
-    eState[1] += midCalc[0][1]
-    eState[2] += midCalc[0][2]
-    eState[3] += midCalc[0][3]
-    eState[4] += midCalc[0][4]
-    eState[5] += midCalc[0][5]
+    eState[0] += midCalc[0]
+    eState[1] += midCalc[1]
+    eState[2] += midCalc[2]
+    eState[3] += midCalc[3]
+    eState[4] += midCalc[4]
+    eState[5] += midCalc[5]
+    return {eState, errCalc, midCalc, p: math.inv(math.multiply(math.transpose(J), J))}
+}
+
+function twoBodyRpo(state = [[-1.89733896, 399.98, 0, 0, 0, 0]], options = {}) {
+    let {mu = 398600.4418, r0 = 42164, a = [0,0,0]} = options;
+    let n = (mu / r0 ** 3) ** (1/2)
+    let ndot = 0
+    let x = state[0][0], y = state[0][1], z = state[0][2], dx = state[0][3], dy = state[0][4], dz = state[0][5];
+    let rT = ((r0 + x) ** 2 + y ** 2 + z ** 2) ** (1.5);
+    return [[
+        dx,
+        dy,
+        dz,
+        -mu * (r0 + x) / rT+ mu / r0 ** 2 + 2 * n * dy + n ** 2 * x + ndot * y +  a[0],
+        -mu * y / rT - 2 * n * dx - ndot * x + n ** 2 * y + a[1],
+        -mu * z / rT + a[2]
+    ]];
+}
+
+function runge_kutta(state, dt, a = [0,0,0]) {
+    eom = twoBodyRpo
+    let k1 = eom(state, {a});
+    let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a});
+    return math.squeeze(math.add(state, math.dotMultiply(dt, k2)));
+}
+
+function runAlgorith(finalT = 22264, rate = 1/120, realState = [0,0,0,0.002,-0.005,0]) {
+    let realObs = generateObs(sensors, finalT, rate, realState, true)
+    // console.log(realObs);
+    realObs = flattenObs(realObs)
+    estState = [0,0,0,0,0,0]
+    let std
+    let ii = 0
+    while (ii < 10) {
+        let {eState, errCalc, midCalc, p} = stepDiffCorrect(estState, finalT, rate, realObs)
+        let rms = (errCalc.map(a => a ** 2).reduce((a,b) => a + b) / errCalc.length) ** 1
+        console.log(rms);
+        estState = eState
+        std = math.dotMultiply(rms, p)
+        ii++
+    }
+    let {values, vectors} = math.eigs(std);
+    vectors = math.transpose(vectors)
+
+    console.log(math.dotPow(values, 0.5).slice(3,6));
+    console.log(math.squeeze(math.column(vectors, 5)));
+    console.log(math.squeeze(math.column(vectors, 4)));
+    console.log(math.squeeze(math.column(vectors, 3)));
+    updateRic(math.dotPow(values, 0.5).slice(3,6), vectors.slice(3,6))
+    console.log(estState);
+}
+
+function randn_bm() {
+    var u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
 }
 
 earth.onload = () => updateInertial()
