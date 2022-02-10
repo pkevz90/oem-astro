@@ -108,9 +108,9 @@ function exportFile() {
         
     }
     let outText = windowOptions.inputData[0] + '\n\n';
-    oldData.forEach(line => {
-        outText += line + '\n'
-    })
+    // oldData.forEach(line => {
+    //     outText += line + '\n'
+    // })
     windowOptions.inputData[1].forEach(line => {
         outText += ' ' + line + '\n'
     })
