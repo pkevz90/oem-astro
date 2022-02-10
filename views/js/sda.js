@@ -143,9 +143,19 @@ window.addEventListener('keydown', e => {
         // Add space sensor
         sensors.push({
             lat: 0,
-            long: 15,
+            long: (math.random() > 0.5 ? 1 : -1) * (10 + 30 * math.random()),
             r: 0.005 * Math.PI / 180,
             type:"space"
+        })
+        updateInertial()
+    }
+    if (e.key === 'g') {
+        // Add space sensor
+        sensors.push({
+            lat: math.random() * 60,
+            long: (math.random() > 0.5 ? 1 : -1) * 60 * math.random(),
+            r: 0.005 * Math.PI / 180,
+            type:"optical"
         })
         updateInertial()
     }
