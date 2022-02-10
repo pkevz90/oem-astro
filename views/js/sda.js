@@ -13,10 +13,16 @@ function changeLatitude(button) {
 
 let sensors = [
     {
-        lat: 0,
+        lat: 30,
         long: 10,
         r: 0.005 * Math.PI / 180,
-        type: 'space'
+        type: 'optical'
+    },
+    {
+        lat: 10,
+        long: -20,
+        r: 0.005 * Math.PI / 180,
+        type: 'optical'
     }
     // ,{
     //     lat: 20.67,
@@ -96,7 +102,7 @@ function updateInertial(sites = []) {
     ctxInert.fill()
 }
 
-function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]]) {
+function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]], ricCov = {}) {
     
     ctxRic.clearRect(0,0,cnvsRic.width, cnvsRic.height)
     let angle = math.atan2(vectors[2][0], vectors[2][1])
@@ -124,7 +130,26 @@ function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]]) {
     ctxRic.rect(cnvsRic.width * 0.485, cnvsRic.height * 0.48, cnvsRic.width * 0.03, cnvsRic.height * 0.04)
     ctxRic.fill()
     ctxRic.stroke()
+    let top = 0
+    ctxRic.font = "20px Georgia";
+    for (coor in ricCov) {
+        ctxRic.fillText(coor + ": +/-" + (ricCov[coor]* 1000).toFixed(3) + ' m', 5, top + 20);
+        top += 25
+    }
 }
+
+window.addEventListener('keydown', e => {
+    if (e.key === 's') {
+        // Add space sensor
+        sensors.push({
+            lat: 0,
+            long: 15,
+            r: 0.005 * Math.PI / 180,
+            type:"space"
+        })
+        updateInertial()
+    }
+})
 
 function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], noise = false) {
     let obs = []
@@ -245,7 +270,10 @@ function runge_kutta(state, dt, a = [0,0,0]) {
     return math.squeeze(math.add(state, math.dotMultiply(dt, k2)));
 }
 
-function runAlgorith(finalT = 22264, rate = 1/120, realState = [0,0,0,0.002,-0.005,0]) {
+function runAlgorith() {
+    let realState = [0,0,0,0.002,-0.005,0]
+    let finalT = Number(document.getElementById('tt').value)
+    let rate = 1/Number(document.getElementById('freq').value)
     let realObs = generateObs(sensors, finalT, rate, realState, true)
     // console.log(realObs);
     realObs = flattenObs(realObs)
@@ -278,9 +306,17 @@ function runAlgorith(finalT = 22264, rate = 1/120, realState = [0,0,0,0.002,-0.0
         ]
 
     }
-    console.log(std);
-    console.log(math.dotPow(values, 0.5), vectors);
-    updateRic(math.dotPow(values, 0.5).slice(3,6), vectors)
+    cov = {
+        r: std[0][0] ** 0.5,
+        i: std[1][1] ** 0.5,
+        c: std[2][2] ** 0.5,
+        rd: std[3][3] ** 0.5,
+        id: std[4][4] ** 0.5,
+        cd: std[5][5] ** 0.5,
+    }
+
+    console.log(cov);
+    updateRic(math.dotPow(values, 0.5).slice(3,6), vectors, cov)
 }
 
 function randn_bm() {
