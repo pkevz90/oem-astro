@@ -116,7 +116,7 @@ function exportFile() {
     state.shift()
     t = state[0]
     state.shift()
-    for (let ii = 60; ii < 24 * 3600; ii+=60) {
+    for (let ii = 60; ii <= 12 * 3600; ii+=60) {
         // state = runge_kutta(60, [state])
         let out = propCovariance(P, 60, [state])
         state = out.state
@@ -124,8 +124,14 @@ function exportFile() {
         P = out.P
         windowOptions.inputData[1].push(`${t + ii} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`); 
         p_data.push(`${t + ii} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
-        
+        if (isNaN(state[0])) {
+
+            console.error('Error in state propagation');
+            console.log(P, state);
+            return
+        }
     }
+    // return
     console.log(p_data);
     let outText = windowOptions.inputData[0] + '\n\n';
     // oldData.forEach(line => {
@@ -278,7 +284,7 @@ function runge_kutta(dt = 10, state = [[42164000, 0, 0, 0, -3070, 0]] ) {
 
 function propCovariance(P, dt = 60, state) {
     let {s, w} = generateSigmaPoints(P, state)
-
+    console.log(s,w);
     // console.log(s);
     s = s.map(point => {
         return [runge_kutta(dt, point)]
@@ -300,6 +306,18 @@ function generateSigmaPoints(P=[[25,0,0,0,0,0], [0,25,0,0,0,0],[0,0,25,0,0,0],[0
     let L = 6
     let w = [0.5]
     let A = choleskyDecomposition(P)
+    for (let ii = 0; ii < A.length; ii++) {
+        for (let jj = 0; jj < A.length; jj++) {
+            if (isNaN(A[ii][jj])) {
+                if (ii !== jj) {
+                    A[ii][jj] = 0
+                }
+                else {
+                    A[ii][jj] = P[ii][jj] ** 0.5
+                }
+            }
+        }
+    }
     // let A = math.dotPow(P, 0.5)
     // A = math.diag(math.diag(A))
     // console.log(A);
