@@ -98,20 +98,44 @@ function exportFile() {
     state[5] = Number(state[5]) + normalRandom() * Number(inputs[4].value) * 1000;
     state[6] = Number(state[6]) + normalRandom() * Number(inputs[5].value) * 1000;
     state[7] = Number(state[7]) + normalRandom() * Number(inputs[6].value) * 1000;
+    let P = math.diag([(Number(inputs[1].value) * 1000) ** 2, 
+                       (Number(inputs[2].value) * 1000) ** 2, 
+                       (Number(inputs[3].value) * 1000) ** 2, 
+                       (Number(inputs[4].value) * 1000) ** 2, 
+                       (Number(inputs[5].value) * 1000) ** 2, 
+                       (Number(inputs[6].value) * 1000) ** 2]) 
+    console.log(math.diag(P));
+    P = math.diag(math.diag(P).map(item => {
+            return item < 1e-8 ? 1e-8 : item
+    }))
+    console.log(math.diag(P));
+
+    let p_data = []
+    p_data.push(`${state[1]} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
     windowOptions.inputData[1] = [`${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]} ${state[6]} ${state[7]}`]; 
     state.shift()
     t = state[0]
     state.shift()
     for (let ii = 60; ii < 12 * 3600; ii+=60) {
-        state = runge_kutta(60, [state])
+        // state = runge_kutta(60, [state])
+        let out = propCovariance(P, 60, [state])
+        state = out.state
+        // console.log(state);
+        P = out.P
         windowOptions.inputData[1].push(`${t + ii} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`); 
+        p_data.push(`${t + ii} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
         
     }
+    console.log(p_data);
     let outText = windowOptions.inputData[0] + '\n\n';
     // oldData.forEach(line => {
     //     outText += line + '\n'
     // })
     windowOptions.inputData[1].forEach(line => {
+        outText += ' ' + line + '\n'
+    })
+    outText += '\n\n\n' + 'CovarianceTimePos\n\n'
+    p_data.forEach(line => {
         outText += ' ' + line + '\n'
     })
     outText += '\n\n\n' + 'END Ephemeris'
@@ -250,4 +274,71 @@ function runge_kutta(dt = 10, state = [[42164000, 0, 0, 0, -3070, 0]] ) {
     let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)));
     let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)));
     return math.dotDivide(math.squeeze(math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))))), 0.001);
+}
+
+function propCovariance(P, dt = 60, state) {
+    let {s, w} = generateSigmaPoints(P, state)
+
+    // console.log(s);
+    s = s.map(point => {
+        return [runge_kutta(dt, point)]
+    })
+    let estP = math.zeros([6,6])
+    let estState = math.zeros([1,6])
+    for (let ii = 0; ii < s.length; ii++) {
+        estState = math.add(estState, math.dotMultiply(w[ii], s[ii])) 
+    }
+    for (let ii = 0; ii < s.length; ii++) {
+        estP = math.add(estP, math.dotMultiply(w[ii], math.multiply(math.transpose(math.subtract(s[ii], estState)), math.subtract(s[ii], estState))))
+    }
+    return {P: estP, state: math.squeeze(estState)}
+}
+
+
+
+function generateSigmaPoints(P=[[25,0,0,0,0,0], [0,25,0,0,0,0],[0,0,25,0,0,0],[0,0,0,0.0001**2,0,0],[0,0,0,0,0.0001**2,0], [0,0,0,0,0,0.0001**2]], state = [[42164, 0, 0, 0, -((398600.4418 / 42164) ** (1/2)), 0]]) {
+    let L = 6
+    let w = [0.5]
+    let A = choleskyDecomposition(P)
+    // let A = math.dotPow(P, 0.5)
+    // A = math.diag(math.diag(A))
+    // console.log(A);
+    let s = [state]
+    for (let jj = 0; jj < L; jj++) {
+        s.push(math.transpose(math.add(math.transpose(state), math.dotMultiply((L / (1 - w[0])) ** (1/2), math.column(A, jj)))))
+    }
+    for (let jj = 0; jj < L; jj++) {
+        s.push(math.transpose(math.subtract(math.transpose(state), math.dotMultiply((L / (1 - w[0])) ** (1/2), math.column(A, jj)))))
+    }
+    for (let jj = 0; jj < 2 * L; jj++) {
+        w.push((1 - w[0]) / 2 / L)    
+    }
+    return {s, w}
+}
+
+function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]) {
+    let a = math.zeros([matrix.length, matrix.length])    
+    for (let ii = 0; ii < a.length; ii++) {
+        for (let jj = 0; jj <= ii; jj++) {
+            if (ii === jj) {
+                a[ii][jj] = matrix[ii][jj]
+                let subNumber = 0
+                for (let kk = 0; kk < jj; kk++) {
+                    subNumber += a[jj][kk] ** 2
+                }
+                a[ii][jj] -= subNumber
+                a[ii][jj] = a[ii][jj] ** (1/2)
+            }
+            else {
+                a[ii][jj] = matrix[ii][jj]
+                let subNumber = 0
+                for (let kk = 0; kk < jj; kk++) {
+                    subNumber += a[ii][kk] * a[jj][kk]
+                }
+                a[ii][jj] -= subNumber
+                a[ii][jj] *= 1 / a[jj][jj]
+            }
+        }
+    }
+    return a
 }
