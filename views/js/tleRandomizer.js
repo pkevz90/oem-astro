@@ -116,7 +116,7 @@ function exportFile() {
     state.shift()
     t = state[0]
     state.shift()
-    for (let ii = 60; ii < 12 * 3600; ii+=60) {
+    for (let ii = 60; ii < 24 * 3600; ii+=60) {
         // state = runge_kutta(60, [state])
         let out = propCovariance(P, 60, [state])
         state = out.state
