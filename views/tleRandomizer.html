@@ -4,99 +4,20 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=1.0, initial-scale=1.0">
-    <title>Document</title>
-    <style>
-        body {
-            font-family: Garamond, sans-serif;
-        }
-        #drop-div {
-            margin-left: 8%;
-            margin-right: auto;
-            padding: 20px; 
-            border: 1px solid black; 
-            border-radius: 20px; 
-            width: 80%;
-            height: 150px;
-            transition-duration: 0.3s;
-        }
-        #parameters {
-            width: 100%;
-            display: flex;
-            justify-content: space-around;
-            margin: 5% 0%;
-            flex-flow: row wrap;
-        }
-        .parameter-box {
-            min-width: 200px;
-        }
-        .button {
-            background-color: #737573;
-            border: none;
-            width: 70%;
-            margin-left: 15%;
-            color: white;
-            padding: 15px 32px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 20px;
-            cursor: pointer;
-            border-radius: 15px;
-            border: 2px solid white;
-            transition-duration: 0.3s;
-        }
-        .button:hover {
-            background-color: white;
-            color: #737573;
-            border-radius: 7.5px;
-            border: 2px solid #737573;
-        }
-        #drop-div:hover, .dragged-on{
-            background-color: rgb(193, 193, 194);
-            font-size: 3em;
-        }
-        #main-area {
-            position: flex;
-            width: 100%;
-            justify-content: space-around;
-        }
-        .center {
-            text-align: center;
-        }
-        input {
-            padding: 10px;
-            text-align: center;
-            border-radius: 10px;
-        }
-        #data-cnvs {
-            width: 100%;
-            height: 500px;
-        }
-        #warning {
-            position: fixed;
-            z-index: 4;
-            top: 240px;
-            left: 551px;
-        }
-        td {
-            text-align: center;
-        }
-        td input {
-            width: 5em;
-        }
-    </style>
+    <title>ACS</title>
+    <link rel="stylesheet" href="./css/tleRandomizer.css">
     <script src="../SupportLibraries/math.min.js"></script>
 </head>
 <body>
     <div id="main-area">
-        <div id="drop-div" class="center" ondrop="testDrop(event);" ondragover="dragOverHandler(event);" ondragenter="dragOverHandler(event);" ondragleave="dragOverHandler(event);" onmouseenter="handleMouseEnter(event)" onmouseleave="handleMouseEnter(event)">
+        <div id="drop-div" class="center" ondrop="testDrop(event);" ondragover="dragOverHandler(event);" ondragenter="dragOverHandler(event);" ondragleave="dragOverHandler(event);">
             Drag ephemeris file into area...
         </div>
         <div id="parameters">
             <div class="parameter-box">Epoch Time <input id="des-date" type="datetime-local" value="2022-02-09T19:30"></div>
         </div>
-        <div>
-            <div>
+        <div id="cov-area">
+            <div id="cov-title">
                 OD Covariance (km & km/s)
             </div>
             <table>
@@ -149,9 +70,6 @@
                     <td><input type="number" value="0.0001"></td>
                 </tr>
             </table>
-        </div>
-        <div id="altered-tle">
-            <textarea cols="75" rows="2"></textarea>
         </div>
     </div>
     <script src="./js/tleRandomizer.js"></script>
