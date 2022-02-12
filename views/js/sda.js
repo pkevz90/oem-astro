@@ -133,7 +133,9 @@ function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]], ricC
     let top = 0
     ctxRic.font = "20px Georgia";
     for (coor in ricCov) {
-        ctxRic.fillText(coor + ": +/-" + (ricCov[coor]* 1000).toFixed(3) + ' m', 5, top + 20);
+
+        let unit = coor === 'r' || coor === 'i' || coor === 'd' ? 'm' : 'm/s'
+        ctxRic.fillText(coor + ": +/-" + (ricCov[coor]* 1000).toFixed(3) + ' ' + unit, 5, top + 20);
         top += 25
     }
 }
