@@ -16,7 +16,7 @@ function stringToCoes(oldTle) {
     oldTle = oldTle.split(/\n/);
     oldTle[0] = oldTle[0].split(/ +/);
     oldTle[1] = oldTle[1].split(/ +/);
-    console.log(oldTle[0]);
+    // console.log(oldTle[0]);
     return {
         Number: oldTle[1][1],
         epoch: Number(oldTle[0][2]) ? oldTle[0][2] : oldTle[0][3],
@@ -61,6 +61,8 @@ function loadFileAsText(event) {
     let ext = fileToLoad.name.split('.')[1];
     let fileReader = new FileReader();
     fileReader.onload = function (fileLoadedEvent) {
+
+        console.log('hey');
         let text = fileLoadedEvent.target.result;
         text = text.split('EphemerisTimePosVel');
         text[1] = text[1].split(/\n+/);
@@ -104,11 +106,11 @@ function exportFile() {
                        (Number(inputs[4].value) * 1000) ** 2, 
                        (Number(inputs[5].value) * 1000) ** 2, 
                        (Number(inputs[6].value) * 1000) ** 2]) 
-    console.log(math.diag(P));
+    // console.log(math.diag(P));
     P = math.diag(math.diag(P).map(item => {
             return item < 1e-8 ? 1e-8 : item
     }))
-    console.log(math.diag(P));
+    // console.log(math.diag(P));
 
     let p_data = []
     p_data.push(`${state[1]} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
@@ -127,12 +129,12 @@ function exportFile() {
         if (isNaN(state[0])) {
 
             console.error('Error in state propagation');
-            console.log(P, state);
+            // console.log(P, state);
             return
         }
     }
     // return
-    console.log(p_data);
+    // console.log(p_data);
     let outText = windowOptions.inputData[0] + '\n\n';
     // oldData.forEach(line => {
     //     outText += line + '\n'
@@ -145,7 +147,7 @@ function exportFile() {
         outText += ' ' + line + '\n'
     })
     outText += '\n\n\n' + 'END Ephemeris'
-    downloadFile('corrupted.e', outText);
+    downloadFile(windowOptions.name + '_error.e', outText);
 }
 
 function handleMouseEnter(el) {
@@ -167,11 +169,11 @@ function coesToTle(coes) {
 function introduceTleError(coes) {
     let total_error = Number(document.getElementById('error-std').innerText) / 1000;
     let p_error = Math.sqrt(Math.pow(total_error, 2) / 4);
-    console.log(p_error);
+    // console.log(p_error);
     let a_sat = Math.pow(398600.4418 * Math.pow(86164*Number(coes.mm) / 2 / Math.PI, 2), 1/3);
     p_error /= a_sat;
     p_error *= 180 / Math.PI;
-    console.log(p_error);
+    // console.log(p_error);
     coes.arg += p_error * normalRandom();
     coes.inc += p_error * normalRandom();
     coes.mA += p_error * normalRandom();
@@ -193,10 +195,13 @@ function hanldeTle(el) {
 function testDrop(event) {
     event.preventDefault();
     fileToLoad = event.dataTransfer.files[0];
+
+    windowOptions.name = fileToLoad.name.split('.')[0]
     // event.target.innerText = fileToLoad.name;
     let ext = fileToLoad.name.split('.')[1];
     let fileReader = new FileReader();
     fileReader.onload = function (fileLoadedEvent) {
+        // console.log(fileLoadedEvent);
         let text = fileLoadedEvent.target.result;
         text = text.split('EphemerisTimePosVel');
         text[1] = text[1].split(/\n+/);
@@ -205,7 +210,7 @@ function testDrop(event) {
         windowOptions.inputData = text;
         let date = text[0].substr(text[0].search('point: ') + 6);
         windowOptions.epochDate = new Date(date.substr(0,date.search('UTCG') - 1));
-        console.log(windowOptions);
+        // console.log(windowOptions);
         if (document.getElementById('des-date').value !== '') {
             exportFile();
         }
@@ -254,7 +259,7 @@ function addZeros(num, dec) {
     while (alteredNum[0].length < dec) {
         alteredNum[0] = '0' + alteredNum[0]
     }
-    console.log(alteredNum);
+    // console.log(alteredNum);
     return alteredNum[0] + '.' + alteredNum[1];
 }
 function twoBodyRpo(state = [[-1.89733896, 399.98, 0, 0, 0, 0]]) {
@@ -284,7 +289,7 @@ function runge_kutta(dt = 10, state = [[42164000, 0, 0, 0, -3070, 0]] ) {
 
 function propCovariance(P, dt = 60, state) {
     let {s, w} = generateSigmaPoints(P, state)
-    console.log(s,w);
+    // console.log(s,w);
     // console.log(s);
     s = s.map(point => {
         return [runge_kutta(dt, point)]
@@ -318,9 +323,6 @@ function generateSigmaPoints(P=[[25,0,0,0,0,0], [0,25,0,0,0,0],[0,0,25,0,0,0],[0
             }
         }
     }
-    // let A = math.dotPow(P, 0.5)
-    // A = math.diag(math.diag(A))
-    // console.log(A);
     let s = [state]
     for (let jj = 0; jj < L; jj++) {
         s.push(math.transpose(math.add(math.transpose(state), math.dotMultiply((L / (1 - w[0])) ** (1/2), math.column(A, jj)))))
