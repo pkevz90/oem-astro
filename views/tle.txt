@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=1.0, initial-scale=1.0">
+    <title>ACS</title>
+    <link rel="stylesheet" href="./css/tleRandomizer.css">
+    <script src="../SupportLibraries/math.min.js"></script>
+</head>
+<body>
+    <div id="main-area">
+        <div id="drop-div" class="center" ondrop="testDrop(event);" ondragover="dragOverHandler(event);" ondragenter="dragOverHandler(event);" ondragleave="dragOverHandler(event);">
+            Drag ephemeris file into area...
+        </div>
+        <div id="parameters">
+            <div class="parameter-box">Epoch Time <input id="des-date" type="datetime-local" value="2022-02-09T19:30"></div>
+        </div>
+        <div id="cov-area">
+            <div id="cov-title">
+                OD Covariance (km & km/s)
+            </div>
+            <table>
+                <tr>
+                    <td><input type="number" value="1"></td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td><input type="number" value="1"></td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td>x</td>
+                    <td><input type="number" value="1"></td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td><input type="number" value="0.0001"></td>
+                    <td>x</td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td><input type="number" value="0.0001"></td>
+                    <td>x</td>
+                </tr>
+                <tr>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td>x</td>
+                    <td><input type="number" value="0.0001"></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <script src="./js/tleRandomizer.js"></script>
+</body>
+</html>

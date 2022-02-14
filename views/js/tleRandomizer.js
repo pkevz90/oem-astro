@@ -363,3 +363,26 @@ function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]
     }
     return a
 }
+
+function sphericalEvenPoints() {
+    let a = 9, b = 14, c = 7, gr = (1 + 5 ** 0.5) / 2, n = 5000, w = 3 ** 0.5
+    let ii = math.add(math.range(0, n), 0.5)._data
+    let data = []
+    for (let jj = 0; jj < ii.length; jj++) {
+        let phi = math.acos(1 - 2 * ii[jj] / n)
+        let theta = 2 * Math.PI * ii[jj] / gr
+        data.push(math.dotMultiply(w, [
+            a * math.cos(theta) * math.sin(phi),
+            b * math.sin(theta) * math.sin(phi),
+            c * math.cos(phi)
+        ]))
+
+    }
+    let p = math.zeros([3,3])
+    for (let jj = 0; jj < data.length; jj++) {
+        // console.log(math.reshape(data[jj], [3,1]), data[jj]);
+        p = math.add(p, math.multiply(math.reshape(data[jj], [3,1]), math.reshape(data[jj], [1,3])))
+    }
+    p = math.dotDivide(p, n)
+    console.log(p);
+}
