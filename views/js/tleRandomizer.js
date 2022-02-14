@@ -125,7 +125,8 @@ function exportFile() {
         // console.log(state);
         P = out.P
         windowOptions.inputData[1].push(`${t + ii} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`); 
-        p_data.push(`${t + ii} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
+        p_data.push(`${t + ii} ${P[0][0]} ${P[0][1]} ${P[0][2]} ${P[1][1]} ${P[1][2]} ${P[2][2]}`)
+        // p_data.push(`${t + ii} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
         if (isNaN(state[0])) {
 
             console.error('Error in state propagation');
