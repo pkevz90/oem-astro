@@ -79,7 +79,7 @@ function loadFileAsText(event) {
 }
 
 function exportFile() {
-    let err_inputs = document.getElementById('parameters').getElementsByTagName('input');
+    let err_inputs = document.getElementsByTagName('input');
     let desDate = new Date(err_inputs[0].value);
     if (desDate == 'Invalid Date') return;
     let timeDiff = desDate - windowOptions.epochDate;
@@ -88,45 +88,40 @@ function exportFile() {
     let timeLine = windowOptions.inputData[1].findIndex(line => {
         return Number(line.split(/ +/)[1]) >= timeDiff;
     });
-    let oldData = windowOptions.inputData[1].slice(0, timeLine + 1)
-    windowOptions.inputData[1] = windowOptions.inputData[1].slice(timeLine + 1,windowOptions.inputData[1].length);
-    let state = windowOptions.inputData[1][0].split(/ +/);
-    // Get error sources
-    let inputs = document.getElementsByTagName('input')
-    state[1] = Number(state[1])
-    state[2] = Number(state[2]) + normalRandom() * Number(inputs[1].value) * 1000;
-    state[3] = Number(state[3]) + normalRandom() * Number(inputs[2].value) * 1000;
-    state[4] = Number(state[4]) + normalRandom() * Number(inputs[3].value) * 1000;
-    state[5] = Number(state[5]) + normalRandom() * Number(inputs[4].value) * 1000;
-    state[6] = Number(state[6]) + normalRandom() * Number(inputs[5].value) * 1000;
-    state[7] = Number(state[7]) + normalRandom() * Number(inputs[6].value) * 1000;
-    let P = math.diag([(Number(inputs[1].value) * 1000) ** 2, 
-                       (Number(inputs[2].value) * 1000) ** 2, 
-                       (Number(inputs[3].value) * 1000) ** 2, 
-                       (Number(inputs[4].value) * 1000) ** 2, 
-                       (Number(inputs[5].value) * 1000) ** 2, 
-                       (Number(inputs[6].value) * 1000) ** 2]) 
-    // console.log(math.diag(P));
+    // Pull initial state from ephemeris file
+    let stateEphemeris = windowOptions.inputData[1].slice(timeLine + 1, timeLine + 2)
+    state = stateEphemeris[0].split(/ +/).slice(1, stateEphemeris[0].length).map(s => Number(s))
+    let t = state.shift()
+    
+    //Prop initial state state back to desired time (to avoid any potential burn at desired epoch)
+    for (let ii = 0; ii < 10; ii++) state = runge_kutta(-(t - timeDiff) / 10, [state])
+    t = timeDiff
+    // Add gaussian error to the initial state
+    state = state.map((s, ii) => s + Number(err_inputs[ii+1].value) * 1000 * normalRandom())
+    
+    // Define initial covariance matrix
+    let P = math.diag([(Number(err_inputs[1].value) * 1000) ** 2, 
+                       (Number(err_inputs[2].value) * 1000) ** 2, 
+                       (Number(err_inputs[3].value) * 1000) ** 2, 
+                       (Number(err_inputs[4].value) * 1000) ** 2, 
+                       (Number(err_inputs[5].value) * 1000) ** 2, 
+                       (Number(err_inputs[6].value) * 1000) ** 2]) 
+    // If any elements of covariance are zero, set to arbitarily low number for numerical stability
     P = math.diag(math.diag(P).map(item => {
             return item < 1e-8 ? 1e-8 : item
     }))
-    // console.log(math.diag(P));
 
-    let p_data = []
-    p_data.push(`${state[1]} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
-    windowOptions.inputData[1] = [`${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]} ${state[6]} ${state[7]}`]; 
-    state.shift()
-    t = state[0]
-    state.shift()
-    for (let ii = 60; ii <= 12 * 3600; ii+=60) {
-        // state = runge_kutta(60, [state])
-        let out = propCovariance(P, 60, [state])
+    let pEphemeris = []
+    pEphemeris.push(`${t} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
+    stateEphemeris = [`${t} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`]
+
+    let timeDelta = 60
+    for (let ii = 60; ii <= 12 * 3600; ii+=timeDelta) {
+        let out = propCovariance(P, timeDelta, [state])
         state = out.state
-        // console.log(state);
         P = out.P
-        windowOptions.inputData[1].push(`${t + ii} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`); 
-        p_data.push(`${t + ii} ${P[0][0]} ${P[0][1]} ${P[0][2]} ${P[1][1]} ${P[1][2]} ${P[2][2]}`)
-        // p_data.push(`${t + ii} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
+        stateEphemeris.push(`${t + ii} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`); 
+        pEphemeris.push(`${t + ii} ${P[0][0]} ${P[0][1]} ${P[0][2]} ${P[1][1]} ${P[1][2]} ${P[2][2]}`)
         if (isNaN(state[0])) {
 
             console.error('Error in state propagation');
@@ -134,19 +129,12 @@ function exportFile() {
             return
         }
     }
-    // return
-    // console.log(p_data);
-    let outText = windowOptions.inputData[0] + '\n\n';
-    // oldData.forEach(line => {
-    //     outText += line + '\n'
-    // })
-    windowOptions.inputData[1].forEach(line => {
-        outText += ' ' + line + '\n'
-    })
+    // Remove number of ephemeris points to default to read all points
+    let header = windowOptions.inputData[0].split(/\n/).filter(line => line.search('NumberOfEp') === -1).join('\n')
+    let outText = header + '\n\n';
+    outText += stateEphemeris.join('\n')
     outText += '\n\n\n' + 'CovarianceTimePos\n\n'
-    p_data.forEach(line => {
-        outText += ' ' + line + '\n'
-    })
+    outText += pEphemeris.join('\n')
     outText += '\n\n\n' + 'END Ephemeris'
     downloadFile(windowOptions.name + '_error.e', outText);
 }
@@ -306,8 +294,6 @@ function propCovariance(P, dt = 60, state) {
     return {P: estP, state: math.squeeze(estState)}
 }
 
-
-
 function generateSigmaPoints(P=[[25,0,0,0,0,0], [0,25,0,0,0,0],[0,0,25,0,0,0],[0,0,0,0.0001**2,0,0],[0,0,0,0,0.0001**2,0], [0,0,0,0,0,0.0001**2]], state = [[42164, 0, 0, 0, -((398600.4418 / 42164) ** (1/2)), 0]]) {
     let L = 6
     let w = [0.5]
@@ -364,25 +350,19 @@ function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]
     return a
 }
 
-function sphericalEvenPoints() {
-    let a = 9, b = 14, c = 7, gr = (1 + 5 ** 0.5) / 2, n = 5000, w = 3 ** 0.5
+function sphericalEvenPoints(dV, n = 20) {
+    let gr = (1 + 5 ** 0.5) / 2, w = 3 ** 0.5
     let ii = math.add(math.range(0, n), 0.5)._data
     let data = []
     for (let jj = 0; jj < ii.length; jj++) {
         let phi = math.acos(1 - 2 * ii[jj] / n)
         let theta = 2 * Math.PI * ii[jj] / gr
-        data.push(math.dotMultiply(w, [
-            a * math.cos(theta) * math.sin(phi),
-            b * math.sin(theta) * math.sin(phi),
-            c * math.cos(phi)
+        data.push(math.dotMultiply(w * dV, [
+            math.cos(theta) * math.sin(phi),
+            math.sin(theta) * math.sin(phi),
+            math.cos(phi)
         ]))
 
     }
-    let p = math.zeros([3,3])
-    for (let jj = 0; jj < data.length; jj++) {
-        // console.log(math.reshape(data[jj], [3,1]), data[jj]);
-        p = math.add(p, math.multiply(math.reshape(data[jj], [3,1]), math.reshape(data[jj], [1,3])))
-    }
-    p = math.dotDivide(p, n)
-    console.log(p);
+    return data
 }
