@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=1.0, initial-scale=1.0">
+    <title>Consolidator</title>
+    <link rel="stylesheet" href="./css/tleRandomizer.css">
+    <script src="../SupportLibraries/math.min.js"></script>
+</head>
+<body>
+    <div id="main-area">
+        <div id="drop-div" class="center" ondrop="fileDrop(event);" ondragover="dragOverHandler(event);" ondragenter="dragOverHandler(event);" ondragleave="dragOverHandler(event);">
+            Drag ephemeris files into area...
+        </div>
+        <button id="consol-button" onclick="exportConsolidated()">Consolidate</button>
+        <div id="files-loaded"></div>
+    <script src="./js/ephemConsolidator.js"></script>
+</body>
+</html>
