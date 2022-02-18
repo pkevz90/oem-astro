@@ -22,9 +22,6 @@
             <div>Year <input type="Number" value="2022"></div>
             <div>Time <input type="text" value="19"> : <input type="text" value="30">Z</div>
         </div>
-        <div>
-            <button onclick="window.localStorage.clear()">Clear Cache</button>
-        </div>
         <div id="cov-area">
             <div id="cov-title">
                 OD Covariance (km & km/s)
@@ -79,6 +76,9 @@
                     <td><input type="number" value="0.0001"></td>
                 </tr>
             </table>
+        </div>
+        <div>
+            <button id="clear-cache-button" onclick="window.localStorage.clear()">Clear Cache</button>
         </div>
     </div>
     <script src="./js/tleRandomizer.js"></script>

@@ -103,3 +103,9 @@ td input {
 #parameters {
     font-size: 2em;
 }
+
+#clear-cache-button {
+    padding: 7px;
+    border-radius: 10px;
+    cursor: pointer;
+}
