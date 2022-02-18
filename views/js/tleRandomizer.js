@@ -2,7 +2,6 @@ let header
 let data
 let fileName
 let epochDate
-let files = window.localStorage.files === undefined ? {} : JSON.parse(window.localStorage.files)
 
 function normalRandom()
 {
@@ -55,6 +54,7 @@ function loadFileAsText(event) {
 }
 
 function exportFile() {
+    let files = window.localStorage.files === undefined ? {} : JSON.parse(window.localStorage.files)
     let err_inputs = document.getElementsByTagName('input');
     let desDate = new Date(Number(err_inputs[2].value), Number(err_inputs[0].value) - 1, Number(err_inputs[1].value), Number(err_inputs[3].value), Number(err_inputs[4].value));
     if (desDate == 'Invalid Date') return;
@@ -118,7 +118,7 @@ function exportFile() {
     }
     window.localStorage.files = JSON.stringify(files)
     console.log(JSON.parse(window.localStorage.files))
-    exportConsolidated(files[saveName], 'bsa_' + fileName + '_' + desDate.getHours() +  desDate.getMinutes() + '.e')
+    exportConsolidated(files[saveName], 'bsa_' + fileName + '_' + padNumbers(desDate.getHours()) +  padNumbers(desDate.getMinutes()) + '.e')
 }
 
 function exportConsolidated(satelliteData, name) { 
@@ -284,4 +284,13 @@ function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]
         }
     }
     return a
+}
+
+function padNumbers(n) {
+    n = String(n)
+    while (n.length < 2) {
+        n = '0' + n
+    }
+
+    return n
 }
