@@ -1,33 +1,8 @@
-let windowOptions = {
-    p_error_ground: 5000,
-    v_error_ground: 2,
-    p_error: null,
-    v_error: null,
-    inputData: null,
-    epochDate: null,
-    cats_data: [
-        [0.66, 1],
-        [36, 0.57],
-        [117, 2.38],
-    ],
-    activePoint: null
-}
-function stringToCoes(oldTle) {
-    oldTle = oldTle.split(/\n/);
-    oldTle[0] = oldTle[0].split(/ +/);
-    oldTle[1] = oldTle[1].split(/ +/);
-    // console.log(oldTle[0]);
-    return {
-        Number: oldTle[1][1],
-        epoch: Number(oldTle[0][2]) ? oldTle[0][2] : oldTle[0][3],
-        inc: Number(oldTle[1][2]),
-        raan: Number(oldTle[1][3]),
-        arg: Number(oldTle[1][5]),
-        mA: Number(oldTle[1][6]),
-        ecc: Number('0.' + oldTle[1][4]),
-        mm: oldTle[1][7],
-    }
-}
+let header
+let data
+let fileName
+let epochDate
+let files = window.localStorage.files === undefined ? {} : JSON.parse(window.localStorage.files)
 
 function normalRandom()
 {
@@ -56,6 +31,7 @@ function normalRandom()
     
     return val;
 }
+
 function loadFileAsText(event) {
     fileToLoad = event.path[0].files[0];
     let ext = fileToLoad.name.split('.')[1];
@@ -80,37 +56,37 @@ function loadFileAsText(event) {
 
 function exportFile() {
     let err_inputs = document.getElementsByTagName('input');
-    let desDate = new Date(err_inputs[0].value);
+    let desDate = new Date(Number(err_inputs[2].value), Number(err_inputs[0].value) - 1, Number(err_inputs[1].value), Number(err_inputs[3].value), Number(err_inputs[4].value));
     if (desDate == 'Invalid Date') return;
-    let timeDiff = desDate - windowOptions.epochDate;
+    let timeDiff = desDate - epochDate;
     timeDiff /= 1000;
     if (timeDiff < 0) return alert('Time must be during the imported .e file')
-    let timeLine = windowOptions.inputData[1].findIndex(line => {
+    let timeLine = data[1].findIndex(line => {
         return Number(line.split(/ +/)[1]) >= timeDiff;
     });
+    let saveName = 'sat' + math.floor(data[1][0].split(/ +/).filter(line => line !== '')[1]);
     // Pull initial state from ephemeris file
-    let stateEphemeris = windowOptions.inputData[1].slice(timeLine + 1, timeLine + 2)
+    let stateEphemeris = data[1].slice(timeLine + 1, timeLine + 2)
     state = stateEphemeris[0].split(/ +/).slice(1, stateEphemeris[0].length).map(s => Number(s))
     let t = state.shift()
-    
     //Prop initial state state back to desired time (to avoid any potential burn at desired epoch)
-    for (let ii = 0; ii < 10; ii++) state = runge_kutta(-(t - timeDiff) / 10, [state])
+    for (let ii = 0; ii < 10; ii++) {
+        state = runge_kutta(-(t - timeDiff) / 10, [state])
+    }
     t = timeDiff
     // Add gaussian error to the initial state
-    state = state.map((s, ii) => s + Number(err_inputs[ii+1].value) * 1000 * normalRandom())
-    
+    state = state.map((s, ii) => s + Number(err_inputs[ii+5].value) * 1000 * normalRandom())
     // Define initial covariance matrix
-    let P = math.diag([(Number(err_inputs[1].value) * 1000) ** 2, 
-                       (Number(err_inputs[2].value) * 1000) ** 2, 
-                       (Number(err_inputs[3].value) * 1000) ** 2, 
-                       (Number(err_inputs[4].value) * 1000) ** 2, 
-                       (Number(err_inputs[5].value) * 1000) ** 2, 
-                       (Number(err_inputs[6].value) * 1000) ** 2]) 
+    let P = math.diag([(Number(err_inputs[5].value) * 1000) ** 2, 
+                       (Number(err_inputs[6].value) * 1000) ** 2, 
+                       (Number(err_inputs[7].value) * 1000) ** 2, 
+                       (Number(err_inputs[8].value) * 1000) ** 2, 
+                       (Number(err_inputs[9].value) * 1000) ** 2, 
+                       (Number(err_inputs[10].value) * 1000) ** 2]) 
     // If any elements of covariance are zero, set to arbitarily low number for numerical stability
     P = math.diag(math.diag(P).map(item => {
             return item < 1e-8 ? 1e-8 : item
     }))
-
     let pEphemeris = []
     pEphemeris.push(`${t} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
     stateEphemeris = [`${t} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`]
@@ -130,91 +106,59 @@ function exportFile() {
         }
     }
     // Remove number of ephemeris points to default to read all points
-    let header = windowOptions.inputData[0].split(/\n/).filter(line => line.search('NumberOfEp') === -1).join('\n')
-    let outText = header + '\n\n';
-    outText += stateEphemeris.join('\n')
-    outText += '\n\n\n' + 'CovarianceTimePos\n\n'
-    outText += pEphemeris.join('\n')
-    outText += '\n\n\n' + 'END Ephemeris'
-    downloadFile(windowOptions.name + '_error.e', outText);
-}
-
-function handleMouseEnter(el) {
-    if (event.type === 'mouseleave') {
-        if (!document.getElementById('tle-area')) return;
-        if (document.getElementById('tle-area').value !== '') return;
-        el.target.innerHTML = 'Drag ephemeris file into area...';
-        return;
+    let header = data[0].split(/\n/).filter(line => line.search('NumberOfEp') === -1).join('\n')
+    if (files[saveName] === undefined) {
+        files[saveName] = {
+            header,
+            data: [{posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff}]
+        }
     }
-    if (windowOptions.inputData) return;
-    if (document.getElementById('tle-area')) return;
-    el.target.innerHTML = 'Enter TLE Below <br> <textarea oninput="hanldeTle(this)" id="tle-area" rows="2" cols="75">';
-}
-
-function coesToTle(coes) {
-    return `1 ${coes.Number}U          ${coes.epoch}  .00000000  00000-0  00000-0 0 00006\n2 ${coes.Number} ${addZeros(coes.inc.toFixed(4), 3)} ${addZeros(coes.raan.toFixed(4), 3)} ${coes.ecc.toFixed(7).split('.')[1]} ${addZeros(coes.arg.toFixed(4), 3)} ${addZeros(coes.mA.toFixed(4), 3)} ${coes.mm}`
-}
-
-function introduceTleError(coes) {
-    let total_error = Number(document.getElementById('error-std').innerText) / 1000;
-    let p_error = Math.sqrt(Math.pow(total_error, 2) / 4);
-    // console.log(p_error);
-    let a_sat = Math.pow(398600.4418 * Math.pow(86164*Number(coes.mm) / 2 / Math.PI, 2), 1/3);
-    p_error /= a_sat;
-    p_error *= 180 / Math.PI;
-    // console.log(p_error);
-    coes.arg += p_error * normalRandom();
-    coes.inc += p_error * normalRandom();
-    coes.mA += p_error * normalRandom();
-    coes.raan += p_error * normalRandom();
-}
-
-function hanldeTle(el) {
-    try {
-        let coes = stringToCoes(el.value);
-        introduceTleError(coes)
-        document.getElementById('altered-tle').getElementsByTagName('textarea')[0].value =  coesToTle(coes);
-        navigator.clipboard.writeText(document.getElementById('altered-tle').getElementsByTagName('textarea')[0].value)
+    else {
+        files[saveName].data.push({posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff})
     }
-    catch (e) {
-        console.error('TLE not recognized')
+    window.localStorage.files = JSON.stringify(files)
+    console.log(JSON.parse(window.localStorage.files))
+    exportConsolidated(files[saveName], 'bsa_' + fileName + '_' + desDate.getHours() +  desDate.getMinutes() + '.e')
+}
+
+function exportConsolidated(satelliteData, name) { 
+    satelliteData = JSON.parse(JSON.stringify(satelliteData))
+    let files = satelliteData.data
+    files = files.sort((a, b) => a.startTime - b.startTime)
+    for (let file = 0; file < files.length; file++) {
+        let endTime = file === files.length - 1 ? 1e10 : files[file + 1].startTime
+        // console.log(endTime);
+        files[file].posVelData = files[file].posVelData.filter(data => Number(data.split(/ +/)[0]) < endTime)
+        files[file].covData = files[file].covData.filter(data => Number(data.split(/ +/)[0]) < endTime)
+        files[file].posVelData = files[file].posVelData.join('\n')
+        files[file].covData = files[file].covData.join('\n')
     }
+    let out = ''
+    out += satelliteData.header + '\n'
+    out += files.map(file => file.posVelData).join('\n')
+    out += 'CovarianceTimePos \n\n'
+    out += files.map(file => file.covData).join('\n')
+    out += 'END Ephemeris'
+    downloadFile(name, out)
 }
 
 function testDrop(event) {
     event.preventDefault();
     fileToLoad = event.dataTransfer.files[0];
-
-    windowOptions.name = fileToLoad.name.split('.')[0]
-    // event.target.innerText = fileToLoad.name;
-    let ext = fileToLoad.name.split('.')[1];
+    fileName = fileToLoad.name.split('.')[0]
     let fileReader = new FileReader();
     fileReader.onload = function (fileLoadedEvent) {
-        // console.log(fileLoadedEvent);
         let text = fileLoadedEvent.target.result;
         text = text.split('EphemerisTimePosVel');
         text[1] = text[1].split(/\n+/);
         text[0] = text[0] + 'EphemerisTimePosVel' + text[1][0];
         text[1].shift();
-        windowOptions.inputData = text;
+        data = text;
         let date = text[0].substr(text[0].search('point: ') + 6);
-        windowOptions.epochDate = new Date(date.substr(0,date.search('UTCG') - 1));
-        // console.log(windowOptions);
-        if (document.getElementById('des-date').value !== '') {
-            exportFile();
-        }
-        else {
-            document.getElementById('des-date').style.backgroundColor = 'rgb(255,200,200)'
-        }
+        epochDate = new Date(date.substr(0,date.search('UTCG') - 1));
+        exportFile()
     };
     fileReader.readAsText(fileToLoad, "UTF-8");
-}
-
-function getPos(el) {
-    for (var lx=0, ly=0;
-        el != null;
-        lx += el.offsetLeft, ly += el.offsetTop, el = el.offsetParent);
-    return {x: lx,y: ly};
 }
 
 function dragOverHandler(event) {
@@ -243,14 +187,6 @@ function downloadFile(filename, text) {
     }
 }
 
-function addZeros(num, dec) {
-    let alteredNum = num.split('.');
-    while (alteredNum[0].length < dec) {
-        alteredNum[0] = '0' + alteredNum[0]
-    }
-    // console.log(alteredNum);
-    return alteredNum[0] + '.' + alteredNum[1];
-}
 function twoBodyRpo(state = [[-1.89733896, 399.98, 0, 0, 0, 0]]) {
     let mu = 398600.4418
     let x = state[0][0], y = state[0][1], z = state[0][2], dx = state[0][3], dy = state[0][4], dz = state[0][5]
@@ -348,21 +284,4 @@ function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]
         }
     }
     return a
-}
-
-function sphericalEvenPoints(dV, n = 20) {
-    let gr = (1 + 5 ** 0.5) / 2, w = 3 ** 0.5
-    let ii = math.add(math.range(0, n), 0.5)._data
-    let data = []
-    for (let jj = 0; jj < ii.length; jj++) {
-        let phi = math.acos(1 - 2 * ii[jj] / n)
-        let theta = 2 * Math.PI * ii[jj] / gr
-        data.push(math.dotMultiply(w * dV, [
-            math.cos(theta) * math.sin(phi),
-            math.sin(theta) * math.sin(phi),
-            math.cos(phi)
-        ]))
-
-    }
-    return data
 }

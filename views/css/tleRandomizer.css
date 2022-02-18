@@ -94,3 +94,12 @@ td input {
     border-radius: 10px;
     cursor: pointer;
 }
+
+#parameters input {
+    width: 4em;
+    font-size: 1.5em;
+}
+
+#parameters {
+    font-size: 2em;
+}

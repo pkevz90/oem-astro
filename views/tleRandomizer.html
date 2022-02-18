@@ -13,8 +13,17 @@
         <div id="drop-div" class="center" ondrop="testDrop(event);" ondragover="dragOverHandler(event);" ondragenter="dragOverHandler(event);" ondragleave="dragOverHandler(event);">
             Drag ephemeris file into area...
         </div>
-        <div id="parameters">
+        <!-- <div id="parameters">
             <div class="parameter-box">Epoch Time <input id="des-date" type="datetime-local" value="2022-02-09T19:30"></div>
+        </div> -->
+        <div id="parameters" style="display: flex; justify-content: space-around;">
+            <div>Month <input type="Number" min="1" max="12" value="2"></div>
+            <div>Day <input type="Number" min="1" max="31" value="9"></div>
+            <div>Year <input type="Number" value="2022"></div>
+            <div>Time <input type="text" value="19"> : <input type="text" value="30">Z</div>
+        </div>
+        <div>
+            <button onclick="window.localStorage.clear()">Clear Cache</button>
         </div>
         <div id="cov-area">
             <div id="cov-title">
