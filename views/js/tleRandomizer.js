@@ -31,28 +31,6 @@ function normalRandom()
     return val;
 }
 
-function loadFileAsText(event) {
-    fileToLoad = event.path[0].files[0];
-    let ext = fileToLoad.name.split('.')[1];
-    let fileReader = new FileReader();
-    fileReader.onload = function (fileLoadedEvent) {
-
-        console.log('hey');
-        let text = fileLoadedEvent.target.result;
-        text = text.split('EphemerisTimePosVel');
-        text[1] = text[1].split(/\n+/);
-        text[0] = text[0] + 'EphemerisTimePosVel' + text[1][0];
-        text[1].shift();
-        windowOptions.inputData = text;
-        let date = text[0].substr(385);
-        windowOptions.epochDate = new Date(date.substr(0,date.search('UTCG') - 1));
-    };
-    if (ext === 'e') {
-        document.getElementById('e-date').style.visibility = 'visible';
-    }
-    fileReader.readAsText(fileToLoad, "UTF-8");
-}
-
 function exportFile() {
     let files = window.localStorage.files === undefined ? {} : JSON.parse(window.localStorage.files)
     let err_inputs = document.getElementsByTagName('input');
