@@ -102,10 +102,19 @@ td input {
 
 #parameters {
     font-size: 2em;
+    margin: 2% 0%;
 }
 
 #clear-cache-button {
     padding: 7px;
     border-radius: 10px;
     cursor: pointer;
+}
+
+table {
+    background-color: #eee;
+    border: 3px solid black;
+    padding: 10px;
+    border-radius: 10px;
+    width: 100%;
 }

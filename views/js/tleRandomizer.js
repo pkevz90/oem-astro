@@ -3,6 +3,19 @@ let data
 let fileName
 let epochDate
 
+document.getElementsByTagName('td')[0].getElementsByTagName('input')[0].addEventListener('input', event => {
+    let initValue = Number(event.target.value)
+    let inputs = event.target.parentNode.parentNode.parentNode.getElementsByTagName('input')
+    if (initValue < 0) {
+        event.target.value = 0
+        initValue = 0
+    }
+    for (let ii = 1; ii < inputs.length; ii++) {
+        inputs[ii].value = initValue / (ii > 2 ? 10000 : 1)
+    }
+})
+
+
 function normalRandom()
 {
     var val, u, v, s, mul;
