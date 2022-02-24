@@ -74,9 +74,19 @@
                 </tr>
             </table>
         </div>
+        
         <div>
             <button id="clear-cache-button" onclick="window.localStorage.clear()">Clear Cache</button>
         </div>
+        <div id="burn-parameters" style="display: flex; justify-content: space-around;">
+            <div>Burn R <input type="Number" value="0"></div>
+            <div>I <input type="Number" value="0"></div>
+            <div>C <input type="Number" value="0"> m/s</div>
+            <div>Ang StD <input type="Number" min="0" value="0.01"> deg</div>
+            <div>Thrust StD <input type="Number" min="0" value="10">%</div>
+            <div><button onclick="induceBurnError(event)">Implement Error</button></div>
+        </div>
+        
     </div>
     <script src="./js/tleRandomizer.js"></script>
 </body>

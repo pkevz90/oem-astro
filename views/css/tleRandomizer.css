@@ -118,3 +118,13 @@ table {
     border-radius: 10px;
     width: 100%;
 }
+
+#burn-parameters {
+    margin: 50% 0%;
+    font-size: 1.25em;
+}
+
+#burn-parameters input {
+    width: 5em;
+    font-size: 1em;
+}

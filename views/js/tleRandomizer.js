@@ -82,8 +82,8 @@ function exportFile() {
     pEphemeris.push(`${t} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
     stateEphemeris = [`${t} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`]
 
-    let timeDelta = 60
-    for (let ii = 60; ii <= 12 * 3600; ii+=timeDelta) {
+    let timeDelta = 120
+    for (let ii = timeDelta; ii <= 12 * 3600; ii+=timeDelta) {
         let out = propCovariance(P, timeDelta, [state])
         state = out.state
         P = out.P
@@ -101,11 +101,11 @@ function exportFile() {
     if (files[saveName] === undefined) {
         files[saveName] = {
             header,
-            data: [{posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff}]
+            data: [{posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff, time: new Date() - 0}]
         }
     }
     else {
-        files[saveName].data.push({posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff})
+        files[saveName].data.push({posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff, time: new Date() - 0})
     }
     window.localStorage.files = JSON.stringify(files)
     console.log(JSON.parse(window.localStorage.files))
@@ -325,4 +325,31 @@ function modelCov(n_ground = 2, n_space = 1, time = 5400) {
         [112.967, 198.032, 77.966, 0.025, 0.014, 0.008]
     ]
     console.log(p);
+}
+
+function induceBurnError(event) {
+    let inputs = event.target.parentElement.parentElement.getElementsByTagName('input');
+    let r = Number(inputs[0].value)
+    let i = Number(inputs[1].value)
+    let c = Number(inputs[2].value)
+    let angStd = Number(inputs[3].value)
+    let rangeStd = Number(inputs[4].value) / 100
+
+    let dV = math.norm([r, i, c])
+    dV = dV * rangeStd * normalRandom() + dV
+
+    let az = math.atan2(i, r) * 180 / Math.PI
+    az = az + angStd * normalRandom()
+    az *= Math.PI / 180
+    console.log(r, i, c);
+    let el = math.atan2(c, math.norm([r, i])) * 180 / Math.PI
+    el = el + angStd * normalRandom()
+    el *= Math.PI / 180
+
+    r = dV * Math.cos(az) * Math.cos(el)
+    i = dV * Math.sin(az) * Math.cos(el)
+    c = dV * Math.sin(el)
+    inputs[0].value = r.toFixed(3)
+    inputs[1].value = i.toFixed(3)
+    inputs[2].value = c.toFixed(3)
 }
