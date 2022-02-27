@@ -5,54 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDA Simulator</title>
-    <style>
-        html, body, .display-container, canvas {
-            overflow: hidden;
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        .display-container {
-            display: grid;
-            grid-template-areas: 'inertial ric' 'inertial control';
-        }
-        .display-container div {
-            width: 50vw;
-        }
-        .display-ric, .display-control {
-            height: 50vh;
-        }
-        .display-inertial {
-            grid-area: inertial;
-        }
-        .display-ric {
-            grid-area: ric;
-        }
-        .display-obs {
-            grid-area: obs;
-        }
-        .display-control {
-            grid-area: control;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
-        }
-        input, select, button {
-            width: 25%;
-            padding: 3px;
-            margin: 5px;
-            border-radius: 10px;
-        }
-        button {
-            cursor: pointer;
-            transition: background-color 0.5s, color 0.5s;
-        }
-        button:hover {
-            background-color: black;
-            color: white;
-        }
-    </style>
+    <link rel="stylesheet" href="./css/sda.css">
     <script src="../SupportLibraries/math.js"></script>
     <script src="./js/sda.js" defer></script>
 </head>
@@ -65,34 +18,22 @@
             <canvas id="ric-canvas"></canvas>
         </div>
         <div class="display-control">
-            <div>Origin Longitude<input placeholder="Origin Long (deg)" type="number" value="0" oninput="changeLatitude(this)"> deg</div>
-            <div>
-                <input placeholder="Sat R" type="number">
-                <input placeholder="Sat I" type="number" name="" id="">
-                <input placeholder="Sat C" type="number" name="" id="">
-                <input placeholder="Sat Rd" type="number" name="" id="">
-                <input placeholder="Sat Id" type="number" name="" id="">
-                <input placeholder="Sat Cd" type="number" name="" id="">
-            </div>
-            <div>
-                <div>
-                    <input placeholder="Lat" type="text">
-                    <input placeholder="Long" type="text">
-                    <input placeholder="Angle StD (deg)" type="text">
-                    <input placeholder="Range StD (m)" type="text">
-                    <select name="" id="">
-                        <option value="">Radar</option>
-                        <option value="">Optical</option>
-                        <option value="">Space</option>
-                    </select>
+            <div># Ground <input type="number" value="2" min="0" oninput="updateSensors(event)"> # Space <input type="number" value="0" min="0" oninput="updateSensors(event)"></div>
+            <div id="sensor-display">
+                <div index="0">Optical Sensor 1 
+                    Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">30</span> deg </span>
+                    Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">10</span> deg </span>
+                    StD:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">0.005</span> deg </span>
                 </div>
-                <button>
-                    Add Sensor
-                </button>
+                <div index="1">Optical Sensor 2 
+                    Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">10</span> deg </span>
+                    Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">-20</span> deg </span>
+                    StD:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">0.005</span> deg </span>
+                </div>
             </div>
             <div>
                 <input type="number" placeholder="Total Time" value="7200" id="tt">
-                <input type="number" placeholder="Freq" id="freq" value="30"> Hz
+                <input type="number" placeholder="Freq" id="freq" value="600"> Hz
                 <button onclick="runAlgorith()">
                     Run
                 </button>

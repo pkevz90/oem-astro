@@ -1,0 +1,51 @@
+html, body, .display-container, canvas {
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+.display-container {
+    display: grid;
+    grid-template-areas: 'inertial ric' 'inertial control';
+}
+.display-container div {
+    width: 50vw;
+}
+.display-ric, .display-control {
+    height: 50vh;
+}
+.display-inertial {
+    grid-area: inertial;
+}
+.display-ric {
+    grid-area: ric;
+}
+.display-obs {
+    grid-area: obs;
+}
+.display-control {
+    grid-area: control;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+}
+input, select, button {
+    width: 25%;
+    padding: 3px;
+    margin: 5px;
+    border-radius: 10px;
+}
+button {
+    cursor: pointer;
+    transition: background-color 0.5s, color 0.5s;
+}
+button:hover {
+    background-color: black;
+    color: white;
+}
+
+.value-span {
+    margin-right: 10px;
+
+}

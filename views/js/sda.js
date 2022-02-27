@@ -134,7 +134,7 @@ function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]], ricC
     ctxRic.font = "20px Georgia";
     for (coor in ricCov) {
 
-        let unit = coor === 'r' || coor === 'i' || coor === 'd' ? 'm' : 'm/s'
+        let unit = coor === 'r' || coor === 'i' || coor === 'c' ? 'm' : 'm/s'
         ctxRic.fillText(coor + ": +/-" + (ricCov[coor]* 1000).toFixed(3) + ' ' + unit, 5, top + 20);
         top += 25
     }
@@ -283,7 +283,7 @@ function runge_kutta(state, dt, a = [0,0,0]) {
 }
 
 function runAlgorith() {
-    let realState = [0,0,0,0.002,-0.005,0]
+    let realState = [0,0,0,0,0,0]
     let finalT = Number(document.getElementById('tt').value)
     let rate = 1/Number(document.getElementById('freq').value)
     let realObs = generateObs(sensors, finalT, rate, realState, true)
@@ -326,8 +326,7 @@ function runAlgorith() {
         id: std[4][4] ** 0.5,
         cd: std[5][5] ** 0.5,
     }
-
-    console.log(cov);
+    navigator.clipboard.writeText(JSON.stringify({std}))
     updateRic(math.dotPow(values, 0.5).slice(3,6), vectors, cov)
 }
 
@@ -351,6 +350,62 @@ function powerIteration(A) {
     return guess
 }
 
+function updateSensors(event) {
+    let inputs = event.target.parentElement.getElementsByTagName('input')
+    let space = Number(inputs[1].value)
+    let ground = Number(inputs[0].value)
+    let opticalSensors = sensors.filter(s => s.type === 'optical')
+    let spaceSensors = sensors.filter(s => s.type === 'space')
+    opticalSensors = opticalSensors.slice(0, ground)
+    spaceSensors = spaceSensors.slice(0, space)
+    while (opticalSensors.length < ground) {
+        opticalSensors.push({
+            type: 'optical',
+            lat: Math.round(-90 + 180 * Math.random()),
+            long: Math.round(-90 + 180 * Math.random()),
+            r: 0.005 * Math.PI / 180
+        })
+    }
+    while (spaceSensors.length < space) {
+        spaceSensors.push({
+            type: 'space',
+            lat: 0,
+            long: Math.round(-90 + 180 * Math.random()),
+            r: 0.0075 * Math.PI / 180
+        })
+    }
+    let sensOut = opticalSensors.concat(spaceSensors)
+    sensors = sensOut
+
+    refreshSensorList(sensOut)
+    updateInertial(sensors)
+}
+
+function refreshSensorList(sensIn) {
+    let disp = document.getElementById('sensor-display')
+    disp.innerHTML = ''
+    sensIn.forEach(s => {
+        let newDiv = document.createElement('div')
+        newDiv.innerHTML = s.type === 'optical' ?  `
+        <div index="0">Optical Sensor 
+            Lat:  <span class="value-span"><span contenteditable="true">${s.lat}</span> deg </span>
+            Long: <span class="value-span"><span contenteditable="true">${s.long}</span> deg </span>
+            StD:  <span class="value-span"><span contenteditable="true">${s.r * 180 / Math.PI}</span> deg </span>
+        </div>
+        `
+        :  `
+        <div index="0">Space Sensor
+            Long: <span class="value-span"><span contenteditable="true">${s.long}</span> deg </span>
+            StD:  <span class="value-span"><span contenteditable="true">${s.r * 180 / Math.PI}</span> deg </span>
+        </div>
+        `
+        disp.appendChild(newDiv)
+    })
+}
+
+function editSensor(event) {
+    console.log(event.target.innerText);
+}
 
 earth.onload = () => updateInertial()
 updateRic()
