@@ -66,20 +66,20 @@ function exportFile() {
     }
     t = timeDiff
     // Add gaussian error to the initial state
-    state = state.map((s, ii) => s + Number(err_inputs[ii+5].value) * 1000 * normalRandom())
+    let rEci2Eci = Ric2Eci(state.slice(0,3), state.slice(3,6))
+    console.log(rEci2Eci);
+    let stateCov = covFromInputs(rEci2Eci)
+    
+    let P = math.dotMultiply(1e6, math.multiply(stateCov, math.transpose(stateCov)))
+    let initError = math.transpose(stateCov).reduce((a, b, ii) => {
+        if (ii === 1) a = math.dotMultiply(a, normalRandom())
+        return math.add(a, math.dotMultiply(normalRandom(),b))
+    })
+    initError = math.dotMultiply(1000, initError)
+    state = math.add(state, initError)
     // Define initial covariance matrix
-    let P = math.diag([(Number(err_inputs[5].value) * 1000) ** 2, 
-                       (Number(err_inputs[6].value) * 1000) ** 2, 
-                       (Number(err_inputs[7].value) * 1000) ** 2, 
-                       (Number(err_inputs[8].value) * 1000) ** 2, 
-                       (Number(err_inputs[9].value) * 1000) ** 2, 
-                       (Number(err_inputs[10].value) * 1000) ** 2]) 
-    // If any elements of covariance are zero, set to arbitarily low number for numerical stability
-    P = math.diag(math.diag(P).map(item => {
-            return item < 1e-8 ? 1e-8 : item
-    }))
     let pEphemeris = []
-    pEphemeris.push(`${t} ${P[0][0]} 0 0 ${P[1][1]} 0 ${P[2][2]}`)
+    pEphemeris.push(`${t} ${P[0][0]} ${P[0][1]} ${P[0][2]} ${P[1][1]} ${P[0][2]} ${P[2][2]}`)
     stateEphemeris = [`${t} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`]
 
     let timeDelta = 120
@@ -352,4 +352,81 @@ function induceBurnError(event) {
     inputs[0].value = r.toFixed(3)
     inputs[1].value = i.toFixed(3)
     inputs[2].value = c.toFixed(3)
+}
+
+function importCov(event) {
+    let input = event.target.value
+    try {
+        input = JSON.parse(input)
+        input = choleskyDecomposition(input.std)
+        let err_inputs = document.getElementsByTagName('input');
+        err_inputs[5].value =  input[0][0].toFixed(5)
+        err_inputs[6].value =  input[1][0].toFixed(5)
+        err_inputs[7].value =  input[1][1].toFixed(5)
+        err_inputs[8].value =  input[2][0].toFixed(5)
+        err_inputs[9].value =  input[2][1].toFixed(5)
+        err_inputs[10].value = input[2][2].toFixed(5)
+        err_inputs[11].value = input[3][0].toFixed(5)
+        err_inputs[12].value = input[3][1].toFixed(5)
+        err_inputs[13].value = input[3][2].toFixed(5)
+        err_inputs[14].value = input[3][3].toFixed(5)
+        err_inputs[15].value = input[4][0].toFixed(5)
+        err_inputs[16].value = input[4][1].toFixed(5)
+        err_inputs[17].value = input[4][2].toFixed(5)
+        err_inputs[18].value = input[4][3].toFixed(5)
+        err_inputs[19].value = input[4][4].toFixed(5)
+        err_inputs[20].value = input[5][0].toFixed(5)
+        err_inputs[21].value = input[5][1].toFixed(5)
+        err_inputs[22].value = input[5][2].toFixed(5)
+        err_inputs[23].value = input[5][3].toFixed(5)
+        err_inputs[24].value = input[5][4].toFixed(5)
+        err_inputs[25].value = input[5][5].toFixed(5)
+
+    }
+    catch (error) {
+        console.error('Not a valid covariance')
+    }
+}
+
+function covFromInputs(r = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
+    let err_inputs = document.getElementsByTagName('input')
+    let cov = math.zeros([6,6])
+    cov[0][0] = Number(err_inputs[5].value) < 1e-8 ? 1e-8 : Number(err_inputs[5].value)
+    cov[1][0] = Number(err_inputs[6].value)
+    cov[1][1] = Number(err_inputs[7].value) < 1e-8 ? 1e-8 : Number(err_inputs[7].value)
+    cov[2][0] = Number(err_inputs[8].value)
+    cov[2][1] = Number(err_inputs[9].value)
+    cov[2][2] = Number(err_inputs[10].value) < 1e-8 ? 1e-8 : Number(err_inputs[10].value)
+    cov[3][0] = Number(err_inputs[11].value)
+    cov[3][1] = Number(err_inputs[12].value)
+    cov[3][2] = Number(err_inputs[13].value)
+    cov[3][3] = Number(err_inputs[14].value) < 1e-12 ? 1e-12 : Number(err_inputs[14].value)
+    cov[4][0] = Number(err_inputs[15].value)
+    cov[4][1] = Number(err_inputs[16].value)
+    cov[4][2] = Number(err_inputs[17].value)
+    cov[4][3] = Number(err_inputs[18].value)
+    cov[4][4] = Number(err_inputs[19].value) < 1e-12 ? 1e-12 : Number(err_inputs[19].value)
+    cov[5][0] = Number(err_inputs[20].value)
+    cov[5][1] = Number(err_inputs[21].value)
+    cov[5][2] = Number(err_inputs[22].value)
+    cov[5][3] = Number(err_inputs[23].value)
+    cov[5][4] = Number(err_inputs[24].value)
+    cov[5][5] = Number(err_inputs[25].value) < 1e-12 ? 1e-12 : Number(err_inputs[25].value)
+    let p = math.multiply(cov, math.transpose(cov))
+    r = math.concat(math.concat(r, math.zeros([3,3])), math.concat(math.zeros([3,3]), r), 0)
+    return choleskyDecomposition(math.multiply(r, p, math.transpose(r)))
+}
+n = 2 * Math.PI / 86164
+function Ric2Eci(rC = [(398600.4418 / n ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / n ** 2)**(1/3))) ** (1/2), 0]) {
+    let h = math.cross(rC, drC);
+    let ricX = math.dotDivide(rC, math.norm(rC));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+
+    let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+    let ricYd = math.cross(ricZ, ricXd);
+    let ricZd = [0,0,0];
+
+    let C = math.transpose([ricX, ricY, ricZ]);
+    return C
 }
