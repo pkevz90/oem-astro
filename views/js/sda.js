@@ -193,7 +193,7 @@ function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], noi
             }
             if (sensors[ii].type === 'radar') {
                 outObs.r = calcRange(positions[ii], satState, noise ? sensors[ii].rr : 0),
-                outobs.rr =  sensors[ii].rr
+                outObs.rr =  sensors[ii].rr
             }
 
             obs.push(outObs)
@@ -223,7 +223,6 @@ function calcRange(stateOb, stateTar, noise = 0) {
     let x = stateTar[0] - stateOb[0]
     let y = stateTar[1] - stateOb[1]
     let z = stateTar[2] - stateOb[2]
-    console.log(noise);
     return (x ** 2 + y ** 2 + z ** 2) ** (1/2) + randn_bm() * noise
 }
 
@@ -233,36 +232,40 @@ function calcRangeRate(stateOb, stateTar) {
 
 function generateJacobian(estIn = [0,0,0,0,0,0], tIn=360, rateIn = 1/120) {
     let estObs = generateObs(sensors, tIn, rateIn, estIn)
-    let estObsList = flattenObs(estObs)
+    let estObsList = flattenObs(estObs).obs
     let J = []
     let delta = [0.01, 0.01, 0.01, 0.00001, 0.00001, 0.00001]
     for (let ii = 0; ii < estIn.length; ii++) {
         let delState = estIn.slice()
-        let delState2 = estIn.slice()
+        // let delState2 = estIn.slice()
         delState[ii] += delta[ii]
-        delState2[ii] -= delta[ii]
+        // delState2[ii] -= delta[ii]
         let delObs = generateObs(sensors, tIn, rateIn, delState)
-        let delObs2 = generateObs(sensors, tIn, rateIn, delState2)
-        let delObsList = flattenObs(delObs)
-        let delObsList2 = flattenObs(delObs2)
-        // J.push(math.dotDivide(math.subtract(delObsList, estObsList), delta[ii]))
-        J.push(math.dotDivide(math.subtract(delObsList, delObsList2), 2 * delta[ii]))
+        // let delObs2 = generateObs(sensors, tIn, rateIn, delState2)
+        let delObsList = flattenObs(delObs).obs
+        // let delObsList2 = flattenObs(delObs2).obs
+        J.push(math.dotDivide(math.subtract(delObsList, estObsList), delta[ii]))
+        // J.push(math.dotDivide(math.subtract(delObsList, delObsList2), 2 * delta[ii]))
     }
     J = math.transpose(J)
-    console.log(J);
     return {J, estObsList}
 }
 
 function flattenObs(obsObject) {
     let azList = obsObject.map(ob => ob.az)
+    let azRlist = obsObject.map(ob => ob.azr).map(ob => 1/ob ** 2)
     let elList = obsObject.map(ob => ob.el)
+    let elRlist = obsObject.map(ob => ob.elr).map(ob => 1/ob ** 2)
     let rList = obsObject.map(ob => ob.r).filter(ob => ob !== undefined)
-    return math.concat(azList, elList, rList)
+    let rRlist = obsObject.map(ob => ob.rr).filter(ob => ob !== undefined).map(ob => 1/ob ** 2)
+    let w =  math.diag(math.concat(azRlist, elRlist, rRlist))
+    w = math.dotDivide(w, math.max(math.max(w)))
+    return {obs: math.concat(azList, elList, rList), w}
 }
 
-function stepDiffCorrect(eState, time, rate, rObs) {
+function stepDiffCorrect(eState, time, rate, rObs, w) {
     let {J, estObsList} = generateJacobian(eState, time, rate)
-    let midCalc = math.multiply(math.inv(math.multiply(math.transpose(J), J)), math.transpose(J))
+    let midCalc = math.multiply(math.inv(math.multiply(math.transpose(J), w, J)), math.transpose(J), w)
     let errCalc = math.subtract(rObs, estObsList)
     midCalc = math.multiply(midCalc, errCalc)
     eState[0] += midCalc[0] * 0.5
@@ -271,7 +274,7 @@ function stepDiffCorrect(eState, time, rate, rObs) {
     eState[3] += midCalc[3] * 0.5
     eState[4] += midCalc[4] * 0.5
     eState[5] += midCalc[5] * 0.5
-    return {eState, errCalc, midCalc, p: math.inv(math.multiply(math.transpose(J), J))}
+    return {eState, errCalc, midCalc, p: math.inv(math.multiply(math.transpose(J), w, J))}
 }
 
 function twoBodyRpo(state = [[-1.89733896, 399.98, 0, 0, 0, 0]], options = {}) {
@@ -304,12 +307,14 @@ function runAlgorith() {
     let realObs = generateObs(sensors, finalT, rate, realState, true)
     // console.log(realObs);
     realObs = flattenObs(realObs)
+    let w = realObs.w
+    realObs = realObs.obs
     estState = [0,0,0,0,0,0]
     let std
     let ii = 0
     while (ii < 20) {
-        let {eState, errCalc, midCalc, p} = stepDiffCorrect(estState, finalT, rate, realObs)
-        let rms = (errCalc.map(a => a ** 2).reduce((a,b) => a + b) / errCalc.length) ** 1
+        let {eState, errCalc, midCalc, p} = stepDiffCorrect(estState, finalT, rate, realObs, w)
+        let rms = (math.multiply(w, errCalc).map(a => a ** 2).reduce((a,b) => a + b) / errCalc.length) ** 1
         console.log(rms);
         estState = eState
         std = math.dotMultiply(rms, p)
