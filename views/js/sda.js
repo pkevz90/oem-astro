@@ -170,25 +170,33 @@ function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], noi
         let realLong = s.long - latitude
         if (s.type === 'space') {
             positions.push([
-                -42164 + 42164 * Math.cos(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180),
-                42164 * Math.sin(realLong* Math.PI / 180) * Math.cos(0 * Math.PI / 180),
-                6371 * Math.sin(0 * Math.PI / 180)
+                -42164 + 42164 * Math.cos(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
+                42164 * Math.sin(realLong* Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
+                6371 * Math.sin(s.lat * Math.PI / 180)
             ])
             return
         }
         positions.push([
-            -42164 + 6371 * Math.cos(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180),
-            6371 * Math.sin(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180),
-            6371 * Math.sin(0 * Math.PI / 180)
+            -42164 + 6371 * Math.cos(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
+            6371 * Math.sin(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
+            6371 * Math.sin(s.lat * Math.PI / 180)
         ])
     })
     let t = 0
     while (t <= tFinal) {
         for (let ii = 0; ii < positions.length; ii++) {
-            obs.push({
+            let outObs = {
                 az: calcAz(positions[ii], satState, noise ? sensors[ii].r : 0),
-                el: calcEl(positions[ii], satState, noise ? sensors[ii].r : 0)
-            })
+                azr: sensors[ii].r,
+                el: calcEl(positions[ii], satState, noise ? sensors[ii].r : 0),
+                elr: sensors[ii].r
+            }
+            if (sensors[ii].type === 'radar') {
+                outObs.r = calcRange(positions[ii], satState, noise ? sensors[ii].rr : 0),
+                outobs.rr =  sensors[ii].rr
+            }
+
+            obs.push(outObs)
             continue
         }
         satState = runge_kutta([satState], 1 / rate)
@@ -211,11 +219,12 @@ function calcEl(stateOb, stateTar, noise = 0) {
 
 }
 
-function calcRange(stateOb, stateTar) {
+function calcRange(stateOb, stateTar, noise = 0) {
     let x = stateTar[0] - stateOb[0]
     let y = stateTar[1] - stateOb[1]
     let z = stateTar[2] - stateOb[2]
-    return (x ** 2 + y ** 2 + z ** 2) ** (1/2)
+    console.log(noise);
+    return (x ** 2 + y ** 2 + z ** 2) ** (1/2) + randn_bm() * noise
 }
 
 function calcRangeRate(stateOb, stateTar) {
@@ -226,23 +235,29 @@ function generateJacobian(estIn = [0,0,0,0,0,0], tIn=360, rateIn = 1/120) {
     let estObs = generateObs(sensors, tIn, rateIn, estIn)
     let estObsList = flattenObs(estObs)
     let J = []
-    let delta = [0.1, 0.1, 0.1, 0.0001, 0.0001, 0.0001]
-
+    let delta = [0.01, 0.01, 0.01, 0.00001, 0.00001, 0.00001]
     for (let ii = 0; ii < estIn.length; ii++) {
         let delState = estIn.slice()
+        let delState2 = estIn.slice()
         delState[ii] += delta[ii]
+        delState2[ii] -= delta[ii]
         let delObs = generateObs(sensors, tIn, rateIn, delState)
+        let delObs2 = generateObs(sensors, tIn, rateIn, delState2)
         let delObsList = flattenObs(delObs)
-        J.push(math.dotDivide(math.subtract(delObsList, estObsList), delta[ii]))
+        let delObsList2 = flattenObs(delObs2)
+        // J.push(math.dotDivide(math.subtract(delObsList, estObsList), delta[ii]))
+        J.push(math.dotDivide(math.subtract(delObsList, delObsList2), 2 * delta[ii]))
     }
     J = math.transpose(J)
+    console.log(J);
     return {J, estObsList}
 }
 
 function flattenObs(obsObject) {
     let azList = obsObject.map(ob => ob.az)
     let elList = obsObject.map(ob => ob.el)
-    return math.concat(azList, elList)
+    let rList = obsObject.map(ob => ob.r).filter(ob => ob !== undefined)
+    return math.concat(azList, elList, rList)
 }
 
 function stepDiffCorrect(eState, time, rate, rObs) {
@@ -250,12 +265,12 @@ function stepDiffCorrect(eState, time, rate, rObs) {
     let midCalc = math.multiply(math.inv(math.multiply(math.transpose(J), J)), math.transpose(J))
     let errCalc = math.subtract(rObs, estObsList)
     midCalc = math.multiply(midCalc, errCalc)
-    eState[0] += midCalc[0]
-    eState[1] += midCalc[1]
-    eState[2] += midCalc[2]
-    eState[3] += midCalc[3]
-    eState[4] += midCalc[4]
-    eState[5] += midCalc[5]
+    eState[0] += midCalc[0] * 0.5
+    eState[1] += midCalc[1] * 0.5
+    eState[2] += midCalc[2] * 0.5
+    eState[3] += midCalc[3] * 0.5
+    eState[4] += midCalc[4] * 0.5
+    eState[5] += midCalc[5] * 0.5
     return {eState, errCalc, midCalc, p: math.inv(math.multiply(math.transpose(J), J))}
 }
 
@@ -292,7 +307,7 @@ function runAlgorith() {
     estState = [0,0,0,0,0,0]
     let std
     let ii = 0
-    while (ii < 10) {
+    while (ii < 20) {
         let {eState, errCalc, midCalc, p} = stepDiffCorrect(estState, finalT, rate, realObs)
         let rms = (errCalc.map(a => a ** 2).reduce((a,b) => a + b) / errCalc.length) ** 1
         console.log(rms);
@@ -352,12 +367,15 @@ function powerIteration(A) {
 
 function updateSensors(event) {
     let inputs = event.target.parentElement.getElementsByTagName('input')
-    let space = Number(inputs[1].value)
+    let space = Number(inputs[2].value)
+    let radar = Number(inputs[1].value)
     let ground = Number(inputs[0].value)
     let opticalSensors = sensors.filter(s => s.type === 'optical')
     let spaceSensors = sensors.filter(s => s.type === 'space')
+    let radarSensors = sensors.filter(s => s.type === 'radar')
     opticalSensors = opticalSensors.slice(0, ground)
     spaceSensors = spaceSensors.slice(0, space)
+    radarSensors = radarSensors.slice(0, radar)
     while (opticalSensors.length < ground) {
         opticalSensors.push({
             type: 'optical',
@@ -366,15 +384,24 @@ function updateSensors(event) {
             r: 0.005 * Math.PI / 180
         })
     }
+    while (radarSensors.length < radar) {
+        radarSensors.push({
+            type: 'radar',
+            lat: Math.round(-90 + 180 * Math.random()),
+            long: Math.round(-90 + 180 * Math.random()),
+            rr: 2,
+            r: 0.005 * Math.PI / 180,
+        })
+    }
     while (spaceSensors.length < space) {
         spaceSensors.push({
             type: 'space',
             lat: 0,
             long: Math.round(-90 + 180 * Math.random()),
-            r: 0.0075 * Math.PI / 180
+            r: 0.005 * Math.PI / 180
         })
     }
-    let sensOut = opticalSensors.concat(spaceSensors)
+    let sensOut = opticalSensors.concat(radarSensors).concat(spaceSensors)
     sensors = sensOut
 
     refreshSensorList(sensOut)
@@ -384,27 +411,31 @@ function updateSensors(event) {
 function refreshSensorList(sensIn) {
     let disp = document.getElementById('sensor-display')
     disp.innerHTML = ''
-    sensIn.forEach(s => {
+    console.log(sensIn);
+    sensIn.forEach((s, ii) => {
         let newDiv = document.createElement('div')
-        newDiv.innerHTML = s.type === 'optical' ?  `
-        <div index="0">Optical Sensor 
-            Lat:  <span class="value-span"><span contenteditable="true">${s.lat}</span> deg </span>
-            Long: <span class="value-span"><span contenteditable="true">${s.long}</span> deg </span>
-            StD:  <span class="value-span"><span contenteditable="true">${s.r * 180 / Math.PI}</span> deg </span>
+        console.log(s.type === 'radar');
+        newDiv.innerHTML =  `
+        <div index="${ii}">${s.type === 'optical' ? 'Optical' : s.type === 'radar' ? 'Radar' : 'Space'} Sensor 
+            Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="lat">${s.lat}</span> deg </span>
+            Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="long">${s.long}</span> deg </span>
+            StD A:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="r">${s.r * 180 / Math.PI}</span> deg </span>
+            ${s.type === 'radar' ? `StD R:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="rr">${s.rr}</span> km </span>` : ''}
         </div>
         `
-        :  `
-        <div index="0">Space Sensor
-            Long: <span class="value-span"><span contenteditable="true">${s.long}</span> deg </span>
-            StD:  <span class="value-span"><span contenteditable="true">${s.r * 180 / Math.PI}</span> deg </span>
-        </div>
-        `
+        
         disp.appendChild(newDiv)
     })
 }
 
 function editSensor(event) {
-    console.log(event.target.innerText);
+    let type = event.target.getAttribute('type')
+    let index = event.target.parentElement.parentElement.getAttribute('index')
+    let value = Number(event.target.innerText)
+    if (isNaN(value)) event.target.style.backgroundColor = '#FCB'
+    else event.target.style.backgroundColor = 'white'
+    sensors[index][type] = type === 'r' ? value * Math.PI / 180 : value
+    updateInertial(sensors)
 }
 
 earth.onload = () => updateInertial()

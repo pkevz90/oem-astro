@@ -18,17 +18,20 @@
             <canvas id="ric-canvas"></canvas>
         </div>
         <div class="display-control">
-            <div># Ground <input type="number" value="2" min="0" oninput="updateSensors(event)"> # Space <input type="number" value="0" min="0" oninput="updateSensors(event)"></div>
+            <div>
+                # Optical <input class="site-input" type="number" value="2" min="0" oninput="updateSensors(event)"> 
+                # Radar <input class="site-input" type="number" value="0" min="0" oninput="updateSensors(event)"> 
+                # Space <input class="site-input" type="number" value="0" min="0" oninput="updateSensors(event)"></div>
             <div id="sensor-display">
-                <div index="0">Optical Sensor 1 
-                    Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">30</span> deg </span>
-                    Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">10</span> deg </span>
-                    StD:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">0.005</span> deg </span>
+                <div index="0">Optical Sensor
+                    Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="lat">30</span> deg </span>
+                    Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="long">10</span> deg </span>
+                    StD:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="r">0.005</span> deg </span>
                 </div>
-                <div index="1">Optical Sensor 2 
-                    Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">10</span> deg </span>
-                    Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">-20</span> deg </span>
-                    StD:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)">0.005</span> deg </span>
+                <div index="1">Optical Sensor
+                    Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="lat">10</span> deg </span>
+                    Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="long">-20</span> deg </span>
+                    StD:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="r">0.005</span> deg </span>
                 </div>
             </div>
             <div>
