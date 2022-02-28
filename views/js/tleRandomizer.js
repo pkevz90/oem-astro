@@ -10,9 +10,11 @@ document.getElementsByTagName('td')[0].getElementsByTagName('input')[0].addEvent
         event.target.value = 0
         initValue = 0
     }
-    for (let ii = 1; ii < inputs.length; ii++) {
-        inputs[ii].value = initValue / (ii > 2 ? 10000 : 1)
-    }
+    inputs[2].value = initValue
+    inputs[5].value = initValue
+    inputs[9].value = initValue / 1e4
+    inputs[14].value = initValue / 1e4
+    inputs[20].value = initValue / 1e4
 })
 
 
@@ -44,6 +46,25 @@ function normalRandom()
     return val;
 }
 
+function randn() {
+    var u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+}
+
+function testRandn(n = 1000) {
+    let as = []
+    for (let ii = 0; ii < n; ii++) {
+        as.push(randn() * 2 + 1)
+    }
+
+    let mean = as.reduce((a,b) => a + b) / as.length
+
+    let std = (as.map(a => (a - mean) ** 2).reduce((a,b) => a + b) / as.length) ** (1/2)
+    console.log(mean,std);
+}
+
 function exportFile() {
     let files = window.localStorage.files === undefined ? {} : JSON.parse(window.localStorage.files)
     let err_inputs = document.getElementsByTagName('input');
@@ -67,7 +88,6 @@ function exportFile() {
     t = timeDiff
     // Add gaussian error to the initial state
     let rEci2Eci = Ric2Eci(state.slice(0,3), state.slice(3,6))
-    console.log(rEci2Eci);
     let stateCov = covFromInputs(rEci2Eci)
     
     let P = math.dotMultiply(1e6, math.multiply(stateCov, math.transpose(stateCov)))
