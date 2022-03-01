@@ -6,8 +6,8 @@ cnvsInert.height = cnvsInert.clientHeight
 const earth = new Image()
 earth.src = './Media/earth_north.jpg'
 let latitude = 0
-function changeLatitude(button) {
-    latitude = button.value
+function changeLongitude(button) {
+    latitude = button.target.value
     updateInertial()
 }
 
@@ -16,27 +16,19 @@ let sensors = [
         lat: 30,
         long: 10,
         r: 0.005 * Math.PI / 180,
-        type: 'optical'
+        type: 'optical',
+        name: 'Optical'
     },
     {
         lat: 10,
         long: -20,
         r: 0.005 * Math.PI / 180,
-        type: 'optical'
+        type: 'optical',
+        name: 'Optical'
     }
-    // ,{
-    //     lat: 20.67,
-    //     long: 45,
-    //     r: 0.001 * Math.PI / 180,
-    //     type: 'optical'
-    // }
-    // ,{
-    //     lat: 20.67,
-    //     long: 15,
-    //     r: 0.005 * Math.PI / 180,
-    //     type: 'space'
-    // }
 ]
+sensors = window.localStorage.sensors !== undefined ? JSON.parse(window.localStorage.sensors) : sensors
+refreshSensorList(sensors)
 
 let cnvsRic = document.getElementById('ric-canvas')
 let ctxRic = cnvsRic.getContext('2d')
@@ -49,12 +41,19 @@ function updateInertial(sites = []) {
     ctxInert.strokeStyle = 'gray'
     
     ctxInert.fillStyle = 'black'
-    ctxInert.setLineDash([20, 10]);
     sensors.filter(s => s.lat < 0).forEach(s => {
+        
+        let realLong = s.long - latitude
+        if (s.type === 'radar') {
+            ctxInert.setLineDash([5, 5, 15, 5, 5, 30]);
+        }
+        else {
+            ctxInert.setLineDash([15, 5, 15, 5, 15, 30]);
+        }
         if (s.type === 'space') return
-        let delX = 6371 * Math.sin(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
+        let delX = 6371 * Math.sin(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
         delX = 0.75 * cnvsInert.height * delX / 42164
-        let delY = 6371 * Math.cos(s.long * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
+        let delY = 6371 * Math.cos(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
         delY = 0.75 * cnvsInert.height * delY / 42164
         ctxInert.beginPath()
         ctxInert.moveTo(cnvsInert.width / 2 - delX, cnvsInert.height - delY)
@@ -73,10 +72,15 @@ function updateInertial(sites = []) {
     ctxInert.strokeStyle = 'gray'
     
     ctxInert.fillStyle = 'black'
-    ctxInert.setLineDash([20, 10]);
     sensors.filter(s => s.lat >= 0).forEach(s => {
         let delX, delY
         let realLong = s.long - latitude
+        if (s.type === 'radar') {
+            ctxInert.setLineDash([5, 5, 15, 5, 5, 30]);
+        }
+        else {
+            ctxInert.setLineDash([15, 5, 15, 5, 15, 30]);
+        }
         if (s.type === 'space') {
             delX = 42164 * Math.sin(realLong * Math.PI / 180) * Math.cos(0 * Math.PI / 180)
             delX = 0.75 * cnvsInert.height * delX / 42164
@@ -140,32 +144,11 @@ function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]], ricC
     }
 }
 
-window.addEventListener('keydown', e => {
-    if (e.key === 's') {
-        // Add space sensor
-        sensors.push({
-            lat: 0,
-            long: (math.random() > 0.5 ? 1 : -1) * (10 + 30 * math.random()),
-            r: 0.005 * Math.PI / 180,
-            type:"space"
-        })
-        updateInertial()
-    }
-    if (e.key === 'g') {
-        // Add space sensor
-        sensors.push({
-            lat: math.random() * 60,
-            long: (math.random() > 0.5 ? 1 : -1) * 60 * math.random(),
-            r: 0.005 * Math.PI / 180,
-            type:"optical"
-        })
-        updateInertial()
-    }
-})
-
-function generateObs(sensors, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], noise = false) {
+function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], noise = false) {
     let obs = []
     let positions = []
+    let checks = document.getElementsByClassName('sensor-checkbox')
+    let sensors = sensorsIn.filter((s, ii) => checks[ii].checked)
     sensors.forEach(s => {
         let realLong = s.long - latitude
         if (s.type === 'space') {
@@ -302,8 +285,8 @@ function runge_kutta(state, dt, a = [0,0,0]) {
 
 function runAlgorith() {
     let realState = [0,0,0,0,0,0]
-    let finalT = Number(document.getElementById('tt').value)
-    let rate = 1/Number(document.getElementById('freq').value)
+    let finalT = Number(document.getElementById('tt').value) * 3600
+    let rate = 1/Number(document.getElementById('freq').value) / 60
     let realObs = generateObs(sensors, finalT, rate, realState, true)
     // console.log(realObs);
     realObs = flattenObs(realObs)
@@ -312,7 +295,7 @@ function runAlgorith() {
     estState = [0,0,0,0,0,0]
     let std
     let ii = 0
-    while (ii < 20) {
+    while (ii < 10) {
         let {eState, errCalc, midCalc, p} = stepDiffCorrect(estState, finalT, rate, realObs, w)
         let rms = (math.multiply(w, errCalc).map(a => a ** 2).reduce((a,b) => a + b) / errCalc.length) ** 1
         console.log(rms);
@@ -386,7 +369,8 @@ function updateSensors(event) {
             type: 'optical',
             lat: Math.round(-90 + 180 * Math.random()),
             long: Math.round(-90 + 180 * Math.random()),
-            r: 0.005 * Math.PI / 180
+            r: 0.005 * Math.PI / 180,
+            name: 'Optical'
         })
     }
     while (radarSensors.length < radar) {
@@ -396,6 +380,7 @@ function updateSensors(event) {
             long: Math.round(-90 + 180 * Math.random()),
             rr: 2,
             r: 0.005 * Math.PI / 180,
+            name: 'Radar'
         })
     }
     while (spaceSensors.length < space) {
@@ -403,17 +388,23 @@ function updateSensors(event) {
             type: 'space',
             lat: 0,
             long: Math.round(-90 + 180 * Math.random()),
-            r: 0.005 * Math.PI / 180
+            r: 0.005 * Math.PI / 180,
+            name: 'Space'
         })
     }
     let sensOut = opticalSensors.concat(radarSensors).concat(spaceSensors)
     sensors = sensOut
 
+    window.localStorage.setItem('sensors', JSON.stringify(sensors))
     refreshSensorList(sensOut)
     updateInertial(sensors)
 }
 
 function refreshSensorList(sensIn) {
+    let inputs = document.getElementsByClassName('display-control')[0].getElementsByTagName('input')
+    inputs[0].value = sensors.filter(s => s.type === 'optical').length
+    inputs[1].value = sensors.filter(s => s.type === 'radar').length
+    inputs[2].value = sensors.filter(s => s.type === 'space').length
     let disp = document.getElementById('sensor-display')
     disp.innerHTML = ''
     console.log(sensIn);
@@ -421,8 +412,8 @@ function refreshSensorList(sensIn) {
         let newDiv = document.createElement('div')
         console.log(s.type === 'radar');
         newDiv.innerHTML =  `
-        <div index="${ii}">${s.type === 'optical' ? 'Optical' : s.type === 'radar' ? 'Radar' : 'Space'} Sensor 
-            Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="lat">${s.lat}</span> deg </span>
+        <div index="${ii}"><span oninput="editSensor(event)" type="name" contentEditable="true">${s.name}</span> <input checked type="checkbox" class="sensor-checkbox">
+            ${s.type !== 'space' ? `Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="lat">${s.lat}</span> deg </span>` : ''}
             Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="long">${s.long}</span> deg </span>
             StD A:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="r">${s.r * 180 / Math.PI}</span> deg </span>
             ${s.type === 'radar' ? `StD R:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="rr">${s.rr}</span> km </span>` : ''}
@@ -435,13 +426,17 @@ function refreshSensorList(sensIn) {
 
 function editSensor(event) {
     let type = event.target.getAttribute('type')
-    let index = event.target.parentElement.parentElement.getAttribute('index')
+    let index = type === 'name' ? event.target.parentElement.getAttribute('index') : event.target.parentElement.parentElement.getAttribute('index')
+    if (type === 'name') {
+        sensors[index][type] = event.target.innerText
+        return window.localStorage.setItem('sensors', JSON.stringify(sensors))
+    } 
     let value = Number(event.target.innerText)
     if (isNaN(value)) event.target.style.backgroundColor = '#FCB'
     else event.target.style.backgroundColor = 'white'
     sensors[index][type] = type === 'r' ? value * Math.PI / 180 : value
+    window.localStorage.setItem('sensors', JSON.stringify(sensors))
     updateInertial(sensors)
 }
-
 earth.onload = () => updateInertial()
 updateRic()
