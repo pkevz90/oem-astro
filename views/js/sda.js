@@ -242,7 +242,7 @@ function flattenObs(obsObject) {
     let rList = obsObject.map(ob => ob.r).filter(ob => ob !== undefined)
     let rRlist = obsObject.map(ob => ob.rr).filter(ob => ob !== undefined).map(ob => 1/ob ** 2)
     let w =  math.diag(math.concat(azRlist, elRlist, rRlist))
-    w = math.dotDivide(w, math.max(math.max(w)))
+    // w = math.dotDivide(w, math.max(math.max(w)))
     return {obs: math.concat(azList, elList, rList), w}
 }
 
@@ -297,13 +297,12 @@ function runAlgorith() {
     let ii = 0
     while (ii < 10) {
         let {eState, errCalc, midCalc, p} = stepDiffCorrect(estState, finalT, rate, realObs, w)
-        let rms = (math.multiply(w, errCalc).map(a => a ** 2).reduce((a,b) => a + b) / errCalc.length) ** 1
+        let rms = (errCalc.map(a => a ** 2).reduce((a,b) => a + b) / errCalc.length) ** 1
         console.log(rms);
         estState = eState
-        std = math.dotMultiply(rms, p)
+        std = p
         ii++
     }
-
     let values, vectors
     try {
         let out = math.eigs(std);
