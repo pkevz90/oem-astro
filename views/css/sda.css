@@ -38,11 +38,7 @@ input, select, button {
 }
 button {
     cursor: pointer;
-    transition: background-color 0.5s, color 0.5s;
-}
-button:hover {
-    background-color: black;
-    color: white;
+    padding: 1% 10%;
 }
 
 .value-span {

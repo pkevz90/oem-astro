@@ -38,9 +38,9 @@ cnvsRic.height = cnvsRic.clientHeight
 function updateInertial(sites = []) {
     ctxInert.clearRect(0,0,cnvsInert.width, cnvsInert.height)
     ctxInert.save()
-    ctxInert.strokeStyle = 'gray'
-    
-    ctxInert.fillStyle = 'black'
+    ctxInert.strokeStyle = 'black'
+    let groundColor = '#F22'
+    ctxInert.fillStyle = groundColor
     sensors.filter(s => s.lat < 0).forEach(s => {
         
         let realLong = s.long - latitude
@@ -69,9 +69,9 @@ function updateInertial(sites = []) {
     ctxInert.drawImage(earth, -radius, -radius, radius*2, radius*2);
 
     ctxInert.restore()
-    ctxInert.strokeStyle = 'gray'
+    ctxInert.strokeStyle = 'black'
     
-    ctxInert.fillStyle = 'black'
+    ctxInert.fillStyle = groundColor
     sensors.filter(s => s.lat >= 0).forEach(s => {
         let delX, delY
         let realLong = s.long - latitude
@@ -106,20 +106,25 @@ function updateInertial(sites = []) {
     ctxInert.fill()
 }
 
-function updateRic(values = [0, 1, 2], vectors=[[0,0,1], [0,1,0], [1,0,0]], ricCov = {}) {
+function updateRic(values = [0, 1, 2], vectors=[], ricCov = {}) {
     
     ctxRic.clearRect(0,0,cnvsRic.width, cnvsRic.height)
-    let angle = math.atan2(vectors[2][0], vectors[2][1])
-    let x = 80
-    let y = x * values[1] / values[2]
-    ctxRic.fillStyle = 'rgba(100,100,100,0.5)'
-    ctxRic.beginPath()
-    ctxRic.ellipse(cnvsRic.width * 0.5, cnvsRic.height / 2, x,y, angle, 0, 2 * Math.PI)
-    ctxRic.fill()
+    if (vectors.length > 0) {
+        let cIndex = math.max(...vectors.map(v => v[2]))
+        let vectorsUse = vectors.filter(v => v[2] !== cIndex)
+        console.log(vectorsUse);
+        let angle = math.atan2(vectors[2][0], vectors[2][1])
+        let x = 80
+        let y = x * values[1] / values[2]
+        ctxRic.fillStyle = 'rgba(100,100,100,0.5)'
+        ctxRic.beginPath()
+        ctxRic.ellipse(cnvsRic.width * 0.5, cnvsRic.height / 2, x,y, angle, 0, 2 * Math.PI)
+        ctxRic.fill()
+    }
     ctxRic.strokeStyle = 'black'
     ctxRic.lineWidth = 2
     ctxRic.beginPath()
-    ctxRic.moveTo(cnvsRic.width * 0.25, cnvsRic.height / 2)
+    ctxRic.moveTo(cnvsRic.width * 0.5 - cnvsRic.height * 0.25, cnvsRic.height / 2)
     ctxRic.lineTo(cnvsRic.width * 0.5, cnvsRic.height / 2)
     ctxRic.lineTo(cnvsRic.width * 0.5, cnvsRic.height * 0.25)
     ctxRic.stroke()
@@ -166,7 +171,7 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
         ])
     })
     let t = 0
-    while (t <= tFinal) {
+    while (t >= -tFinal) {
         for (let ii = 0; ii < positions.length; ii++) {
             let outObs = {
                 az: calcAz(positions[ii], satState, noise ? sensors[ii].r : 0),
@@ -183,7 +188,7 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
             continue
         }
         satState = runge_kutta([satState], 1 / rate)
-        t += 1/rate
+        t -= 1/rate
     }
     return obs
 }
@@ -295,41 +300,55 @@ function runAlgorith() {
     estState = [0,0,0,0,0,0]
     let std
     let ii = 0
-    while (ii < 10) {
+
+    button = document.getElementsByTagName('button')[0]
+    a = function() {
         let {eState, errCalc, midCalc, p} = stepDiffCorrect(estState, finalT, rate, realObs, w)
         let rms = (errCalc.map(a => a ** 2).reduce((a,b) => a + b) / errCalc.length) ** 1
         console.log(rms);
         estState = eState
         std = p
         ii++
-    }
-    let values, vectors
-    try {
-        let out = math.eigs(std);
-        values = out.values
-        vectors = out.vectors
-        vectors = math.transpose(vectors)
-        vectors = vectors.slice(3,6)
-    }
-    catch (err) {
-        values = [0,0,0,std[2][2], std[1][1], std[0][0]]
-        vectors = [
-            [0,0,1,0,0,0],
-            [0,1,0,0,0,0],
-            math.squeeze(powerIteration(std))
-        ]
 
+        if (ii < 15) {
+            button.innerText = (ii / 15 * 100).toFixed(0) + '%'
+            // button.style.color = 'linear-gradient(90deg, rgba(255, 255, 255, 1) '+ (ii / 10 * 100).toFixed(0) + '%, rgba(0, 0, 0, 1) 10% 100%)'
+            button.style.background = 'linear-gradient(90deg, rgba(100, 100, 100, 1) '+ (ii / 15 * 100).toFixed(0) + '%, rgba(200, 200, 200, 1) 10% 100%)'
+            setTimeout(a, 1)
+        }
+        else {
+            button.innerText = 'Run'
+            button.style.background = '#EFEFEF'
+            let values, vectors
+            try {
+                let out = math.eigs(std);
+                values = out.values
+                vectors = out.vectors
+                vectors = math.transpose(vectors)
+                vectors = vectors.slice(3,6)
+            }
+            catch (err) {
+                values = [0,0,0,std[2][2], std[1][1], std[0][0]]
+                vectors = [
+                    [0,0,1,0,0,0],
+                    [0,1,0,0,0,0],
+                    math.squeeze(powerIteration(std))
+                ]
+        
+            }
+            cov = {
+                r: std[0][0] ** 0.5,
+                i: std[1][1] ** 0.5,
+                c: std[2][2] ** 0.5,
+                rd: std[3][3] ** 0.5,
+                id: std[4][4] ** 0.5,
+                cd: std[5][5] ** 0.5,
+            }
+            navigator.clipboard.writeText(JSON.stringify({std}))
+            updateRic(math.dotPow(values, 0.5).slice(3,6), vectors, cov)
+        }
     }
-    cov = {
-        r: std[0][0] ** 0.5,
-        i: std[1][1] ** 0.5,
-        c: std[2][2] ** 0.5,
-        rd: std[3][3] ** 0.5,
-        id: std[4][4] ** 0.5,
-        cd: std[5][5] ** 0.5,
-    }
-    navigator.clipboard.writeText(JSON.stringify({std}))
-    updateRic(math.dotPow(values, 0.5).slice(3,6), vectors, cov)
+    setTimeout(a, 1)
 }
 
 function randn_bm() {
