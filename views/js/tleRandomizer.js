@@ -99,7 +99,7 @@ function exportFile() {
     state = math.add(state, initError)
     // Define initial covariance matrix
     let pEphemeris = []
-    pEphemeris.push(`${t} ${P[0][0]} ${P[0][1]} ${P[0][2]} ${P[1][1]} ${P[0][2]} ${P[2][2]}`)
+    pEphemeris.push(`${t} ${P[0][0]} ${P[0][1]} ${P[0][2]} ${P[1][1]} ${P[1][2]} ${P[2][2]}`)
     stateEphemeris = [`${t} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`]
 
     let timeDelta = 120
@@ -147,7 +147,7 @@ function exportConsolidated(satelliteData, name) {
     let out = ''
     out += satelliteData.header + '\n'
     out += files.map(file => file.posVelData).join('\n')
-    out += 'CovarianceTimePos \n\n'
+    out += '\n\nCovarianceTimePos \n\n'
     out += files.map(file => file.covData).join('\n')
     out += 'END Ephemeris'
     downloadFile(name, out)
@@ -406,6 +406,9 @@ function importCov(event) {
     catch (error) {
         console.error('Not a valid covariance')
     }
+    setTimeout(() => {
+        event.target.value = ''
+    }, 3000)
 }
 
 function covFromInputs(r = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
