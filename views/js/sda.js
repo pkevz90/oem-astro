@@ -256,12 +256,12 @@ function stepDiffCorrect(eState, time, rate, rObs, w) {
     let midCalc = math.multiply(math.inv(math.multiply(math.transpose(J), w, J)), math.transpose(J), w)
     let errCalc = math.subtract(rObs, estObsList)
     midCalc = math.multiply(midCalc, errCalc)
-    eState[0] += midCalc[0] * 0.5
-    eState[1] += midCalc[1] * 0.5
-    eState[2] += midCalc[2] * 0.5
-    eState[3] += midCalc[3] * 0.5
-    eState[4] += midCalc[4] * 0.5
-    eState[5] += midCalc[5] * 0.5
+    eState[0] += midCalc[0]
+    eState[1] += midCalc[1]
+    eState[2] += midCalc[2]
+    eState[3] += midCalc[3]
+    eState[4] += midCalc[4]
+    eState[5] += midCalc[5]
     return {eState, errCalc, midCalc, p: math.inv(math.multiply(math.transpose(J), w, J))}
 }
 
@@ -310,7 +310,7 @@ function runAlgorith() {
         std = p
         ii++
 
-        if (ii < 15) {
+        if (ii < 20) {
             button.innerText = (ii / 15 * 100).toFixed(0) + '%'
             // button.style.color = 'linear-gradient(90deg, rgba(255, 255, 255, 1) '+ (ii / 10 * 100).toFixed(0) + '%, rgba(0, 0, 0, 1) 10% 100%)'
             button.style.background = 'linear-gradient(90deg, rgba(100, 100, 100, 1) '+ (ii / 15 * 100).toFixed(0) + '%, rgba(200, 200, 200, 1) 10% 100%)'
