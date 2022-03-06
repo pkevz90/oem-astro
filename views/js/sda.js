@@ -187,7 +187,7 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
             obs.push(outObs)
             continue
         }
-        satState = runge_kutta([satState], 1 / rate)
+        satState = runge_kutta([satState], -1 / rate)
         t -= 1/rate
     }
     return obs
