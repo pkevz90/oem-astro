@@ -154,13 +154,14 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
     let positions = []
     let checks = document.getElementsByClassName('sensor-checkbox')
     let sensors = sensorsIn.filter((s, ii) => checks[ii].checked)
+    let spaceZ = 780
     sensors.forEach(s => {
         let realLong = s.long - latitude
         if (s.type === 'space') {
             positions.push([
                 -42164 + 42164 * Math.cos(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
                 42164 * Math.sin(realLong* Math.PI / 180) * Math.cos(s.lat * Math.PI / 180),
-                6371 * Math.sin(s.lat * Math.PI / 180)
+                spaceZ
             ])
             return
         }
@@ -173,10 +174,12 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
     let t = 0
     while (t >= -tFinal) {
         for (let ii = 0; ii < positions.length; ii++) {
+            let curPosition = sensors[ii].type === 'space' ? [positions[ii][0], positions[ii][1], spaceZ - spaceZ * Math.sin(-t * 2 * Math.PI / 86164)] : positions[ii]
+            // console.log(curPosition[2]);
             let outObs = {
-                az: calcAz(positions[ii], satState, noise ? sensors[ii].r : 0),
+                az: calcAz(curPosition, satState, noise ? sensors[ii].r : 0),
                 azr: sensors[ii].r,
-                el: calcEl(positions[ii], satState, noise ? sensors[ii].r : 0),
+                el: calcEl(curPosition, satState, noise ? sensors[ii].r : 0),
                 elr: sensors[ii].r
             }
             if (sensors[ii].type === 'radar') {
@@ -310,7 +313,7 @@ function runAlgorith() {
         std = p
         ii++
 
-        if (ii < 20) {
+        if (ii < 10) {
             button.innerText = (ii / 15 * 100).toFixed(0) + '%'
             // button.style.color = 'linear-gradient(90deg, rgba(255, 255, 255, 1) '+ (ii / 10 * 100).toFixed(0) + '%, rgba(0, 0, 0, 1) 10% 100%)'
             button.style.background = 'linear-gradient(90deg, rgba(100, 100, 100, 1) '+ (ii / 15 * 100).toFixed(0) + '%, rgba(200, 200, 200, 1) 10% 100%)'
