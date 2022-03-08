@@ -47,10 +47,15 @@ class windowCanvas {
         rc: {x: 0, y: 0.5, w: 0, h: 0},
         plot: {x: 0, y: 0, w: 0, h: 0}
     };
+    colors = {
+        backgroundColor: 'white',
+        foregroundColor: 'black',
+        textColor: 'black'
+    }
     normalizeDirection = true;
     frameMove = undefined;
     initSun = [1, 0, 0];
-    desired = {
+    desired = { 
         scenarioTime: 0,
         plotCenter: 0,
         plotWidth: 200,
@@ -181,7 +186,7 @@ class windowCanvas {
     }
     clear() {
         let ctx = this.getContext();
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = this.colors.backgroundColor;
         ctx.fillRect(0, 0, this.cnvs.width, this.cnvs.height);
     }
     getRatio() {
@@ -192,7 +197,7 @@ class windowCanvas {
     }
     drawBorder() {
         let ctx = this.getContext();
-        ctx.strokeStyle = 'black';
+        ctx.strokeStyle = this.colors.foregroundColor;
         for (const frame in this.frameCenter) {
             ctx.beginPath();
             ctx.moveTo((this.frameCenter[frame].x - this.frameCenter[frame].w / 2) * this.cnvs.width, (this.frameCenter[frame].y - this.frameCenter[frame].h / 2) * this.cnvs.height);
@@ -328,8 +333,8 @@ class windowCanvas {
     }
     drawAxes() {
         let ctx = this.getContext();
-        ctx.strokeStyle = 'black';
-        ctx.fillStyle = 'black';
+        ctx.strokeStyle = this.colors.foregroundColor;
+        ctx.fillStyle = this.colors.foregroundColor;
         let axesLength = 0.5;
         let sunLength = 0.4 * this.plotHeight / 2 * Math.max(this.frameCenter.ri.h, this.frameCenter.ci.h, this.frameCenter.rc.h);
         let sunCoor = this.convertToPixels(math.dotMultiply(sunLength, this.getCurrentSun()));
@@ -351,7 +356,7 @@ class windowCanvas {
             ctx.moveTo(origin.ri.x, origin.ri.y);
             ctx.lineTo(sunCoor.ri.x , sunCoor.ri.y);
             ctx.stroke();
-            ctx.strokeStyle = 'black';
+            ctx.strokeStyle = this.colors.foregroundColor;
             ctx.fillText('R', origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.cnvs.width * this.frameCenter.ri.w / 60)
             ctx.fillText('I', origin.ri.x - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.cnvs.width * this.frameCenter.ri.w / 80, origin.ri.y)
 
@@ -366,16 +371,16 @@ class windowCanvas {
             }
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = this.colors.backgroundColor;
         }
         if (this.state.search('ci') !== -1) {
             
             ctx.lineWidth = this.cnvs.width * this.frameCenter.ci.w / 200;
-            ctx.fillStyle = 'white';
+            ctx.fillStyle = this.colors.backgroundColor;
             ctx.fillRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
             // console.log(ctx.lineWidth);
             ctx.strokeRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
-            ctx.fillStyle = 'black ';
+            ctx.fillStyle = this.colors.foregroundColor;
             ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.ci.w / 40 + 'px serif';
             let drawX = math.abs(this.plotCenter) < this.plotWidth / 2* this.frameCenter.ci.w;
             let drawY = this.plotCenter + this.plotWidth / 2 * this.frameCenter.ci.w;
@@ -397,17 +402,17 @@ class windowCanvas {
                 ctx.stroke();
 
             }
-            ctx.strokeStyle = 'black';
+            ctx.strokeStyle = this.colors.foregroundColor;
             
             if (drawX) ctx.fillText('C', origin.ci.x, origin.ci.y - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.cnvs.width * this.frameCenter.ci.w / 60)
             if (drawY > this.plotHeight / 2 * this.frameCenter.ci.h * axesLength) ctx.fillText('I', origin.ci.x - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.cnvs.width * this.frameCenter.ci.w / 80, origin.ci.y)
         }
         if (this.state.search('rc') !== -1) {
-            ctx.fillStyle = 'white';
+            ctx.fillStyle = this.colors.backgroundColor;
             ctx.fillRect(this.frameCenter.rc.x * this.cnvs.width - this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height - this.frameCenter.rc.h / 2 * this.cnvs.height, this.frameCenter.rc.x * this.cnvs.width + this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height + this.frameCenter.rc.h / 2 * this.cnvs.height);
             // console.log(ctx.lineWidth);
             ctx.strokeRect(this.frameCenter.rc.x * this.cnvs.width - this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height - this.frameCenter.rc.h / 2 * this.cnvs.height, this.frameCenter.rc.x * this.cnvs.width + this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height + this.frameCenter.rc.h / 2 * this.cnvs.height);
-            ctx.fillStyle = 'black ';
+            ctx.fillStyle = this.colors.foregroundColor;
             
             ctx.lineWidth = this.cnvs.width * this.frameCenter.rc.w / 200;
             ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.rc.w / 40 + 'px serif';
@@ -422,7 +427,7 @@ class windowCanvas {
             ctx.moveTo(origin.rc.x, origin.rc.y);
             ctx.lineTo(sunCoor.rc.x, sunCoor.rc.y);
             ctx.stroke();
-            ctx.strokeStyle = 'black';
+            ctx.strokeStyle = this.colors.foregroundColor;
             ctx.fillText('C', origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 - this.cnvs.width * this.frameCenter.rc.w / 60)
             ctx.fillText('R', origin.rc.x + this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 + this.cnvs.width * this.frameCenter.rc.w / 80, origin.rc.y)
         }
@@ -446,7 +451,7 @@ class windowCanvas {
             dataLine.push({x, y}); 
         }
         // Fix click on plot
-        this.getContext().strokeStyle = 'black';
+        this.getContext().strokeStyle = this.colors.foregroundColor;
         ctx.rect(this.cnvs.width * this.frameCenter.plot.x - this.cnvs.width * pos.w / 2, this.cnvs.height * this.frameCenter.plot.y - this.cnvs.height * pos.h / 2, this.cnvs.width * pos.w , this.cnvs.height * pos.h)
         ctx.stroke();
         ctx.lineWidth = 1;
@@ -471,7 +476,7 @@ class windowCanvas {
         let ctx = this.getContext();
         let oldLineWidth = ctx.lineWidth;
         let oldStyle = ctx.strokeStyle;
-        ctx.strokeStyle = 'black';
+        ctx.strokeStyle = this.colors.foregroundColor;
         ctx.lineWidth = 1;
         ctx.globalAlpha = 0.5;
         ctx.beginPath();
@@ -482,7 +487,7 @@ class windowCanvas {
         ctx.beginPath();
         ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
         ctx.fill();
-        ctx.fillStyle = 'black';
+        ctx.fillStyle = this.colors.backgroundColor;
         ctx.globalAlpha = 1;
         ctx.lineWidth = oldLineWidth;
         ctx.strokeStyle = oldStyle;
@@ -550,7 +555,7 @@ class windowCanvas {
     }
     drawMouse(position = [0, 0]) {
         let ctx = this.getContext();
-        ctx.strokeStyle = 'black';
+        ctx.strokeStyle = this.colors.foregroundColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(position[0] - this.cnvs.width / 60, position[1]);
@@ -563,6 +568,7 @@ class windowCanvas {
         let ctx = this.getContext();
         let oldWidth = ctx.lineWidth;
         ctx.lineWidth = 1;
+        ctx.fillStyle = this.colors.foregroundColor
         this.relativeData.dataReqs.forEach(req => {
             ctx.textAlign = 'left';
             ctx.font = "bold " + req.textSize + "pt Courier";
@@ -601,7 +607,7 @@ class windowCanvas {
             if (!this.mousePosition) return;
             let ricCoor = this.convertToRic(this.mousePosition);
             let frame = Object.keys(ricCoor)[0];
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = this.colors.foregroundColor;
             ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km ${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km `, this.cnvs.width - 10, this.cnvs.height -  10)
         }
         catch (e) {
@@ -1023,6 +1029,7 @@ setTimeout(() => {
 //------------------------------------------------------------------
 function keydownFunction(key) {
     key.key = key.key.toLowerCase()
+
     if (key.key === 'Control') {
         let buttons = document.getElementsByClassName('ctrl-switch');
         for (let ii = 0; ii < buttons.length; ii++) {
@@ -1037,6 +1044,17 @@ function keydownFunction(key) {
         if (document.activeElement === document.getElementById('add-waypoint-button')) {
             key.preventDefault();
             document.getElementById('add-start-time').focus();
+        }
+    }
+    else if (key.key === 'd') {
+        console.log(key.key);
+        if (mainWindow.colors.backgroundColor === 'black') {
+            mainWindow.colors.backgroundColor = 'white'
+            mainWindow.colors.foregroundColor = 'black'
+        }
+        else {
+            mainWindow.colors.backgroundColor = 'black'
+            mainWindow.colors.foregroundColor = 'white'
         }
     }
     if (mainWindow.panelOpen) return;

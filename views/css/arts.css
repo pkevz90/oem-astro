@@ -314,6 +314,7 @@ html, body {
     flex-wrap: wrap;
     justify-content: space-evenly;
     overflow-y: scroll;
+    background-color: rgba(255,255,255,0.5);
   }
 
   .title-text {
