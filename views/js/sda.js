@@ -35,7 +35,7 @@ let ctxRic = cnvsRic.getContext('2d')
 cnvsRic.width = cnvsRic.clientWidth
 cnvsRic.height = cnvsRic.clientHeight
 
-function updateInertial(sites = []) {
+function updateInertial(hist = {}) {
     ctxInert.clearRect(0,0,cnvsInert.width, cnvsInert.height)
     ctxInert.save()
     ctxInert.strokeStyle = 'black'
@@ -104,6 +104,18 @@ function updateInertial(sites = []) {
     ctxInert.beginPath()
     ctxInert.arc(cnvsInert.width / 2,cnvsInert.height *0.25, 4,0,2 * Math.PI)
     ctxInert.fill()
+
+    
+    let top = 0
+    ctxInert.font = "20px Georgia";
+    ctxInert.fillText('3 Sigma Error', 10, top + 30);
+    // top += 25
+    ctxInert.fillText('__________', 10, top + 30);
+    top += 25
+    for (time in hist) {
+        ctxInert.fillText(time + ' hrs: ' + hist[time].toFixed(2) + ' km', 10, top + 30);
+        top += 25
+    }
 }
 
 function updateRic(values = [0, 1, 2], vectors=[], ricCov = {}) {
@@ -112,7 +124,7 @@ function updateRic(values = [0, 1, 2], vectors=[], ricCov = {}) {
     if (vectors.length > 0) {
         let cIndex = math.max(...vectors.map(v => v[2]))
         let vectorsUse = vectors.filter(v => v[2] !== cIndex)
-        console.log(vectorsUse);
+        // console.log(vectorsUse);
         let angle = math.atan2(vectors[2][0], vectors[2][1])
         let x = 80
         let y = x * values[1] / values[2]
@@ -349,7 +361,37 @@ function runAlgorith() {
             }
             navigator.clipboard.writeText(JSON.stringify({std}))
             updateRic(math.dotPow(values, 0.5).slice(3,6), vectors, cov)
+            console.log(p);
+            let pProp = JSON.parse(JSON.stringify(p))
+            let pHistory = {}
+            console.clear()
+            for (let time = 0; time <= 25*3600; time += 120) {
+                let out = propCovariance(pProp, 120, [[0,0,0,0,0,0]])
+                pProp = out.P
+                if (time === 18000) {
+                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
+                    pHistory[5] = dist
+                }
+                if (time === 36000) {
+                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
+                    pHistory[10] = dist
+                }
+                if (time === 54000) {
+                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
+                    pHistory[15] = dist
+                }
+                if (time === 72000) {
+                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
+                    pHistory[20] = dist
+                }
+                if (time === 25*3600) {
+                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
+                    pHistory[25] = dist
+                }
+            }
+            updateInertial(pHistory)
         }
+        
     }
     setTimeout(a, 1)
 }
@@ -458,6 +500,78 @@ function editSensor(event) {
     sensors[index][type] = type === 'r' ? value * Math.PI / 180 : value
     window.localStorage.setItem('sensors', JSON.stringify(sensors))
     updateInertial(sensors)
+}
+
+function propCovariance(P = [[1,0,0,0,0,0],[0,1,0,0,0,0], [0,0,1,0,0,0], [0,0,0,0.0001,0,0], [0,0,0,0,0.0001,0], [0,0,0,0,0,0.0001]], dt = 60, state = [[0,0,0,0,0,0]]) {
+    let {s, w} = generateSigmaPoints(P, state)
+    s = s.map(point => {
+        return [runge_kutta(point, dt)]
+    })
+    let estP = math.zeros([6,6])
+    let estState = math.zeros([1,6])
+    for (let ii = 0; ii < s.length; ii++) {
+        estState = math.add(estState, math.dotMultiply(w[ii], s[ii])) 
+    }
+    for (let ii = 0; ii < s.length; ii++) {
+        estP = math.add(estP, math.dotMultiply(w[ii], math.multiply(math.transpose(math.subtract(s[ii], estState)), math.subtract(s[ii], estState))))
+    }
+    return {P: estP, state: math.squeeze(estState)}
+}
+
+function generateSigmaPoints(P=[[25,0,0,0,0,0], [0,25,0,0,0,0],[0,0,25,0,0,0],[0,0,0,0.0001**2,0,0],[0,0,0,0,0.0001**2,0], [0,0,0,0,0,0.0001**2]], state = [[42164, 0, 0, 0, -((398600.4418 / 42164) ** (1/2)), 0]]) {
+    let L = 6
+    let w = [0.5]
+    let A = choleskyDecomposition(P)
+    for (let ii = 0; ii < A.length; ii++) {
+        for (let jj = 0; jj < A.length; jj++) {
+            if (isNaN(A[ii][jj])) {
+                if (ii !== jj) {
+                    A[ii][jj] = 0
+                }
+                else {
+                    A[ii][jj] = P[ii][jj] ** 0.5
+                }
+            }
+        }
+    }
+    let s = [state]
+    for (let jj = 0; jj < L; jj++) {
+        s.push(math.transpose(math.add(math.transpose(state), math.dotMultiply((L / (1 - w[0])) ** (1/2), math.column(A, jj)))))
+    }
+    for (let jj = 0; jj < L; jj++) {
+        s.push(math.transpose(math.subtract(math.transpose(state), math.dotMultiply((L / (1 - w[0])) ** (1/2), math.column(A, jj)))))
+    }
+    for (let jj = 0; jj < 2 * L; jj++) {
+        w.push((1 - w[0]) / 2 / L)    
+    }
+    return {s, w}
+}
+
+function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]) {
+    let a = math.zeros([matrix.length, matrix.length])    
+    for (let ii = 0; ii < a.length; ii++) {
+        for (let jj = 0; jj <= ii; jj++) {
+            if (ii === jj) {
+                a[ii][jj] = matrix[ii][jj]
+                let subNumber = 0
+                for (let kk = 0; kk < jj; kk++) {
+                    subNumber += a[jj][kk] ** 2
+                }
+                a[ii][jj] -= subNumber
+                a[ii][jj] = a[ii][jj] ** (1/2)
+            }
+            else {
+                a[ii][jj] = matrix[ii][jj]
+                let subNumber = 0
+                for (let kk = 0; kk < jj; kk++) {
+                    subNumber += a[ii][kk] * a[jj][kk]
+                }
+                a[ii][jj] -= subNumber
+                a[ii][jj] *= 1 / a[jj][jj]
+            }
+        }
+    }
+    return a
 }
 earth.onload = () => updateInertial()
 updateRic()
