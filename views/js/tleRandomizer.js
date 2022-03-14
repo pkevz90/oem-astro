@@ -87,7 +87,7 @@ function exportFile() {
     }
     t = timeDiff
     // Add gaussian error to the initial state
-    let rEci2Eci = Ric2Eci(state.slice(0,3), state.slice(3,6))
+    let rEci2Eci = Ric2EciRedux(state.slice(0,3), state.slice(3,6))
     let stateCov = covFromInputs(rEci2Eci)
     
     let P = math.dotMultiply(1e6, math.multiply(stateCov, math.transpose(stateCov)))
@@ -411,7 +411,7 @@ function importCov(event) {
     }, 3000)
 }
 
-function covFromInputs(r = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
+function covFromInputs(r) {
     let err_inputs = document.getElementsByTagName('input')
     let cov = math.zeros([6,6])
     cov[0][0] = Number(err_inputs[5].value) < 1e-8 ? 1e-8 : Number(err_inputs[5].value)
@@ -436,11 +436,12 @@ function covFromInputs(r = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
     cov[5][4] = Number(err_inputs[24].value)
     cov[5][5] = Number(err_inputs[25].value) < 1e-12 ? 1e-12 : Number(err_inputs[25].value)
     let p = math.multiply(cov, math.transpose(cov))
-    r = math.concat(math.concat(r, math.zeros([3,3])), math.concat(math.zeros([3,3]), r), 0)
+    // r = math.concat(math.concat(r, math.zeros([3,3])), math.concat(math.zeros([3,3]), r), 0)
     return choleskyDecomposition(math.multiply(r, p, math.transpose(r)))
 }
 n = 2 * Math.PI / 86164
-function Ric2Eci(rC = [(398600.4418 / n ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / n ** 2)**(1/3))) ** (1/2), 0]) {
+
+function Ric2EciRedux(rC = [(398600.4418 / n ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / n ** 2)**(1/3))) ** (1/2), 0]) {
     let h = math.cross(rC, drC);
     let ricX = math.dotDivide(rC, math.norm(rC));
     let ricZ = math.dotDivide(h, math.norm(h));
@@ -451,5 +452,10 @@ function Ric2Eci(rC = [(398600.4418 / n ** 2)**(1/3), 0, 0], drC = [0, (398600.4
     let ricZd = [0,0,0];
 
     let C = math.transpose([ricX, ricY, ricZ]);
-    return C
+    let Cd = math.transpose([ricXd, ricYd, ricZd]);
+    let R1 = math.concat(C, math.zeros([3,3]), 1)
+    let R2 = math.concat(Cd, C, 1)
+    let R = math.concat(R1, R2, 0)
+    console.log(R);
+    return R
 }

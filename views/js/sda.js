@@ -365,28 +365,13 @@ function runAlgorith() {
             let pProp = JSON.parse(JSON.stringify(p))
             let pHistory = {}
             console.clear()
-            for (let time = 0; time <= 25*3600; time += 120) {
-                let out = propCovariance(pProp, 120, [[0,0,0,0,0,0]])
+            dt = 30
+            for (let time = 0; time <= 12*3600; time += dt) {
+                let out = propCovariance(pProp, dt, [[0,0,0,0,0,0]])
                 pProp = out.P
-                if (time === 18000) {
-                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
-                    pHistory[5] = dist
-                }
-                if (time === 36000) {
-                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
-                    pHistory[10] = dist
-                }
-                if (time === 54000) {
-                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
-                    pHistory[15] = dist
-                }
-                if (time === 72000) {
-                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
-                    pHistory[20] = dist
-                }
-                if (time === 25*3600) {
-                    let dist = math.max(math.sqrt(math.dotMultiply(3, math.eigs(pProp).values)))
-                    pHistory[25] = dist
+                if (time % 7200 === 0) {
+                    let dist = math.max(math.dotMultiply(3, math.sqrt(math.eigs(pProp).values)))
+                    pHistory[time / 3600] = dist
                 }
             }
             updateInertial(pHistory)
@@ -432,7 +417,7 @@ function updateSensors(event) {
             type: 'optical',
             lat: Math.round(-90 + 180 * Math.random()),
             long: Math.round(-90 + 180 * Math.random()),
-            r: 0.005 * Math.PI / 180,
+            r: 0.0002 * Math.PI / 180,
             name: 'Optical'
         })
     }
@@ -460,7 +445,7 @@ function updateSensors(event) {
 
     window.localStorage.setItem('sensors', JSON.stringify(sensors))
     refreshSensorList(sensOut)
-    updateInertial(sensors)
+    updateInertial()
 }
 
 function refreshSensorList(sensIn) {
