@@ -960,7 +960,11 @@ class Satellite {
             id: state[4],
             cd: state[5]
         }
-        this.burns = []
+        if (this.burns.length > 0) {
+            if (this.burns[0].time > dt) this.burns.map(burn => burn.time -= dt)
+            else this.burns = []
+        }
+        else this.burns = []
         this.calcTraj();
     }
 }
@@ -2378,6 +2382,7 @@ function parseState(button) {
     if (text[0] === "") text.shift();
     if (text[text.length - 1] === "") text.pop();
     if (text.length > 9) {
+        let oldMM = mainWindow.mm + 0
         if (text.length > 12) {
             let tA = Number(text.pop() * Math.PI / 180)
             let arg = Number(text.pop() * Math.PI / 180)
@@ -2399,7 +2404,7 @@ function parseState(button) {
             mainWindow.mm = Math.sqrt(398600.4418 / (Number(text.pop() ** 3)));
             mainWindow.originOrbit.a = (398600.4418 / mainWindow.mm ** 2) ** (1/3)
         }
-        mainWindow.scenarioLength = 2 * Math.PI / mainWindow.mm / 3600 * 2;
+        mainWindow.scenarioLength = math.abs(mainWindow.mm - oldMM) < 1000 ? mainWindow.scenarioLength : 2 * Math.PI / mainWindow.mm / 3600 * 2;
         document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
         mainWindow.timeDelta = 0.006 * 2 * Math.PI / mainWindow.mm;
     }
