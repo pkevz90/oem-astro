@@ -76,6 +76,13 @@ function exportFile() {
     let timeLine = data[1].findIndex(line => {
         return Number(line.split(/ +/)[1]) >= timeDiff;
     });
+    // Get propTime
+    let lastLine = data[1].length-1
+    while (isNaN(Number(data[1][lastLine].split(/ +/)[1]))) {
+        lastLine--
+    }
+    let endTime = Number(data[1][lastLine].split(/ +/)[1])
+
     let saveName = 'sat' + math.floor(data[1][0].split(/ +/).filter(line => line !== '')[1]);
     // Pull initial state from ephemeris file
     let stateEphemeris = data[1].slice(timeLine + 1, timeLine + 2)
@@ -103,7 +110,7 @@ function exportFile() {
     stateEphemeris = [`${t} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`]
 
     let timeDelta = 120
-    for (let ii = timeDelta; ii <= 12 * 3600; ii+=timeDelta) {
+    for (let ii = timeDelta; ii <= (endTime - timeDiff); ii+=timeDelta) {
         let out = propCovariance(P, timeDelta, [state])
         state = out.state
         P = out.P
