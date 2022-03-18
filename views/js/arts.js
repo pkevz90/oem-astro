@@ -4502,3 +4502,45 @@ function copySat(sat = 0) {
     }
     mainWindow.satellites[sat].calcTraj()
 }
+
+function findInTrackTime(sat= 0, it= -20, time = mainWindow.scenarioTime) {
+    if (mainWindow.satellites.length === 0) return
+    let stateHist = mainWindow.satellites[sat].stateHistory
+    stateHist = stateHist.filter(state => state.t > time)
+    let curState = mainWindow.satellites[sat].curPos
+    let positionSeed = curState.i < it ? 1 : -1;
+    let seedIndex = stateHist.findIndex(state => state.i * positionSeed > it * positionSeed);
+    if (seedIndex === -1) return showScreenAlert('No Solution')
+    let seedTime = stateHist[seedIndex].t
+    // console.log(seedTime);
+    for (let index = 0; index < 10; index++) {
+        let dt = 0.1
+        let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
+        let time2 = mainWindow.satellites[sat].currentPosition({time: seedTime - dt})
+        let di_dt = (time1.i[0] - time2.i[0]) / dt
+        seedTime += (it - time1.i[0]) / di_dt
+    }
+    mainWindow.desired.scenarioTime = seedTime
+    document.getElementById('time-slider-range').value = seedTime
+}
+
+function findRadialTime(sat= 0, r= -20, time = mainWindow.scenarioTime) {
+    if (mainWindow.satellites.length === 0) return
+    let stateHist = mainWindow.satellites[sat].stateHistory
+    stateHist = stateHist.filter(state => state.t > time)
+    let curState = mainWindow.satellites[sat].curPos
+    let positionSeed = curState.r < r ? 1 : -1;
+    let seedIndex = stateHist.findIndex(state => state.r * positionSeed > r * positionSeed);
+    if (seedIndex === -1) return showScreenAlert('No Solution')
+    let seedTime = stateHist[seedIndex].t
+    // console.log(seedTime);
+    for (let index = 0; index < 10; index++) {
+        let dt = 0.1
+        let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
+        let time2 = mainWindow.satellites[sat].currentPosition({time: seedTime - dt})
+        let di_dt = (time1.r[0] - time2.r[0]) / dt
+        seedTime += (r - time1.r[0]) / di_dt
+    }
+    mainWindow.desired.scenarioTime = seedTime
+    document.getElementById('time-slider-range').value = seedTime
+}
