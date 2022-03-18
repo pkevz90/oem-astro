@@ -1378,6 +1378,8 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="prop-crossing">Next Plane-Crossing</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-perigee">Next Perigee</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-apogee">Next Apogee</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-radial">Radial Position</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="prop-in-track">In-Track Position</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-maxsun">To Max Sun</div>' : ''}
         `
@@ -1452,6 +1454,25 @@ function handleContextClick(button) {
             newInnerHTML += `<div class="context-item"  onclick="handleContextClick(this)" sat="${ii}" id="${button.id}-execute">${mainWindow.satellites[ii].name}</div>`
         }
         button.parentElement.innerHTML = newInnerHTML;
+    }
+    else if (button.id === 'prop-radial' || button.id === 'prop-in-track') {
+        let newInnerHTML = `
+            <div class="context-item" ><input type="Number" style="width: 3em; font-size: 1em"> km</div>
+            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-${button.id === 'prop-radial' ? 'r' : 'i'}" tabindex="0">Prop to ${button.id === 'prop-radial' ? 'R' : 'I'}</div>
+        `;
+        button.parentElement.innerHTML = newInnerHTML;
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'execute-r' || button.id === 'execute-i') {
+        let target = Number(button.parentElement.getElementsByTagName('input')[0].value)
+        let sat = document.getElementById('context-menu').sat
+        if (button.id === 'execute-r') {
+            findRadialTime(sat, target)
+        }
+        else {
+            findInTrackTime(sat, target)
+        }
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-poca-execute') {
         let sat1 = button.getAttribute('sat'), sat2 = document.getElementById('context-menu').sat;
