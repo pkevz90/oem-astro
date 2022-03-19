@@ -23,20 +23,10 @@
                 # Radar <input class="site-input" type="number" value="0" min="0" oninput="updateSensors(event)"> 
                 # Space <input class="site-input" type="number" value="0" min="0" oninput="updateSensors(event)"></div>
             <div id="sensor-display">
-                <div index="0"><span oninput="editSensor(event)" type="name" contenteditable="true">Optical </span> <input type="checkbox" class="sensor-checkbox" checked>
-                    Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="lat">30</span> deg </span>
-                    Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="long">10</span> deg </span>
-                    StD:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="r">0.005</span> deg </span>
-                </div>
-                <div index="1"><span oninput="editSensor(event)" type="name" contenteditable="true">Optical </span> <input type="checkbox" class="sensor-checkbox" checked>
-                    Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="lat">10</span> deg </span>
-                    Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="long">-20</span> deg </span>
-                    StD:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="r">0.005</span> deg </span>
-                </div>
             </div>
             <div>
                 Track Time<input type="number" class="site-input" placeholder="Total Time" value="2" id="tt">
-                Frequency <input type="number" class="site-input" placeholder="Freq" id="freq" value="10"> min
+                Frequency of Obs <input type="number" class="site-input" placeholder="Freq" id="freq" value="10"> min
                 Longitude <input type="number" class="site-input" placeholder="Freq" id="freq" value="0" oninput="changeLongitude(event)"> deg
                 <button onclick="runAlgorith()">
                     Run

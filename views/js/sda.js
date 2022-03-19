@@ -17,14 +17,16 @@ let sensors = [
         long: 10,
         r: 0.005 * Math.PI / 180,
         type: 'optical',
-        name: 'Optical'
+        name: 'Optical',
+        availString: '1'
     },
     {
         lat: 10,
         long: -20,
         r: 0.005 * Math.PI / 180,
         type: 'optical',
-        name: 'Optical'
+        name: 'Optical',
+        availString: '1'
     }
 ]
 sensors = window.localStorage.sensors !== undefined ? JSON.parse(window.localStorage.sensors) : sensors
@@ -166,6 +168,7 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
     let positions = []
     let checks = document.getElementsByClassName('sensor-checkbox')
     let sensors = sensorsIn.filter((s, ii) => checks[ii].checked)
+    let avail = sensors.map(sens => sens.availString).map(avail => str2avail(avail))
     let spaceZ = 780
     sensors.forEach(s => {
         let realLong = s.long - latitude
@@ -186,8 +189,10 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
     let t = 0
     while (t >= -tFinal) {
         for (let ii = 0; ii < positions.length; ii++) {
+            if (avail[ii].filter(time => {
+                return ((-time.start*tFinal >= t)) && (-(time.end*tFinal) <= t)
+            }).length === 0) continue
             let curPosition = sensors[ii].type === 'space' ? [positions[ii][0], positions[ii][1], spaceZ - spaceZ * Math.sin(-t * 2 * Math.PI / 86164)] : positions[ii]
-            // console.log(curPosition[2]);
             let outObs = {
                 az: calcAz(curPosition, satState, noise ? sensors[ii].r : 0),
                 azr: sensors[ii].r,
@@ -418,7 +423,8 @@ function updateSensors(event) {
             lat: Math.round(-90 + 180 * Math.random()),
             long: Math.round(-90 + 180 * Math.random()),
             r: 0.0002 * Math.PI / 180,
-            name: 'Optical'
+            name: 'Optical',
+            availString: '1'
         })
     }
     while (radarSensors.length < radar) {
@@ -428,7 +434,8 @@ function updateSensors(event) {
             long: Math.round(-90 + 180 * Math.random()),
             rr: 2,
             r: 0.005 * Math.PI / 180,
-            name: 'Radar'
+            name: 'Radar',
+            availString: '1'
         })
     }
     while (spaceSensors.length < space) {
@@ -437,7 +444,8 @@ function updateSensors(event) {
             lat: 0,
             long: Math.round(-90 + 180 * Math.random()),
             r: 0.005 * Math.PI / 180,
-            name: 'Space'
+            name: 'Space',
+            availString: '1'
         })
     }
     let sensOut = opticalSensors.concat(radarSensors).concat(spaceSensors)
@@ -465,6 +473,7 @@ function refreshSensorList(sensIn) {
             Long: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="long">${s.long}</span> deg </span>
             StD A:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="r">${s.r * 180 / Math.PI}</span> deg </span>
             ${s.type === 'radar' ? `StD R:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="rr">${s.rr}</span> km </span>` : ''}
+            Availability: <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="avail">${s.availString}</span>
         </div>
         `
         
@@ -479,6 +488,10 @@ function editSensor(event) {
         sensors[index][type] = event.target.innerText
         return window.localStorage.setItem('sensors', JSON.stringify(sensors))
     } 
+    else if (type === 'avail') {
+        sensors[index].availString = event.target.innerText
+        return window.localStorage.setItem('sensors', JSON.stringify(sensors))
+    }
     let value = Number(event.target.innerText)
     if (isNaN(value)) event.target.style.backgroundColor = '#FCB'
     else event.target.style.backgroundColor = 'white'
@@ -558,5 +571,27 @@ function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]
     }
     return a
 }
+
+function str2avail(str='0101') {
+    let len = str.length
+    let dt = 1 / len
+    let place = 0
+    let avail = []
+    console.log(len);
+    while (place < len) {
+        while (str[place] === '0') {
+            place++
+        }
+        if (place === len) break
+        let start = place * dt
+        while (str[place] !== '0' && place < len) {
+            place++
+        }
+        let end = place * dt
+        avail.push({start, end})
+    }
+    return avail
+}
+
 earth.onload = () => updateInertial()
 updateRic()
