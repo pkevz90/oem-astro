@@ -168,7 +168,7 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
     let positions = []
     let checks = document.getElementsByClassName('sensor-checkbox')
     let sensors = sensorsIn.filter((s, ii) => checks[ii].checked)
-    let avail = sensors.map(sens => sens.availString).map(avail => str2avail(avail))
+    let avail = sensors.map(sens => sens.availString).map(avail => str2avail(avail.split('').reverse('').join('')))
     let spaceZ = 780
     sensors.forEach(s => {
         let realLong = s.long - latitude
