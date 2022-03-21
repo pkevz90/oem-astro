@@ -1962,23 +1962,18 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     else return;
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
-        let time = []
-        time.push('' + (math.floor(mainWindow.desired.scenarioTime / 3600) - new Date(mainWindow.startDate).getHours()))
-        time.push('' + math.floor((mainWindow.desired.scenarioTime - time[0] * 3600) / 60))
-        time.push('' + math.floor(mainWindow.desired.scenarioTime - time[0] * 3600 - time[1] * 60))
-        time = time.map(t => {
-            if (t.length === 1) {
-                return '0' + t
-            }
-            return t
-        })
-        let newTime = prompt('Enter scenario time in HH:MM:SS past start:', time.join(':'))
-        newTime = newTime.split(/[^0-9]/g)
-        newTime = Number(newTime[0]) * 3600 + (newTime[1] !== undefined ? Number(newTime[1]) * 60 : 0) + (newTime[2] !== undefined ? Number(newTime[2]) : 0)
-        if (newTime/3600 < mainWindow.scenarioLength && newTime > 0) {
-            mainWindow.desired.scenarioTime = newTime;
-            mainWindow.scenarioTime = newTime;
-            document.getElementById('time-slider-range').value = newTime;
+        let curTime = new Date(mainWindow.startDate.getTime() + mainWindow.scenarioTime * 1000).toString().split(' GMT')[0].substring(4)
+        let newTime = prompt('Enter scenario time:',curTime)
+        let desTime = new Date(newTime)
+        let delTime = desTime - mainWindow.startDate
+        console.log(desTime, delTime);
+        if (delTime/3600000 < mainWindow.scenarioLength && delTime > 0) {
+            mainWindow.desired.scenarioTime = delTime / 1000;
+            mainWindow.scenarioTime = delTime / 1000;
+            document.getElementById('time-slider-range').value = delTime / 1000;
+        }
+        else {
+            showScreenAlert('Invalid Time String')
         }
         return
     }

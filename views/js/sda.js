@@ -15,7 +15,7 @@ let sensors = [
     {
         lat: 30,
         long: 10,
-        r: 0.005 * Math.PI / 180,
+        r: 0.0005 * Math.PI / 180,
         type: 'optical',
         name: 'Optical',
         availString: '1'
@@ -23,7 +23,7 @@ let sensors = [
     {
         lat: 10,
         long: -20,
-        r: 0.005 * Math.PI / 180,
+        r: 0.0005 * Math.PI / 180,
         type: 'optical',
         name: 'Optical',
         availString: '1'
@@ -40,8 +40,16 @@ cnvsRic.height = cnvsRic.clientHeight
 function updateInertial(hist = {}) {
     ctxInert.clearRect(0,0,cnvsInert.width, cnvsInert.height)
     ctxInert.save()
-    ctxInert.strokeStyle = 'black'
     let groundColor = '#F22'
+    
+    ctxInert.translate(cnvsInert.width / 2, cnvsInert.height)
+    ctxInert.rotate(latitude*Math.PI/180);
+    let radius = 0.75 * cnvsInert.height * 6371 / 42164
+    ctxInert.drawImage(earth, -radius, -radius, radius*2, radius*2);
+
+    ctxInert.restore()
+    ctxInert.strokeStyle = 'black'
+    
     ctxInert.fillStyle = groundColor
     sensors.filter(s => s.lat < 0).forEach(s => {
         
@@ -57,23 +65,23 @@ function updateInertial(hist = {}) {
         delX = 0.75 * cnvsInert.height * delX / 42164
         let delY = 6371 * Math.cos(realLong * Math.PI / 180) * Math.cos(s.lat * Math.PI / 180)
         delY = 0.75 * cnvsInert.height * delY / 42164
+        
+        let x1 = -delX, y1 = delY
+        let x2 = 0, y2 = cnvsInert.height * 0.75
+        let a = (y2 - y1) / (x2 - x1)
+        let b = y1 - a * x1
+        let r = 0.75 * cnvsInert.height * 6371 / 42164
+        x1 = (-2 * b * a + ((2 * b * a) ** 2 - 4 * (a ** 2 + 1) * (b ** 2 - r ** 2)) ** (1/2)) / (2 * a * a+ 2)
+        x2 = (-2 * b * a - ((2 * b * a) ** 2 - 4 * (a ** 2 + 1) * (b ** 2 - r ** 2)) ** (1/2)) / (2 * a * a+ 2)
+        y1 = a * x1 + b
+        y2 = a * x2 + b
+        let x = y1 > 0 ? x1 : x2
+        let y = y1 > 0 ? y1 : y2
         ctxInert.beginPath()
-        ctxInert.moveTo(cnvsInert.width / 2 - delX, cnvsInert.height - delY)
+        ctxInert.moveTo(cnvsInert.width / 2 + x, cnvsInert.height - y)
         ctxInert.lineTo(cnvsInert.width / 2, cnvsInert.height * 0.25)
         ctxInert.stroke()
-        ctxInert.beginPath()
-        ctxInert.arc(cnvsInert.width / 2 - delX, cnvsInert.height - delY, 3, 0, 2 * Math.PI)
-        ctxInert.fill()
     })
-    ctxInert.translate(cnvsInert.width / 2, cnvsInert.height)
-    ctxInert.rotate(latitude*Math.PI/180);
-    let radius = 0.75 * cnvsInert.height * 6371 / 42164
-    ctxInert.drawImage(earth, -radius, -radius, radius*2, radius*2);
-
-    ctxInert.restore()
-    ctxInert.strokeStyle = 'black'
-    
-    ctxInert.fillStyle = groundColor
     sensors.filter(s => s.lat >= 0).forEach(s => {
         let delX, delY
         let realLong = s.long - latitude
@@ -374,7 +382,7 @@ function runAlgorith() {
             for (let time = 0; time <= 12*3600; time += dt) {
                 let out = propCovariance(pProp, dt, [[0,0,0,0,0,0]])
                 pProp = out.P
-                if (time % 7200 === 0) {
+                if (time % 3600 === 0) {
                     let dist = math.max(math.dotMultiply(3, math.sqrt(math.eigs(pProp).values)))
                     pHistory[time / 3600] = dist
                 }
@@ -463,10 +471,8 @@ function refreshSensorList(sensIn) {
     inputs[2].value = sensors.filter(s => s.type === 'space').length
     let disp = document.getElementById('sensor-display')
     disp.innerHTML = ''
-    console.log(sensIn);
     sensIn.forEach((s, ii) => {
         let newDiv = document.createElement('div')
-        console.log(s.type === 'radar');
         newDiv.innerHTML =  `
         <div index="${ii}"><span oninput="editSensor(event)" type="name" contentEditable="true">${s.name}</span> <input checked type="checkbox" class="sensor-checkbox">
             ${s.type !== 'space' ? `Lat:  <span class="value-span"><span contenteditable="true" oninput="editSensor(event)" type="lat">${s.lat}</span> deg </span>` : ''}
@@ -497,7 +503,7 @@ function editSensor(event) {
     else event.target.style.backgroundColor = 'white'
     sensors[index][type] = type === 'r' ? value * Math.PI / 180 : value
     window.localStorage.setItem('sensors', JSON.stringify(sensors))
-    updateInertial(sensors)
+    updateInertial()
 }
 
 function propCovariance(P = [[1,0,0,0,0,0],[0,1,0,0,0,0], [0,0,1,0,0,0], [0,0,0,0.0001,0,0], [0,0,0,0,0.0001,0], [0,0,0,0,0,0.0001]], dt = 60, state = [[0,0,0,0,0,0]]) {
