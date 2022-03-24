@@ -1328,6 +1328,7 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
             <div class="context-item" onclick="handleContextClick(this)" id="dsk-maneuver">DSK</div>
             <div class="context-item" onclick="handleContextClick(this)" id="drift-maneuver">Set Drift Rate</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="perch-maneuver">Perch</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
@@ -1339,6 +1340,11 @@ function handleContextClick(button) {
         `
         button.parentElement.innerHTML = html
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'perch-maneuver') { 
+        let sat = button.parentElement.sat;
+        perchSatellite(sat)
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'burn-time-change') {
         let sat = button.getAttribute('sat')
@@ -1381,7 +1387,6 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="prop-radial">Radial Position</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-in-track">In-Track Position</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>' : ''}
-            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-maxsun">To Max Sun</div>' : ''}
         `
     }
     else if (button.id === 'data-options') {
@@ -1637,47 +1642,8 @@ function handleContextClick(button) {
             }
         }
         let sat = button.parentElement.sat;
-        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
-            return burn.time < mainWindow.scenarioTime;
-        })
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
-        if (mainWindow.normalizeDirection) {
-            let rot = translateFrames(sat)
-            dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
-        }
-        let position = mainWindow.satellites[sat].currentPosition();
-        mainWindow.satellites[sat].burns.push({
-            time: mainWindow.desired.scenarioTime,
-            direction: {
-                r: dir[0],
-                i: dir[1],
-                c: dir[2]
-            },
-            waypoint: {
-                tranTime: 0,
-                target: {
-                    r: 0,
-                    i: 0,
-                    c: 0,
-                }
-            }
-        })
-        let tof = 1.5*math.norm([ Number(inputs[0].value),  Number(inputs[1].value),  Number(inputs[2].value)]) / 1000 / mainWindow.satellites[sat].a;
-        tof = tof > 10800 ? tof : 10800;
-        position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
-        let direction = dir;
-        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.scenarioTime, mainWindow.satellites[sat].a)
-        
-        mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
-            tranTime: tof,
-            target: {
-                r: wayPos.x,
-                i: wayPos.y,
-                c: wayPos.z
-            }
-        }
-        mainWindow.satellites[sat].genBurns();
-        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + 3600;
+        insertDirectionBurn(sat, mainWindow.scenarioTime, dir)
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
     }
@@ -4575,4 +4541,122 @@ function findCrossTrackTime(sat= 0, c= -5, time = mainWindow.scenarioTime) {
     }
     mainWindow.desired.scenarioTime = seedTime
     document.getElementById('time-slider-range').value = seedTime
+}
+
+function perchSatelliteSolver(state = [1, 10, 0, -0.005, 0, 0], a = 0.00001, startTime = mainWindow.scenarioTime) {
+    // Generate initial guess
+    let direction = math.dotMultiply(-1, state.slice(3,6))
+    let params = {az: math.atan2(direction[1], direction[0]), el: math.atan2(direction[2], math.norm([direction[0], direction[1]])), tb: math.norm([direction[0], direction[1], direction[2]]) / a}
+    direction = math.dotDivide(direction, math.norm(direction))
+    let numBurnPoints = math.ceil(params.tb / mainWindow.timeDelta)
+    numBurnPoints = numBurnPoints < 1 ? 1 : numBurnPoints;
+    
+    let genJacobPerch = function(params, startState, a, startT) {
+        let dir = [a * Math.cos(params.az) * Math.cos(params.el),
+                   a * Math.sin(params.az) * Math.cos(params.el),
+                   a * Math.sin(params.el)]
+        let baseState = runge_kutta(twoBodyRpo, startState, params.tb, dir, startT).slice(3,6)
+        let derivative = []
+        let paramsDelta = {...params}
+        paramsDelta.az += 0.01
+        dir = [a * Math.cos(paramsDelta.az) * Math.cos(paramsDelta.el),
+            a * Math.sin(paramsDelta.az) * Math.cos(paramsDelta.el),
+            a * Math.sin(paramsDelta.el)]
+        let deltaState = runge_kutta(twoBodyRpo, startState, paramsDelta.tb, dir, startT).slice(3,6)
+        derivative.push(math.dotDivide(math.subtract(deltaState, baseState), 0.01))
+
+        paramsDelta = {...params}
+        paramsDelta.el += 0.01
+        dir = [a * Math.cos(paramsDelta.az) * Math.cos(paramsDelta.el),
+            a * Math.sin(paramsDelta.az) * Math.cos(paramsDelta.el),
+            a * Math.sin(paramsDelta.el)]
+        deltaState = runge_kutta(twoBodyRpo, startState, paramsDelta.tb, dir, startT).slice(3,6)
+        derivative.push(math.dotDivide(math.subtract(deltaState, baseState), 0.01))
+
+        paramsDelta = {...params}
+        paramsDelta.tb += 0.01
+        dir = [a * Math.cos(paramsDelta.az) * Math.cos(paramsDelta.el),
+            a * Math.sin(paramsDelta.az) * Math.cos(paramsDelta.el),
+            a * Math.sin(paramsDelta.el)]
+        deltaState = runge_kutta(twoBodyRpo, startState, paramsDelta.tb, dir, startT).slice(3,6)
+        derivative.push(math.dotDivide(math.subtract(deltaState, baseState), 0.01))
+        
+        return math.transpose(derivative)
+    }
+    for (let index = 0; index < 100; index++) {
+        // Generate Jacobian
+        let jac = genJacobPerch(params, state, a, startTime)
+
+        let dir = [a * Math.cos(params.az) * Math.cos(params.el),
+            a * Math.sin(params.az) * Math.cos(params.el),
+            a * Math.sin(params.el)]
+        // Get final state
+        let stateF = [...state]
+        for (let index = 0; index < numBurnPoints; index++) {
+            stateF = runge_kutta(twoBodyRpo, stateF, params.tb / numBurnPoints, dir, startTime + index / numBurnPoints * params.tb)
+        }
+        stateF = stateF.slice(3,6)
+
+        let des = [0,0,0]
+        let residuals = math.transpose([math.subtract(des, stateF)])
+        let dParams = math.squeeze(math.multiply(math.inv(jac), residuals))
+        params.az += dParams[0]
+        params.el += dParams[1]
+        params.tb += dParams[2]
+    }
+    let dir = [a * Math.cos(params.az) * Math.cos(params.el),
+        a * Math.sin(params.az) * Math.cos(params.el),
+        a * Math.sin(params.el)]
+    
+    let stateF = runge_kutta(twoBodyRpo, state, params.tb, dir, startTime).slice(3,6)
+    console.log(params.tb);
+    return {dir: math.dotMultiply(params.tb, dir), stateF, params}
+}
+
+function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
+    mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+        return burn.time < time
+    })
+    let position = mainWindow.satellites[sat].currentPosition({time});
+    mainWindow.satellites[sat].burns.push({
+        time: time,
+        direction: {
+            r: dir[0],
+            i: dir[1],
+            c: dir[2]
+        },
+        waypoint: {
+            tranTime: 0,
+            target: {
+                r: 0,
+                i: 0,
+                c: 0,
+            }
+        }
+    })
+    let tof = 1.5 * math.norm(dir) / mainWindow.satellites[sat].a;
+    tof = tof > 10800 ? tof : 10800;
+    position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
+    let direction = dir;
+    let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, time, mainWindow.satellites[sat].a)
+    
+    mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
+        tranTime: tof,
+        target: {
+            r: wayPos.x,
+            i: wayPos.y,
+            c: wayPos.z
+        }
+    }
+    mainWindow.satellites[sat].genBurns();
+    mainWindow.desired.scenarioTime = time + 3600;
+}
+
+function perchSatellite(sat = 0, time = mainWindow.scenarioTime) {
+    let curPos = mainWindow.satellites[sat].currentPosition({time})
+    let burnEst = math.norm([curPos.rd[0], curPos.id[0], curPos.cd[0]])
+    curPos = mainWindow.satellites[sat].currentPosition({time: time - burnEst / mainWindow.satellites[sat].a / 2})
+
+    let burnOut = perchSatelliteSolver([curPos.r[0], curPos.i[0], curPos.c[0], curPos.rd[0], curPos.id[0], curPos.cd[0]], mainWindow.satellites[sat].a)
+    insertDirectionBurn(sat, time - burnEst / mainWindow.satellites[sat].a / 2, burnOut.dir)
 }
