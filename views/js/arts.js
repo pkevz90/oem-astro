@@ -1329,6 +1329,7 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="dsk-maneuver">DSK</div>
             <div class="context-item" onclick="handleContextClick(this)" id="drift-maneuver">Set Drift Rate</div>
             <div class="context-item" onclick="handleContextClick(this)" id="perch-maneuver">Perch</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="circ-maneuver">Circularize</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
@@ -1344,6 +1345,11 @@ function handleContextClick(button) {
     else if (button.id === 'perch-maneuver') { 
         let sat = button.parentElement.sat;
         perchSatellite(sat)
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'circ-maneuver') { 
+        let sat = button.parentElement.sat;
+        circSatellite(sat)
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'burn-time-change') {
@@ -4659,4 +4665,150 @@ function perchSatellite(sat = 0, time = mainWindow.scenarioTime) {
 
     let burnOut = perchSatelliteSolver([curPos.r[0], curPos.i[0], curPos.c[0], curPos.rd[0], curPos.id[0], curPos.cd[0]], mainWindow.satellites[sat].a)
     insertDirectionBurn(sat, time - burnEst / mainWindow.satellites[sat].a / 2, burnOut.dir)
+}
+
+function circSatellite(sat = 0, time = mainWindow.scenarioTime) {
+    let dt = 7200
+    let curPos = mainWindow.satellites[sat].currentPosition({time})
+    let curPos2 = mainWindow.satellites[sat].currentPosition({time: time + dt})
+    let curR = math.norm([curPos.r[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3), curPos.i[0], curPos.c[0]])
+    let curTh = math.atan2( curPos.i[0], curPos.r[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3))
+    let dTh = (398600.4418 / curR ** 3) ** (1/2) - (398600.4418 / (398600.4418 / mainWindow.mm ** 2)) ** (1/2)
+    let newTh = curTh + dt * dTh
+    let newPos = [curR * Math.cos(newTh) - (398600.4418 / mainWindow.mm ** 2) ** (1/3), curR * Math.sin(newTh), curPos2.c[0]]
+    
+    mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+        return burn.time < mainWindow.scenarioTime;
+    })
+    mainWindow.satellites[sat].burns.push({
+        time: mainWindow.desired.scenarioTime,
+        direction: {
+            r: 0,
+            i: 0,
+            c: 0
+        },
+        waypoint: {
+            tranTime: dt,
+            target: {
+                r: newPos[0],
+                i: newPos[1],
+                c: newPos[2],
+            }
+        }
+    })
+    mainWindow.satellites[sat].genBurns();
+    let dV = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].direction
+    dV = math.norm([dV.r, dV.i, dV.c]) / mainWindow.satellites[sat].a
+    mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].time -= dV / 2
+    mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].waypoint.tranTime += dV / 2
+    mainWindow.satellites[sat].genBurns();
+    let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
+    if (math.norm([checkBurn.direction.r, checkBurn.direction.i, checkBurn.direction.c]) < 1e-8) {
+        mainWindow.satellites[sat].burns.pop();
+        mainWindow.satellites[sat].genBurns();
+        showScreenAlert('Waypoint outside kinematic reach of satellite with given time of flight');
+        return;
+    }
+    mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + dt;
+    document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + dt;
+    
+}
+
+function circularizeOrbitSolver(state = [10, 700, 0, 0, 0, 0], a = 0.00001, startTime = mainWindow.scenarioTime) {
+    // Generate initial guess
+    let nominalVel = [0, -state[0] * 1.5 * mainWindow.mm, 0]
+    let nominalDir = math.subtract(nominalVel, state.slice(3,6))
+    let params = {az: math.atan2(nominalDir[1], nominalDir[0]), el: 0, tb: math.norm(nominalDir.slice(0,1) / a)}
+    let numBurnPoints = math.ceil(params.tb / mainWindow.timeDelta)
+    numBurnPoints = numBurnPoints < 1 ? 1 : numBurnPoints;
+    
+    let genJacobCirc = function(params, startState, a, startT) {
+        let derivative = []
+        
+        let paramsDelta1 = {...params}
+        paramsDelta1.az += 0.01
+        let paramsDelta2 = {...params}
+        paramsDelta2.az -= 0.01
+        dir1 = [a * Math.cos(paramsDelta1.az) * Math.cos(paramsDelta1.el),
+            a * Math.sin(paramsDelta1.az) * Math.cos(paramsDelta1.el),
+            Math.sin(paramsDelta1.el)]
+        dir2 = [a * Math.cos(paramsDelta2.az) * Math.cos(paramsDelta2.el),
+            a * Math.sin(paramsDelta2.az) * Math.cos(paramsDelta2.el),
+            Math.sin(paramsDelta2.el)]
+        let deltaState1 = runge_kutta(twoBodyRpo, startState, paramsDelta1.tb, dir1, startT)
+        let deltaState2 = runge_kutta(twoBodyRpo, startState, paramsDelta2.tb, dir2, startT)
+        let deltaE1 = calcSatelliteEccentricity(deltaState1)
+        let deltaE2 = calcSatelliteEccentricity(deltaState2)
+        derivative.push((deltaE1 - deltaE2) / 0.02)
+
+        paramsDelta1 = {...params}
+        paramsDelta1.el += 0.01
+        paramsDelta2 = {...params}
+        paramsDelta2.el -= 0.01
+        dir1 = [a * Math.cos(paramsDelta1.az) * Math.cos(paramsDelta1.el),
+            a * Math.sin(paramsDelta1.az) * Math.cos(paramsDelta1.el),
+            Math.sin(paramsDelta1.el)]
+        dir2 = [a * Math.cos(paramsDelta2.az) * Math.cos(paramsDelta2.el),
+            a * Math.sin(paramsDelta2.az) * Math.cos(paramsDelta2.el),
+            Math.sin(paramsDelta2.el)]
+        deltaState1 = runge_kutta(twoBodyRpo, startState, paramsDelta1.tb, dir1, startT)
+        deltaState2 = runge_kutta(twoBodyRpo, startState, paramsDelta2.tb, dir2, startT)
+        deltaE1 = calcSatelliteEccentricity(deltaState1)
+        deltaE2 = calcSatelliteEccentricity(deltaState2)
+        derivative.push((deltaE1 - deltaE2) / 0.02)
+
+        paramsDelta1 = {...params}
+        paramsDelta1.tb += 0.01
+        paramsDelta2 = {...params}
+        paramsDelta2.tb -= 0.01
+        dir1 = [a * Math.cos(paramsDelta1.az) * Math.cos(paramsDelta1.el),
+            a * Math.sin(paramsDelta1.az) * Math.cos(paramsDelta1.el),
+            Math.sin(paramsDelta1.el)]
+        dir2 = [a * Math.cos(paramsDelta2.az) * Math.cos(paramsDelta2.el),
+            a * Math.sin(paramsDelta2.az) * Math.cos(paramsDelta2.el),
+            Math.sin(paramsDelta2.el)]
+        deltaState1 = runge_kutta(twoBodyRpo, startState, paramsDelta1.tb, dir1, startT)
+        deltaState2 = runge_kutta(twoBodyRpo, startState, paramsDelta2.tb, dir2, startT)
+        deltaE1 = calcSatelliteEccentricity(deltaState1)
+        deltaE2 = calcSatelliteEccentricity(deltaState2)
+        derivative.push((deltaE1 - deltaE2) / 0.02)
+        
+        return math.transpose(derivative)
+    }
+    for (let index = 0; index < 100; index++) {
+        // Generate Jacobian
+        let jac = genJacobCirc(params, state, a, startTime)
+
+        let dir = [a * Math.cos(params.az) *Math.cos(params.el),
+            a * Math.sin(params.az)*Math.cos(params.el),
+            Math.sin(params.el)]
+        // Get final state
+        let stateF = [...state]
+        for (let index = 0; index < numBurnPoints; index++) {
+            stateF = runge_kutta(twoBodyRpo, stateF, params.tb / numBurnPoints, dir, startTime + index / numBurnPoints * params.tb)
+        }
+        let eAch = calcSatelliteEccentricity(stateF)
+        let eDes = 0
+        let residuals = math.transpose([eDes - eAch])
+        let p = math.multiply(math.inv(math.multiply(math.transpose(jac), jac)), math.transpose(jac))
+        let dParams = math.squeeze(math.multiply(math.transpose([p]), residuals))
+        params.az += dParams[0]
+        params.el += dParams[1]
+        params.tb += dParams[2]
+        console.log(eAch);
+    }
+    let dir = [a * Math.cos(params.az),
+        a * Math.sin(params.az),
+        0]
+    
+    let stateF = runge_kutta(twoBodyRpo, state, params.tb, dir, startTime).slice(3,6)
+    return {dir: math.dotMultiply(params.tb, dir), stateF, params}
+}
+
+function calcSatelliteEccentricity(position = [10,0,0,0,0,0]) {
+    let outEci = Ric2Eci(rHcw = position.slice(0,3), drHcw = position.slice(3,6))
+    let h = math.cross(outEci.rEcci, outEci.drEci)
+    let e = math.dotDivide(math.cross(outEci.drEci, h), 398600.4415)
+    e = math.subtract(e, math.dotDivide(outEci.rEcci, math.norm(outEci.rEcci)))
+    return math.norm(e);
 }
