@@ -957,7 +957,7 @@ class Satellite {
             id: state.id[0],
             cd: state.cd[0]
         }
-        this.burns.filter(burn => burn.time >= dt).map(burn => {
+        this.burns = this.burns.filter(burn => burn.time >= dt).map(burn => {
             burn.time -= dt
             return burn
         })
@@ -1295,12 +1295,10 @@ function startContextClick(event) {
         ctxMenu.innerHTML = `
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
-            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="data-options">Graph Data</div>' : ''}
-            <div class="context-item">Export Burns</div>
             <div style="padding: 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
             <div style="padding: 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
             `
-        
+        //             <div class="context-item">Export Burns</div>
     }
     else {
         ctxMenu.innerHTML = `
@@ -1327,7 +1325,7 @@ function startContextClick(event) {
 
 function handleContextClick(button) {
     if (button.id === 'maneuver-options') {
-        button.parentElement.innerHTML = `
+         button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
             <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
             <div class="context-item" onclick="handleContextClick(this)" id="dsk-maneuver">DSK</div>
@@ -1337,6 +1335,13 @@ function handleContextClick(button) {
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
+        let cm = document.getElementById('context-menu')
+        let elHeight = cm.offsetHeight
+        let elTop =  Number(cm.style.top.split('p')[0])
+
+        console.log((window.innerHeight - elHeight) < elTop);
+        cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+        console.log(cm.style.top);
     }
     else if (button.id === 'drift-maneuver') { 
         let html = `
