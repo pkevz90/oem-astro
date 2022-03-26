@@ -1295,8 +1295,8 @@ function startContextClick(event) {
         ctxMenu.innerHTML = `
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
-            <div style="padding: 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
-            <div style="padding: 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
+            <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
+            <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
             `
         //             <div class="context-item">Export Burns</div>
     }
@@ -1338,10 +1338,7 @@ function handleContextClick(button) {
         let cm = document.getElementById('context-menu')
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
-
-        console.log((window.innerHeight - elHeight) < elTop);
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
-        console.log(cm.style.top);
     }
     else if (button.id === 'drift-maneuver') { 
         let html = `
@@ -1756,6 +1753,11 @@ function handleContextClick(button) {
         innerString += `<div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
 
         button.parentElement.innerHTML = innerString;
+        let cm = document.getElementById('context-menu')
+        let elHeight = cm.offsetHeight
+        let elTop =  Number(cm.style.top.split('p')[0])
+        cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    
     }
     else if (button.id === 'execute-sun') {
         let inputs = button.parentElement.getElementsByTagName('input');
