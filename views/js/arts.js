@@ -734,6 +734,7 @@ class windowCanvas {
                 cd: this.satellites[this.satellites.length - 1].curPos.cd[0]
             }
         })
+        document.title = this.satellites.map(sat => sat.name).join(' / ')
         document.getElementById('time-slider-range').max = scenarioLength * 3600
 
     }
@@ -947,11 +948,7 @@ class Satellite {
     }
     propInitialState(dt) {
         if (Math.abs(dt) > 200000) return
-        let propTime = dt / 5000;
-        let state = [this.position.r, this.position.i, this.position.c, this.position.rd, this.position.id, this.position.cd];
-        for (let ii = 0; ii < 5000; ii++) {
-            state = runge_kutta(twoBodyRpo, state, propTime)
-        }
+        let state = this.currentPosition({time: dt})
         this.position = {
             r: state[0],
             i: state[1],
@@ -960,11 +957,10 @@ class Satellite {
             id: state[4],
             cd: state[5]
         }
-        if (this.burns.length > 0) {
-            if (this.burns[0].time > dt) this.burns.map(burn => burn.time -= dt)
-            else this.burns = []
-        }
-        else this.burns = []
+        this.burns.filter(burn => burn.time >= dt).map(burn => {
+            burn.time -= dt
+            return burn
+        })
         this.calcTraj();
     }
 }
@@ -1201,23 +1197,31 @@ function keydownFunction(key) {
         }
     }
     else if (key.key === 'n') {
-        let newSat = new Satellite({
-            name: 'Sat-' + (mainWindow.satellites.length + 1)
-        });
+        let newSat = mainWindow.satellites.length === 0 ?  new Satellite({
+                name: 'Chief',
+                position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
+                shape: 'diamond',
+                color: '#b0b'
+            }) : 
+            new Satellite({
+                name: 'Sat-' + (mainWindow.satellites.length + 1)
+            })
+
         newSat.calcTraj();
         mainWindow.satellites.push(newSat)
+        document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
     }
     else if (shiftedNumbers.search(key.key) !== '-1' && key.ctrlKey && key.shiftKey) {
         let index = shiftedNumbers.search(key.key) + 1
         if (key.key === 'Control' || key.key === 'Shift') return
-        recoverDefaultScenario(index)
-        showScreenAlert('Loaded default scenario ' + index)
-    }
-    else if (shiftedNumbers.search(key.key) !== '-1' && key.shiftKey) {
-        let index = shiftedNumbers.search(key.key) + 1
-        if (key.key === 'Control' || key.key === 'Shift') return
         setDefaultScenario(index)
         showScreenAlert('Saved as default scenario ' + index)
+    }
+    else if (shiftedNumbers.search(key.key) !== '-1' &&  key.shiftKey) {
+        let index = shiftedNumbers.search(key.key) + 1
+        if (key.key === 'Control' || key.key === 'Shift') return
+        recoverDefaultScenario(index)
+        showScreenAlert('Loaded default scenario ' + index)
     }
 }
 window.addEventListener('keydown', keydownFunction)
@@ -3332,11 +3336,7 @@ function initStateFunction(el) {
         if (newWidth > mainWindow.desired.plotWidth) {
             mainWindow.desired.plotWidth = newWidth
         }
-        newTitle += mainWindow.satellites[0].name;
-        for (let ii = 1; ii < mainWindow.satellites.length; ii++){
-            newTitle += ' / ' + mainWindow.satellites[ii].name;
-        }
-        document.title = newTitle;
+        document.title = mainWindow.satellites.map(sat => sat.name).join(' / ');
         closeAll();
     }
     else if (el.id === 'add-launch-button') {
