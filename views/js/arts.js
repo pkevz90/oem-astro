@@ -950,12 +950,12 @@ class Satellite {
         if (Math.abs(dt) > 200000) return
         let state = this.currentPosition({time: dt})
         this.position = {
-            r: state[0],
-            i: state[1],
-            c: state[2],
-            rd: state[3],
-            id: state[4],
-            cd: state[5]
+            r: state.r[0],
+            i: state.i[0],
+            c: state.c[0],
+            rd: state.rd[0],
+            id: state.id[0],
+            cd: state.cd[0]
         }
         this.burns.filter(burn => burn.time >= dt).map(burn => {
             burn.time -= dt
