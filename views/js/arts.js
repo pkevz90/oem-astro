@@ -1258,7 +1258,19 @@ function alterEditableSatChar(action) {
     let element = action.getAttribute('element')
     let sat = action.getAttribute('sat')
     let newEl = action.innerText
-    mainWindow.satellites[sat][element] = newEl
+    if (element === 'color') {
+        if (isNaN(Number('0x' + newEl.substr(1,newEl.length))) || newEl.length > 7 || newEl[0] !== '#') {
+            if (newEl.length === 1 && newEl === '#') return
+            action.innerText = mainWindow.satellites[sat].color
+            return
+        }
+        mainWindow.satellites[sat][element] = newEl
+        return
+    }
+    mainWindow.satellites[sat][element] = element === 'a' ? Number(newEl) : newEl
+    if (element === 'a') {
+        mainWindow.satellites[sat].calcTraj()
+    }
     document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
 }
 
