@@ -2367,7 +2367,7 @@ function dataChange(el) {
         inputs[ii].checked = indexCheck === -1 ? false : mainWindow.relativeData.dataReqs[indexCheck].data.includes(inputs[ii].id)
     }
     inputs[5].value = indexCheck === -1 ? 1 : mainWindow.relativeData.dataReqs[indexCheck].positionX;
-    inputs[6].value = indexCheck === -1 ? 5 : mainWindow.relativeData.dataReqs[indexCheck].positionY;
+    inputs[6].value = indexCheck === -1 ? 10 : mainWindow.relativeData.dataReqs[indexCheck].positionY;
     inputs[7].value = indexCheck === -1 ? 30 : mainWindow.relativeData.dataReqs[indexCheck].textSize;
 }
 function changeBurnType() {
