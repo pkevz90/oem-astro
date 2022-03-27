@@ -1028,8 +1028,8 @@ setTimeout(() => {
 // Adding event listeners for window objects
 //------------------------------------------------------------------
 function keydownFunction(key) {
+    if (document.getElementById('context-menu') !== null) return
     key.key = key.key.toLowerCase()
-
     if (key.key === 'Control') {
         let buttons = document.getElementsByClassName('ctrl-switch');
         for (let ii = 0; ii < buttons.length; ii++) {
@@ -1253,6 +1253,15 @@ document.oncontextmenu = startContextClick
 let openInstructions = function() {
     document.getElementById('instructions-panel').classList.toggle("hidden");
 }
+
+function alterEditableSatChar(action) {
+    let element = action.getAttribute('element')
+    let sat = action.getAttribute('sat')
+    let newEl = action.innerText
+    mainWindow.satellites[sat][element] = newEl
+    document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
+}
+
 function startContextClick(event) {
     if (mainWindow.panelOpen) {
         return false;
@@ -1289,10 +1298,24 @@ function startContextClick(event) {
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
     
-
-    if (activeSat !== false) {
+    if (activeBurn !== false) {
+        let burn = mainWindow.satellites[activeBurn.sat].burns[activeBurn.burn]
+        let burnDir = [1000*burn.direction.r, 1000*burn.direction.i, 1000*burn.direction.c]
+        let rot = translateFrames(activeBurn.sat, {time: burn.time})
+        burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
+        let burnTime = new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString().split(' GMT')[0].substring(4)
+        ctxMenu.innerHTML = `
+            <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
+            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+            <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
+            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(2)}, ${burnDir[1].toFixed(2)}, ${burnDir[2].toFixed(2)}) m/s</div>
+        `
+    }
+    else if (activeSat !== false) {
         ctxMenu.sat = activeSat;
         ctxMenu.innerHTML = `
+            <div contentEditable="true" sat="${activeSat}" element="name" oninput="alterEditableSatChar(this)" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeSat].name}</div>
+            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
@@ -1655,6 +1678,8 @@ function handleContextClick(button) {
         }
         let sat = button.parentElement.sat;
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
+        let rot = translateFrames(sat)
+        dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
         insertDirectionBurn(sat, mainWindow.scenarioTime, dir)
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
