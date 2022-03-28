@@ -1320,7 +1320,7 @@ function startContextClick(event) {
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
-            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(2)}, ${burnDir[1].toFixed(2)}, ${burnDir[2].toFixed(2)}) m/s</div>
+            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(3)}, ${burnDir[1].toFixed(3)}, ${burnDir[2].toFixed(3)}) m/s</div>
         `
     }
     else if (activeSat !== false) {
@@ -1377,7 +1377,7 @@ function handleContextClick(button) {
     }
     else if (button.id === 'drift-maneuver') { 
         let html = `
-            <div class="context-item" >Drift Rate: <input type="Number" style="width: 3em; font-size: 1em"> deg/rev</div>
+            <div class="context-item" >Drift Rate: <input type="Number" style="width: 3em; font-size: 1em" value="0"> deg/rev</div>
             <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="execute-drift" tabindex="0">Execute</div>
         `
         button.parentElement.innerHTML = html
@@ -1546,8 +1546,8 @@ function handleContextClick(button) {
     else if (button.id === 'waypoint-maneuver') {
         let sat = button.parentElement.sat;
         let html = `
-            <div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>
-            <div class="context-item" >Target: (<input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">, <input type="Number" style="width: 3em; font-size: 1em">) km</div>
+            <div class="context-item" >TOF: <input value="2" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" >Target: (<input value="0" type="Number" style="width: 3em; font-size: 1em">, <input value="0" type="Number" style="width: 3em; font-size: 1em">, <input value="0" type="Number" style="width: 3em; font-size: 1em">) km</div>
             <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-waypoint" tabindex="0">RIC Origin</div>
         `
         for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
@@ -1563,10 +1563,6 @@ function handleContextClick(button) {
         let inputs = button.parentElement.getElementsByTagName('input');
         let currentPos = mainWindow.satellites[sat].curPos
         let eciPos = Ric2Eci([currentPos.r, currentPos.i, currentPos.c], [currentPos.rd, currentPos.id, currentPos.cd])
-        if (inputs[0].value === '') {
-            inputs[ii].style.backgroundColor = 'rgb(255,150,150)';
-            return
-        }
         let driftRate = Number(inputs[0].value) * Math.PI / 180
         let period = 2 * Math.PI / mainWindow.mm
         // Convert drift rate to desired SMA
@@ -1577,7 +1573,6 @@ function handleContextClick(button) {
         let energy = -398600.4418 / driftRate / 2
         let vel = ((energy + 398600.4418 / r) * 2) ** (1/2)
         let newVel = math.dotMultiply(vel, math.dotDivide(eciPos.drEci, math.norm(eciPos.drEci)))
-        console.log(r, vel, driftRate, period);
         let newRic = Eci2Ric([(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0], eciPos.rEcci, newVel)
         let direction = math.subtract(math.squeeze(newRic.drHcw), [currentPos.rd, currentPos.id, currentPos.cd])
         let tof = 0.125 * 2 * Math.PI / mainWindow.mm
@@ -1618,16 +1613,16 @@ function handleContextClick(button) {
     }
     else if (button.id === 'direction-maneuver') {
         button.parentElement.innerHTML = `
-            <div class="context-item" >R: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >I: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >C: <input type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >R: <input value="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >I: <input value="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >C: <input value="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
             <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-direction" tabindex="0">Execute</div>
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
     else if (button.id === 'dsk-maneuver') {
         button.parentElement.innerHTML = `
-            <div class="context-item" >Time: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" >Time: <input value="3" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
             <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-dsk" tabindex="0">Execute</div>
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
@@ -1734,7 +1729,7 @@ function handleContextClick(button) {
             if (ii === button.parentElement.sat) continue;
             innerString += `<div onclick="handleContextClick(this)" class="context-item" id="execute-intercept" sat="${ii}">${mainWindow.satellites[ii].name}</div>`
         }
-        innerString += `<div class="context-item" >TOF: <input type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
+        innerString += `<div class="context-item" >TOF: <input value="1" type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
 
         button.parentElement.innerHTML = innerString;
 
