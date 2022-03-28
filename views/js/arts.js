@@ -948,14 +948,31 @@ class Satellite {
     }
     propInitialState(dt) {
         if (Math.abs(dt) > 200000) return
-        let state = this.currentPosition({time: dt})
-        this.position = {
-            r: state.r[0],
-            i: state.i[0],
-            c: state.c[0],
-            rd: state.rd[0],
-            id: state.id[0],
-            cd: state.cd[0]
+        let state
+        if (dt > 0) {
+            state = this.currentPosition({time: dt})
+            this.position = {
+                r: state.r[0],
+                i: state.i[0],
+                c: state.c[0],
+                rd: state.rd[0],
+                id: state.id[0],
+                cd: state.cd[0]
+            }
+        }
+        else {
+            state = [this.position.r, this.position.i, this.position.c, this.position.rd, this.position.id, this.position.cd];
+            for (let ii = 0; ii < 5000; ii++) {
+                state = runge_kutta(twoBodyRpo, state, dt / 5000)
+            }
+            this.position = {
+                r: state[0],
+                i: state[1],
+                c: state[2],
+                rd: state[3],
+                id: state[4],
+                cd: state[5]
+            }
         }
         this.burns = this.burns.filter(burn => burn.time >= dt).map(burn => {
             burn.time -= dt
@@ -1330,6 +1347,7 @@ function startContextClick(event) {
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
             <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
             `
@@ -1435,6 +1453,29 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="prop-in-track">In-Track Position</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>' : ''}
         `
+    }
+    else if (button.id === 'state-options') {
+        button.parentElement.innerHTML = `
+            <div class="context-item" id="state-update"><input placeholder="ARTS Report String"/></div>
+            <div class="context-item" onclick="handleContextClick(this)" id="state-update">Update</div>
+        `
+    }
+    else if (button.id === 'state-update') {
+        let input = button.parentElement.getElementsByTagName('input')[0]
+        let sat = button.parentElement.sat
+        if (input.value === '') return
+        let state = parseArtsReport(input.value)
+        console.log(state);
+        mainWindow.satellites[sat].burns = []
+        mainWindow.satellites[sat].position = {
+            r: state[0],
+            i: state[1],
+            c: state[2],
+            rd: state[3] / 1000,
+            id: state[4] / 1000,
+            cd: state[5] / 1000
+        }
+        mainWindow.satellites[sat].calcTraj()
     }
     else if (button.id === 'data-options') {
         button.parentElement.innerHTML = `
@@ -2391,6 +2432,64 @@ function changeBurnType() {
         mainWindow.burnType = 'waypoint'
     }
 }
+
+function parseArtsReport(text) {
+    text = text.split(/ {2,}/)
+    let outState = []
+    if (isNaN(Number(text[0]))) {
+        let oldDate = mainWindow.startDate + 0;
+        mainWindow.startDate = new Date(text.shift())
+        let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
+        mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
+    }
+    if (text[0] === "") text.shift();
+    if (text[text.length - 1] === "") text.pop();
+    if (text.length > 9) {
+        let oldMM = mainWindow.mm + 0
+        if (text.length > 12) {
+            let tA = Number(text.pop() * Math.PI / 180)
+            let arg = Number(text.pop() * Math.PI / 180)
+            let raan = Number(text.pop() * Math.PI / 180)
+            let i = Number(text.pop() * Math.PI / 180)
+            let e = Number(text.pop())
+            let a = Number(text.pop())
+            mainWindow.originOrbit = {
+                a,
+                arg,
+                e,
+                i,
+                raan,
+                tA
+            }
+            mainWindow.mm = Math.sqrt(398600.4418 / (Number(a ** 3)));
+        }
+        else {
+            mainWindow.mm = Math.sqrt(398600.4418 / (Number(text.pop() ** 3)));
+            mainWindow.originOrbit.a = (398600.4418 / mainWindow.mm ** 2) ** (1/3)
+        }
+        mainWindow.scenarioLength = math.abs(mainWindow.mm - oldMM) < 1000 ? mainWindow.scenarioLength : 2 * Math.PI / mainWindow.mm / 3600 * 2;
+        document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
+        mainWindow.timeDelta = 0.006 * 2 * Math.PI / mainWindow.mm;
+    }
+    text = text.filter(t => {
+        return Number(t) !== NaN;
+    });
+    text = text.map(t => Number(t));
+    if (text.length < 6) {
+        alert('Please include all six states (R I C Rd Id Cd)');
+        return;
+    } 
+    for (let ii = 0; ii < 6; ii++) {
+        outState.push(((ii > 2) ? 1000 : 1) * Number(text[ii]))
+    }
+    if (text.length === 9) {
+        let initSun = [Number(text[6]), Number(text[7]), Number(text[8])]
+        initSun = math.dotDivide(initSun, math.norm(initSun));
+        mainWindow.setInitSun([-initSun[2], initSun[0], -initSun[1]]);
+    }
+    return outState
+}
+
 function parseState(button) {
     let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input');
     let text = document.getElementById('parse-text').value;
