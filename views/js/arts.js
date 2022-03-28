@@ -1637,7 +1637,7 @@ function handleContextClick(button) {
         let inputs = button.parentElement.getElementsByTagName('input');
         let bad = false;
         for (let ii = 0; ii < inputs.length; ii++) {
-            if (inputs[ii].value === '' || (ii === 0 && inputs[ii].value < 0)) {
+            if ((ii === 0 && inputs[ii].value < 0)) {
                 inputs[ii].style.backgroundColor = 'rgb(255,150,150)';
                 bad = true;
             }
