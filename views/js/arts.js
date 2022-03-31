@@ -1339,6 +1339,8 @@ function startContextClick(event) {
             <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
             <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(3)}, ${burnDir[1].toFixed(3)}, ${burnDir[2].toFixed(3)}) m/s</div>
         `
+        let outText = burnDir.map(x => x.toFixed(4)).join('x')
+        navigator.clipboard.writeText(outText)
     }
     else if (activeSat !== false) {
         ctxMenu.sat = activeSat;
