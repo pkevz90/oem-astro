@@ -177,7 +177,7 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
     let checks = document.getElementsByClassName('sensor-checkbox')
     let sensors = sensorsIn.filter((s, ii) => checks[ii].checked)
     let avail = sensors.map(sens => sens.availString).map(avail => str2avail(avail.split('').reverse('').join('')))
-    let spaceZ = 780
+    let spaceZ = 780*2
     sensors.forEach(s => {
         let realLong = s.long - latitude
         if (s.type === 'space') {
@@ -201,11 +201,14 @@ function generateObs(sensorsIn, tFinal, rate = 1/30, satState = [0,0,0,0,0,0], n
                 return ((-time.start*tFinal >= t)) && (-(time.end*tFinal) <= t)
             }).length === 0) continue
             let curPosition = sensors[ii].type === 'space' ? [positions[ii][0], positions[ii][1], spaceZ - spaceZ * Math.sin(-t * 2 * Math.PI / 86164)] : positions[ii]
+            let d = math.norm(curPosition) / 734
+            let noiseSensor = sensors[ii].type === 'space' ? (d < 60 ? sensors[ii].r * (60 / d) ** 1.4 : sensors[ii].r * (60 / d)) : sensors[ii].r 
+            console.log(noiseSensor);
             let outObs = {
-                az: calcAz(curPosition, satState, noise ? sensors[ii].r : 0),
-                azr: sensors[ii].r,
-                el: calcEl(curPosition, satState, noise ? sensors[ii].r : 0),
-                elr: sensors[ii].r
+                az: calcAz(curPosition, satState, noise ? noiseSensor : 0),
+                azr: noiseSensor,
+                el: calcEl(curPosition, satState, noise ? noiseSensor : 0),
+                elr: noiseSensor
             }
             if (sensors[ii].type === 'radar') {
                 outObs.r = calcRange(positions[ii], satState, noise ? sensors[ii].rr : 0),
@@ -377,7 +380,7 @@ function runAlgorith() {
             console.log(p);
             let pProp = JSON.parse(JSON.stringify(p))
             let pHistory = {}
-            console.clear()
+            // console.clear()
             dt = 30
             for (let time = 0; time <= 12*3600; time += dt) {
                 let out = propCovariance(pProp, dt, [[0,0,0,0,0,0]])

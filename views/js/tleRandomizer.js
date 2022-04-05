@@ -86,7 +86,7 @@ function exportFile() {
     let saveName = 'sat' + math.floor(data[1][0].split(/ +/).filter(line => line !== '')[1]);
     // Pull initial state from ephemeris file
     let stateEphemeris = data[1].slice(timeLine + 1, timeLine + 2)
-    state = stateEphemeris[0].split(/ +/).slice(1, stateEphemeris[0].length).map(s => Number(s))
+    state = stateEphemeris[0].split(/ +/).filter(s => s !== '').map(s => Number(s))
     let t = state.shift()
     //Prop initial state state back to desired time (to avoid any potential burn at desired epoch)
     for (let ii = 0; ii < 10; ii++) {
@@ -106,16 +106,16 @@ function exportFile() {
     state = math.add(state, initError)
     // Define initial covariance matrix
     let pEphemeris = []
-    pEphemeris.push(`${t} ${P[0][0]} ${P[0][1]} ${P[0][2]} ${P[1][1]} ${P[1][2]} ${P[2][2]}`)
-    stateEphemeris = [`${t} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`]
+    pEphemeris.push(`${t} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
+    stateEphemeris = [`${t.toExponential(16)} ${state[0].toExponential(16)} ${state[1].toExponential(16)} ${state[2].toExponential(16)} ${state[3].toExponential(16)} ${state[4].toExponential(16)} ${state[5].toExponential(16)}`]
 
     let timeDelta = 120
     for (let ii = timeDelta; ii <= (endTime - timeDiff); ii+=timeDelta) {
         let out = propCovariance(P, timeDelta, [state])
         state = out.state
         P = out.P
-        stateEphemeris.push(`${t + ii} ${state[0]} ${state[1]} ${state[2]} ${state[3]} ${state[4]} ${state[5]}`); 
-        pEphemeris.push(`${t + ii} ${P[0][0]} ${P[0][1]} ${P[0][2]} ${P[1][1]} ${P[1][2]} ${P[2][2]}`)
+        stateEphemeris.push(`${(t + ii).toExponential(16)} ${state[0].toExponential(16)} ${state[1].toExponential(16)} ${state[2].toExponential(16)} ${state[3].toExponential(16)} ${state[4].toExponential(16)} ${state[5].toExponential(16)}`); 
+        pEphemeris.push(`${(t + ii).toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
         if (isNaN(state[0])) {
 
             console.error('Error in state propagation');
@@ -124,7 +124,8 @@ function exportFile() {
         }
     }
     // Remove number of ephemeris points to default to read all points
-    let header = data[0].split(/\n/).filter(line => line.search('NumberOfEp') === -1).join('\n')
+    // let header = data[0].split(/\n/).filter(line => line.search('NumberOfEp') === -1).join('\n')
+    let header = data[0]
     if (files[saveName] === undefined) {
         files[saveName] = {
             header,
@@ -132,6 +133,7 @@ function exportFile() {
         }
     }
     else {
+        files[saveName].header = header
         files[saveName].data.push({posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff, time: new Date() - 0})
     }
     window.localStorage.files = JSON.stringify(files)
@@ -152,7 +154,14 @@ function exportConsolidated(satelliteData, name) {
         files[file].covData = files[file].covData.join('\n')
     }
     let out = ''
-    out += satelliteData.header + '\n'
+    let header = satelliteData.header.split('\n')
+    let nPointsIndex = header.findIndex(line => {
+        return line.search('NumberOfEp') !== -1
+    })
+
+    let nPoints = files.map(file => file.posVelData).join('').split('\n').length
+    header.splice(nPointsIndex, 1,'   NumberOfEphemerisPoints \t\t' + nPoints)
+    out += header.join('\n') + '\n'
     out += files.map(file => file.posVelData).join('\n')
     out += '\n\nCovarianceTimePos \n\n'
     out += files.map(file => file.covData).join('\n')
