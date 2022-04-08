@@ -209,7 +209,14 @@ class windowCanvas {
         }
     }
     getCurrentSun(t = this.scenarioTime) {
-        return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 360 / 365 / 86164), 3), math.transpose([this.initSun])));
+        let monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        let curDate = new Date(mainWindow.startDate)
+        let daySinceWinterSolstice = monthDays.slice(0, curDate.getMonth()).reduce((a, b) => a + b) + curDate.getDate() - 80
+        let freq = 2 * Math.PI /365
+        let maxCt = mainWindow.initSun[2] / Math.sin(freq * daySinceWinterSolstice)
+        let initSunWithCrossComponent = this.initSun.slice()
+        initSunWithCrossComponent[2] = maxCt * Math.sin(freq * (daySinceWinterSolstice + t / 86164))
+        return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 360 / 365 / 86164), 3), math.transpose([initSunWithCrossComponent])));
     }
     getInitSun() {
         return this.initSun;
@@ -1295,20 +1302,16 @@ function startContextClick(event) {
     if (mainWindow.panelOpen) {
         return false;
     }
-    let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
-    let activeSat = false, activeBurn = false;
-    for (sat = 0; sat < mainWindow.satellites.length; sat++) {
-        let check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
-        if (check.ri || check.rc || check.ci) {
-            activeSat = sat;
-            break;
-        }
-        check = mainWindow.satellites[sat].checkClickProximity(ricCoor, true);
-        if (check !== false) {
-            activeBurn = {sat, burn: check};
-            break;
-        }
-    }
+    let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY])
+    // Check if clicked on satellite
+    let checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor)).findIndex(sat => sat.ri || sat.rc || sat.ci)
+    let activeSat = checkProxSats === -1 ? false : checkProxSats
+    // Check if clicked on burn
+    checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, true))
+    // Find index of satellite burn clicked on
+    let burnIndexSat = checkProxSats.findIndex(sat => sat !== false)
+    let activeBurn = burnIndexSat === -1 ? false : {sat: burnIndexSat, burn: checkProxSats[burnIndexSat]}
+
     let ctxMenu;
     if (document.getElementById('context-menu') === null) {
         ctxMenu = document.createElement('div');
@@ -1327,22 +1330,7 @@ function startContextClick(event) {
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
     
-    if (activeBurn !== false) {
-        let burn = mainWindow.satellites[activeBurn.sat].burns[activeBurn.burn]
-        let burnDir = [1000*burn.direction.r, 1000*burn.direction.i, 1000*burn.direction.c]
-        let rot = translateFrames(activeBurn.sat, {time: burn.time})
-        burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
-        let burnTime = new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString().split(' GMT')[0].substring(4)
-        ctxMenu.innerHTML = `
-            <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
-            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
-            <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
-            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(3)}, ${burnDir[1].toFixed(3)}, ${burnDir[2].toFixed(3)}) m/s</div>
-        `
-        let outText = burnDir.map(x => x.toFixed(4)).join('x')
-        navigator.clipboard.writeText(outText)
-    }
-    else if (activeSat !== false) {
+    if (activeSat !== false) {
         ctxMenu.sat = activeSat;
         ctxMenu.innerHTML = `
             <div contentEditable="true" sat="${activeSat}" element="name" oninput="alterEditableSatChar(this)" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeSat].name}</div>
@@ -1354,6 +1342,22 @@ function startContextClick(event) {
             <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
             `
         //             <div class="context-item">Export Burns</div>
+    }
+    else if (activeBurn !== false) {
+        let burn = mainWindow.satellites[activeBurn.sat].burns[activeBurn.burn]
+        let burnDir = [1000*burn.direction.r, 1000*burn.direction.i, 1000*burn.direction.c]
+        let rot = translateFrames(activeBurn.sat, {time: burn.time})
+        burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
+        let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
+        ctxMenu.innerHTML = `
+            <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
+            <div class="context-item" onclick="handleContextClick(this)" dir="${burnDir.join('_')}" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-direction-options">Change Direction</div>
+            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+            <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
+            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(3)}, ${burnDir[1].toFixed(3)}, ${burnDir[2].toFixed(3)}) m/s</div>
+        `
+        let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
+        navigator.clipboard.writeText(outText)
     }
     else {
         ctxMenu.innerHTML = `
@@ -1654,6 +1658,18 @@ function handleContextClick(button) {
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
     }
+    else if (button.id === 'change-direction-options') {
+        let sat = button.getAttribute('sat')
+        let burn = button.getAttribute('burn')
+        let dir = button.getAttribute('dir').split('_').map(s => Number(s))
+        button.parentElement.innerHTML = `
+            <div class="context-item" >R: <input value="${dir[0].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >I: <input value="${dir[1].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >C: <input value="${dir[2].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-direction" tabindex="0">Change</div>
+        `
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
     else if (button.id === 'direction-maneuver') {
         button.parentElement.innerHTML = `
             <div class="context-item" >R: <input value="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
@@ -1662,6 +1678,22 @@ function handleContextClick(button) {
             <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-direction" tabindex="0">Execute</div>
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'execute-change-direction') {
+        let sat = button.getAttribute('sat')
+        let burn = button.getAttribute('burn')
+        let inputs = button.parentElement.getElementsByTagName('input');
+        for (let ii = 0; ii < inputs.length; ii++) {
+            if (inputs[ii].value === '') {
+                inputs[ii].value = 0;
+            }
+        }
+        let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
+        let rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
+        dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
+        insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
+        // document.getElementById('time-slider-range').value = mainWindow.satellites[sat].burns[burn].time + 3600;
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'dsk-maneuver') {
         button.parentElement.innerHTML = `
@@ -4759,10 +4791,15 @@ function perchSatelliteSolver(state = [1, 10, 0, -0.005, 0, 0], a = 0.00001, sta
     return {dir: math.dotMultiply(params.tb, dir), stateF, params}
 }
 
-function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
-    mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
-        return burn.time < time
-    })
+function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0], burn) {
+    if (burn !== undefined) {
+        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.slice(0, Number(burn))
+    }
+    else {
+        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+            return burn.time < time
+        })
+    }
     let position = mainWindow.satellites[sat].currentPosition({time});
     mainWindow.satellites[sat].burns.push({
         time: time,
@@ -4795,6 +4832,7 @@ function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
         }
     }
     mainWindow.satellites[sat].genBurns();
+    if (burn !== undefined) return
     mainWindow.desired.scenarioTime = time + 3600;
 }
 
