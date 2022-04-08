@@ -1302,10 +1302,13 @@ function startContextClick(event) {
     if (mainWindow.panelOpen) {
         return false;
     }
+
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY])
     // Check if clicked on satellite
     let checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor)).findIndex(sat => sat.ri || sat.rc || sat.ci)
     let activeSat = checkProxSats === -1 ? false : checkProxSats
+    activeSat = event.ctrlKey ? false : activeSat
+
     // Check if clicked on burn
     checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, true))
     // Find index of satellite burn clicked on
@@ -1348,6 +1351,7 @@ function startContextClick(event) {
         let burnDir = [1000*burn.direction.r, 1000*burn.direction.i, 1000*burn.direction.c]
         let rot = translateFrames(activeBurn.sat, {time: burn.time})
         burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
+        let burnDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000)
         let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
         ctxMenu.innerHTML = `
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
@@ -1357,6 +1361,10 @@ function startContextClick(event) {
             <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(3)}, ${burnDir[1].toFixed(3)}, ${burnDir[2].toFixed(3)}) m/s</div>
         `
         let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
+        let padNumber = function(n) {
+            return n < 10 ? '0' + n : n
+        }
+        outText = event.shiftKey ? `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; Mag ${math.norm(burnDir).toFixed(1)} m/s` : outText
         navigator.clipboard.writeText(outText)
     }
     else {
