@@ -787,6 +787,7 @@ class Satellite {
         this.name = name;
         this.burns = burns;
         this.a = a;
+        this.originDate = Date.now()
         setTimeout(() => this.calcTraj(), 250);
     }
     calcTraj = calcSatTwoBody;
@@ -1343,6 +1344,7 @@ function startContextClick(event) {
             <div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
             <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
+            <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">Last State Update: ${((Date.now() - mainWindow.satellites[activeSat].originDate) / 60000).toFixed(0)} minutes ago</div> 
             `
         //             <div class="context-item">Export Burns</div>
     }
@@ -1489,6 +1491,7 @@ function handleContextClick(button) {
             id: state[4] / 1000,
             cd: state[5] / 1000
         }
+        mainWindow.satellites[sat].originDate = Date.now()
         mainWindow.satellites[sat].calcTraj()
     }
     else if (button.id === 'data-options') {
@@ -3593,6 +3596,7 @@ function editSatellite(button) {
     mainWindow.satellites[button.nextSibling.selectedIndex].calcTraj();
     let curPos = mainWindow.satellites[button.nextSibling.selectedIndex].currentPosition();
     mainWindow.satellites[button.nextSibling.selectedIndex].curPos = {r: curPos.r[0], i: curPos.i[0], c: curPos.c[0], rd: curPos.rd[0], id: curPos.id[0], cd: curPos.cd[0]}
+    mainWindow.satellites[button.nextSibling.selectedIndex].originDate = Date.now()
     closeAll();
 }
 
