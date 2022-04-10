@@ -1226,10 +1226,12 @@ function keydownFunction(key) {
                 name: 'Chief',
                 position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
                 shape: 'diamond',
-                color: '#b0b'
+                color: '#b0b',
+                a: 0.001
             }) : 
             new Satellite({
-                name: 'Sat-' + (mainWindow.satellites.length + 1)
+                name: 'Sat-' + (mainWindow.satellites.length + 1),
+                a: 0.001
             })
 
         newSat.calcTraj();
@@ -1366,7 +1368,7 @@ function startContextClick(event) {
         let padNumber = function(n) {
             return n < 10 ? '0' + n : n
         }
-        outText = event.shiftKey ? `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; Mag ${math.norm(burnDir).toFixed(1)} m/s` : outText
+        outText = event.shiftKey ? `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s` : outText
         navigator.clipboard.writeText(outText)
     }
     else {
@@ -1480,16 +1482,19 @@ function handleContextClick(button) {
         let input = button.parentElement.getElementsByTagName('input')[0]
         let sat = button.parentElement.sat
         if (input.value === '') return
-        let state = parseArtsReport(input.value)
-        console.log(state);
+        let parsedValues = parseArtsText(input.value)
+        if (parsedValues == undefined) return
+        mainWindow.startDate = parsedValues.newDate
+        mainWindow.setInitSun(parsedValues.newSun)
         mainWindow.satellites[sat].burns = []
+        mainWindow.originOrbit = parsedValues.originOrbit
         mainWindow.satellites[sat].position = {
-            r: state[0],
-            i: state[1],
-            c: state[2],
-            rd: state[3] / 1000,
-            id: state[4] / 1000,
-            cd: state[5] / 1000
+            r:  parsedValues.newState[0],
+            i:  parsedValues.newState[1],
+            c:  parsedValues.newState[2],
+            rd: parsedValues.newState[3],
+            id: parsedValues.newState[4],
+            cd: parsedValues.newState[5]
         }
         mainWindow.satellites[sat].originDate = Date.now()
         mainWindow.satellites[sat].calcTraj()
@@ -2478,61 +2483,25 @@ function changeBurnType() {
     }
 }
 
-function parseArtsReport(text) {
+function parseArtsText(text) {
     text = text.split(/ {2,}/)
-    let outState = []
-    if (isNaN(Number(text[0]))) {
-        let oldDate = mainWindow.startDate + 0;
-        mainWindow.startDate = new Date(text.shift())
-        let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
-        mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
+    if (text.length < 10) return alert('Invalid State Input')
+    let newDate = new Date(text[0])
+    newDate = isNaN(newDate) ? mainWindow.startDate : newDate
+    let newState = text.slice(1,7).map(s => Number(s))
+    if (newState.length < 6 || newState.filter(s => isNaN(s)).length > 0) return alert('Invalid State Input')
+    let newSun = text.slice(7,10).map(s => Number(s))
+    if (newSun.length < 3 || newSun.filter(s => isNaN(s)).length > 0) return alert('Invalid State Input')
+    newSun = math.dotDivide(newSun, math.norm(newSun))
+    newSun = [-newSun[2], newSun[0], -newSun[1]]
+    let originOrbit = [42164, 0, 0, 0, 0, 0]
+    let newOrbit = text.slice(10, 16).map(s => Number(s))
+    for (let index = 0; index < newOrbit.length; index++) {
+        originOrbit[index] = newOrbit[index]
+        if (index > 1) originOrbit[index] *= Math.PI / 180
     }
-    if (text[0] === "") text.shift();
-    if (text[text.length - 1] === "") text.pop();
-    if (text.length > 9) {
-        let oldMM = mainWindow.mm + 0
-        if (text.length > 12) {
-            let tA = Number(text.pop() * Math.PI / 180)
-            let arg = Number(text.pop() * Math.PI / 180)
-            let raan = Number(text.pop() * Math.PI / 180)
-            let i = Number(text.pop() * Math.PI / 180)
-            let e = Number(text.pop())
-            let a = Number(text.pop())
-            mainWindow.originOrbit = {
-                a,
-                arg,
-                e,
-                i,
-                raan,
-                tA
-            }
-            mainWindow.mm = Math.sqrt(398600.4418 / (Number(a ** 3)));
-        }
-        else {
-            mainWindow.mm = Math.sqrt(398600.4418 / (Number(text.pop() ** 3)));
-            mainWindow.originOrbit.a = (398600.4418 / mainWindow.mm ** 2) ** (1/3)
-        }
-        mainWindow.scenarioLength = math.abs(mainWindow.mm - oldMM) < 1000 ? mainWindow.scenarioLength : 2 * Math.PI / mainWindow.mm / 3600 * 2;
-        document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
-        mainWindow.timeDelta = 0.006 * 2 * Math.PI / mainWindow.mm;
-    }
-    text = text.filter(t => {
-        return Number(t) !== NaN;
-    });
-    text = text.map(t => Number(t));
-    if (text.length < 6) {
-        alert('Please include all six states (R I C Rd Id Cd)');
-        return;
-    } 
-    for (let ii = 0; ii < 6; ii++) {
-        outState.push(((ii > 2) ? 1000 : 1) * Number(text[ii]))
-    }
-    if (text.length === 9) {
-        let initSun = [Number(text[6]), Number(text[7]), Number(text[8])]
-        initSun = math.dotDivide(initSun, math.norm(initSun));
-        mainWindow.setInitSun([-initSun[2], initSun[0], -initSun[1]]);
-    }
-    return outState
+
+    return {newDate, newState, newSun, originOrbit}
 }
 
 function parseState(button) {
@@ -2541,7 +2510,9 @@ function parseState(button) {
     text = text.split(/ {2,}/)
     if (isNaN(Number(text[0]))) {
         let oldDate = mainWindow.startDate + 0;
-        mainWindow.startDate = new Date(text.shift())
+        let newDate = new Date(text.shift())
+        mainWindow.startDate = isNaN(newDate) ? mainWindow.startDate : newDate
+        if (isNaN(newDate)) alert('Date not recognized')
         let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
         mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
     }
