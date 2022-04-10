@@ -1484,7 +1484,11 @@ function handleContextClick(button) {
         if (input.value === '') return
         let parsedValues = parseArtsText(input.value)
         if (parsedValues == undefined) return
+        
+        let oldDate = mainWindow.startDate + 0
         mainWindow.startDate = parsedValues.newDate
+        let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
+        mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
         mainWindow.setInitSun(parsedValues.newSun)
         mainWindow.satellites[sat].burns = []
         mainWindow.originOrbit = parsedValues.originOrbit
@@ -2505,63 +2509,20 @@ function parseArtsText(text) {
 }
 
 function parseState(button) {
-    let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input');
-    let text = document.getElementById('parse-text').value;
-    text = text.split(/ {2,}/)
-    if (isNaN(Number(text[0]))) {
-        let oldDate = mainWindow.startDate + 0;
-        let newDate = new Date(text.shift())
-        mainWindow.startDate = isNaN(newDate) ? mainWindow.startDate : newDate
-        if (isNaN(newDate)) alert('Date not recognized')
-        let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
-        mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
+    let parsedState = parseArtsText(document.getElementById('parse-text').value)
+    let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input')
+    if (parsedState === undefined) return
+    console.log(parsedState);
+    mainWindow.mm = (398600.4418 / parsedState.originOrbit[0] ** 3) ** (1/2)
+    let oldDate = mainWindow.startDate + 0
+    mainWindow.startDate = parsedState.newDate
+    let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
+    mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
+    mainWindow.setInitSun(parsedState.newSun);
+    for (let index = 6; index < stateInputs.length; index++) {
+        stateInputs[index].value = parsedState.newState[index - 6] * (index > 8 ? 1000 : 1)
     }
-    if (text[0] === "") text.shift();
-    if (text[text.length - 1] === "") text.pop();
-    if (text.length > 9) {
-        let oldMM = mainWindow.mm + 0
-        if (text.length > 12) {
-            let tA = Number(text.pop() * Math.PI / 180)
-            let arg = Number(text.pop() * Math.PI / 180)
-            let raan = Number(text.pop() * Math.PI / 180)
-            let i = Number(text.pop() * Math.PI / 180)
-            let e = Number(text.pop())
-            let a = Number(text.pop())
-            mainWindow.originOrbit = {
-                a,
-                arg,
-                e,
-                i,
-                raan,
-                tA
-            }
-            mainWindow.mm = Math.sqrt(398600.4418 / (Number(a ** 3)));
-        }
-        else {
-            mainWindow.mm = Math.sqrt(398600.4418 / (Number(text.pop() ** 3)));
-            mainWindow.originOrbit.a = (398600.4418 / mainWindow.mm ** 2) ** (1/3)
-        }
-        mainWindow.scenarioLength = math.abs(mainWindow.mm - oldMM) < 1000 ? mainWindow.scenarioLength : 2 * Math.PI / mainWindow.mm / 3600 * 2;
-        document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
-        mainWindow.timeDelta = 0.006 * 2 * Math.PI / mainWindow.mm;
-    }
-    text = text.filter(t => {
-        return Number(t) !== NaN;
-    });
-    text = text.map(t => Number(t));
-    if (text.length < 6) {
-        alert('Please include all six states (R I C Rd Id Cd)');
-        return;
-    } 
-    for (let ii = 0; ii < 6; ii++) {
-        stateInputs[ii+6].value = ((ii > 2) ? 1000 : 1) * Number(text[ii]);
-    }
-    if (text.length === 9) {
-        let initSun = [Number(text[6]), Number(text[7]), Number(text[8])]
-        initSun = math.dotDivide(initSun, math.norm(initSun));
-        // console.log([-initSun[2], initSun[0], -initSun[1]]);
-        mainWindow.setInitSun([-initSun[2], initSun[0], -initSun[1]]);
-    }
+    mainWindow.originOrbit = parsedState.originOrbit
     initStateFunction(stateInputs[6]);
 }
 //------------------------------------------------------------------
