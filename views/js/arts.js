@@ -1841,7 +1841,7 @@ function handleContextClick(button) {
             return burn.time < mainWindow.scenarioTime;
         })
         let target = mainWindow.satellites[targetSat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
-        mainWindow.satellites[sat].burns.push({
+        mainWindow.satellites[chaserSat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
                 r: 0,
@@ -1858,7 +1858,7 @@ function handleContextClick(button) {
             }
         })
         mainWindow.satellites[chaserSat].genBurns();
-        let dir = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].direction;
+        let dir = mainWindow.satellites[chaserSat].burns[mainWindow.satellites[chaserSat].burns.length-1].direction;
         if (math.norm([dir.r, dir.i, dir.c]) < 1e-6) {
             mainWindow.satellites[sat].burns.pop();
             mainWindow.satellites[sat].genBurns();
@@ -1939,7 +1939,7 @@ function handleContextClick(button) {
         }
         console.log(sunPso.particles.map(part => part.position[1] * 180 / Math.PI));
         target = opt_function(sunPso.bestGlobalPosition, true)
-        mainWindow.satellites[sat].burns.push({
+        mainWindow.satellites[chaserSat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
                 r: 0,
