@@ -1490,7 +1490,6 @@ function handleContextClick(button) {
         let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
         mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
         mainWindow.setInitSun(parsedValues.newSun)
-        mainWindow.satellites[sat].burns = []
         mainWindow.originOrbit = parsedValues.originOrbit
         mainWindow.satellites[sat].position = {
             r:  parsedValues.newState[0],
@@ -2514,6 +2513,8 @@ function parseState(button) {
     if (parsedState === undefined) return
     console.log(parsedState);
     mainWindow.mm = (398600.4418 / parsedState.originOrbit[0] ** 3) ** (1/2)
+    mainWindow.scenarioLength = 2 * Math.PI / 3600 / mainWindow.mm
+    document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
     let oldDate = mainWindow.startDate + 0
     mainWindow.startDate = parsedState.newDate
     let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
