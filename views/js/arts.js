@@ -3497,7 +3497,13 @@ function initStateFunction(el) {
 
 function editSatellite(button) {
     if (button.innerText === 'Delete') {
-        mainWindow.satellites.splice(button.nextSibling.selectedIndex,1);
+        let delSat = button.nextSibling.selectedIndex
+        mainWindow.satellites.splice(delSat, 1);
+        mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => req.target == delSat || req.origin === delSat )
+        for (let index = 0; index < mainWindow.relativeData.dataReqs.length; index++) {
+            mainWindow.relativeData.dataReqs[index].origin = mainWindow.relativeData.dataReqs[index].origin > delSat ? Number(mainWindow.relativeData.dataReqs[index].origin) - 1 : mainWindow.relativeData.dataReqs[index].origin
+            mainWindow.relativeData.dataReqs[index].target = mainWindow.relativeData.dataReqs[index].target > delSat ? Number(mainWindow.relativeData.dataReqs[index].origin) - 1 : mainWindow.relativeData.dataReqs[index].target
+        }
         closeAll();
         return;
     }
