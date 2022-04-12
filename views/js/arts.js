@@ -1586,23 +1586,23 @@ function handleContextClick(button) {
     else if (button.id === 'prop-poca-execute') {
         let sat1 = button.getAttribute('sat'), sat2 = document.getElementById('context-menu').sat;
         let data = getRelativeData(button.getAttribute('sat'),document.getElementById('context-menu').sat);
-        let tGuess = data.toca*mainWindow.timeDelta + 600;
-        data = data.toca*mainWindow.timeDelta;
-        for (let ii = 0; ii < 100; ii++) {
+        let tGuess = data.toca + 600;
+        data = data.toca;
+        for (let ii = 0; ii < 200; ii++) {
             let pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess})
             let pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess})
             let dr = [pos1.r[0] - pos2.r[0], pos1.i[0] - pos2.i[0], pos1.c[0] - pos2.c[0]]
             let dv = [pos1.rd[0] - pos2.rd[0], pos1.id[0] - pos2.id[0], pos1.cd[0] - pos2.cd[0]]
             let rr1 = math.dot(dr,dv) / math.norm(dr)
-            pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess + 0.1})
-            pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess + 0.1})
+            pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess + 0.001})
+            pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess + 0.001})
             dr = [pos1.r[0] - pos2.r[0], pos1.i[0] - pos2.i[0], pos1.c[0] - pos2.c[0]]
             dv = [pos1.rd[0] - pos2.rd[0], pos1.id[0] - pos2.id[0], pos1.cd[0] - pos2.cd[0]]
             let rr2 = math.dot(dr,dv) / math.norm(dr)
-            dr = (rr2 - rr1) / 0.1
-            tGuess -= rr1 / dr
+            dr = (rr2 - rr1) / 0.001
+            tGuess -= 0.05 * rr1 / dr
             tGuess = tGuess < 0 ? 0 : tGuess
-            // console.log(tGuess, dr, rr1);
+            if (math.abs(rr1) < 1e-8) break
 
         }
         mainWindow.desired.scenarioTime = tGuess
@@ -3771,11 +3771,10 @@ function getRelativeData(n_target, n_origin) {
     try {
         relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
         poca = math.min(relPosHis);
-        toca = relPosHis.findIndex(element => element === poca);
+        toca = relPosHis.findIndex(element => element === poca) * mainWindow.timeDelta;
     }
     catch (err) {console.log(err)}
     
-    // console.log(poca, toca);
     return {
         sunAngle,
         rangeRate,
