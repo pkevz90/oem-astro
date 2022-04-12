@@ -1477,6 +1477,7 @@ function handleContextClick(button) {
             <div class="context-item" id="state-update"><input placeholder="ARTS Report String"/></div>
             <div class="context-item" onclick="handleContextClick(this)" id="state-update">Update</div>
         `
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
     else if (button.id === 'state-update') {
         let input = button.parentElement.getElementsByTagName('input')[0]
@@ -1526,7 +1527,6 @@ function handleContextClick(button) {
     else if (button.id === 'prop-crossing' || button.id === 'prop-maxcross') {
         let type = button.id.split('-')[1];
         let sat = document.getElementById('context-menu').sat;
-        let state = mainWindow.satellites[sat].currentPosition();
         if (type === 'crossing') {
             findCrossTrackTime(sat, 0)
         }
@@ -1566,7 +1566,7 @@ function handleContextClick(button) {
     }
     else if (button.id === 'prop-radial' || button.id === 'prop-in-track') {
         let newInnerHTML = `
-            <div class="context-item" ><input type="Number" style="width: 3em; font-size: 1em"> km</div>
+            <div class="context-item" ><input type="Number" placeholder="0" style="width: 3em; font-size: 1em"> km</div>
             <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-${button.id === 'prop-radial' ? 'r' : 'i'}" tabindex="0">Prop to ${button.id === 'prop-radial' ? 'R' : 'I'}</div>
         `;
         button.parentElement.innerHTML = newInnerHTML;
@@ -1612,8 +1612,8 @@ function handleContextClick(button) {
     else if (button.id === 'waypoint-maneuver') {
         let sat = button.parentElement.sat;
         let html = `
-            <div class="context-item" >TOF: <input value="2" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
-            <div class="context-item" >Target: (<input value="0" type="Number" style="width: 3em; font-size: 1em">, <input value="0" type="Number" style="width: 3em; font-size: 1em">, <input value="0" type="Number" style="width: 3em; font-size: 1em">) km</div>
+            <div class="context-item" >TOF: <input placeholder="2" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" >Target: (<input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">) km</div>
             <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-waypoint" tabindex="0">RIC Origin</div>
         `
         for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
@@ -1691,9 +1691,9 @@ function handleContextClick(button) {
     }
     else if (button.id === 'direction-maneuver') {
         button.parentElement.innerHTML = `
-            <div class="context-item" >R: <input value="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >I: <input value="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >C: <input value="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >R: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >I: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >C: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
             <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-direction" tabindex="0">Execute</div>
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
@@ -1724,17 +1724,15 @@ function handleContextClick(button) {
     else if (button.id === 'execute-waypoint') {
         let target = button.getAttribute('target')
         let inputs = button.parentElement.getElementsByTagName('input');
-        let bad = false;
         for (let ii = 0; ii < inputs.length; ii++) {
-            if ((ii === 0 && inputs[ii].value < 0)) {
-                inputs[ii].style.backgroundColor = 'rgb(255,150,150)';
-                bad = true;
+            if ((ii === 0 && inputs[ii].value !== '' && inputs[ii].value < 0.25)) {
+                inputs[ii].style.backgroundColor = 'rgb(255,150,150)'
+                return
             }
-            else {
-                inputs[ii].style.backgroundColor = 'white';
-            }
+            else inputs[ii].style.backgroundColor = 'white'
+            if (ii === 0 && inputs[ii].value === '') inputs[ii].value = 2
+            if (ii > 0 && inputs[ii].value === '') inputs[ii].value = 0
         }
-        if (bad) return;
         let sat = button.parentElement.sat;
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
@@ -1763,7 +1761,7 @@ function handleContextClick(button) {
         if (math.norm([checkBurn.direction.r, checkBurn.direction.i, checkBurn.direction.c]) < 1e-8) {
             mainWindow.satellites[sat].burns.pop();
             mainWindow.satellites[sat].genBurns();
-            showScreenAlert('Waypoint outside kinematic reach of satellite with given time of flight');
+            showScreenAlert('Waypoint outside kinematic reach or error in calculating burn');
             return;
         }
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
@@ -2330,15 +2328,14 @@ function openDataTab() {
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
     let el = click.target;
     el = el.parentNode.parentNode;
-    let inputs = el.getElementsByTagName('input');
-    console.log(inputs);
+    let inputs = el.getElementsByTagName('input')
     let date = inputs[0].value;
     let sun = inputs[3].value;
     mainWindow.mm = Math.sqrt(398600.4418 / Math.pow(Number(inputs[2].value), 3));
     mainWindow.originOrbit.a = Number(inputs[2].value)
     mainWindow.scenarioLength = Number(inputs[1].value);
     document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
-    mainWindow.timeDelta = (2 * Math.PI / mainWindow.mm) / Number(inputs[10].value)
+    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / Number(inputs[10].value)
     mainWindow.satellites.forEach(sat => {
         sat.genBurns();
         sat.calcTraj();
@@ -2585,6 +2582,7 @@ function openPanel(button) {
         if (sunTime.length < 4) sunTime = '0' + sunTime;
         inputs[3].value = sunTime;
         inputs[4].value = 180 * math.atan2(mainWindow.getInitSun()[2], math.norm(mainWindow.getInitSun().slice(0,2))) / Math.PI;
+        inputs[10].value = Math.round(mainWindow.scenarioLength * 3600 / mainWindow.timeDelta)
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     // mainWindow.panelOpen = true;
