@@ -1682,9 +1682,9 @@ function handleContextClick(button) {
         let burn = button.getAttribute('burn')
         let dir = button.getAttribute('dir').split('_').map(s => Number(s))
         button.parentElement.innerHTML = `
-            <div class="context-item" >R: <input value="${dir[0].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >I: <input value="${dir[1].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >C: <input value="${dir[2].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >R: <input placeholder="${dir[0].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >I: <input placeholder="${dir[1].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >C: <input placeholder="${dir[2].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
             <div class="context-item" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-direction" tabindex="0">Change</div>
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
@@ -1704,7 +1704,7 @@ function handleContextClick(button) {
         let inputs = button.parentElement.getElementsByTagName('input');
         for (let ii = 0; ii < inputs.length; ii++) {
             if (inputs[ii].value === '') {
-                inputs[ii].value = 0;
+                inputs[ii].value = Number(inputs[ii].placeholder);
             }
         }
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
