@@ -1821,17 +1821,18 @@ function handleContextClick(button) {
             if (ii === button.parentElement.sat) continue;
             innerString += `<div onclick="handleContextClick(this)" class="context-item" id="execute-intercept" sat="${ii}">${mainWindow.satellites[ii].name}</div>`
         }
-        innerString += `<div class="context-item" >TOF: <input value="1" type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
+        innerString += `<div class="context-item" >TOF: <input placeholder="1" type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
 
         button.parentElement.innerHTML = innerString;
 
     }
     else if (button.id === 'execute-intercept') {
         let inputs = button.parentElement.getElementsByTagName('input')[0];
-        if (inputs.value < 0 || inputs.value === '') {
+        if (inputs.value < 0) {
             inputs.style.backgroundColor = 'rgb(255,150,150)';
             return;
         }
+        inputs.value = inputs.value === '' ? inputs.placeholder : inputs.value
         let tof = Number(inputs.value) * 3600;
         let targetSat = button.getAttribute('sat');
         let chaserSat = button.parentElement.sat;
