@@ -1087,9 +1087,12 @@ function keydownFunction(key) {
         let a = Number(prompt('Enter reference SMA [km]', mainWindow.originOrbit.a))
         let e = Number(prompt('Enter reference Eccentricity', mainWindow.originOrbit.e))
         let i = Number(prompt('Enter reference Inclination [deg]', mainWindow.originOrbit.i * 180 / Math.PI)) * Math.PI / 180
-        let raan = Number(prompt('Enter reference RAAN [deg]', mainWindow.originOrbit.raan * 180 / Math.PI)) * Math.PI / 180
         let arg = Number(prompt('Enter reference Arg of Perigee [deg]', mainWindow.originOrbit.arg * 180 / Math.PI)) * Math.PI / 180
+        let raan = Number(prompt('Enter reference RAAN [deg]', mainWindow.originOrbit.raan * 180 / Math.PI)) * Math.PI / 180
         let tA = Number(prompt('Enter reference True Anomaly [deg]', mainWindow.originOrbit.tA * 180 / Math.PI)) * Math.PI / 180
+        mainWindow.mm = (398600.4418 / a ** 3) ** (1/2)
+        mainWindow.scenarioLength = Math.abs(a - mainWindow.originOrbit.a) > 2000 ? 2 * Math.PI * (a ** 3 / 398600.4418) ** (1/2) / 3600: mainWindow.scenarioLength
+        mainWindow.timeDelta = mainWindow.scenarioLength / 0.09284620026925397
         mainWindow.originOrbit = {
             a, e, i, raan, arg, tA
         }
@@ -2086,19 +2089,24 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     else return;
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
+        if (event.altKey) {
+            let curStart = new Date(mainWindow.startDate.getTime()).toString().split(' GMT')[0].substring(4)
+            let newStart = prompt('Enter scenario start time:',curStart)
+            if (new Date(newStart) == 'Invalid Date') showScreenAlert('Invalid Time String')
+            mainWindow.startDate = new Date(newStart)
+            return
+        l
+        }
         let curTime = new Date(mainWindow.startDate.getTime() + mainWindow.scenarioTime * 1000).toString().split(' GMT')[0].substring(4)
         let newTime = prompt('Enter scenario time:',curTime)
         let desTime = new Date(newTime)
         let delTime = desTime - mainWindow.startDate
-        console.log(desTime, delTime);
         if (delTime/3600000 < mainWindow.scenarioLength && delTime > 0) {
             mainWindow.desired.scenarioTime = delTime / 1000;
             mainWindow.scenarioTime = delTime / 1000;
             document.getElementById('time-slider-range').value = delTime / 1000;
         }
-        else {
-            showScreenAlert('Invalid Time String')
-        }
+        else showScreenAlert('Invalid Time String')
         return
     }
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
@@ -2139,7 +2147,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                     c: 0
                 },
                 waypoint: {
-                    tranTime: 7200,
+                    tranTime: math.round(2 * Math.PI * 0.08356158 / mainWindow.mm / 10) * 10,
                     target: {
                         r: targetState.r[0],
                         i: targetState.i[0],
@@ -2158,7 +2166,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                 frame: Object.keys(check)[0]
             }
             if (mainWindow.burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
-                mainWindow.desired.scenarioTime += 7200;
+                mainWindow.desired.scenarioTime += math.round(2 * Math.PI * 0.08356158 / mainWindow.mm / 10) * 10;
                 document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
             };
         }, 250)
