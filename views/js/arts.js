@@ -52,6 +52,7 @@ class windowCanvas {
         foregroundColor: 'black',
         textColor: 'black'
     }
+    extraAcc = [0,0,0]
     normalizeDirection = true;
     frameMove = undefined;
     initSun = [1, 0, 0];
@@ -1082,6 +1083,17 @@ function keydownFunction(key) {
             mainWindow.colors.foregroundColor = 'white'
         }
     }
+    else if (key.key === 'o' && key.altKey) {
+        let a = Number(prompt('Enter reference SMA [km]', mainWindow.originOrbit.a))
+        let e = Number(prompt('Enter reference Eccentricity', mainWindow.originOrbit.e))
+        let i = Number(prompt('Enter reference Inclination [deg]', mainWindow.originOrbit.i * 180 / Math.PI)) * Math.PI / 180
+        let raan = Number(prompt('Enter reference RAAN [deg]', mainWindow.originOrbit.raan * 180 / Math.PI)) * Math.PI / 180
+        let arg = Number(prompt('Enter reference Arg of Perigee [deg]', mainWindow.originOrbit.arg * 180 / Math.PI)) * Math.PI / 180
+        let tA = Number(prompt('Enter reference True Anomaly [deg]', mainWindow.originOrbit.tA * 180 / Math.PI)) * Math.PI / 180
+        mainWindow.originOrbit = {
+            a, e, i, raan, arg, tA
+        }
+    }
     if (mainWindow.panelOpen) return;
     let shiftedNumbers = '!@#$%'
     if (key.key === ' ') {
@@ -1338,14 +1350,18 @@ function startContextClick(event) {
     
     if (activeSat !== false) {
         ctxMenu.sat = activeSat;
+        console.log(event.altKey);
+        let dispPosition = event.altKey ? getCurrentInertial(activeSat) : mainWindow.satellites[activeSat].curPos
+        console.log(dispPosition);
         ctxMenu.innerHTML = `
             <div contentEditable="true" sat="${activeSat}" element="name" oninput="alterEditableSatChar(this)" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeSat].name}</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
             <div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
-            <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${mainWindow.satellites[activeSat].curPos.r.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.i.toFixed(2)}, ${mainWindow.satellites[activeSat].curPos.c.toFixed(2)}) km</div>
-            <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*mainWindow.satellites[activeSat].curPos.rd).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.id).toFixed(2)}, ${(1000*mainWindow.satellites[activeSat].curPos.cd).toFixed(2)}) m/s</div> 
+            <div class="context-item" onclick="generateEphemFile(${activeSat})" id="state-options">Gen .e File</div>
+            <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${dispPosition.r.toFixed(2)}, ${dispPosition.i.toFixed(2)}, ${dispPosition.c.toFixed(2)}) km</div>
+            <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*dispPosition.rd).toFixed(2)}, ${(1000*dispPosition.id).toFixed(2)}, ${(1000*dispPosition.cd).toFixed(2)}) m/s</div> 
             <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">Last State Update: ${((Date.now() - mainWindow.satellites[activeSat].originDate) / 60000).toFixed(0)} minutes ago</div> 
             `
         //             <div class="context-item">Export Burns</div>
@@ -4005,9 +4021,9 @@ function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
         dx,
         dy,
         dz,
-        -mu * (r0 + x) / rT+ mu / r0 ** 2 + 2 * n * dy + n ** 2 * x + ndot * y +  a[0],
-        -mu * y / rT - 2 * n * dx - ndot * x + n ** 2 * y + a[1],
-        -mu * z / rT + a[2]
+        -mu * (r0 + x) / rT+ mu / r0 ** 2 + 2 * n * dy + n ** 2 * x + ndot * y +  a[0] + mainWindow.extraAcc[0],
+        -mu * y / rT - 2 * n * dx - ndot * x + n ** 2 * y + a[1] + mainWindow.extraAcc[1],
+        -mu * z / rT + a[2] + mainWindow.extraAcc[2]
     ];
 }
 
@@ -4938,4 +4954,55 @@ function calcSatelliteEccentricity(position = [10,0,0,0,0,0]) {
     let e = math.dotDivide(math.cross(outEci.drEci, h), 398600.4415)
     e = math.subtract(e, math.dotDivide(outEci.rEcci, math.norm(outEci.rEcci)))
     return math.norm(e);
+}
+
+function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
+    let inertChief = {...mainWindow.originOrbit}
+    inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
+    inertChief = Coe2PosVelObject(inertChief)
+    inertChief = [inertChief.x, inertChief.y, inertChief.z, inertChief.vx, inertChief.vy, inertChief.vz]
+    // console.log(inertChief);
+    let satPos = mainWindow.satellites[sat].currentPosition({time})
+    satPos = Ric2Eci([satPos.r[0],satPos.i[0],satPos.c[0]], [satPos.rd[0],satPos.id[0],satPos.cd[0]], inertChief.slice(0,3), inertChief.slice(3,6))
+    return {
+        r: satPos.rEcci[0],
+        i: satPos.rEcci[1],
+        c: satPos.rEcci[2],
+        rd: satPos.drEci[0],
+        id: satPos.drEci[1],
+        cd: satPos.drEci[2]
+    }
+}
+
+function generateEphemFile(sat = 0) {
+    let start = `stk.v.11.0
+
+    # WrittenBy    STK_v11.7.1
+    
+    BEGIN Ephemeris
+    
+        NumberOfEphemerisPoints		 200
+    
+        ScenarioEpoch		 27 Apr 2022 18:00:00.000000
+    
+    # Epoch in JDate format: 2459697.25000000000000
+    # Epoch in YYDDD format:   22117.75000000000000
+    
+    
+        InterpolationMethod		 Lagrange
+    
+        InterpolationSamplesM1		 5
+    
+        CentralBody		 Earth
+    
+        CoordinateSystem		 ICRF
+    
+    # Time of first point: ` + toStkFormat(new Date(mainWindow.startDate.getTime()).toString()) + '\n\n\tEphemerisTimePosVel\n\n'
+    for (let time = 0; time < mainWindow.scenarioLength * 3600; time += mainWindow.scenarioLength * 18) {
+        let curPos = getCurrentInertial(sat, time)
+
+        start += `${time} ${curPos.r * 1000} ${curPos.i * 1000} ${curPos.c * 1000} ${curPos.rd * 1000} ${curPos.id * 1000} ${curPos.cd * 1000}\n`
+    }
+    start += `\n\nEND Ephemeris`
+    downloadFile(mainWindow.satellites[sat].name + '.e', start)
 }
