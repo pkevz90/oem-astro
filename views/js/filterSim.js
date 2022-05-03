@@ -1,4 +1,10 @@
 let mainDiv = document.querySelector('#main')
+let initTime = new Date()
+let timeMultiplier = 1
+let mm = Math.PI / 180
+let trueState = {r: -10, i: -50, c: 0, rd: 0, id: -10 * mm * 3/2, cd: 0}
+let ricWidth = 100
+let timeElapsed = 0
 
 function popupTitleClick(title) {
     let parentDiv = title.parentElement
@@ -32,10 +38,12 @@ class canvasObject {
         ctx.fillStyle = color
         ctx.fillRect(center.x - width/2, center.y - height/2, width, height)
     } 
-    drawChar(message, point, left = true) {
-        
+    drawChar(options = {}) {
+        let {message = 'test', point, fontSize, left = true} = options
     }
-
+    clearCnvs() {
+        this.getContext().clearRect(0,0,this.cnvs.width, this.cnvs.height)
+    }
 }
 
 class unscentedFilter {
@@ -48,8 +56,42 @@ class unscentedFilter {
 }
 
 let mainCanvas = new canvasObject(document.querySelector('#main-canvas'))
-mainCanvas.drawRectangle()
-mainCanvas.drawRectangle({
-    color: 'rgb(100,100,200)',
-    center: {x: 3*mainCanvas.cnvs.width/4, y: 3*mainCanvas.cnvs.height/4}
-})
+
+
+function formatTime(time) {
+    time = time.split('GMT')[0].substring(4, time.split('GMT')[0].length - 1);
+    time = time.split(' ');
+    return time[1] + ' ' + time[0] + ' ' + time[2].slice(2,4) + ' ' + time[3];
+}
+
+function advanceTime(dt = 1) {
+    if (timeMultiplier === 0) return
+    timeElapsed += timeMultiplier * dt
+    initTime.setSeconds(initTime.getSeconds() + dt * timeMultiplier)
+    document.querySelector('#time-display').innerText = formatTime(initTime.toString());
+    formatCanvas()
+}
+function formatCanvas() {
+    mainCanvas.clearCnvs()
+    mainCanvas.drawRectangle()
+    mainCanvas.drawRectangle({
+        color: 'rgb(100,100,200)',
+        center: {x: 3*mainCanvas.cnvs.width/4 - timeElapsed, y: 3*mainCanvas.cnvs.height/4}
+    })
+}
+function timeControls(button) {
+    if (button.innerText === '<<') {
+        timeMultiplier = timeMultiplier > 0 ? timeMultiplier - 1 : timeMultiplier
+    }
+    else if (button.innerText === '>>') {
+        timeMultiplier = timeMultiplier < 100 ? timeMultiplier + 1 : timeMultiplier
+    }
+    else {
+        timeMultiplier = 0
+    }
+    document.querySelector('#time-multiplier-span').innerText = timeMultiplier
+}
+
+
+
+setInterval(advanceTime, 1000)

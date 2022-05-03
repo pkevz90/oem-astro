@@ -5,30 +5,32 @@
     overflow: hidden;
 }
 #popup-1 {
-    position: fixed;
-    left: 2.5%;
+    left: 0%;
 }
 
 #popup-2 {
-    position: fixed;
-    right: 2.5%;
+    left: 54%;
 }
 
 #popup-3 {
-    position: fixed;
-    left: 35%;
+    left: 27%;
 }
 
+#popup-4 {
+    left: 81%;
+    width: 19vw;
+}
 
 .popup-class {
+    position: fixed;
     z-index: 10;
     background-color: white;
     border: 2px solid black;
-    border-radius: 20px;
+    border-radius: 10px;
     height: 100vh;
     top: 95vh;
     transition: top 0.25s;
-    width: 30vw;
+    width: 27vw;
 }
 
 .popup-title {
@@ -73,4 +75,14 @@
           -ms-user-select: none; /* Internet Explorer/Edge */
               user-select: none; /* Non-prefixed version, currently
                                     supported by Chrome, Opera and Firefox */
+  }
+
+  .time-button {
+      margin: 10px;
+      font-size: 3em;
+      cursor: pointer;
+  }
+
+  .time-button:hover {
+      font-weight: 900;
   }
