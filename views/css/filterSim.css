@@ -1,0 +1,76 @@
+#main, html, body, #main-canvas {
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    overflow: hidden;
+}
+#popup-1 {
+    position: fixed;
+    left: 2.5%;
+}
+
+#popup-2 {
+    position: fixed;
+    right: 2.5%;
+}
+
+#popup-3 {
+    position: fixed;
+    left: 35%;
+}
+
+
+.popup-class {
+    z-index: 10;
+    background-color: white;
+    border: 2px solid black;
+    border-radius: 20px;
+    height: 100vh;
+    top: 95vh;
+    transition: top 0.25s;
+    width: 30vw;
+}
+
+.popup-title {
+    width: 100%;
+    text-align: center;
+    padding: 2px 2px 20px 2px;
+    cursor: pointer;
+    font-size: 4vh;
+}
+
+#filter-status-span {
+    color: rgb(200, 100, 100);
+    /* color: rgb(100, 200, 100); */
+}
+
+#filter-start-stop {
+    padding: 20px 50px;
+    width: 50%;
+    margin: 20px 25%;
+    border-radius: 10px;
+    font-size: 2vw;
+    cursor: pointer;
+    opacity: 0.75;
+    background-color: rgb(70,140,70);
+}
+
+#filter-start-stop:hover {
+    opacity: 0.875;
+    background-color: rgb(70,140,70);
+}
+
+#filter-start-stop:active {
+    opacity: 1;
+    background-color: rgb(70,140,70);
+}
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+      -webkit-user-select: none; /* Safari */
+       -khtml-user-select: none; /* Konqueror HTML */
+         -moz-user-select: none; /* Old versions of Firefox */
+          -ms-user-select: none; /* Internet Explorer/Edge */
+              user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome, Opera and Firefox */
+  }

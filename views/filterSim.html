@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFS</title>
+    <script src="./js/filterSim.js" defer></script>
+    <link rel="stylesheet" href="./css/filterSim.css">
+</head>
+<body class="noselect">
+    <div id="main">
+        <canvas id="main-canvas"></canvas>
+    </div>
+    <div id="popup-1" class="popup-class">
+        <div class="popup-title" onclick="popupTitleClick(this)">Matrix Info</div>
+        <div>Covariance</div>
+        <div>Q</div>
+    </div>
+    <div id="popup-2" class="popup-class">
+        <div class="popup-title" onclick="popupTitleClick(this)">Filter Info - <span id="filter-status-span">Off</span></div>
+        <div id="filter-info">
+            <div>
+                <label for="range-switch">Range</label> <input type="checkbox" id="range-switch">
+                <label for="angles-switch">Angles</label> <input type="checkbox" id="angles-switch">
+            </div>
+            <div>
+                <button onclick="changeFilterStatus(this)" id="filter-start-stop">Start Filter</button>
+            </div>
+        </div>
+    </div>
+    <div id="popup-3" class="popup-class">
+        <div class="popup-title" onclick="popupTitleClick(this)">Manuever Info</div>
+        <div>Tracking Satellite</div>
+        <div>Tracked Satellite</div>
+    </div>
+</body>
+</html>

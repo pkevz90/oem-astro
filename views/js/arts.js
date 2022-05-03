@@ -4964,14 +4964,38 @@ function calcSatelliteEccentricity(position = [10,0,0,0,0,0]) {
     return math.norm(e);
 }
 
+function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2 = true) {
+    let mu = 398600.4418, j2 = 0.0010826, re = 6378.137, x = position[0], y = position[1], z = position[2]
+    let r = math.norm(position.slice(0,3))
+    return j2 ? [
+        position[3], position[4], position[5],
+        -mu * x / r ** 3 * (1 + 1.5 * j2 * re ** 2 / r ** 2 - 7.5 * j2 * re ** 2 * z ** 2 / r ** 4),
+        -mu * y / r ** 3 * (1 + 1.5 * j2 * re ** 2 / r ** 2 - 7.5 * j2 * re ** 2 * z ** 2 / r ** 4),
+        -mu * z / r ** 3 * (1 + 4.5 * j2 * re ** 2 / r ** 2 - 7.5 * j2 * re ** 2 * z ** 2 / r ** 4)
+    ] : 
+    [
+        position[3], position[4], position[5],
+        -mu * x / r ** 3 ,
+        -mu * y / r ** 3 ,
+        -mu * z / r ** 3 
+    ]
+}
+
 function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
-    let inertChief = {...mainWindow.originOrbit}
-    inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
-    inertChief = Coe2PosVelObject(inertChief)
-    inertChief = [inertChief.x, inertChief.y, inertChief.z, inertChief.vx, inertChief.vy, inertChief.vz]
+    // let inertChief = {...mainWindow.originOrbit}
+    // inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
+    // inertChief = Coe2PosVelObject(inertChief)
+    // inertChief = [inertChief.x, inertChief.y, inertChief.z, inertChief.vx, inertChief.vy, inertChief.vz]
     // console.log(inertChief);
+    let chiefPos = Coe2PosVelObject(mainWindow.originOrbit)
+    chiefPos = [chiefPos.x, chiefPos.y, chiefPos.z, chiefPos.vx, chiefPos.vy, chiefPos.vz]
+    let n = math.floor(time / 2)
+    for (let index = 0; index < n; index++) {
+        chiefPos = runge_kutta(twoBodyJ2, chiefPos, time / n)
+    }
     let satPos = mainWindow.satellites[sat].currentPosition({time})
-    satPos = Ric2Eci([satPos.r[0],satPos.i[0],satPos.c[0]], [satPos.rd[0],satPos.id[0],satPos.cd[0]], inertChief.slice(0,3), inertChief.slice(3,6))
+    // satPos = Ric2Eci([satPos.r[0],satPos.i[0],satPos.c[0]], [satPos.rd[0],satPos.id[0],satPos.cd[0]], inertChief.slice(0,3), inertChief.slice(3,6))
+    satPos = Ric2Eci([satPos.r[0],satPos.i[0],satPos.c[0]], [satPos.rd[0],satPos.id[0],satPos.cd[0]], chiefPos.slice(0,3), chiefPos.slice(3,6))
     return {
         r: satPos.rEcci[0],
         i: satPos.rEcci[1],
@@ -4991,7 +5015,7 @@ function generateEphemFile(sat = 0) {
     
         NumberOfEphemerisPoints		 200
     
-        ScenarioEpoch		 27 Apr 2022 18:00:00.000000
+        ScenarioEpoch		 ${toStkFormat(new Date(mainWindow.startDate.getTime()).toString())}
     
     # Epoch in JDate format: 2459697.25000000000000
     # Epoch in YYDDD format:   22117.75000000000000
