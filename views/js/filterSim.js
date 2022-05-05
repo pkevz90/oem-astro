@@ -4,7 +4,7 @@ let curTime = new Date()
 let timeMultiplier = 1
 let mm = 2 * Math.PI / 86164
 let trueState = [-10, -50, 0, 0, 0.0010938185275485561, 0]
-let r = math.diag([0.000003046174197867086, 0.000003046174197867086, 0.01])
+let r = math.diag([(0.000003046174197867086), 0.000003046174197867086, 0.01])
 let q = math.diag([1e-10, 1e-10, 1e-10, 1e-16, 1e-16, 1e-16])
 let ricWidth = 100
 let timeElapsed = 0
@@ -65,7 +65,7 @@ class unscentedFilter {
         this.genSigmaPoints()
         this.propStates(dt, a)
         let out = this.calcGain()
-        this.p = math.multiply(math.subtract(math.ones([this.estState.length,this.estState.length]), math.multiply(out.k, math.reshape(out.cross_corr, [-1, this.p.length]))), this.p)
+        this.p = math.subtract(this.p, math.multiply(out.k, out.s, math.transpose(out.k)))
         
         let error = math.subtract(obs, out.z_hat)
         this.estState = math.add(math.reshape(this.estState, [-1, 1]), math.multiply(out.k, math.reshape(error, [-1,1])))
@@ -102,17 +102,18 @@ class unscentedFilter {
         this.p = estP
     }
     measure(state, noise = false) {
+        let rNoise = choleskyDecomposition(this.r)
         let x = state[0], y = state[1], z = state[2], n = noise ? 1 : 0
+        let outObs = [math.atan2(y, x) + randn_gauss() * rNoise[0][0], math.atan2(z, math.norm([x, y])) + randn_gauss() * rNoise[1][1]]
         if (this.range) {
-            return [math.atan2(y, x), math.atan2(z, math.norm([x, y])), math.norm([x, y, z])]
+            outObs.push(math.norm([x, y, z]) + randn_gauss() * rNoise[2][2])
         }
-        return [math.atan2(y, x), math.atan2(z, math.norm([x, y]))]
+        return outObs
     }
     calcGain() {
         let z_sigma = this.sigma.map(sig => this.measure(sig))
         let z_hat = math.zeros(math.size(z_sigma[0]))
         let s = math.zeros(math.size(this.r))
-        console.log(z_sigma);
         z_sigma.forEach((sig, ii) => {
             let w = ii === 0 ? this.weight[0] : this.weight[1]
             z_hat = math.add(z_hat, math.dotMultiply(w, sig))
@@ -135,18 +136,21 @@ class unscentedFilter {
 }
 
 let mainCanvas = new canvasObject(document.querySelector('#main-canvas'))
-// let mainFilter = new unscentedFilter({
-//     estState: generateRandomPoint(trueState, initP),
-//     p: initP,
-//     q,
-//     r
-// })
 let mainFilter = new unscentedFilter({
-        estState: [0, 11, 0, 0, 0, 0],
-        p: math.diag([1, 25, 1, 0.005 ** 2, 0.005 ** 2, 0.005 ** 2]),
-        q: math.diag([0.0001 ** 2, 0.0001 ** 2, 0.0001 ** 2, 0.000001 ** 2, 0.000001 ** 2, 0.000001 ** 2]),
-        r: r.slice(0,2).map(row => row.slice(0,2))
-    })
+    estState: generateRandomPoint(trueState, initP),
+    p: initP,
+    q,
+    r:  r.slice(0,2).map(row => row.slice(0,2))
+})
+console.log(mainFilter.estState)
+mainFilter.genSigmaPoints()
+mainFilter.calcGain()
+// let mainFilter = new unscentedFilter({
+//         estState: [0, 11, 0, 0, 0, 0],
+//         p: math.diag([1, 25, 1, 0.005 ** 2, 0.005 ** 2, 0.005 ** 2]),
+//         q: math.diag([0.0001 ** 2, 0.0001 ** 2, 0.0001 ** 2, 0.000001 ** 2, 0.000001 ** 2, 0.000001 ** 2]),
+//         r: r.slice(0,2).map(row => row.slice(0,2))
+//     })
 
 function formatTime(time) {
     time = time.split('GMT')[0].substring(4, time.split('GMT')[0].length - 1);
@@ -164,7 +168,8 @@ function advanceTime(dt = 1) {
     }
     let obs = mainFilter.measure(trueState)
     // console.log(obs);
-    // mainFilter.step(obs, timeMultiplier * dt)
+    mainFilter.step(obs, timeMultiplier * dt)
+    console.log(mainFilter.estState);
     formatCanvas()
 }
 function formatCanvas() {
