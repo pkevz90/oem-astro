@@ -52,7 +52,7 @@ class canvasObject {
 
 class unscentedFilter {
     constructor(input = {}) {
-        let {estState, p, q, r, range = false} = input
+        let {estState, p, q, r, range = true} = input
         this.estState = estState
         this.p = p
         this.q = q
@@ -140,7 +140,7 @@ let mainFilter = new unscentedFilter({
     estState: generateRandomPoint(trueState, initP),
     p: initP,
     q,
-    r:  r.slice(0,2).map(row => row.slice(0,2))
+    r
 })
 console.log(mainFilter.estState)
 mainFilter.genSigmaPoints()

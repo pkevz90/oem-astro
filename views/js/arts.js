@@ -15,6 +15,10 @@ newNode.id = 'add-launch-button';
 newNode.innerText = 'Add Launch';
 addButton.parentNode.insertBefore(newNode, addButton);
 // document.getElementsByClassName('rmoe')[1].parentNodeinnerHTML = 'a'
+
+let currentAction
+let pastActions = []
+
 document.getElementsByClassName('rmoe')[1].parentNode.innerHTML = `
     Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> degs/rev
 `
@@ -4964,7 +4968,7 @@ function calcSatelliteEccentricity(position = [10,0,0,0,0,0]) {
     return math.norm(e);
 }
 
-function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2 = true) {
+function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2Eff = true) {
     let mu = 398600.4418, j2 = 0.0010826, re = 6378.137, x = position[0], y = position[1], z = position[2]
     let r = math.norm(position.slice(0,3))
     return j2 ? [
@@ -5037,4 +5041,8 @@ function generateEphemFile(sat = 0) {
     }
     start += `\n\nEND Ephemeris`
     downloadFile(mainWindow.satellites[sat].name + '.e', start)
+}
+
+function reverseLastAction() {
+
 }
