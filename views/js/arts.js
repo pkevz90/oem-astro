@@ -1077,7 +1077,6 @@ function keydownFunction(key) {
         }
     }
     else if (key.key === 'd') {
-        console.log(key.key);
         if (mainWindow.colors.backgroundColor === 'black') {
             mainWindow.colors.backgroundColor = 'white'
             mainWindow.colors.foregroundColor = 'black'
@@ -1086,6 +1085,9 @@ function keydownFunction(key) {
             mainWindow.colors.backgroundColor = 'black'
             mainWindow.colors.foregroundColor = 'white'
         }
+    }
+    else if (key.key === 'z' && key.ctrlKey) {
+        reverseLastAction()
     }
     else if (key.key === 'o' && key.altKey) {
         let a = Number(prompt('Enter reference SMA [km]', mainWindow.originOrbit.a))
@@ -2169,6 +2171,11 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                 burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
                 frame: Object.keys(check)[0]
             }
+            logAction({
+                index: mainWindow.burnStatus.burn,
+                sat: mainWindow.currentTarget.sat,
+                type: 'addBurn'
+            })
             if (mainWindow.burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
                 mainWindow.desired.scenarioTime += math.round(2 * Math.PI * 0.08356158 / mainWindow.mm / 10) * 10;
                 document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
@@ -2177,10 +2184,23 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     }
     else if (mainWindow.currentTarget.type === 'burn') {
         if (event.ctrlKey) {
+            console.log(check[mainWindow.currentTarget.frame]);
+            logAction({
+                type: 'deleteBurn',
+                index: check[mainWindow.currentTarget.frame],
+                sat: mainWindow.currentTarget.sat,
+                burn:  mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]
+            })
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.splice(check[mainWindow.currentTarget.frame], 1);
             mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
             return;
         }
+        logAction({
+            type: 'alterBurn',
+            index: check[mainWindow.currentTarget.frame],
+            sat: mainWindow.currentTarget.sat,
+            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]))
+        })
         mainWindow.burnStatus = {
             type: mainWindow.burnType,
             sat: mainWindow.currentTarget.sat,
@@ -5043,6 +5063,40 @@ function generateEphemFile(sat = 0) {
     downloadFile(mainWindow.satellites[sat].name + '.e', start)
 }
 
+function logAction(options = {}) {
+    let {type, sat, time = mainWindow.scenarioTime, burn, index, satellitesState} = options
+    pastActions.push({
+        time,
+        sat,
+        burn,
+        index,
+        satellitesState,
+        type
+    })
+}
+
 function reverseLastAction() {
+    if (pastActions.length === 0) return
+    let action = pastActions.pop()
+    switch (action.type) {
+        case 'addBurn':
+            mainWindow.satellites[action.sat].burns.splice(action.index, 1)
+            mainWindow.satellites[action.sat].burns = mainWindow.satellites[action.sat].burns.filter(burn => burn !== undefined)
+            mainWindow.satellites[action.sat].genBurns()
+            mainWindow.satellites[action.sat].calcTraj()
+            mainWindow.desired.scenarioTime = action.time
+            break
+        case 'deleteBurn':
+            mainWindow.satellites[action.sat].burns.splice(action.index, 0, action.burn)
+            mainWindow.satellites[action.sat].genBurns()
+            mainWindow.satellites[action.sat].calcTraj()
+            mainWindow.desired.scenarioTime = action.time
+            break
+        case 'alterBurn':
+            mainWindow.satellites[action.sat].burns.splice(action.index, 1, action.burn)
+            mainWindow.satellites[action.sat].genBurns()
+            mainWindow.satellites[action.sat].calcTraj()
+            break
+    }
 
 }
