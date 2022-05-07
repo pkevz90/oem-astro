@@ -4607,7 +4607,7 @@ function recoverDefaultScenario(index) {
         if (selection < scenarioNames.length) {
             pastActions = []
             textFromFileLoaded = JSON.parse(window.localStorage[scenarioNames[selection]]);
-            lastSaveName = Object.keys(window.localStorage)[selection]
+            lastSaveName = scenarioNames[selection].slice(5)
             mainWindow.loadDate(textFromFileLoaded);
             mainWindow.setAxisWidth('set', mainWindow.plotWidth);
         }
