@@ -4593,8 +4593,8 @@ function testLambertSolutionMan() {
 function setDefaultScenario(index) {
     
     index = index.replace(/ +/g, '_')
-    index = index.slice(0,5) === 'arts_' ? index : 'arts_' + index
     lastSaveName = index
+    index = index.slice(0,5) === 'arts_' ? index : 'arts_' + index
     window.localStorage.setItem(index, JSON.stringify(mainWindow.getData()))
 }
 
