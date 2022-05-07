@@ -18,6 +18,7 @@ addButton.parentNode.insertBefore(newNode, addButton);
 
 let currentAction
 let pastActions = []
+let lastSaveName = ''
 
 document.getElementsByClassName('rmoe')[1].parentNode.innerHTML = `
     Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> degs/rev
@@ -1059,7 +1060,7 @@ setTimeout(() => {
 //------------------------------------------------------------------
 function keydownFunction(key) {
     if (document.getElementById('context-menu') !== null) return
-    key.key = key.key.toLowerCase()
+    key.key = key.key.toLowerCase();
     if (key.key === 'Control') {
         let buttons = document.getElementsByClassName('ctrl-switch');
         for (let ii = 0; ii < buttons.length; ii++) {
@@ -1074,16 +1075,6 @@ function keydownFunction(key) {
         if (document.activeElement === document.getElementById('add-waypoint-button')) {
             key.preventDefault();
             document.getElementById('add-start-time').focus();
-        }
-    }
-    else if (key.key === 'd') {
-        if (mainWindow.colors.backgroundColor === 'black') {
-            mainWindow.colors.backgroundColor = 'white'
-            mainWindow.colors.foregroundColor = 'black'
-        }
-        else {
-            mainWindow.colors.backgroundColor = 'black'
-            mainWindow.colors.foregroundColor = 'white'
         }
     }
     else if (key.key === 'z' && key.ctrlKey) {
@@ -1104,7 +1095,6 @@ function keydownFunction(key) {
         }
     }
     if (mainWindow.panelOpen) return;
-    let shiftedNumbers = '!@#$%'
     if (key.key === ' ') {
         switch (mainWindow.getState()) {
             case 'ri': 
@@ -1242,7 +1232,17 @@ function keydownFunction(key) {
                 break;       
         }
     }
-    else if (key.key === 'n') {
+    else if (key.key === 'd' || key.key === 'D') {
+        if (mainWindow.colors.backgroundColor === 'black') {
+            mainWindow.colors.backgroundColor = 'white'
+            mainWindow.colors.foregroundColor = 'black'
+        }
+        else {
+            mainWindow.colors.backgroundColor = 'black'
+            mainWindow.colors.foregroundColor = 'white'
+        }
+    }
+    else if (key.key === 'n' || key.key === 'N') {
         let newSat = mainWindow.satellites.length === 0 ?  new Satellite({
                 name: 'Chief',
                 position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
@@ -1259,17 +1259,12 @@ function keydownFunction(key) {
         mainWindow.satellites.push(newSat)
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
     }
-    else if (shiftedNumbers.search(key.key) !== '-1' && key.ctrlKey && key.shiftKey) {
-        let index = shiftedNumbers.search(key.key) + 1
-        if (key.key === 'Control' || key.key === 'Shift') return
-        setDefaultScenario(index)
-        showScreenAlert('Saved as default scenario ' + index)
+    else if ((key.key === 'S' || key.key === 's') && key.shiftKey) {
+        let saveName = prompt('Set name of save file:', lastSaveName)
+        if (saveName.length > 0) setDefaultScenario(saveName)
     }
-    else if (shiftedNumbers.search(key.key) !== '-1' &&  key.shiftKey) {
-        let index = shiftedNumbers.search(key.key) + 1
-        if (key.key === 'Control' || key.key === 'Shift') return
-        recoverDefaultScenario(index)
-        showScreenAlert('Loaded default scenario ' + index)
+    else if ((key.key === 'L' || key.key === 'l') && key.shiftKey) {
+        recoverDefaultScenario()
     }
 }
 window.addEventListener('keydown', keydownFunction)
@@ -1394,6 +1389,7 @@ function startContextClick(event) {
             return n < 10 ? '0' + n : n
         }
         outText = event.shiftKey ? `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s` : outText
+        outText = event.shiftKey && event.altKey ? `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; Az: ${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(3)} deg, El: ${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(3)}, Mag: ${math.norm(burnDir).toFixed(3)} m/s` : outText
         navigator.clipboard.writeText(outText)
     }
     else {
@@ -4595,14 +4591,31 @@ function testLambertSolutionMan() {
 }
 
 function setDefaultScenario(index) {
+    
+    index = index.replace(/ +/g, '_')
+    index = index.slice(0,5) === 'arts_' ? index : 'arts_' + index
+    lastSaveName = index
     window.localStorage.setItem(index, JSON.stringify(mainWindow.getData()))
 }
 
 function recoverDefaultScenario(index) {
-    if (window.localStorage[index] === undefined) return
-    let textFromFileLoaded = JSON.parse(window.localStorage.getItem(index));
-    mainWindow.loadDate(textFromFileLoaded);
-    mainWindow.setAxisWidth('set', mainWindow.plotWidth);
+    let scenarioNames = Object.keys(window.localStorage).filter(a => a.slice(0,5) === 'arts_')
+    let selection = prompt('Select file below by Number:\n' + scenarioNames.map((key, ii) => ii + ': ' + key).join('\n'))
+    if (selection == null || selection.replace(/ +/g, '') === '') return
+    if (!isNaN(Number(selection))) {
+        selection = Number(selection)
+        if (selection < scenarioNames.length) {
+            textFromFileLoaded = JSON.parse(window.localStorage[scenarioNames[selection]]);
+            lastSaveName = Object.keys(window.localStorage)[selection]
+            mainWindow.loadDate(textFromFileLoaded);
+            mainWindow.setAxisWidth('set', mainWindow.plotWidth);
+        }
+    }
+    else if (selection.search('del') !== -1) {
+        let delIndex = selection.slice(selection.search(/[0-9]/))
+        if (Number(delIndex) < scenarioNames.length) window.localStorage.removeItem(scenarioNames[delIndex])
+    }
+    
 }
 
 function convertRAEtoCartesian(rae = [[10, 0, 0, 0, 0, 0.004]]) {
