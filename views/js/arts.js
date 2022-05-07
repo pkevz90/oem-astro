@@ -1437,8 +1437,15 @@ function handleContextClick(button) {
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
     }
     else if (button.id === 'drift-maneuver') { 
+        let inertPos = getCurrentInertial(button.parentElement.sat)
+        inertPos = Object.values(inertPos)
+        let satSMA = PosVel2CoeNew(inertPos.slice(0,3), inertPos.slice(3,6)).a
+        let scenSMA = mainWindow.originOrbit.a
+        let driftRate = (398600.4418 / satSMA ** 3) ** (1/2) - (398600.4418 / scenSMA ** 3) ** (1/2)
+        driftRate *= 180 / Math.PI * 86164
+        driftRate = Math.round(driftRate * 100) / 100
         let html = `
-            <div class="context-item" >Drift Rate: <input type="Number" style="width: 3em; font-size: 1em" value="0"> deg/rev</div>
+            <div class="context-item" >Drift Rate: <input type="Number" style="width: 3em; font-size: 1em" placeholder="${driftRate}"> deg/rev</div>
             <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="execute-drift" tabindex="0">Execute</div>
         `
         button.parentElement.innerHTML = html
@@ -1651,7 +1658,9 @@ function handleContextClick(button) {
     }
     else if (button.id === 'execute-drift') {
         let sat = button.parentElement.sat;
+        
         let inputs = button.parentElement.getElementsByTagName('input');
+        inputs[0].value = inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value
         let currentPos = mainWindow.satellites[sat].curPos
         let eciPos = Ric2Eci([currentPos.r, currentPos.i, currentPos.c], [currentPos.rd, currentPos.id, currentPos.cd])
         let driftRate = Number(inputs[0].value) * Math.PI / 180
@@ -1672,7 +1681,9 @@ function handleContextClick(button) {
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
-        
+        logAction({
+            type: 'addBurn', sat, index: mainWindow.satellites[sat].burns.length
+        })
         mainWindow.satellites[sat].burns.push({
             time: mainWindow.desired.scenarioTime,
             direction: {
@@ -1735,6 +1746,9 @@ function handleContextClick(button) {
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
         let rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
         dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
+        logAction({
+            type: 'alterBurn', sat, index: burn, burn: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
+        })
         insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
         // document.getElementById('time-slider-range').value = mainWindow.satellites[sat].burns[burn].time + 3600;
         document.getElementById('context-menu')?.remove();
@@ -1797,7 +1811,7 @@ function handleContextClick(button) {
         let inputs = button.parentElement.getElementsByTagName('input');
         for (let ii = 0; ii < inputs.length; ii++) {
             if (inputs[ii].value === '') {
-                inputs[ii].value = 0;
+                inputs[ii].value = inputs[ii].placeholder;
             }
         }
         let sat = button.parentElement.sat;
