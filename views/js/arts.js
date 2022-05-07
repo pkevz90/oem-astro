@@ -4600,11 +4600,12 @@ function setDefaultScenario(index) {
 
 function recoverDefaultScenario(index) {
     let scenarioNames = Object.keys(window.localStorage).filter(a => a.slice(0,5) === 'arts_')
-    let selection = prompt('Select file below by Number:\n' + scenarioNames.map((key, ii) => ii + ': ' + key).join('\n'))
+    let selection = prompt('Select file below by Number:\n' + scenarioNames.map((key, ii) => ii + ': ' + key.slice(5)).join('\n'))
     if (selection == null || selection.replace(/ +/g, '') === '') return
     if (!isNaN(Number(selection))) {
         selection = Number(selection)
         if (selection < scenarioNames.length) {
+            pastActions = []
             textFromFileLoaded = JSON.parse(window.localStorage[scenarioNames[selection]]);
             lastSaveName = Object.keys(window.localStorage)[selection]
             mainWindow.loadDate(textFromFileLoaded);
