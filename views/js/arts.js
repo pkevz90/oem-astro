@@ -5128,3 +5128,51 @@ function reverseLastAction() {
     }
 
 }
+
+function impulsiveHcwProp(p1 = [[1],[0],[0]], v1 =[[0],[0],[0]], dt = 3600) {
+    let state = math.concat(p1, v1, 0)
+    let phi = phiMatrixWhole(dt)
+    return math.multiply(phi, state)
+}
+
+function optimizeMultiBurn(burns = 4, start = [0, 734, 0, 0, 0, 0], end = [0,0,0,0,0,0], dt = 8*3600, options = {}) {
+    let {a = 0.001, maxBurn = 30} = options
+    let vNom =  proxOpsTargeter(math.transpose([start.slice(0,3)]), math.transpose([end.slice(0,3)]), dt)[0]
+    let r1 = math.squeeze(impulsiveHcwProp(math.transpose([start.slice(0,3)]), vNom, dt / 3).slice(0,3))
+    let r2 = math.squeeze(impulsiveHcwProp(math.transpose([start.slice(0,3)]), vNom, 2 * dt / 3).slice(0,3))
+    
+    let opt = new pso({
+        n_part: 300,
+        upper_bounds: [0.4333, 0.85, 150, 150, 150, 150, 150, 150],
+        lower_bounds: [0.15, 0.5667, -150, -150, -150, -150, -150, -150]
+    })
+    opt.opt_fuction = function(x, show = false) {
+        let waypoints = [
+            start.slice(0,3),
+            math.add(r1, x.slice(2,5)),
+            math.add(r2, x.slice(5)),
+            end.slice(0,3)
+        ].map(way => math.transpose([way]))
+        let dV = []
+        let curV = start.slice(3)
+        let curT = 0
+        for (let index = 0; index < waypoints.length - 1; index++) {
+            let wayT = index !== waypoints.length - 2 ? x[index] : 1
+            if (show) console.log(math.squeeze(waypoints[index]), math.squeeze(waypoints[index+1]), dt * (wayT - curT) / 3600);
+            let vels = proxOpsTargeter(waypoints[index], waypoints[index+1], dt * (wayT - curT)).map(v => math.squeeze(v))
+            dV.push(math.norm(math.subtract(vels[0], curV)))
+            curV = vels[1]
+            curT = x[index]
+        }
+        dV.push(math.norm(math.subtract(end.slice(3), curV)))
+        if (show) console.log(dV);
+        return (dV.map((v, ii) => v ** (5 + 0.000025 * ii)).reduce((a,b) => a + b)) ** (1/3)
+    }   
+    // opt.opt_fuction([0.333,0.667, -10,0,0,10,0,0])
+    for (let index = 0; index < 300; index++) {
+        opt.step()
+        console.log(index, opt.bestGlobabValue);
+    }
+    console.log(opt.bestGlobalPosition)
+    opt.opt_fuction(opt.bestGlobalPosition, true)
+}

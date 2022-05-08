@@ -6,8 +6,8 @@ class pso {
             lower_bounds = [1,1,1,1],
             loop_variable,
             inertia = 0.85,
-            phi_g = 0.1,
-            phi_p = 0.1,
+            phi_g = 0.5,
+            phi_p = 0.5,
             opt_fuction = (x) => x[0] ** 2 + x[1] ** 2,
         } = options
         this.particles = []
