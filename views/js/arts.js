@@ -1498,7 +1498,8 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="prop-radial">Radial Position</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-in-track">In-Track Position</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>' : ''}
-        `
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-range">To Range</div>' : ''}
+            `
     }
     else if (button.id === 'state-options') {
         button.parentElement.innerHTML = `
@@ -1600,6 +1601,18 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = newInnerHTML;
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
+    else if (button.id === 'prop-range') {
+        let newInnerHTML = `
+            <div class="context-item" ><input type="Number" placeholder="0" style="width: 3em; font-size: 1em"> km</div>
+        `;
+        let sat = document.getElementById('context-menu').sat
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (sat === ii) continue;
+            newInnerHTML += `<div class="context-item"  onclick="handleContextClick(this)" sat="${ii}" id="${button.id}-execute">${mainWindow.satellites[ii].name}</div>`
+        }
+        button.parentElement.innerHTML = newInnerHTML;
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
     else if (button.id === 'execute-r' || button.id === 'execute-i') {
         let target = Number(button.parentElement.getElementsByTagName('input')[0].value)
         let sat = document.getElementById('context-menu').sat
@@ -1609,6 +1622,14 @@ function handleContextClick(button) {
         else {
             findInTrackTime(sat, target)
         }
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'prop-range-execute') {
+        let target = Number(button.parentElement.getElementsByTagName('input')[0].value)
+        let sat = document.getElementById('context-menu').sat
+        let satTarget = button.getAttribute('sat')
+        console.log(satTarget);
+        findRangeTime(sat, satTarget, target)
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-poca-execute') {
@@ -4679,6 +4700,43 @@ function copySat(sat = 0) {
     mainWindow.satellites[sat].calcTraj()
 }
 
+function findRangeTime(sat= 0, satTarget = 1, r= 10, time = mainWindow.scenarioTime) {
+    if (mainWindow.satellites.length === 0) return
+    let stateHist = mainWindow.satellites[sat].stateHistory.filter(state => state.t > time)
+    let stateHistTarget = mainWindow.satellites[satTarget].stateHistory.filter(state => state.t > time)
+    let getRange = function(sat1, sat2, timeIn) {
+        let s1 = mainWindow.satellites[sat1].currentPosition({time: timeIn})
+        let s2 = mainWindow.satellites[sat2].currentPosition({time: timeIn})
+        return math.norm([s1.r[0] - s2.r[0], s1.i[0] - s2.i[0], s1.c[0] - s2.c[0]])
+    }
+    console.log(getRange(sat, satTarget, time));
+    let positionSeed = getRange(sat, satTarget, time) < r ? 1 : -1;
+    console.log(positionSeed);
+    console.log(stateHist.map((state, ii) => {
+        return math.norm([state.r - stateHistTarget[ii].r, state.i - stateHistTarget[ii].i, state.c - stateHistTarget[ii].c])
+    }));
+    let seedIndex = stateHist.map((state, ii) => {
+        return math.norm([state.r - stateHistTarget[ii].r, state.i - stateHistTarget[ii].i, state.c - stateHistTarget[ii].c])
+    }).findIndex(range => {
+        return range * positionSeed > r * positionSeed
+    });
+    if (seedIndex === -1) return showScreenAlert('No Solution in Time Frame')
+    let seedTime = stateHist[seedIndex].t
+    // console.log(seedTime);
+    for (let index = 0; index < 10; index++) {
+        let dt = 0.1
+        // let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
+        let time1 = getRange(sat, satTarget, seedTime)
+        // let time2 = mainWindow.satellites[sat].currentPosition({time: seedTime - dt})
+        let time2 = getRange(sat, satTarget, seedTime - dt)
+        let di_dt = (time1 - time2) / dt
+        seedTime += (r - time1) / di_dt
+    }
+    mainWindow.desired.scenarioTime = seedTime
+    document.getElementById('time-slider-range').value = seedTime
+}
+
+
 function findInTrackTime(sat= 0, it= -20, time = mainWindow.scenarioTime) {
     if (mainWindow.satellites.length === 0) return
     let stateHist = mainWindow.satellites[sat].stateHistory
@@ -5135,16 +5193,16 @@ function impulsiveHcwProp(p1 = [[1],[0],[0]], v1 =[[0],[0],[0]], dt = 3600) {
     return math.multiply(phi, state)
 }
 
-function optimizeMultiBurn(burns = 4, start = [0, 734, 0, 0, 0, 0], end = [0,0,0,0,0,0], dt = 8*3600, options = {}) {
+function optimizeMultiBurn(burns = 4, start = [100, 400, 0, 0, -2*50 * 1.5 * mainWindow.mm, 0], end = [0,-30,0,0,0,0], dt = 8*3600, options = {}) {
     let {a = 0.001, maxBurn = 30} = options
     let vNom =  proxOpsTargeter(math.transpose([start.slice(0,3)]), math.transpose([end.slice(0,3)]), dt)[0]
     let r1 = math.squeeze(impulsiveHcwProp(math.transpose([start.slice(0,3)]), vNom, dt / 3).slice(0,3))
     let r2 = math.squeeze(impulsiveHcwProp(math.transpose([start.slice(0,3)]), vNom, 2 * dt / 3).slice(0,3))
     
     let opt = new pso({
-        n_part: 300,
-        upper_bounds: [0.4333, 0.85, 150, 150, 150, 150, 150, 150],
-        lower_bounds: [0.15, 0.5667, -150, -150, -150, -150, -150, -150]
+        n_part: 500,
+        upper_bounds: [0.4333, 0.75, 150, 150, 150, 150, 150, 150],
+        lower_bounds: [0.25, 0.5667, -150, -150, -150, -150, -150, -150]
     })
     opt.opt_fuction = function(x, show = false) {
         let waypoints = [
@@ -5156,17 +5214,21 @@ function optimizeMultiBurn(burns = 4, start = [0, 734, 0, 0, 0, 0], end = [0,0,0
         let dV = []
         let curV = start.slice(3)
         let curT = 0
+        let outWaypoints = []
         for (let index = 0; index < waypoints.length - 1; index++) {
             let wayT = index !== waypoints.length - 2 ? x[index] : 1
-            if (show) console.log(math.squeeze(waypoints[index]), math.squeeze(waypoints[index+1]), dt * (wayT - curT) / 3600);
+            outWaypoints.push({
+                time: curT * dt,
+                dt: dt * (wayT - curT),
+                point: math.squeeze(waypoints[index+1])
+            })
             let vels = proxOpsTargeter(waypoints[index], waypoints[index+1], dt * (wayT - curT)).map(v => math.squeeze(v))
             dV.push(math.norm(math.subtract(vels[0], curV)))
             curV = vels[1]
             curT = x[index]
         }
         dV.push(math.norm(math.subtract(end.slice(3), curV)))
-        if (show) console.log(dV);
-        return (dV.map((v, ii) => v ** (5 + 0.000025 * ii)).reduce((a,b) => a + b)) ** (1/3)
+        return show ? outWaypoints : (dV.map((v, ii) => v ** (4 - 0.1 * ii ** 2)).reduce((a,b) => a + b))
     }   
     // opt.opt_fuction([0.333,0.667, -10,0,0,10,0,0])
     for (let index = 0; index < 300; index++) {
@@ -5174,5 +5236,33 @@ function optimizeMultiBurn(burns = 4, start = [0, 734, 0, 0, 0, 0], end = [0,0,0
         console.log(index, opt.bestGlobabValue);
     }
     console.log(opt.bestGlobalPosition)
-    opt.opt_fuction(opt.bestGlobalPosition, true)
+    let points = opt.opt_fuction(opt.bestGlobalPosition, true)
+    console.log({r: start[0], i: start[1], c: start[2], rd: start[3], id: start[4], cd: start[5]})
+    let newSat = new Satellite({
+        a,
+        position: {r: start[0], i: start[1], c: start[2], rd: start[3], id: start[4], cd: start[5]}
+    })
+    // return
+    points.forEach(p => {
+        newSat.burns.push({
+            time: p.time,
+            direction: {
+                r: 0,
+                i: 0,
+                c: 0
+            },
+            waypoint: {
+                tranTime: p.dt,
+                target: {
+                    r: p.point[0],
+                    i: p.point[1],
+                    c: p.point[2]
+                }
+            }
+        })
+        newSat.genBurns()
+    })
+    mainWindow.satellites.push(newSat)
+    mainWindow.desired.plotWidth = 900
+    mainWindow.desired.scenarioTime = dt + 100
 }
