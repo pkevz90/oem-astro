@@ -163,7 +163,9 @@ class windowCanvas {
     };
     plotSettings = {
         data: undefined,
-        type: undefined
+        type: undefined,
+        origin: 0,
+        target: 1
     }
     prop = 2
     precise = false;
@@ -446,8 +448,9 @@ class windowCanvas {
         }
     }
     drawPlot() {
-        if (this.state.search('plot') === -1) return;
-        if (!this.plotSettings.data) return;
+        // if (this.state.search('plot') === -1) return;
+        if (!this.plotSettings.type) return;
+        plotRelativeData()
         let ctx = this.getContext();
         let pos = {...this.frameCenter.plot};
         pos.w = pos.w * 0.8;
@@ -466,6 +469,7 @@ class windowCanvas {
         // Fix click on plot
         this.getContext().strokeStyle = this.colors.foregroundColor;
         ctx.rect(this.cnvs.width * this.frameCenter.plot.x - this.cnvs.width * pos.w / 2, this.cnvs.height * this.frameCenter.plot.y - this.cnvs.height * pos.h / 2, this.cnvs.width * pos.w , this.cnvs.height * pos.h)
+        ctx.fillStyle = 'black'
         ctx.stroke();
         ctx.lineWidth = 1;
         drawCurve(this.getContext(), dataLine);
@@ -1218,6 +1222,7 @@ function keydownFunction(key) {
                 break;
             default:  
                 mainWindow.setState('ri');
+                mainWindow.plotSettings.type = null
                 mainWindow.setFrameCenter({
                     ri: {
                         x: 0.5, y: 0.5, w: 1, h: 1
@@ -2114,23 +2119,30 @@ function translateFrames(sat = 0, options={}) {
     
 }
 
-function plotRelativeData(data, origin, target) {
-    mainWindow.plotSettings.data = [];
-    for (let ii = 0; ii < mainWindow.scenarioLength * 3600; ii += mainWindow.scenarioLength * 3600 / 200) {
-        let r1 = mainWindow.satellites[origin].currentPosition({time: ii});
-        let r2 = mainWindow.satellites[target].currentPosition({time: ii});
-        if (data === 'Range') {
-            mainWindow.plotSettings.data.push([ii / 3600, math.norm([r1.r[0] - r2.r[0], r1.i[0] - r2.i[0], r1.c[0] - r2.c[0]])]);
+function plotRelativeData() {
+    // console.log(mainWindow.satellites[mainWindow.plotSettings.origin]);
+    if (math.squeeze(Object.values(mainWindow.satellites[mainWindow.plotSettings.target].stateHistory[0])) === undefined || math.squeeze(Object.values(mainWindow.satellites[mainWindow.plotSettings.origin].stateHistory[0])) === undefined) return
+    let newData = []
+    try {
+        for (let ii = 0; ii < 200; ii++ ) {
+            let time = ii / 200 * mainWindow.scenarioLength * 3600
+            let targetState = math.squeeze(Object.values(mainWindow.satellites[mainWindow.plotSettings.target].currentPosition({time})))
+            let originState = math.squeeze(Object.values(mainWindow.satellites[mainWindow.plotSettings.origin].currentPosition({time})))
+            switch (mainWindow.plotSettings.type) {
+                case 'Range':
+                    newData.push([time / 3600, math.norm(math.subtract(targetState, originState))])
+                    break
+                case 'CATS':
+                    let relVec = math.subtract(targetState, originState)
+                    let sunVec = mainWindow.getCurrentSun(s.t)
+                    newData.push([time, math.acos(math.dot(relVec, sunVec) / math.norm(relVec) / math.norm(sunVec))])
+                    break
+            }
         }
-        else if (data === 'CATS') {
-            let cats = mainWindow.getCurrentSun(ii);
-            let relVector = [r1.r[0] - r2.r[0], r1.i[0] - r2.i[0], r1.c[0] - r2.c[0]];
-            mainWindow.plotSettings.data.push([ii / 3600, Math.acos((math.dot(cats, relVector) / math.norm(relVector))) * 180 / Math.PI]);
-        }
-        else {
-            mainWindow.plotSettings.data.push([ii / 3600, math.norm([r1.rd[0] - r2.rd[0], r1.id[0] - r2.id[0], r1.cd[0] - r2.cd[0]])]);
-        }
+    } catch (error) {
+        return console.log(error);
     }
+    mainWindow.plotSettings.data = newData
     mainWindow.setState('ri plot');
     mainWindow.setFrameCenter({
         ri: {
