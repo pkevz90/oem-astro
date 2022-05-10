@@ -1288,11 +1288,15 @@ window.addEventListener('keyup', key => {
 window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
     if (mainWindow.panelOpen) return;
-    if (mainWindow.burnStatus.type) {
-        if (mainWindow.burnStatus.type === 'waypoint') {
-            mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime += event.deltaY > 0 ? -300 : 300;   
-            mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
-        }
+    if (mainWindow.burnStatus.type === 'waypoint') {
+        let tranTimeDelta = event.deltaY > 0 ? -300 : 300
+        let curCrossState = mainWindow.satellites[mainWindow.burnStatus.sat].currentPosition({
+            time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
+        })
+        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target.c = curCrossState.c[0]
+        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime += tranTimeDelta 
+        mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
+
         return;
     }
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
