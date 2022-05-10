@@ -1424,6 +1424,7 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="drift-maneuver">Set Drift Rate</div>
             <div class="context-item" onclick="handleContextClick(this)" id="perch-maneuver">Perch</div>
             <div class="context-item" onclick="handleContextClick(this)" id="circ-maneuver">Circularize</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="multi-maneuver">Multi-Burn</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
@@ -1499,6 +1500,7 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="prop-in-track">In-Track Position</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-poca">To POCA</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-range">To Range</div>' : ''}
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="prop-cats">To CATS</div>' : ''}
             `
     }
     else if (button.id === 'state-options') {
@@ -1613,6 +1615,18 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = newInnerHTML;
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
+    else if (button.id === 'prop-cats') {
+        let newInnerHTML = `
+            <div class="context-item" ><input type="Number" placeholder="90" style="width: 3em; font-size: 1em"> deg</div>
+        `;
+        let sat = document.getElementById('context-menu').sat
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (sat === ii) continue;
+            newInnerHTML += `<div class="context-item"  onclick="handleContextClick(this)" sat="${ii}" id="${button.id}-execute">${mainWindow.satellites[ii].name}</div>`
+        }
+        button.parentElement.innerHTML = newInnerHTML;
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
     else if (button.id === 'execute-r' || button.id === 'execute-i') {
         let target = Number(button.parentElement.getElementsByTagName('input')[0].value)
         let sat = document.getElementById('context-menu').sat
@@ -1630,6 +1644,15 @@ function handleContextClick(button) {
         let satTarget = button.getAttribute('sat')
         console.log(satTarget);
         findRangeTime(sat, satTarget, target)
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'prop-cats-execute') {
+        button.parentElement.getElementsByTagName('input')[0].value = button.parentElement.getElementsByTagName('input')[0].value === '' ? button.parentElement.getElementsByTagName('input')[0].placeholder : button.parentElement.getElementsByTagName('input')[0].value
+        let target = Number(button.parentElement.getElementsByTagName('input')[0].value)
+        let sat = document.getElementById('context-menu').sat
+        let satTarget = button.getAttribute('sat')
+        console.log(sat, satTarget, target);
+        findCatsTime(sat, satTarget, target)
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-poca-execute') {
@@ -1672,6 +1695,44 @@ function handleContextClick(button) {
         }
         button.parentElement.innerHTML = html
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'multi-maneuver') {
+        let sat = button.parentElement.sat;
+        let html = `
+            <div class="context-item" >TOF: <input placeholder="6" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" >Target P: (<input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">) km</div>
+            <div class="context-item" >Target V: (<input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">) m/s</div>
+            <div title="Higher the number, more optimizer will try and make all burns the same magnitude" class="context-item" >Burn Uniformity: <input placeholder="2" type="Number" style="width: 3em; font-size: 1em"></div>
+            <div title="Higher the number, more optimizer will stack larger burns at beginning" class="context-item" >Burn Relative Size: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"></div>
+            <div class="context-item" >N Burns: <input placeholder="4" type="Number" style="width: 3em; font-size: 1em"></div>
+            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-multi" tabindex="0">RIC Origin</div>
+        `
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (sat === ii) continue
+            html += `<div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="${ii}" id="execute-multi" tabindex="0">${mainWindow.satellites[ii].name}</div>`
+        }
+        button.parentElement.innerHTML = html
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'execute-multi') {
+        let target = button.getAttribute('target')
+        let inputs = button.parentElement.getElementsByTagName('input');
+        for (let ii = 0; ii < inputs.length; ii++) inputs[ii].value = inputs[ii].value === '' ? inputs[ii].placeholder : inputs[ii].value
+        let sat = button.parentElement.sat;
+        let startPoint = math.squeeze(Object.values(mainWindow.satellites[sat].curPos))
+        let origin = target === 'origin' ? {r: [0], i: [0], c: [0], rd: [0], id: [0], cd: [0]} : mainWindow.satellites[target].currentPosition({
+            time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
+        })
+        origin = math.squeeze(Object.values(origin));
+        let targetPoint = []
+        for (let index = 1; index < 7; index++) targetPoint.push((index > 3 ? 0.001 : 1) * Number(inputs[index].value))
+        origin = math.add(origin, targetPoint)
+        console.log(startPoint);
+        setTimeout(optimizeMultiBurn(Number(inputs[9].value), startPoint, origin, Number(inputs[0].value) * 3600, {
+            sat, uniformity: Number(inputs[7].value), bias: Number(inputs[8].value), logId: document.getElementById('it-count')
+        }), 100)
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-drift') {
         let sat = button.parentElement.sat;
@@ -4709,12 +4770,7 @@ function findRangeTime(sat= 0, satTarget = 1, r= 10, time = mainWindow.scenarioT
         let s2 = mainWindow.satellites[sat2].currentPosition({time: timeIn})
         return math.norm([s1.r[0] - s2.r[0], s1.i[0] - s2.i[0], s1.c[0] - s2.c[0]])
     }
-    console.log(getRange(sat, satTarget, time));
     let positionSeed = getRange(sat, satTarget, time) < r ? 1 : -1;
-    console.log(positionSeed);
-    console.log(stateHist.map((state, ii) => {
-        return math.norm([state.r - stateHistTarget[ii].r, state.i - stateHistTarget[ii].i, state.c - stateHistTarget[ii].c])
-    }));
     let seedIndex = stateHist.map((state, ii) => {
         return math.norm([state.r - stateHistTarget[ii].r, state.i - stateHistTarget[ii].i, state.c - stateHistTarget[ii].c])
     }).findIndex(range => {
@@ -4722,7 +4778,6 @@ function findRangeTime(sat= 0, satTarget = 1, r= 10, time = mainWindow.scenarioT
     });
     if (seedIndex === -1) return showScreenAlert('No Solution in Time Frame')
     let seedTime = stateHist[seedIndex].t
-    // console.log(seedTime);
     for (let index = 0; index < 10; index++) {
         let dt = 0.1
         // let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
@@ -4736,6 +4791,37 @@ function findRangeTime(sat= 0, satTarget = 1, r= 10, time = mainWindow.scenarioT
     document.getElementById('time-slider-range').value = seedTime
 }
 
+function findCatsTime(sat= 0, satTarget = 1, c= 90, time = mainWindow.scenarioTime) {
+    if (mainWindow.satellites.length === 0) return
+    let stateHist = mainWindow.satellites[sat].stateHistory.filter(state => state.t > time)
+    let stateHistTarget = mainWindow.satellites[satTarget].stateHistory.filter(state => state.t > time)
+    let getCats = function(sat1, sat2, timeIn) {
+        let s1 = mainWindow.satellites[sat1].currentPosition({time: timeIn})
+        let s2 = mainWindow.satellites[sat2].currentPosition({time: timeIn})
+        let relPos = math.squeeze(math.subtract(Object.values(s1), Object.values(s2))).slice(0,3)
+        let sunVec = mainWindow.getCurrentSun(timeIn)
+        return math.acos(math.dot(relPos, sunVec) / math.norm(relPos) / math.norm(sunVec)) * 180 / Math.PI
+    }
+    let positionSeed = getCats(sat, satTarget, time) < c ? 1 : -1;
+    let seedIndex = stateHist.map((state, ii) => {
+        return getCats(sat, satTarget, state.t)
+    }).findIndex(cats => {
+        return cats * positionSeed > c * positionSeed
+    });
+    if (seedIndex === -1) return showScreenAlert('No Solution in Time Frame')
+    let seedTime = stateHist[seedIndex].t
+    for (let index = 0; index < 10; index++) {
+        let dt = 0.1
+        // let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
+        let time1 = getCats(sat, satTarget, seedTime)
+        // let time2 = mainWindow.satellites[sat].currentPosition({time: seedTime - dt})
+        let time2 = getCats(sat, satTarget, seedTime - dt)
+        let di_dt = (time1 - time2) / dt
+        seedTime += (c - time1) / di_dt
+    }
+    mainWindow.desired.scenarioTime = seedTime
+    document.getElementById('time-slider-range').value = seedTime
+}
 
 function findInTrackTime(sat= 0, it= -20, time = mainWindow.scenarioTime) {
     if (mainWindow.satellites.length === 0) return
@@ -5193,24 +5279,39 @@ function impulsiveHcwProp(p1 = [[1],[0],[0]], v1 =[[0],[0],[0]], dt = 3600) {
     return math.multiply(phi, state)
 }
 
-function optimizeMultiBurn(burns = 4, start = [100, 400, 0, 0, -2*50 * 1.5 * mainWindow.mm, 0], end = [0,-30,0,0,0,0], dt = 8*3600, options = {}) {
-    let {a = 0.001, maxBurn = 30} = options
+function optimizeMultiBurn(burns = 4, start = [0, 400, 0, 0, 0, 0], end = [0,-30,0,0,0,0], dt = 6*3600, options = {}) {
+    let {a = 0.001, maxBurn = 30, sat = null, uniformity = 4, bias = 0, logId = null} = options
+    let dist = math.norm(math.subtract(start.slice(0,3), end.slice(0,3))) * 0.333
+    // console.log(start, end, sat, dt);
     let vNom =  proxOpsTargeter(math.transpose([start.slice(0,3)]), math.transpose([end.slice(0,3)]), dt)[0]
-    let r1 = math.squeeze(impulsiveHcwProp(math.transpose([start.slice(0,3)]), vNom, dt / 3).slice(0,3))
-    let r2 = math.squeeze(impulsiveHcwProp(math.transpose([start.slice(0,3)]), vNom, 2 * dt / 3).slice(0,3))
-    
+    let rList = []
+    for (let index = 1; index < burns - 1; index++) {
+        rList.push(math.squeeze(impulsiveHcwProp(math.transpose([start.slice(0,3)]), vNom, index * dt / (burns - 1)).slice(0,3)))
+    }
+    let uBounds = []
+    let lBounds = []
+    for (let index = 1; index < burns - 1; index++) {
+        let delta = 0.3 / (burns - 1)
+        uBounds.push(index / (burns - 1) + delta)
+        lBounds.push(index / (burns - 1) - delta)   
+    }
+    for (let index = 1; index < burns - 1; index++) {
+        uBounds.push(dist, dist, dist)
+        lBounds.push(-dist, -dist, -dist)   
+    }
     let opt = new pso({
-        n_part: 500,
-        upper_bounds: [0.4333, 0.75, 150, 150, 150, 150, 150, 150],
-        lower_bounds: [0.25, 0.5667, -150, -150, -150, -150, -150, -150]
+        n_part: 250,
+        upper_bounds: uBounds,
+        lower_bounds: lBounds
     })
     opt.opt_fuction = function(x, show = false) {
-        let waypoints = [
-            start.slice(0,3),
-            math.add(r1, x.slice(2,5)),
-            math.add(r2, x.slice(5)),
-            end.slice(0,3)
-        ].map(way => math.transpose([way]))
+        let waypoints = [start.slice(0,3)]
+        for (let index = 0; index < burns - 2; index++) {
+            waypoints.push(math.add(rList[index], x.slice(burns - 2 + index * 3,burns + 1 + index * 3)))
+        }
+        waypoints.push(end.slice(0,3))
+        waypoints = waypoints.map(way => math.transpose([way]))
+        // console.log(waypoints);
         let dV = []
         let curV = start.slice(3)
         let curT = 0
@@ -5228,41 +5329,74 @@ function optimizeMultiBurn(burns = 4, start = [100, 400, 0, 0, -2*50 * 1.5 * mai
             curT = x[index]
         }
         dV.push(math.norm(math.subtract(end.slice(3), curV)))
-        return show ? outWaypoints : (dV.map((v, ii) => v ** (4 - 0.1 * ii ** 2)).reduce((a,b) => a + b))
+        return show ? outWaypoints : dV.map((v, ii) => ((ii + 1) ** bias) * v ** uniformity).reduce((a,b) => a + b)
     }   
-    // opt.opt_fuction([0.333,0.667, -10,0,0,10,0,0])
-    for (let index = 0; index < 300; index++) {
+    let iterations = 200
+    let iterationCount = 0
+    let stepFunction = function(next = true) {
+        iterationCount++
         opt.step()
-        console.log(index, opt.bestGlobabValue);
-    }
-    console.log(opt.bestGlobalPosition)
-    let points = opt.opt_fuction(opt.bestGlobalPosition, true)
-    console.log({r: start[0], i: start[1], c: start[2], rd: start[3], id: start[4], cd: start[5]})
-    let newSat = new Satellite({
-        a,
-        position: {r: start[0], i: start[1], c: start[2], rd: start[3], id: start[4], cd: start[5]}
-    })
-    // return
-    points.forEach(p => {
-        newSat.burns.push({
-            time: p.time,
-            direction: {
-                r: 0,
-                i: 0,
-                c: 0
-            },
-            waypoint: {
-                tranTime: p.dt,
-                target: {
-                    r: p.point[0],
-                    i: p.point[1],
-                    c: p.point[2]
-                }
+        console.log(iterationCount, opt.bestGlobabValue)
+        // console.log(logId);
+        if (next) setTimeout(stepFunction(iterationCount < iterations), 10)
+        else {
+            let points = opt.opt_fuction(opt.bestGlobalPosition, true)
+            console.log(opt.bestGlobalPosition)
+            console.log({r: start[0], i: start[1], c: start[2], rd: start[3], id: start[4], cd: start[5]})
+            if (sat == null) {
+                let newSat = new Satellite({
+                    a,
+                    position: {r: start[0], i: start[1], c: start[2], rd: start[3], id: start[4], cd: start[5]}
+                })
+                // return
+                points.forEach(p => {
+                    newSat.burns.push({
+                        time: p.time,
+                        direction: {
+                            r: 0,
+                            i: 0,
+                            c: 0
+                        },
+                        waypoint: {
+                            tranTime: p.dt,
+                            target: {
+                                r: p.point[0],
+                                i: p.point[1],
+                                c: p.point[2]
+                            }
+                        }
+                    })
+                    newSat.genBurns()
+                })
+                mainWindow.satellites.push(newSat)
+                mainWindow.desired.plotWidth = 900
             }
-        })
-        newSat.genBurns()
-    })
-    mainWindow.satellites.push(newSat)
-    mainWindow.desired.plotWidth = 900
-    mainWindow.desired.scenarioTime = dt + 100
+            else {
+                mainWindow.satellites[sat].burns.filter(burn => burn.time < mainWindow.scenarioTime)
+                points.forEach(p => {
+                    mainWindow.satellites[sat].burns.push({
+                        time: p.time + mainWindow.scenarioTime,
+                        direction: {
+                            r: 0,
+                            i: 0,
+                            c: 0
+                        },
+                        waypoint: {
+                            tranTime: p.dt,
+                            target: {
+                                r: p.point[0],
+                                i: p.point[1],
+                                c: p.point[2]
+                            }
+                        }
+                    })
+                    mainWindow.satellites[sat].genBurns()
+                })
+        
+            }
+            mainWindow.desired.scenarioTime += dt 
+        }
+    }
+    setTimeout(stepFunction(), 10)
+    
 }
