@@ -1021,7 +1021,7 @@ function testTimeDelta(dt = 500, time = 7200) {
 
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
 mainWindow.fillWindow();
-
+let lastSaveTime = Date.now() - 30000
 function sleep(milliseconds) {
     var start = new Date().getTime();
     for (var i = 0; i < 1e7; i++) {
@@ -1056,6 +1056,11 @@ let timeFunction = false;
         }
         if (timeFunction) console.timeEnd()
         mainWindow.recordFunction();
+        if ((Date.now() - lastSaveTime) > 15000) {
+            setDefaultScenario('autosave', false)
+            console.log(`Autosaved on ${(new Date()).toString()}`)
+            lastSaveTime = Date.now()
+        }
         window.requestAnimationFrame(animationLoop)
     } catch (error) {
         let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
@@ -1065,16 +1070,7 @@ let timeFunction = false;
         showScreenAlert('System crash recovering to last autosave');
     }
 })()
-
-function autoSaveLoop() {
-    setDefaultScenario('autosave', false)
-    console.log(`Autosaved on ${(new Date()).toString()}`)
-    setTimeout(autoSaveLoop, 15000)
-}
-autoSaveLoop()
-// setTimeout(() => {
-//     showScreenAlert('Right-click to see planning options')
-// }, 2000)
+showScreenAlert('Right-click to see planning options')
 //------------------------------------------------------------------
 // Adding event listeners for window objects
 //------------------------------------------------------------------
