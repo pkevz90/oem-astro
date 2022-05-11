@@ -1032,34 +1032,49 @@ function sleep(milliseconds) {
   }
 let timeFunction = false;
 (function animationLoop() {
-    if (timeFunction) console.time()
-    mainWindow.clear();
-    mainWindow.updateSettings();
-    mainWindow.drawInertialOrbit(); 
-    mainWindow.drawAxes();
-    mainWindow.drawPlot();
-    mainWindow.showData();
-    mainWindow.showTime();
-    mainWindow.showLocation();
-    if (mainWindow.burnStatus.type) {
-        mainWindow.calculateBurn();
+    try {
+        if (timeFunction) console.time()
+        mainWindow.clear();
+        mainWindow.updateSettings();
+        mainWindow.drawInertialOrbit(); 
+        mainWindow.drawAxes();
+        mainWindow.drawPlot();
+        mainWindow.showData();
+        mainWindow.showTime();
+        mainWindow.showLocation();
+        if (mainWindow.burnStatus.type) {
+            mainWindow.calculateBurn();
+        }
+        mainWindow.satellites.forEach(sat => {
+            sat.checkInBurn()
+            sat.drawTrajectory();
+            sat.drawBurns();
+            sat.drawCurrentPosition();
+        })
+        if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
+            drawVulnerabilityZone();
+        }
+        if (timeFunction) console.timeEnd()
+        mainWindow.recordFunction();
+        window.requestAnimationFrame(animationLoop)
+    } catch (error) {
+        let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
+        mainWindow.loadDate(autosavedScen);
+        mainWindow.setAxisWidth('set', mainWindow.plotWidth);
+        animationLoop()
+        showScreenAlert('System crash recovering to last autosave');
     }
-    mainWindow.satellites.forEach(sat => {
-        sat.checkInBurn()
-        sat.drawTrajectory();
-        sat.drawBurns();
-        sat.drawCurrentPosition();
-    })
-    if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
-        drawVulnerabilityZone();
-    }
-    if (timeFunction) console.timeEnd()
-    mainWindow.recordFunction();
-    window.requestAnimationFrame(animationLoop)
 })()
-setTimeout(() => {
-    showScreenAlert('Right-click to see planning options')
-}, 2000)
+
+function autoSaveLoop() {
+    setDefaultScenario('autosave', false)
+    console.log(`Autosaved on ${(new Date()).toString()}`)
+    setTimeout(autoSaveLoop, 15000)
+}
+autoSaveLoop()
+// setTimeout(() => {
+//     showScreenAlert('Right-click to see planning options')
+// }, 2000)
 //------------------------------------------------------------------
 // Adding event listeners for window objects
 //------------------------------------------------------------------
@@ -4691,11 +4706,11 @@ function testLambertSolutionMan() {
 
 }
 
-function setDefaultScenario(index) {
+function setDefaultScenario(index, arts = true) {
     
     index = index.replace(/ +/g, '_')
     lastSaveName = index
-    index = index.slice(0,5) === 'arts_' ? index : 'arts_' + index
+    if (arts) index = index.slice(0,5) === 'arts_' ? index : 'arts_' + index
     window.localStorage.setItem(index, JSON.stringify(mainWindow.getData()))
 }
 
