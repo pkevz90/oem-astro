@@ -171,6 +171,7 @@ class windowCanvas {
     precise = false;
     curvilinear = true;
     panelOpen = false;
+    plotSize = 1
     constructor(cnvs) {
         this.cnvs = cnvs;
     }
@@ -350,16 +351,16 @@ class windowCanvas {
         let ctx = this.getContext();
         ctx.strokeStyle = this.colors.foregroundColor;
         ctx.fillStyle = this.colors.foregroundColor;
-        let axesLength = 0.5;
-        let sunLength = 0.4 * this.plotHeight / 2 * Math.max(this.frameCenter.ri.h, this.frameCenter.ci.h, this.frameCenter.rc.h);
+        let axesLength = this.plotSize * 0.5;
+        let sunLength = this.plotSize * 0.4 * this.plotHeight / 2 * Math.max(this.frameCenter.ri.h, this.frameCenter.ci.h, this.frameCenter.rc.h);
         let sunCoor = this.convertToPixels(math.dotMultiply(sunLength, this.getCurrentSun()));
         let origin = this.convertToPixels([0, 0, 0]);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         this.drawBorder();
         if (this.state.search('ri') !== -1) {
-            ctx.lineWidth = this.cnvs.width * this.frameCenter.ri.w / 200;
-            ctx.font = 'bold ' + (this.cnvs.width > this.cnvs.height ? this.cnvs.width : this.cnvs.height) * this.frameCenter.ri.w / 40 + 'px serif';
+            ctx.lineWidth = this.plotSize * this.cnvs.width * this.frameCenter.ri.w / 200;
+            ctx.font = 'bold ' + (this.cnvs.width > this.cnvs.height ? this.cnvs.width : this.cnvs.height) * this.plotSize * this.frameCenter.ri.w / 40 + 'px serif';
             ctx.beginPath()
             ctx.moveTo(origin.ri.x, origin.ri.y);
             ctx.lineTo(origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2);
@@ -372,8 +373,8 @@ class windowCanvas {
             ctx.lineTo(sunCoor.ri.x , sunCoor.ri.y);
             ctx.stroke();
             ctx.strokeStyle = this.colors.foregroundColor;
-            ctx.fillText('R', origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.cnvs.width * this.frameCenter.ri.w / 60)
-            ctx.fillText('I', origin.ri.x - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.cnvs.width * this.frameCenter.ri.w / 80, origin.ri.y)
+            ctx.fillText('R', origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.ri.w / 60)
+            ctx.fillText('I', origin.ri.x - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.ri.w / 80, origin.ri.y)
 
             ctx.textAlign = 'left';
             ctx.textBaseline = 'bottom';
@@ -390,13 +391,13 @@ class windowCanvas {
         }
         if (this.state.search('ci') !== -1) {
             
-            ctx.lineWidth = this.cnvs.width * this.frameCenter.ci.w / 200;
+            ctx.lineWidth = this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 200;
             ctx.fillStyle = this.colors.backgroundColor;
             ctx.fillRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
             // console.log(ctx.lineWidth);
             ctx.strokeRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
             ctx.fillStyle = this.colors.foregroundColor;
-            ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.ci.w / 40 + 'px serif';
+            ctx.font = 'bold ' + this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 40 + 'px serif';
             let drawX = math.abs(this.plotCenter) < this.plotWidth / 2* this.frameCenter.ci.w;
             let drawY = this.plotCenter + this.plotWidth / 2 * this.frameCenter.ci.w;
             ctx.beginPath()
@@ -419,8 +420,8 @@ class windowCanvas {
             }
             ctx.strokeStyle = this.colors.foregroundColor;
             
-            if (drawX) ctx.fillText('C', origin.ci.x, origin.ci.y - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.cnvs.width * this.frameCenter.ci.w / 60)
-            if (drawY > this.plotHeight / 2 * this.frameCenter.ci.h * axesLength) ctx.fillText('I', origin.ci.x - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.cnvs.width * this.frameCenter.ci.w / 80, origin.ci.y)
+            if (drawX) ctx.fillText('C', origin.ci.x, origin.ci.y - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 60)
+            if (drawY > this.plotHeight / 2 * this.frameCenter.ci.h * axesLength) ctx.fillText('I', origin.ci.x - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 80, origin.ci.y)
         }
         if (this.state.search('rc') !== -1) {
             ctx.fillStyle = this.colors.backgroundColor;
@@ -429,8 +430,8 @@ class windowCanvas {
             ctx.strokeRect(this.frameCenter.rc.x * this.cnvs.width - this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height - this.frameCenter.rc.h / 2 * this.cnvs.height, this.frameCenter.rc.x * this.cnvs.width + this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height + this.frameCenter.rc.h / 2 * this.cnvs.height);
             ctx.fillStyle = this.colors.foregroundColor;
             
-            ctx.lineWidth = this.cnvs.width * this.frameCenter.rc.w / 200;
-            ctx.font = 'bold ' + this.cnvs.width * this.frameCenter.rc.w / 40 + 'px serif';
+            ctx.lineWidth = this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 200;
+            ctx.font = 'bold ' + this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 40 + 'px serif';
             ctx.beginPath()
             ctx.moveTo(origin.rc.x, origin.rc.y);
             ctx.lineTo(origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2);
@@ -443,8 +444,8 @@ class windowCanvas {
             ctx.lineTo(sunCoor.rc.x, sunCoor.rc.y);
             ctx.stroke();
             ctx.strokeStyle = this.colors.foregroundColor;
-            ctx.fillText('C', origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 - this.cnvs.width * this.frameCenter.rc.w / 60)
-            ctx.fillText('R', origin.rc.x + this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 + this.cnvs.width * this.frameCenter.rc.w / 80, origin.rc.y)
+            ctx.fillText('C', origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 60)
+            ctx.fillText('R', origin.rc.x + this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 + this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 80, origin.rc.y)
         }
     }
     drawPlot() {
@@ -1081,9 +1082,7 @@ function keydownFunction(key) {
             document.getElementById('add-start-time').focus();
         }
     }
-    else if (key.key === 'z' && key.ctrlKey) {
-        reverseLastAction()
-    }
+    else if ((key.key === 'z' || key.key === 'Z') && key.ctrlKey) reverseLastAction()
     else if (key.key === 'o' && key.altKey) {
         let a = Number(prompt('Enter reference SMA [km]', mainWindow.originOrbit.a))
         let e = Number(prompt('Enter reference Eccentricity', mainWindow.originOrbit.e))
@@ -1268,9 +1267,13 @@ function keydownFunction(key) {
         let saveName = prompt('Set name of save file:', lastSaveName)
         if (saveName.length > 0) setDefaultScenario(saveName)
     }
-    else if ((key.key === 'L' || key.key === 'l') && key.shiftKey) {
-        recoverDefaultScenario()
-    }
+    else if ((key.key === 'L' || key.key === 'l') && key.shiftKey) recoverDefaultScenario()
+    else if (key.key === ',' && key.ctrlKey) mainWindow.satellites.forEach(sat => sat.size = sat.size > 1 ? sat.size - 0.25 : sat.size)
+    else if (key.key === '.' && key.ctrlKey) mainWindow.satellites.forEach(sat => sat.size += 0.25)
+    else if (key.key === '<' && key.shiftKey && key.altKey) mainWindow.plotSize = mainWindow.plotSize > 0.1 ? mainWindow.plotSize - 0.05 : mainWindow.plotSize
+    else if (key.key === '>' && key.shiftKey && key.altKey) mainWindow.plotSize += 0.05
+    else if (key.key === '<' && key.shiftKey) mainWindow.trajSize = mainWindow.trajSize > 0.5 ? mainWindow.trajSize - 0.1 : mainWindow.trajSize
+    else if (key.key === '>' && key.shiftKey) mainWindow.trajSize += 0.1
 }
 window.addEventListener('keydown', keydownFunction)
 window.addEventListener('keyup', key => {
@@ -3905,8 +3908,8 @@ function drawSatellite(satellite = {}) {
     
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    let letterY = pixelPosition[1] + shapeHeight / 2 + (cnvs.height*0.025)*1.3 / 2;
-    ctx.font = `${(cnvs.height < cnvs.width ? cnvs.height : cnvs.width) *0.025}px Courier`;
+    let letterY = pixelPosition[1] + shapeHeight / 2 + size * 3
+    ctx.font = `${size * 7}px Courier`;
     ctx.fillText(name ? name : '', pixelPosition[0], letterY);
 }
 
