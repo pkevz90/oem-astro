@@ -19,7 +19,7 @@ addButton.parentNode.insertBefore(newNode, addButton);
 let currentAction
 let pastActions = []
 let lastSaveName = ''
-
+let errorList = []
 document.getElementsByClassName('rmoe')[1].parentNode.innerHTML = `
     Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> degs/rev
 `
@@ -707,6 +707,7 @@ class windowCanvas {
         }
     }
     loadDate(data = {}) {
+        // console.log('loaded');
         let {
             plotWidth = this.plotWidth, 
             relativeData = this.relativeData,
@@ -1063,7 +1064,9 @@ let timeFunction = false;
         }
         window.requestAnimationFrame(animationLoop)
     } catch (error) {
+        errorList.push(error);
         let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
+        mainWindow = new windowCanvas(document.getElementById('main-plot'));
         mainWindow.loadDate(autosavedScen);
         mainWindow.setAxisWidth('set', mainWindow.plotWidth);
         animationLoop()
@@ -1285,6 +1288,7 @@ function keydownFunction(key) {
     else if (key.key === '>' && key.shiftKey && key.altKey) mainWindow.plotSize += 0.05
     else if (key.key === '<' && key.shiftKey) mainWindow.trajSize = mainWindow.trajSize > 0.5 ? mainWindow.trajSize - 0.1 : mainWindow.trajSize
     else if (key.key === '>' && key.shiftKey) mainWindow.trajSize += 0.1
+    else if (key.key === 'E' && key.shiftKey && key.altKey) downloadFile('error_file.txt', errorList.map(e => e.stack).join('\n'))
 }
 window.addEventListener('keydown', keydownFunction)
 window.addEventListener('keyup', key => {
@@ -4705,7 +4709,7 @@ function testLambertSolutionMan() {
 function setDefaultScenario(index, arts = true) {
     
     index = index.replace(/ +/g, '_')
-    lastSaveName = index
+    lastSaveName = arts ? index : lastSaveName
     if (arts) index = index.slice(0,5) === 'arts_' ? index : 'arts_' + index
     window.localStorage.setItem(index, JSON.stringify(mainWindow.getData()))
 }
