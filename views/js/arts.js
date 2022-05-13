@@ -221,7 +221,7 @@ class windowCanvas {
         let monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         let curDate = new Date(mainWindow.startDate)
         let daySinceWinterSolstice = monthDays.slice(0, curDate.getMonth()).reduce((a, b) => a + b) + curDate.getDate() - 80
-        let freq = 2 * Math.PI /365
+        let freq = 2 * Math.PI /365.25
         let maxCt = mainWindow.initSun[2] / Math.sin(freq * daySinceWinterSolstice)
         let initSunWithCrossComponent = this.initSun.slice()
         initSunWithCrossComponent[2] = maxCt * Math.sin(freq * (daySinceWinterSolstice + t / 86164))
@@ -1030,8 +1030,9 @@ function sleep(milliseconds) {
         break;
       }
     }
-  }
+}
 let timeFunction = false;
+
 (function animationLoop() {
     try {
         if (timeFunction) console.time()
@@ -1064,12 +1065,14 @@ let timeFunction = false;
         }
         window.requestAnimationFrame(animationLoop)
     } catch (error) {
-        errorList.push(error);
+        errorList.push(error)
         let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
         mainWindow = new windowCanvas(document.getElementById('main-plot'));
         mainWindow.loadDate(autosavedScen);
         mainWindow.setAxisWidth('set', mainWindow.plotWidth);
         animationLoop()
+        mainWindow.desired.scenarioTime = Number(document.getElementById('time-slider-range').value)
+        mainWindow.scenarioTime = Number(document.getElementById('time-slider-range').value)
         showScreenAlert('System crash recovering to last autosave');
     }
 })()
@@ -2213,6 +2216,7 @@ function showScreenAlert(message = 'test alert') {
 function changePlanType(box) {
     mainWindow.burnType = box.checked ? 'waypoint' : 'manual';
 }
+
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     // Close context menu if 
     let subList = document.getElementsByClassName('sub-menu');
@@ -4199,19 +4203,8 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
 }
 
 function calcSatTwoBody(allBurns = false) {
-    let t_calc, currentState, satBurn;
+    let t_calc = 0, currentState = Object.values(this.position), satBurn = this.burns.length > 0 ? 0 : undefined;
     this.stateHistory = [];
-    t_calc = 0;
-    // console.log(`Calc traj on ${this.name}`);
-    currentState = [
-        this.position.r,
-        this.position.i,
-        this.position.c,
-        this.position.rd,
-        this.position.id,
-        this.position.cd
-    ];
-    satBurn = this.burns.length > 0 ? 0 : undefined;
     while (t_calc <= mainWindow.scenarioLength * 3600) {
         this.stateHistory.push({
             t: t_calc, 
@@ -4253,8 +4246,7 @@ function calcSatTwoBody(allBurns = false) {
                             xd: 0,
                             yd: 0,
                             zd: 0
-                        }, this.burns[satBurn].waypoint.tranTime, this.a, t_calc);
-                        // console.log(dir);
+                        }, this.burns[satBurn].waypoint.tranTime, this.a, t_calc)
                         if (dir && dir.t > 0 && dir.t < 1) {
                             this.burns[satBurn].direction.r = dir.r;
                             this.burns[satBurn].direction.i = dir.i;
@@ -4273,9 +4265,8 @@ function calcSatTwoBody(allBurns = false) {
                 t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !allBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
                 
                 // console.log(math.squeeze(currentState));
-                let direction = [this.burns[satBurn].direction.r, this.burns[satBurn].direction.i, this.burns[satBurn].direction.c];
-
-                direction = math.dotMultiply(this.a, math.dotDivide(direction, math.norm(direction)));
+                let direction = Object.values(this.burns[satBurn].direction)
+                direction = math.dotMultiply(this.a / math.norm(direction), direction);
                 while ((this.burns[satBurn].time + t_burn - t_calc) > mainWindow.timeDelta) {
                     t_calc += mainWindow.timeDelta;
                     currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, direction, t_calc);
@@ -4283,13 +4274,10 @@ function calcSatTwoBody(allBurns = false) {
                 }
                 // console.log(this.burns[satBurn].time + t_burn - t_calc);
                 if (t_burn > 1e-3) {
-                // if (true) {
                     currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time + t_burn - t_calc, direction, t_calc);
-                    // showScreenAlert('Burn has magnitude of 0 m/s')
                 }
                 t_calc += mainWindow.timeDelta;
                 currentState = runge_kutta(twoBodyRpo, currentState, t_calc - this.burns[satBurn].time - t_burn, [0,0,0], t_calc);
-                // console.log(math.squeeze(currentState));
                 satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
                 continue;
             }
@@ -4901,7 +4889,6 @@ function findRadialTime(sat= 0, r= -20, time = mainWindow.scenarioTime) {
     mainWindow.desired.scenarioTime = seedTime
     document.getElementById('time-slider-range').value = seedTime
 }
-
 
 function findCrossTrackTime(sat= 0, c= -5, time = mainWindow.scenarioTime) {
     if (mainWindow.satellites.length === 0) return
