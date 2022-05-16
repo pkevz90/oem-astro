@@ -5451,3 +5451,54 @@ function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
     mainWindow.satellites[sat].genBurns()
     mainWindow.satellites[sat].calcTraj()
 }
+
+function runMonteCarlo(sat = 0, burn = 0, options = {}) {
+    let {n = 10000, stdR =  0.1, stdAng =  1*Math.PI / 180, dt = 7200} = options
+    let burnSat = mainWindow.satellites[sat].burns[burn]
+    let state = mainWindow.satellites[sat].currentPosition({time: burnSat.time})
+    state = {
+        x: state.r[0],
+        y: state.i[0],
+        z: state.c[0],
+        xd: state.rd[0],
+        yd: state.id[0],
+        zd: state.cd[0]
+    }
+    let direction = {
+        mag: math.norm(Object.values(burnSat.direction)),
+        az: math.atan2(burnSat.direction.i, burnSat.direction.r),
+        el: math.atan2(burnSat.direction.c, math.norm(Object.values(burnSat.direction).slice(0,2)))
+    }
+    let a = mainWindow.satellites[sat].a
+    let corruptBurn = (burn) => {
+        return {
+            mag: burn.mag + stdR * burn.mag * randn_bm(),
+            az: burn.az + stdAng * randn_bm(),
+            el: burn.el + stdAng * randn_bm()
+        }
+    }
+    let points = [], average = [0,0,0,0,0,0]
+    for (let index = 0; index < n; index++) {
+        let cBurn = corruptBurn(direction)
+        let cDur = cBurn.mag / a
+        let wayPos = oneBurnFiniteHcw(state, cBurn.az, cBurn.el, cDur / dt, dt, burnSat.time, a)
+        average = math.add(average, Object.values(wayPos))
+        points.push(Object.values(wayPos));
+    }
+    average = math.dotDivide(average, points.length)
+    let std = math.zeros([6,6])
+    points.forEach(p => {
+        std = math.add(std, math.multiply(math.reshape(math.subtract(p, average), [6,1]), math.reshape(math.subtract(p, average), [1,6])))
+    })
+    std = math.dotDivide(std, points.length)
+    console.log(std);
+    console.log(math.dotPow(std, 0.5));
+    console.log(math.eigs(std));
+}
+
+function randn_bm() {
+    var u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+}
