@@ -379,11 +379,11 @@ class windowCanvas {
             ctx.textAlign = 'left';
             ctx.textBaseline = 'bottom';
             ctx.fillStyle = '#555 ';
-            let fontSize = this.cnvs.height * this.frameCenter.ri.w / 20
+            let fontSize = this.cnvs.height * this.frameCenter.ri.w / 40
             ctx.font = 'bold ' + fontSize + 'px serif';
             let dist = (mainWindow.desired.plotWidth / 2).toFixed(0) + 'km'
             for (let letter = 0; letter < dist.length; letter++) {
-                ctx.fillText(dist[letter], 5, origin.ri.y - dist.length / 5 * fontSize + letter * fontSize)
+                ctx.fillText(dist[letter], 7.5, origin.ri.y - dist.length / 5 * fontSize + letter * fontSize)
             }
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1404,6 +1404,7 @@ function startContextClick(event) {
         ctxMenu.innerHTML = `
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
             <div class="context-item" onclick="handleContextClick(this)" dir="${burnDir.join('_')}" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-direction-options">Change Direction</div>
+            <div class="context-item" onclick="handleContextClick(this)" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
             <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(3)}, ${burnDir[1].toFixed(3)}, ${burnDir[2].toFixed(3)}) m/s</div>
@@ -1472,6 +1473,22 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = html
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
+    else if (button.id === 'change-time') { 
+        let inputs = button.getElementsByTagName('input')
+        if (inputs[0].value === '') return
+        let sat = button.getAttribute('sat') 
+        let burn = button.getAttribute('burn')
+        let curTime = mainWindow.scenarioTime + Number(inputs[0].value) * 60
+        logAction({
+            type: 'alterBurn',
+            index: burn,
+            sat,
+            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
+        })
+        moveBurnTime(sat, burn, Number(inputs[0].value) * 60)
+        mainWindow.desired.scenarioTime = curTime
+        document.getElementById('context-menu')?.remove()
+        }
     else if (button.id === 'perch-maneuver') { 
         let sat = button.parentElement.sat;
         perchSatellite(sat)
@@ -1839,6 +1856,12 @@ function handleContextClick(button) {
     else if (button.id === 'execute-change-direction') {
         let sat = button.getAttribute('sat')
         let burn = button.getAttribute('burn')
+        logAction({
+            type: 'alterBurn',
+            index: burn,
+            sat,
+            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
+        })
         let inputs = button.parentElement.getElementsByTagName('input');
         for (let ii = 0; ii < inputs.length; ii++) {
             if (inputs[ii].value === '') {
@@ -3935,10 +3958,11 @@ function getRelativeData(n_target, n_origin) {
     sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
     sunAngle = 180 - sunAngle; // Appropriate for USSF
     rangeRate = math.dot(relVel, relPos) * 1000 / range;
-    tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
+    // tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
     let relPosHis;
     try {
         relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
+
         poca = math.min(relPosHis);
         toca = relPosHis.findIndex(element => element === poca) * mainWindow.timeDelta;
     }
@@ -3992,12 +4016,12 @@ function drawVulnerabilityZone() {
             zd: 0 
         };
         pointText = {
-            x: tarPos.r[0] + mainWindow.vz_reach.distance * Math.sin(ang)*1.1,
-            y: tarPos.i[0] + mainWindow.vz_reach.distance * Math.cos(ang)*1.1,
-            z: tarPos.c[0]
+            r: tarPos.r[0] + mainWindow.vz_reach.distance * Math.sin(ang)*1.1,
+            i: tarPos.i[0] + mainWindow.vz_reach.distance * Math.cos(ang)*1.1,
+            c: tarPos.c[0]
         };
-        textLoc = mainWindow.convertToPixels({r: pointText.x, i: pointText.y, c: pointText.z}).ri;
-        burn = hcwFiniteBurnOneBurn(objPos, point, mainWindow.vz_reach.time, 0.00001);
+        textLoc = mainWindow.convertToPixels(pointText).ri;
+        burn = hcwFiniteBurnOneBurn(objPos, point, mainWindow.vz_reach.time, 0.001);
         results.push(burn ? {
             dV: math.norm([burn.r, burn.i, burn.c]),
             vel: math.norm([burn.F.xd-tarPos.rd[0], burn.F.yd-tarPos.id[0], burn.F.zd-tarPos.cd[0]])
@@ -4008,7 +4032,7 @@ function drawVulnerabilityZone() {
     }
     let zoneCenter = mainWindow.convertToPixels({r: tarPos.r[0], i: tarPos.i[0], c: tarPos.c[0]}).ri;
     ctx.beginPath();
-    ctx.arc(zoneCenter.x, zoneCenter.y, mainWindow.vz_reach.distance / 2 / mainWindow.getPlotWidth() * mainWindow.getWidth(),0, 2 * Math.PI);
+    ctx.arc(zoneCenter.x, zoneCenter.y, mainWindow.vz_reach.distance / mainWindow.getPlotWidth() * mainWindow.getWidth(),0, 2 * Math.PI);
     ctx.stroke();
 }
 
@@ -5412,4 +5436,18 @@ function optimizeMultiBurn(burns = 4, start = [0, 400, 0, 0, 0, 0], end = [0,-30
     }
     setTimeout(stepFunction(), 10)
     
+}
+
+function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
+    let burnOld = JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
+    let futureBurns = mainWindow.satellites[sat].burns.filter(b => b.time > burnOld.time)
+    let timeLimits = [Number(burn) === 0 ? 0 : mainWindow.satellites[sat].burns[burn - 1].time, futureBurns.length > 0 ? futureBurns[0].time : mainWindow.scenarioLength * 3600]
+    if ((burnOld.time + dt) < timeLimits[0]) return showScreenAlert('Burn too early')
+    if ((burnOld.time + dt) > timeLimits[1]) return showScreenAlert('Burn too late')
+    mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(b => b.time < burnOld.time)
+    mainWindow.satellites[sat].calcTraj()
+    insertDirectionBurn(sat, burnOld.time + dt, Object.values(burnOld.direction))
+    mainWindow.satellites[sat].burns.push(...futureBurns)
+    mainWindow.satellites[sat].genBurns()
+    mainWindow.satellites[sat].calcTraj()
 }
