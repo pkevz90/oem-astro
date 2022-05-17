@@ -2714,7 +2714,14 @@ function parseArtsText(text) {
         originOrbit[index] = newOrbit[index]
         if (index > 1) originOrbit[index] *= Math.PI / 180
     }
-
+    originOrbit = {
+        a: originOrbit[0],
+        e: originOrbit[1],
+        i: originOrbit[2],
+        raan: originOrbit[3],
+        arg: originOrbit[4],
+        tA: originOrbit[5],
+    }
     return {newDate, newState, newSun, originOrbit}
 }
 
@@ -5563,6 +5570,8 @@ function changeOrigin(satIn = 1) {
             }
         })
         satellitesOut = []
+        let dataReqs = JSON.parse(JSON.stringify(mainWindow.relativeData.dataReqs))
+        mainWindow.relativeData.dataReqs = []
         sats.forEach((sat, ii) => {
             satellitesOut.push(new Satellite({
                 position: sat.position,
@@ -5579,6 +5588,7 @@ function changeOrigin(satIn = 1) {
                     insertDirectionBurn(ii, burn.time, Object.values(burn.direction), undefined, true)
                 })
             })
+            mainWindow.relativeData.dataReqs = dataReqs
         }, 500)
     } catch (error) {
         showScreenAlert('Error in changing ref satellite')
