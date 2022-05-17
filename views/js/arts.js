@@ -1380,7 +1380,6 @@ function startContextClick(event) {
     if (activeSat !== false) {
         ctxMenu.sat = activeSat;
         let dispPosition = event.altKey ? getCurrentInertial(activeSat) : mainWindow.satellites[activeSat].curPos
-        console.log(dispPosition);
         ctxMenu.innerHTML = `
             <div contentEditable="true" sat="${activeSat}" element="name" oninput="alterEditableSatChar(this)" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeSat].name}</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
@@ -1423,6 +1422,7 @@ function startContextClick(event) {
             ${mainWindow.satellites.length > 0 ? '<div class="context-item" onclick="openPanel(this)" id="burns">Maneuver List</div>' : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="openDataTab()" id="data">Display Data</div>' : ''}
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)"" id="change-origin">Change Origin Sat</div>' : ''}
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept=".sas" onchange="uploadScenario(event)"></div>
             <div class="context-item" onclick="exportScenario()">Export Scenario</div>
@@ -1737,6 +1737,19 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = html
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
+    else if (button.id === 'change-origin') {
+        let html = ``
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            html += `<div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="${ii}" id="execute-change-origin" tabindex="0">${mainWindow.satellites[ii].name}</div>`
+        
+        }
+        button.parentElement.innerHTML = html
+    }
+    else if (button.id === 'execute-change-origin') {
+        let sat = button.getAttribute('target')
+        changeOrigin(sat)
+        document.getElementById('context-menu')?.remove();
+    }
     else if (button.id === 'multi-maneuver') {
         let sat = button.parentElement.sat;
         let html = `
@@ -1901,6 +1914,20 @@ function handleContextClick(button) {
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
+        let waypoint
+        if (target === 'origin') {
+            waypoint = {r: Number(inputs[1].value), i: Number(inputs[2].value), c: Number(inputs[3].value)}
+        }
+        else {
+            let rot = translateFrames(target, {
+                time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
+            })
+            waypoint = math.reshape([Number(inputs[1].value), Number(inputs[2].value), Number(inputs[3].value)], [3,1])
+            waypoint = math.multiply(math.transpose(rot), waypoint)
+            waypoint = {r: waypoint[0][0], i: waypoint[1][0], c: waypoint[2][0]}
+            console.log(waypoint);
+
+        }
         let origin = target === 'origin' ? {r: [0], i: [0], c: [0]} : mainWindow.satellites[target].currentPosition({
             time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
         })
@@ -1914,9 +1941,9 @@ function handleContextClick(button) {
             waypoint: {
                 tranTime: Number(inputs[0].value) * 3600,
                 target: {
-                    r: Number(inputs[1].value) + origin.r[0],
-                    i: Number(inputs[2].value) + origin.i[0],
-                    c: Number(inputs[3].value) + origin.c[0],
+                    r: Number(waypoint.r) + origin.r[0],
+                    i: Number(waypoint.i) + origin.i[0],
+                    c: Number(waypoint.c) + origin.c[0],
                 }
             }
         })
@@ -2129,14 +2156,7 @@ function translateFrames(sat = 0, options={}) {
     let {time = mainWindow.desired.scenarioTime} = options
     let ricPos = mainWindow.satellites[sat].currentPosition({time})
     ricPos = math.squeeze([ricPos.r, ricPos.i, ricPos.c, ricPos.rd, ricPos.id, ricPos.cd])
-    let inert = [
-        (398600.4418 / mainWindow.mm ** 2) ** (1/3),
-        0,
-        0,
-        0,
-        (398600.4418 / ((398600.4418 / mainWindow.mm ** 2) ** (1/3))) ** (1/2),
-        0
-    ]
+    let inert = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
     let eciPos = Ric2Eci(ricPos.slice(0,3), ricPos.slice(3,6), inert.slice(0,3), inert.slice(3,6))
     let h = math.cross(eciPos.rEcci, eciPos.drEci);
     let ricX = math.dotDivide(eciPos.rEcci, math.norm(eciPos.rEcci));
@@ -2883,7 +2903,6 @@ function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
 function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainWindow.mm) {
     let state = math.transpose([Object.values(stateInit)]);
     stateFinal = math.transpose([Object.values(stateFinal)]);
-    
     let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
     let v1 = v[0],
         yErr= [100], S, dX = 1,
@@ -2895,13 +2914,12 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
     else {
         dv1 = guess;
     }
-    
     let Xret = [
         [Math.atan2(dv1[1][0], dv1[0][0])],
         [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
         [math.norm(math.squeeze(dv1)) / a0 / tf]
     ];
-    if (Xret[2] < 1e-9) {
+    if (Xret[2] < 1e-11) {
         return {
             r: 0,
             i: 0,
@@ -2925,6 +2943,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, n);
         dX = math.multiply(math.inv(S), yErr);
         X = math.add(X, dX)
+        X[2][0] = X[2][0] < 0 ? 1e-9 : X[2][0]
         if (errCount > 20 || X[2][0] < 0) return false;
         errCount++;
     }
@@ -4997,7 +5016,12 @@ function perchSatelliteSolver(state = [1, 10, 0, -0.005, 0, 0], a = 0.00001, sta
     return {dir: math.dotMultiply(params.tb, dir), stateF, params}
 }
 
-function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0], burn) {
+function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0], burn, translate = false) {
+    if (translate) {
+        let rot = translateFrames(sat, {time})
+        dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
+        
+    }
     if (burn !== undefined) {
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.slice(0, Number(burn))
     }
@@ -5501,4 +5525,62 @@ function randn_bm() {
     while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
     while(v === 0) v = Math.random();
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+}
+
+function changeOrigin(satIn = 1) {
+    try {
+        let inertStart = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+        let sats = mainWindow.satellites.map((sat, ii) => {
+            let inertPos = Ric2Eci(Object.values(sat.position).slice(0,3), Object.values(sat.position).slice(3,6), inertStart.slice(0,3), inertStart.slice(3,6))
+            inertPos = [...inertPos.rEcci, ...inertPos.drEci]
+            let satOut = JSON.parse(JSON.stringify(sat))
+            satOut.inertPos = inertPos
+            return {
+                inertPos,
+                position: sat.position,
+                a: sat.a,
+                burns: sat.burns.map(burn => {
+                    let r = translateFrames(ii, {time: burn.time})
+                    let dir = math.squeeze(math.multiply(r, math.reshape(Object.values(burn.direction), [3,1])))
+                    let burnOut = JSON.parse(JSON.stringify(burn))
+                    burnOut.direction = {r: dir[0], i: dir[1], c: dir[2]}
+                    return burnOut
+                }),
+    
+    
+            }
+        })
+        let newInert = PosVel2CoeNew(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6))
+        mainWindow.mm = (398600.4418 / newInert.a ** 3) ** (1/2)
+        mainWindow.originOrbit = newInert
+        sats = sats.map((sat, ii) => {
+            let relPos = Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sat.inertPos.slice(0,3), sat.inertPos.slice(3,6))
+            relPos = math.squeeze([...relPos.rHcw, ...relPos.drHcw])
+            return {
+                position: {r: relPos[0], i: relPos[1], c: relPos[2], rd: relPos[3], id: relPos[4], cd: relPos[5]},
+                a: sat.a,
+                burns: sat.burns
+            }
+        })
+        satellitesOut = []
+        sats.forEach((sat, ii) => {
+            satellitesOut.push(new Satellite({
+                position: sat.position,
+                color: mainWindow.satellites[ii].color,
+                shape: mainWindow.satellites[ii].shape,
+                a: mainWindow.satellites[ii].a,
+                name: mainWindow.satellites[ii].name
+            }))
+        })
+        mainWindow.satellites = satellitesOut
+        setTimeout(() => {
+            mainWindow.satellites.forEach((sat, ii) => {
+                sats[ii].burns.forEach(burn => {
+                    insertDirectionBurn(ii, burn.time, Object.values(burn.direction), undefined, true)
+                })
+            })
+        }, 500)
+    } catch (error) {
+        showScreenAlert('Error in changing ref satellite')
+    }
 }
