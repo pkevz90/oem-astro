@@ -20,6 +20,7 @@ let currentAction
 let pastActions = []
 let lastSaveName = ''
 let errorList = []
+let ellipses = []
 document.getElementsByClassName('rmoe')[1].parentNode.innerHTML = `
     Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> degs/rev
 `
@@ -534,6 +535,32 @@ class windowCanvas {
             }
         })
     }
+    drawEllipses() {
+        let ctx = this.getContext()
+        let oldLineW = ctx.lineWidth + 0
+        ctx.lineWidth = 2
+        // ellipses.forEach(ell => {
+        //     let pixPos = this.convertToPixels([ell.position.r, ell.position.i, ell.position.c, 0, 0, 0])
+        //     ctx.beginPath()
+        //     ctx.ellipse(pixPos.ri.x, pixPos.ri.y, ell.a * this.cnvs.width / this.desired.plotWidth, ell.b * this.cnvs.width / this.desired.plotWidth, ell.ang, 0, 2 * Math.PI)
+        //     ctx.stroke()
+        // })
+        let beforeIndex = ellipses.filter(ell => ell.time < mainWindow.scenarioTime).length
+        if (beforeIndex > ellipses.length || beforeIndex === 0) return
+        let dispEllipse = {
+            a: ellipses[beforeIndex].a + (ellipses[beforeIndex+1].a - ellipses[beforeIndex].a) * (mainWindow.desired.scenarioTime - ellipses[beforeIndex].time) / (ellipses[beforeIndex + 1].time - ellipses[beforeIndex].time),
+            b: ellipses[beforeIndex].b + (ellipses[beforeIndex+1].b - ellipses[beforeIndex].b) * (mainWindow.desired.scenarioTime - ellipses[beforeIndex].time) / (ellipses[beforeIndex + 1].time - ellipses[beforeIndex].time),
+            ang: ellipses[beforeIndex].ang + (ellipses[beforeIndex+1].ang - ellipses[beforeIndex].ang) * (mainWindow.desired.scenarioTime - ellipses[beforeIndex].time) / (ellipses[beforeIndex + 1].time - ellipses[beforeIndex].time),
+            r: ellipses[beforeIndex].position.r + (ellipses[beforeIndex+1].position.r - ellipses[beforeIndex].position.r) * (mainWindow.desired.scenarioTime - ellipses[beforeIndex].time) / (ellipses[beforeIndex + 1].time - ellipses[beforeIndex].time),
+            i: ellipses[beforeIndex].position.i + (ellipses[beforeIndex+1].position.i - ellipses[beforeIndex].position.i) * (mainWindow.desired.scenarioTime - ellipses[beforeIndex].time) / (ellipses[beforeIndex + 1].time - ellipses[beforeIndex].time),
+            c: ellipses[beforeIndex].position.c + (ellipses[beforeIndex+1].position.c - ellipses[beforeIndex].position.c) * (mainWindow.desired.scenarioTime - ellipses[beforeIndex].time) / (ellipses[beforeIndex + 1].time - ellipses[beforeIndex].time)
+        }
+        let pixPos = this.convertToPixels([dispEllipse.r, dispEllipse.i, dispEllipse.c, 0, 0, 0])
+        ctx.beginPath()
+        ctx.ellipse(pixPos.ri.x, pixPos.ri.y, dispEllipse.a * this.cnvs.width / this.desired.plotWidth, dispEllipse.b * this.cnvs.width / this.desired.plotWidth, dispEllipse.ang, 0, 2 * Math.PI)
+        ctx.stroke()
+        ctx.lineWidth = oldLineW
+    }
     drawSatLocation(position, sat = {}) {
         let {shape, size, color, name} = sat;
         let pixelPosition = this.convertToPixels(position);
@@ -1036,6 +1063,7 @@ let timeFunction = false;
         mainWindow.drawInertialOrbit(); 
         mainWindow.drawAxes();
         mainWindow.drawPlot();
+        mainWindow.drawEllipses()
         mainWindow.showData();
         mainWindow.showTime();
         mainWindow.showLocation();
@@ -5483,8 +5511,15 @@ function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
     mainWindow.satellites[sat].calcTraj()
 }
 
+function mc() {
+    for (let index = 3600; index <= 21600; index+=100) {
+        ellipses.push(runMonteCarlo(0,0,{dt: index}))
+        
+    }
+}
+
 function runMonteCarlo(sat = 0, burn = 0, options = {}) {
-    let {n = 10000, stdR =  0.1, stdAng =  1*Math.PI / 180, dt = 7200} = options
+    let {n = 200, stdR =  0.05, stdAng =  1*Math.PI / 180, dt = 7200} = options
     let burnSat = mainWindow.satellites[sat].burns[burn]
     let state = mainWindow.satellites[sat].currentPosition({time: burnSat.time})
     state = {
@@ -5515,6 +5550,18 @@ function runMonteCarlo(sat = 0, burn = 0, options = {}) {
         let wayPos = oneBurnFiniteHcw(state, cBurn.az, cBurn.el, cDur / dt, dt, burnSat.time, a)
         average = math.add(average, Object.values(wayPos))
         points.push(Object.values(wayPos));
+        
+        // ellipses.push({
+        //     screen: 'ri',
+        //     a: 0.1,
+        //     b: 0.1,
+        //     ang: 0,
+        //     position: {
+        //         r: Object.values(wayPos)[0],
+        //         i: Object.values(wayPos)[1],
+        //         c: Object.values(wayPos)[2]
+        //     }
+        // })
     }
     average = math.dotDivide(average, points.length)
     let std = math.zeros([6,6])
@@ -5522,9 +5569,26 @@ function runMonteCarlo(sat = 0, burn = 0, options = {}) {
         std = math.add(std, math.multiply(math.reshape(math.subtract(p, average), [6,1]), math.reshape(math.subtract(p, average), [1,6])))
     })
     std = math.dotDivide(std, points.length)
-    console.log(std);
-    console.log(math.dotPow(std, 0.5));
-    console.log(math.eigs(std));
+    let riStd = std.slice(0,2).map(s => s.slice(0,2))
+    console.log(riStd);
+    let eigRiStd = math.eigs(riStd);
+    console.log(eigRiStd);
+    console.log(average);
+    return {
+        screen: 'ri',
+        a: 3 * eigRiStd.values[1] ** 0.5,
+        b: 3 * eigRiStd.values[0] ** 0.5,
+        ang: math.atan2(eigRiStd.vectors[0][1], eigRiStd.vectors[1][1]),
+        position: {
+            r: average[0],
+            i: average[1],
+            c: average[2]
+        },
+        time: burnSat.time + dt
+    }
+    // console.log(points.filter(p => {
+    //     return ()
+    // }));
 }
 
 function randn_bm() {
