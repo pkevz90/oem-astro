@@ -21,6 +21,7 @@ let pastActions = []
 let lastSaveName = ''
 let errorList = []
 let ellipses = []
+let monteCarloData = null
 document.getElementsByClassName('rmoe')[1].parentNode.innerHTML = `
     Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> degs/rev
 `
@@ -610,8 +611,15 @@ class windowCanvas {
             y_location += req.textSize*1.1;
             req.data.forEach(d => {
                 if (relDataIn[d] !== undefined) {
-                    ctx.fillText(this.relativeData.data[d].name + ': ' + relDataIn[d].toFixed(
-                        1) + ' ' + this.relativeData.data[d].units, req.positionX*this.cnvs.width / 100,
+                    let textOut
+                    if (d === 'range') {
+                        if (relDataIn.rangeStd !== undefined) textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} +/-${relDataIn.rangeStd.toFixed(2)} km`
+                        else textOut = `${this.relativeData.data[d].name} :  ${relDataIn[d].toFixed(1)} km`
+                    }
+                    else {
+                        textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} +/-${relDataIn.rangeStd.toFixed(2)} ${this.relativeData.data[d].units}`
+                    }
+                    ctx.fillText(textOut, req.positionX*this.cnvs.width / 100,
                         y_location);
                     y_location += req.textSize*1.1;
                 }
@@ -1301,6 +1309,39 @@ function keydownFunction(key) {
     else if (key.key === '<' && key.shiftKey) mainWindow.trajSize = mainWindow.trajSize > 0.5 ? mainWindow.trajSize - 0.1 : mainWindow.trajSize
     else if (key.key === '>' && key.shiftKey) mainWindow.trajSize += 0.1
     else if (key.key === 'E' && key.shiftKey && key.altKey) downloadFile('error_file.txt', errorList.map(e => e.stack).join('\n'))
+}
+function sliderFunction(slider) {
+
+    let timeDelta = Number(slider.value) - mainWindow.desired.scenarioTime
+    mainWindow.desired.scenarioTime += timeDelta
+    if (monteCarloData !== null) {
+        let td = mainWindow.desired.scenarioTime - monteCarloData.time
+        td = mainWindow.desired.scenarioTime < monteCarloData.minTime ? monteCarloData.minTime - monteCarloData.time : td
+        console.log(td);
+        monteCarloData.points = monteCarloData.points.map(p => {
+            return oneBurnFiniteHcw(p, 0, 0, 0, td, monteCarloData.time, 0)
+        })
+        monteCarloData.time = mainWindow.desired.scenarioTime
+        let covData = findCovariance(monteCarloData.points)
+        monteCarloData.ave = covData.average
+        monteCarloData.cov = covData.cov
+        ellipses = mainWindow.scenarioTime < monteCarloData.minTime ? [] : [
+            cov2ellipse(covData.cov, covData.average)
+        ]
+        // monteCarloData.points.forEach(p => {
+        //     ellipses.push({
+        //         screen: 'ri',
+        //         a: 0.03,
+        //         b: 0.03,
+        //         ang: 0,
+        //         position: {
+        //             r: p.x,
+        //             i: p.y,
+        //             c: p.z
+        //         }
+        //     })
+        // })
+    }
 }
 window.addEventListener('keydown', keydownFunction)
 window.addEventListener('keyup', key => {
@@ -2744,7 +2785,7 @@ function parseState(button) {
     let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input')
     if (parsedState === undefined) return
     console.log(parsedState);
-    mainWindow.mm = (398600.4418 / parsedState.originOrbit[0] ** 3) ** (1/2)
+    mainWindow.mm = (398600.4418 / parsedState.originOrbit.a ** 3) ** (1/2)
     mainWindow.scenarioLength = 2 * Math.PI / 3600 / mainWindow.mm
     document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
     let oldDate = mainWindow.startDate + 0
@@ -3988,12 +4029,19 @@ function drawSatellite(satellite = {}) {
 }
 
 function getRelativeData(n_target, n_origin) {
-    let sunAngle, rangeRate, range, poca, toca, tanRate;
+    let sunAngle, rangeRate, range, poca, toca, tanRate, rangeStd;
     let relPos = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getPositionArray(), mainWindow.satellites[n_target]
         .getPositionArray()));
     let relVel = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getVelocityArray(), mainWindow.satellites[n_target]
         .getVelocityArray()));
     range = math.norm(relPos);
+    if (monteCarloData !== null) {
+        if (n_target == monteCarloData.sat) {
+            let rData = monteCarloData.points.map(p => math.norm(math.subtract(Object.values(p).slice(0,3), math.squeeze(mainWindow.satellites[n_origin].getPositionArray()))))
+            let rDataAve = rData.reduce((a,b) => a + b, 0) / rData.length
+            rangeStd = (rData.reduce((a, b) => a + (b - rDataAve) ** 2, 0) / (rData.length-1)) ** 0.5
+        }
+    }
     sunAngle = mainWindow.getCurrentSun()
     sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
     sunAngle = 180 - sunAngle; // Appropriate for USSF
@@ -4012,6 +4060,7 @@ function getRelativeData(n_target, n_origin) {
         sunAngle,
         rangeRate,
         range,
+        rangeStd,
         poca,
         toca,
         tanRate,
@@ -5497,15 +5546,8 @@ function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
     mainWindow.satellites[sat].calcTraj()
 }
 
-function mc() {
-    for (let index = 7200; index <= 10800; index+=1800) {
-        ellipses.push(runMonteCarlo(0,0,{dt: index}))
-        
-    }
-}
-
-function runMonteCarlo(sat = 0, burn = 0, options = {}) {
-    let {n = 100, stdR =  0.05, stdAng =  1*Math.PI / 180, dt = 7200} = options
+function startMonteCarlo(sat = 0, burn = 0, options= {}) {
+    let {n = 100, stdR =  0.05, stdAng =  3*Math.PI / 180} = options
     let burnSat = mainWindow.satellites[sat].burns[burn]
     let state = mainWindow.satellites[sat].currentPosition({time: burnSat.time})
     state = {
@@ -5522,6 +5564,8 @@ function runMonteCarlo(sat = 0, burn = 0, options = {}) {
         el: math.atan2(burnSat.direction.c, math.norm(Object.values(burnSat.direction).slice(0,2)))
     }
     let a = mainWindow.satellites[sat].a
+    let dur = direction.mag * (1 + 10 * stdR) / a
+    let propTime = dur < (mainWindow.scenarioTime - burnSat.time) ? mainWindow.scenarioTime - burnSat.time : dur
     let corruptBurn = (burn) => {
         return {
             mag: burn.mag + stdR * burn.mag * randn_bm(),
@@ -5529,53 +5573,60 @@ function runMonteCarlo(sat = 0, burn = 0, options = {}) {
             el: burn.el + stdAng * randn_bm()
         }
     }
-    let points = [], average = [0,0,0,0,0,0]
+    let points = []
     for (let index = 0; index < n; index++) {
         let cBurn = corruptBurn(direction)
         let cDur = cBurn.mag / a
-        let wayPos = oneBurnFiniteHcw(state, cBurn.az, cBurn.el, cDur / dt, dt, burnSat.time, a)
-        average = math.add(average, Object.values(wayPos))
-        points.push(Object.values(wayPos));
-        
-        ellipses.push({
-            screen: 'ri',
-            a: 0.1,
-            b: 0.1,
-            ang: 0,
-            position: {
-                r: Object.values(wayPos)[0],
-                i: Object.values(wayPos)[1],
-                c: Object.values(wayPos)[2]
-            }
-        })
+        let wayPos = oneBurnFiniteHcw(state, cBurn.az, cBurn.el, cDur / propTime, propTime, burnSat.time, a)
+        points.push(wayPos)
     }
-    average = math.dotDivide(average, points.length)
-    let std = math.zeros([6,6])
-    points.forEach(p => {
-        std = math.add(std, math.multiply(math.reshape(math.subtract(p, average), [6,1]), math.reshape(math.subtract(p, average), [1,6])))
-    })
-    std = math.dotDivide(std, points.length)
-    let riStd = std.slice(0,2).map(s => s.slice(0,2))
-    console.log(riStd);
+    let covData = findCovariance(points)
+    ellipses = [
+        cov2ellipse(covData.cov, covData.average)
+    ]
+    return {
+        points,
+        minTime: burnSat.time + dur,
+        time: burnSat.time + propTime,
+        ave: covData.average,
+        cov: covData.cov,
+        sat,
+        burn
+    }
+}
+
+function findCovariance(points) {
+    let p = points.map(p => math.reshape(Object.values(p), [6,1]))
+    let average = math.dotDivide(p.reduce((a,b) => math.add(a, b), math.zeros([6,1])), p.length)
+    let cov = math.dotDivide(p.reduce((a,b) => {
+        let added = math.multiply(math.subtract(b, average), math.reshape(math.subtract(b, average), [1,6]))
+        return math.add(a, added)
+    }, math.zeros([6,6])), p.length)
+    
+    return {
+        average,
+        cov
+    }
+}
+
+function cov2ellipse(cov, average) {
+    let riStd = cov.slice(0,2).map(s => s.slice(0,2))
     let eigRiStd = math.eigs(riStd);
-    console.log(eigRiStd);
-    console.log(average);
     return {
         screen: 'ri',
-        a: 2 * eigRiStd.values[1] ** 0.5,
-        b: 2 * eigRiStd.values[0] ** 0.5,
+        a: 3 * eigRiStd.values[1] ** 0.5,
+        b: 3 * eigRiStd.values[0] ** 0.5,
         ang: math.atan2(eigRiStd.vectors[0][1], eigRiStd.vectors[1][1]),
         position: {
-            r: average[0],
-            i: average[1],
-            c: average[2]
+            r: average[0][0],
+            i: average[1][0],
+            c: average[2][0]
         },
-        time: burnSat.time + dt
+    
+
     }
-    // console.log(points.filter(p => {
-    //     return ()
-    // }));
 }
+
 
 function randn_bm() {
     var u = 0, v = 0;
