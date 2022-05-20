@@ -617,7 +617,7 @@ class windowCanvas {
                         else textOut = `${this.relativeData.data[d].name} :  ${relDataIn[d].toFixed(1)} km`
                     }
                     else {
-                        textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} +/-${relDataIn.rangeStd.toFixed(2)} ${this.relativeData.data[d].units}`
+                        textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} ${this.relativeData.data[d].units}`
                     }
                     ctx.fillText(textOut, req.positionX*this.cnvs.width / 100,
                         y_location);
@@ -1321,7 +1321,7 @@ function sliderFunction(slider) {
         monteCarloData.points = monteCarloData.points.map(p => {
             return oneBurnFiniteHcw(p, 0, 0, 0, td, monteCarloData.time, 0)
         })
-        monteCarloData.time = mainWindow.desired.scenarioTime
+        monteCarloData.time += td //mainWindow.desired.scenarioTime
         let covData = findCovariance(monteCarloData.points)
         monteCarloData.ave = covData.average
         monteCarloData.cov = covData.cov
@@ -5547,7 +5547,7 @@ function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
 }
 
 function startMonteCarlo(sat = 0, burn = 0, options= {}) {
-    let {n = 100, stdR =  0.05, stdAng =  3*Math.PI / 180} = options
+    let {n = 100, stdR =  0.1, stdAng =  3*Math.PI / 180} = options
     let burnSat = mainWindow.satellites[sat].burns[burn]
     let state = mainWindow.satellites[sat].currentPosition({time: burnSat.time})
     state = {
@@ -5567,6 +5567,11 @@ function startMonteCarlo(sat = 0, burn = 0, options= {}) {
     let dur = direction.mag * (1 + 10 * stdR) / a
     let propTime = dur < (mainWindow.scenarioTime - burnSat.time) ? mainWindow.scenarioTime - burnSat.time : dur
     let corruptBurn = (burn) => {
+        return {
+            mag: burn.mag + stdR * burn.mag * 2*(Math.random()-0.5),
+            az: burn.az + stdAng * 2*(Math.random()-0.5),
+            el: burn.el + stdAng * 2*(Math.random()-0.5)
+        }
         return {
             mag: burn.mag + stdR * burn.mag * randn_bm(),
             az: burn.az + stdAng * randn_bm(),
@@ -5694,4 +5699,17 @@ function changeOrigin(satIn = 1) {
     } catch (error) {
         showScreenAlert('Error in changing ref satellite')
     }
+}
+
+function forcePlaneCrossing(sat = 0, dt = 4) {
+    let curPos = mainWindow.satellites[sat].curPos
+    let curPhase = math.atan2(curPos.c, curPos.cd / mainWindow.mm)
+    // =CEILING.MATH((C4+180*FLOOR.MATH(F2/12))/180)*180
+    let halfPeriod = Math.PI / mainWindow.mm / 3600
+    let phaseGoal = Math.ceil((curPhase + 180 * Math.floor(dt / halfPeriod)) / 180)
+    let desiredPhase = phaseGoal - mainWindow.mm * dt * 3600
+    let desTan = Math.tan(desiredPhase)
+    let desVelocity = curPos.c / desTan * mainWindow.mm
+    
+    return desVelocity
 }
