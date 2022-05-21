@@ -1441,12 +1441,12 @@ function startContextClick(event) {
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
             <div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
-            <div class="context-item" onclick="generateEphemFile(${activeSat})" id="state-options">Gen .e File</div>
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${dispPosition.r.toFixed(2)}, ${dispPosition.i.toFixed(2)}, ${dispPosition.c.toFixed(2)}) km</div>
             <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*dispPosition.rd).toFixed(2)}, ${(1000*dispPosition.id).toFixed(2)}, ${(1000*dispPosition.cd).toFixed(2)}) m/s</div> 
             <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">Last State Update: ${((Date.now() - mainWindow.satellites[activeSat].originDate) / 60000).toFixed(0)} minutes ago</div> 
             `
-        //             <div class="context-item">Export Burns</div>
+        //             <div class="context-item">Export Burns</div><div class="context-item" onclick="generateEphemFile(${activeSat})" id="state-options">Gen .e File</div>
+            
     }
     else if (activeBurn !== false) {
         let burn = mainWindow.satellites[activeBurn.sat].burns[activeBurn.burn]
@@ -3772,10 +3772,11 @@ function editSatellite(button) {
     if (button.innerText === 'Delete') {
         let delSat = button.nextSibling.selectedIndex
         mainWindow.satellites.splice(delSat, 1);
-        mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => req.target == delSat || req.origin === delSat )
+        mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => Number(req.target) !== delSat && Number(req.origin) !== delSat )
+        console.log(JSON.parse(JSON.stringify(mainWindow.relativeData.dataReqs)));
         for (let index = 0; index < mainWindow.relativeData.dataReqs.length; index++) {
-            mainWindow.relativeData.dataReqs[index].origin = mainWindow.relativeData.dataReqs[index].origin > delSat ? Number(mainWindow.relativeData.dataReqs[index].origin) - 1 : mainWindow.relativeData.dataReqs[index].origin
-            mainWindow.relativeData.dataReqs[index].target = mainWindow.relativeData.dataReqs[index].target > delSat ? Number(mainWindow.relativeData.dataReqs[index].origin) - 1 : mainWindow.relativeData.dataReqs[index].target
+            mainWindow.relativeData.dataReqs[index].origin = Number(mainWindow.relativeData.dataReqs[index].origin) > delSat ? Number(mainWindow.relativeData.dataReqs[index].origin) - 1 : mainWindow.relativeData.dataReqs[index].origin
+            mainWindow.relativeData.dataReqs[index].target = Number(mainWindow.relativeData.dataReqs[index].target) > delSat ? Number(mainWindow.relativeData.dataReqs[index].target) - 1 : mainWindow.relativeData.dataReqs[index].target
         }
         closeAll();
         return;
