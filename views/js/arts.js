@@ -140,7 +140,8 @@ class windowCanvas {
             }
         },
         dataReqs: [],
-        time: 0
+        time: 0,
+        fontSize: 20
     };
     makeGif = {
         start: false,
@@ -601,14 +602,16 @@ class windowCanvas {
         let oldWidth = ctx.lineWidth;
         ctx.lineWidth = 1;
         ctx.fillStyle = this.colors.foregroundColor
+        let location = [this.cnvs.width * 0.02, this.cnvs.height * 0.12]
+        this.relativeData.fontSize = this.relativeData.fontSize || 20
+        let textSize = this.relativeData.fontSize * this.cnvs.height / 550//this.cnvs.height * 0.03
         this.relativeData.dataReqs.forEach(req => {
             ctx.textAlign = 'left';
-            ctx.font = "bold " + req.textSize + "pt Courier";
+            ctx.font = "bold " + textSize + "pt Courier";
             let relDataIn = getRelativeData(req.origin, req.target);
-            let y_location = req.positionY * this.cnvs.height / 100;
-            ctx.fillText(this.satellites[req.origin].name + String.fromCharCode(8594) + this.satellites[req.target].name, req.positionX*this.cnvs.width / 100, y_location);
-            ctx.font = req.textSize + 'px Courier';
-            y_location += req.textSize*1.1;
+            ctx.fillText(this.satellites[req.origin].name + String.fromCharCode(8594) + this.satellites[req.target].name, location[0], location[1]);
+            ctx.font = textSize + 'px Courier';
+            location[1] += textSize*1.1
             req.data.forEach(d => {
                 if (relDataIn[d] !== undefined) {
                     let textOut
@@ -619,14 +622,14 @@ class windowCanvas {
                     else {
                         textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} ${this.relativeData.data[d].units}`
                     }
-                    ctx.fillText(textOut, req.positionX*this.cnvs.width / 100,
-                        y_location);
-                    y_location += req.textSize*1.1;
+                    ctx.fillText(textOut, location[0], location[1]);
+                    location[1] += textSize*1.1;
                 }
             })
-            })
-            ctx.lineWidth = oldWidth;
-            this.relativeData.time = this.relativeData.time > 1 ? 0 : this.relativeData.time + 0.03;
+            location[1] += textSize*0.5;
+        })
+        ctx.lineWidth = oldWidth;
+        this.relativeData.time = this.relativeData.time > 1 ? 0 : this.relativeData.time + 0.03;
         
     }
     showTime() {
@@ -2622,6 +2625,7 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
     let indexCheck = mainWindow.relativeData.dataReqs.findIndex(req => {
         return req.origin === selectVal[0] && req.target === selectVal[1];
     });
+    mainWindow.relativeData.fontSize = inputs[5].value
     for (let ii = 0; ii < 5; ii++) {
         exist = exist || inputs[ii].checked;
         if (inputs[ii].checked) data.push(inputs[ii].id);
@@ -2631,9 +2635,6 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
             mainWindow.relativeData.dataReqs.push({
                 origin: selectVal[0],
                 target: selectVal[1],
-                textSize: !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : 20,
-                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value): 20,
-                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value) : 20,
                 data
             })
         }
@@ -2641,9 +2642,6 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
             mainWindow.relativeData.dataReqs[indexCheck] = {
                 origin: selectVal[0],
                 target: selectVal[1],
-                textSize: !isNaN(Number(inputs[7].value)) ? Number(inputs[7].value) : 20,
-                positionX: !isNaN(Number(inputs[5].value)) ? Number(inputs[5].value) : 20,
-                positionY: !isNaN(Number(inputs[6].value)) ? Number(inputs[6].value) : 20,
                 data
             }
         }
@@ -2653,13 +2651,13 @@ document.getElementById('confirm-data-button').addEventListener('click', (click)
             mainWindow.relativeData.dataReqs.splice(indexCheck,1);
         }
     }
-    if (inputs[8].checked) {
-        mainWindow.vz_reach.shown = true;
-        mainWindow.vz_reach.target = Number(selectVal[0]);
-        mainWindow.vz_reach.object = Number(selectVal[1]);
-        mainWindow.vz_reach.distance = Number(inputs[9].value);
-        mainWindow.vz_reach.time = Number(inputs[10].value)*3600;
-    }
+    // if (inputs[8].checked) {
+    //     mainWindow.vz_reach.shown = true;
+    //     mainWindow.vz_reach.target = Number(selectVal[0]);
+    //     mainWindow.vz_reach.object = Number(selectVal[1]);
+    //     mainWindow.vz_reach.distance = Number(inputs[9].value);
+    //     mainWindow.vz_reach.time = Number(inputs[10].value)*3600;
+    // }
     closeAll();
 })
 function uploadScenario() {
@@ -2733,9 +2731,6 @@ function dataChange(el) {
     for (let ii = 0; ii < 5; ii++) {
         inputs[ii].checked = indexCheck === -1 ? false : mainWindow.relativeData.dataReqs[indexCheck].data.includes(inputs[ii].id)
     }
-    inputs[5].value = indexCheck === -1 ? 1 : mainWindow.relativeData.dataReqs[indexCheck].positionX;
-    inputs[6].value = indexCheck === -1 ? 10 : mainWindow.relativeData.dataReqs[indexCheck].positionY;
-    inputs[7].value = indexCheck === -1 ? 30 : mainWindow.relativeData.dataReqs[indexCheck].textSize;
 }
 function changeBurnType() {
     if (mainWindow.burnType === 'waypoint') {
