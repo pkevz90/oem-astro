@@ -1444,6 +1444,7 @@ function startContextClick(event) {
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
             <div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${dispPosition.r.toFixed(2)}, ${dispPosition.i.toFixed(2)}, ${dispPosition.c.toFixed(2)}) km</div>
             <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*dispPosition.rd).toFixed(2)}, ${(1000*dispPosition.id).toFixed(2)}, ${(1000*dispPosition.cd).toFixed(2)}) m/s</div> 
             <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">Last State Update: ${((Date.now() - mainWindow.satellites[activeSat].originDate) / 60000).toFixed(0)} minutes ago</div> 
@@ -1479,7 +1480,6 @@ function startContextClick(event) {
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
             ${mainWindow.satellites.length > 0 ? '<div class="context-item" onclick="openPanel(this)" id="burns">Maneuver List</div>' : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
-            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="openDataTab()" id="data">Display Data</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)"" id="change-origin">Change Origin Sat</div>' : ''}
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept=".sas" onchange="uploadScenario(event)"></div>
@@ -1507,14 +1507,76 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="drift-maneuver">Set Drift Rate</div>
             <div class="context-item" onclick="handleContextClick(this)" id="perch-maneuver">Perch</div>
             <div class="context-item" onclick="handleContextClick(this)" id="circ-maneuver">Circularize</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="multi-maneuver">Multi-Burn</div>
-            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="intercept-maneuver">Intercept</div>' : ''}
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
         `
+        //<div class="context-item" onclick="handleContextClick(this)" id="multi-maneuver">Multi-Burn</div>
+            
         let cm = document.getElementById('context-menu')
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    else if (button.id === 'display-data-1') {
+
+        let sat = button.parentElement.sat
+        let out  = `
+           <div class="context-item" onclick="handleContextClick(this)" id="display-data-2">Confirm</div>
+        `
+       for (let index = 0; index < mainWindow.satellites.length; index++) {
+          if (index === sat) continue
+
+          out += `<div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="${index}-box"/><label style="cursor: pointer" for="${index}-box">${mainWindow.satellites[index].name}</label></div>`
+       }
+
+       button.parentElement.innerHTML = out
+       let cm = document.getElementById('context-menu')
+       let elHeight = cm.offsetHeight
+       let elTop =  Number(cm.style.top.split('p')[0])
+       cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    else if (button.id === 'display-data-2') {
+        let oldCheckboxes = button.parentElement.getElementsByTagName('input')
+        let targets = []
+        for (let index = 0; index < oldCheckboxes.length; index++) {
+            if (oldCheckboxes[index].checked) targets.push(Number(oldCheckboxes[index].id.split('-')[0]))
+        }
+        if (targets.length === 0) {
+            mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) !== Number(button.parentElement.sat))
+            document.getElementById('context-menu')?.remove();
+            return
+        }
+        button.parentElement.targets = targets
+        let out  = `
+           <div class="context-item" onclick="handleContextClick(this)" id="display-data-3">Confirm</div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="range"/><label style="cursor: pointer" for="range">Range</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="rangeRate"/><label style="cursor: pointer" for="rangeRate">Range Rate</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="relativeVelocity"/><label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="poca"/><label style="cursor: pointer" for="poca">POCA</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="sunAngle"/><label style="cursor: pointer" for="sunAngle">CATS</label></div>
+        `
+
+       button.parentElement.innerHTML = out
+       let cm = document.getElementById('context-menu')
+       let elHeight = cm.offsetHeight
+       let elTop =  Number(cm.style.top.split('p')[0])
+       cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    else if (button.id === 'display-data-3') {
+        let oldCheckboxes = button.parentElement.getElementsByTagName('input')
+        let data = []
+        for (let index = 0; index < oldCheckboxes.length; index++) {
+            if (oldCheckboxes[index].checked) data.push(oldCheckboxes[index].id)
+        }
+        if (data.length === 0) return
+        mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) !== Number(button.parentElement.sat))
+        button.parentElement.targets.forEach(target => {
+            mainWindow.relativeData.dataReqs.push({
+                data,
+                target,
+                origin: button.parentElement.sat
+            })
+        })
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'drift-maneuver') { 
         let inertPos = getCurrentInertial(button.parentElement.sat)
@@ -5543,7 +5605,7 @@ function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
 }
 
 function startMonteCarlo(sat = 0, burn = 0, options= {}) {
-    let {n = 100, stdR =  0.1, stdAng =  3*Math.PI / 180} = options
+    let {n = 200, stdR =  0.1, stdAng =  1.5*Math.PI / 180} = options
     let burnSat = mainWindow.satellites[sat].burns[burn]
     let state = mainWindow.satellites[sat].currentPosition({time: burnSat.time})
     state = {
@@ -5563,11 +5625,11 @@ function startMonteCarlo(sat = 0, burn = 0, options= {}) {
     let dur = direction.mag * (1 + 10 * stdR) / a
     let propTime = dur < (mainWindow.scenarioTime - burnSat.time) ? mainWindow.scenarioTime - burnSat.time : dur
     let corruptBurn = (burn) => {
-        return {
-            mag: burn.mag + stdR * burn.mag * 2*(Math.random()-0.5),
-            az: burn.az + stdAng * 2*(Math.random()-0.5),
-            el: burn.el + stdAng * 2*(Math.random()-0.5)
-        }
+        // return {
+        //     mag: burn.mag + stdR * burn.mag * 2*(Math.random()-0.5),
+        //     az: burn.az + stdAng * 2*(Math.random()-0.5),
+        //     el: burn.el + stdAng * 2*(Math.random()-0.5)
+        // }
         return {
             mag: burn.mag + stdR * burn.mag * randn_bm(),
             az: burn.az + stdAng * randn_bm(),
