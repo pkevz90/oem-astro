@@ -604,9 +604,10 @@ class windowCanvas {
         ctx.fillStyle = this.colors.foregroundColor
         let location = [this.cnvs.width * 0.02, this.cnvs.height * 0.12]
         this.relativeData.fontSize = this.relativeData.fontSize || 20
-        let textSize = this.relativeData.fontSize * this.cnvs.height / 550//this.cnvs.height * 0.03
+        let textSize = this.relativeData.fontSize * this.cnvs.height / 550
+        let timeFontSize = this.cnvs.height * 0.05 + 10
+        ctx.textAlign = 'left';
         this.relativeData.dataReqs.forEach(req => {
-            ctx.textAlign = 'left';
             ctx.font = "bold " + textSize + "pt Courier";
             let relDataIn = getRelativeData(req.origin, req.target);
             ctx.fillText(this.satellites[req.origin].name + String.fromCharCode(8594) + this.satellites[req.target].name, location[0], location[1]);
@@ -627,7 +628,12 @@ class windowCanvas {
                 }
             })
             location[1] += textSize*0.5;
+            if ((location[1] + 5 * textSize * 1.1 + (ctx.textAlign === 'left' ? timeFontSize : 0 ))> this.cnvs.height) {
+                ctx.textAlign = 'right'
+                location = [this.cnvs.width * 0.98, this.cnvs.height * 0.12]
+            }
         })
+        ctx.textAlign = 'left'
         ctx.lineWidth = oldWidth;
         this.relativeData.time = this.relativeData.time > 1 ? 0 : this.relativeData.time + 0.03;
         
@@ -635,10 +641,12 @@ class windowCanvas {
     showTime() {
         let ctx = this.getContext();
         ctx.textAlign = 'left';
+        // console.log(ctx.textBaseline);
+        ctx.textBaseline = 'bottom'
         let fontSize = (this.cnvs.height < this.cnvs.width ? this.cnvs.height : this.cnvs.width) * 0.05
         ctx.font = 'bold ' + fontSize + 'px serif'
         ctx.fillText(new Date(this.startDate.getTime() + this.scenarioTime * 1000).toString()
-            .split(' GMT')[0].substring(4), this.cnvs.width * 0.02, this.cnvs.height - fontSize);
+            .split(' GMT')[0].substring(4), 10, this.cnvs.height - 5);
     }
     showLocation() {
         try {
@@ -1524,8 +1532,9 @@ function handleContextClick(button) {
         `
        for (let index = 0; index < mainWindow.satellites.length; index++) {
           if (index === sat) continue
-
-          out += `<div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="${index}-box"/><label style="cursor: pointer" for="${index}-box">${mainWindow.satellites[index].name}</label></div>`
+          let checked = ''
+          if (mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) === sat && Number(req.target) === index).length > 0) checked = 'checked'
+          out += `<div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" ${checked} id="${index}-box"/><label style="cursor: pointer" for="${index}-box">${mainWindow.satellites[index].name}</label></div>`
        }
 
        button.parentElement.innerHTML = out
@@ -2680,48 +2689,6 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     mainWindow.startDate = new Date(date);
     closeAll();
 })
-document.getElementById('confirm-data-button').addEventListener('click', (click) => {
-    let el = click.target;
-    let inputs = el.parentNode.getElementsByTagName('input'), exist = false, data = [];
-    let selectVal = el.parentNode.parentNode.getElementsByTagName('select')[0].value.split('&');
-    let indexCheck = mainWindow.relativeData.dataReqs.findIndex(req => {
-        return req.origin === selectVal[0] && req.target === selectVal[1];
-    });
-    mainWindow.relativeData.fontSize = inputs[5].value
-    for (let ii = 0; ii < 5; ii++) {
-        exist = exist || inputs[ii].checked;
-        if (inputs[ii].checked) data.push(inputs[ii].id);
-    }
-    if (exist) {
-        if (indexCheck === -1) {
-            mainWindow.relativeData.dataReqs.push({
-                origin: selectVal[0],
-                target: selectVal[1],
-                data
-            })
-        }
-        else {
-            mainWindow.relativeData.dataReqs[indexCheck] = {
-                origin: selectVal[0],
-                target: selectVal[1],
-                data
-            }
-        }
-    }
-    else {
-        if (indexCheck !== -1) {
-            mainWindow.relativeData.dataReqs.splice(indexCheck,1);
-        }
-    }
-    // if (inputs[8].checked) {
-    //     mainWindow.vz_reach.shown = true;
-    //     mainWindow.vz_reach.target = Number(selectVal[0]);
-    //     mainWindow.vz_reach.object = Number(selectVal[1]);
-    //     mainWindow.vz_reach.distance = Number(inputs[9].value);
-    //     mainWindow.vz_reach.time = Number(inputs[10].value)*3600;
-    // }
-    closeAll();
-})
 function uploadScenario() {
     let screenAlert = document.getElementsByClassName('screen-alert');
     if (screenAlert.length > 0) screenAlert[0].remove();
@@ -2783,16 +2750,6 @@ function loadFileAsText(fileToLoad) {
     };
 
     fileReader.readAsText(fileToLoad, "UTF-8");
-}
-function dataChange(el) {
-    let selectVal = el.value.split('&');
-    let indexCheck = mainWindow.relativeData.dataReqs.findIndex(req => {
-        return req.origin === selectVal[0] && req.target === selectVal[1];
-    });
-    let inputs = el.parentNode.parentNode.getElementsByTagName('input');
-    for (let ii = 0; ii < 5; ii++) {
-        inputs[ii].checked = indexCheck === -1 ? false : mainWindow.relativeData.dataReqs[indexCheck].data.includes(inputs[ii].id)
-    }
 }
 function changeBurnType() {
     if (mainWindow.burnType === 'waypoint') {
