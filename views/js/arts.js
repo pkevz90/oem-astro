@@ -187,9 +187,6 @@ class windowCanvas {
     getPlotHeight() {
         return this.plotHeight;
     }
-    getPlotCenter() {
-        return this.plotCenter;
-    }
     getHeight() {
         return this.cnvs.height;
     }
@@ -209,7 +206,6 @@ class windowCanvas {
     }
     drawBorder() {
         let ctx = this.getContext();
-        ctx.strokeStyle = this.colors.foregroundColor;
         for (const frame in this.frameCenter) {
             ctx.beginPath();
             ctx.moveTo((this.frameCenter[frame].x - this.frameCenter[frame].w / 2) * this.cnvs.width, (this.frameCenter[frame].y - this.frameCenter[frame].h / 2) * this.cnvs.height);
@@ -230,12 +226,6 @@ class windowCanvas {
         initSunWithCrossComponent[2] = maxCt * Math.sin(freq * (daySinceWinterSolstice + t / 86164))
         return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 360 / 365 / 86164), 3), math.transpose([initSunWithCrossComponent])));
     }
-    getInitSun() {
-        return this.initSun;
-    }
-    getFrameCenter() {
-        return this.frameCenter;
-    }
     setInitSun(sun) {
         this.initSun = sun;
     }
@@ -254,9 +244,6 @@ class windowCanvas {
             this.desired.plotWidth /= 1.05;
         }
         this.plotHeight = this.desired.plotWidth * this.getRatio();
-    }
-    setPlotCenter(center) {
-        this.plotCenter = center;
     }
     setFrameCenter(options) {
         let {ri = this.frameCenter.ri, ci = this.frameCenter.ci, rc = this.frameCenter.rc, plot = this.frameCenter.plot} = options;
@@ -360,7 +347,7 @@ class windowCanvas {
         let origin = this.convertToPixels([0, 0, 0]);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        this.drawBorder();
+        // this.drawBorder();
         if (this.state.search('ri') !== -1) {
             ctx.lineWidth = this.plotSize * this.cnvs.width * this.frameCenter.ri.w / 200;
             ctx.font = 'bold ' + (this.cnvs.width > this.cnvs.height ? this.cnvs.width : this.cnvs.height) * this.plotSize * this.frameCenter.ri.w / 40 + 'px serif';
@@ -397,9 +384,10 @@ class windowCanvas {
             ctx.lineWidth = this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 200;
             ctx.fillStyle = this.colors.backgroundColor;
             ctx.fillRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
-            // console.log(ctx.lineWidth);
+            ctx.strokeStyle = 'rgb(200,200,200)'
             ctx.strokeRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
             ctx.fillStyle = this.colors.foregroundColor;
+            ctx.strokeStyle = 'black'
             ctx.font = 'bold ' + this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 40 + 'px serif';
             let drawX = math.abs(this.plotCenter) < this.plotWidth / 2* this.frameCenter.ci.w;
             let drawY = this.plotCenter + this.plotWidth / 2 * this.frameCenter.ci.w;
@@ -419,7 +407,6 @@ class windowCanvas {
                 ctx.moveTo(origin.ci.x, origin.ci.y);
                 ctx.lineTo(sunCoor.ci.x, sunCoor.ci.y);
                 ctx.stroke();
-
             }
             ctx.strokeStyle = this.colors.foregroundColor;
             
@@ -430,11 +417,13 @@ class windowCanvas {
             ctx.fillStyle = this.colors.backgroundColor;
             ctx.fillRect(this.frameCenter.rc.x * this.cnvs.width - this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height - this.frameCenter.rc.h / 2 * this.cnvs.height, this.frameCenter.rc.x * this.cnvs.width + this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height + this.frameCenter.rc.h / 2 * this.cnvs.height);
             // console.log(ctx.lineWidth);
+            ctx.strokeStyle = 'rgb(200,200,200)'
             ctx.strokeRect(this.frameCenter.rc.x * this.cnvs.width - this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height - this.frameCenter.rc.h / 2 * this.cnvs.height, this.frameCenter.rc.x * this.cnvs.width + this.frameCenter.rc.w / 2 * this.cnvs.width, this.frameCenter.rc.y * this.cnvs.height + this.frameCenter.rc.h / 2 * this.cnvs.height);
             ctx.fillStyle = this.colors.foregroundColor;
             
             ctx.lineWidth = this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 200;
             ctx.font = 'bold ' + this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 40 + 'px serif';
+            ctx.strokeStyle = 'black'
             ctx.beginPath()
             ctx.moveTo(origin.rc.x, origin.rc.y);
             ctx.lineTo(origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2);
@@ -489,9 +478,7 @@ class windowCanvas {
         ctx.lineWidth = 3.67;
     }
     drawInertialOrbit() {
-        // if (this.plotWidth < 2000) return;
         let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
-        // let delAngle = this.plotWidth / a;
         let circleTop = this.convertToPixels([0, 0, 0]).ri;
         let circleCenter = this.convertToPixels([-a, 0, 0]).ri;
         let ctx = this.getContext();
@@ -499,7 +486,7 @@ class windowCanvas {
         let oldStyle = ctx.strokeStyle;
         ctx.strokeStyle = this.colors.foregroundColor;
         ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = this.desired.plotWidth / 400 > 0.5 ? 0.5 : this.desired.plotWidth / 400;
         ctx.beginPath();
         ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
         ctx.stroke();
@@ -586,17 +573,6 @@ class windowCanvas {
             })
         }
     }
-    drawMouse(position = [0, 0]) {
-        let ctx = this.getContext();
-        ctx.strokeStyle = this.colors.foregroundColor;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(position[0] - this.cnvs.width / 60, position[1]);
-        ctx.lineTo(position[0] + this.cnvs.width / 60, position[1]);
-        ctx.moveTo(position[0], position[1] - this.cnvs.width / 60);
-        ctx.lineTo(position[0], position[1] + this.cnvs.width / 60);
-        ctx.stroke();
-    }
     showData() {
         let ctx = this.getContext();
         let oldWidth = ctx.lineWidth;
@@ -673,14 +649,6 @@ class windowCanvas {
         this.desired.scenarioTime = Number(inputs[5].value) * 60;
         this.scenarioTime = Number(inputs[5].value) * 60;
         this.makeGif.step = Number(inputs[7].value);
-        // mainWindow.makeGif.keyFrames.forEach(frame => {
-        //     if (frame.time < 300) {
-        //         windowOptions.width_des = frame.width;
-        //         windowOptions.width = frame.width;
-        //         windowOptions.origin_it_des = frame.center;
-        //         windowOptions.origin_it = frame.center;
-        //     }
-        // })
         let val = document.getElementById('res-select').value;
         val = val.split('x');
         if (val[0] !== 'full') {
@@ -845,7 +813,7 @@ class Satellite {
         let timeDelta, ctx = mainWindow.getContext(), dist = mainWindow.getPlotWidth() * 0.025;
         ctx.lineWidth = mainWindow.trajSize * 2
         let state = mainWindow.getState();
-        let fC = mainWindow.getFrameCenter();
+        let fC = mainWindow.frameCenter;
         let burns = this.burns.filter(b => b.time < mainWindow.scenarioTime)
         mainWindow.drawCurve(burns.map(b => b.location), {color: this.color, size: mainWindow.trajSize * 3});
         ctx.font = 'bold 15px serif';
@@ -862,7 +830,7 @@ class Satellite {
             let point2 = math.add(Object.values(burn.location).map(s => s[0]).slice(0,3), math.dotMultiply(dispDist / mag, Object.values(burn.direction)))
             point2 = mainWindow.convertToPixels(point2);
             let textWidth = ctx.measureText((1000*mag).toFixed(1)).width;
-            if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i - mainWindow.getPlotCenter()) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
+            if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
                 ctx.beginPath();
                 ctx.moveTo(point1.ri.x, point1.ri.y);
                 ctx.lineTo(point2.ri.x, point2.ri.y);
@@ -872,7 +840,7 @@ class Satellite {
                     ctx.stroke();
                 }
             }
-            if (state.search('ci') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location.i - mainWindow.getPlotCenter()) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
+            if (state.search('ci') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location.i - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
             
                 ctx.beginPath();
                 ctx.moveTo(point1.ci.x, point1.ci.y);
@@ -1409,6 +1377,7 @@ function alterEditableSatChar(action) {
 }
 
 function startContextClick(event) {
+    console.log(event);
     if (mainWindow.panelOpen) {
         return false;
     }
@@ -1479,8 +1448,15 @@ function startContextClick(event) {
         let padNumber = function(n) {
             return n < 10 ? '0' + n : n
         }
-        outText = event.shiftKey ? `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s` : outText
-        outText = event.shiftKey && event.altKey ? `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; Az: ${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(3)} deg, El: ${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(3)}, Mag: ${math.norm(burnDir).toFixed(3)} m/s` : outText
+        if (event.button === 1) {
+            outText = burnTime + 'x' + Object.values(burn.waypoint.target).map(x => x.toFixed(4)).join('x') + 'x' + burn.waypoint.tranTime
+        }
+        else if (event.shiftKey && event.altKey) {
+            outText = `X. UXXXXX; MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}X; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(1)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(3)}, M${math.norm(burnDir).toFixed(1)}`
+        }
+        else if (event.shiftKey) {
+            outText = `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
+        }
         navigator.clipboard.writeText(outText)
     }
     else {
@@ -2385,9 +2361,11 @@ function changePlanType(box) {
 
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     // Close context menu if 
+    event.preventDefault()
     let subList = document.getElementsByClassName('sub-menu');
     for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
-    if (event.button !== 2) document.getElementById('context-menu')?.remove();
+    if (event.button === 0) document.getElementById('context-menu')?.remove();
+    else if (event.button === 1) return startContextClick(event)
     else return;
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
@@ -2508,7 +2486,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
         try {
             mainWindow.frameMove = {
                 x: mainWindow.mousePosition[0],
-                origin: mainWindow.getPlotCenter()
+                origin: mainWindow.plotCenter
             };
         } catch (error) {errorList.push(error.stack)}
         return;
@@ -2866,12 +2844,12 @@ function openPanel(button) {
         inputs[0].value = dateDiff;
         inputs[1].value = mainWindow.scenarioLength;
         inputs[2].value = Math.pow(398600.4418 / Math.pow(mainWindow.mm, 2), 1/3).toFixed(2);
-        let sunTime = Math.round((24 * math.atan2(mainWindow.getInitSun()[1], -mainWindow.getInitSun()[0]) / 2 / Math.PI));
+        let sunTime = Math.round((24 * math.atan2(mainWindow.initSun[1], -mainWindow.initSun[0]) / 2 / Math.PI));
         if (sunTime < 0) sunTime = math.round((sunTime + 24));
         sunTime += '00';
         if (sunTime.length < 4) sunTime = '0' + sunTime;
         inputs[3].value = sunTime;
-        inputs[4].value = 180 * math.atan2(mainWindow.getInitSun()[2], math.norm(mainWindow.getInitSun().slice(0,2))) / Math.PI;
+        inputs[4].value = 180 * math.atan2(mainWindow.initSun[2], math.norm(mainWindow.initSun.slice(0,2))) / Math.PI;
         inputs[10].value = Math.round(mainWindow.scenarioLength * 3600 / mainWindow.timeDelta)
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
