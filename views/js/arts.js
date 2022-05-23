@@ -1503,7 +1503,7 @@ function updateLockScreen() {
     let out = ''
     mainWindow.satellites.forEach((sat, ii) => {
         let checked = sat.locked ? '' : 'checked'
-        out += `<div>
+        out += `<div style="text-align: right">
                     <label for="lock-${ii}">${sat.name}</label> <input ${checked} oninput="changeLockStatus(this)" sat="${ii}" id="lock-${ii}" type="checkbox"/>
                 </div>`
     })
@@ -3732,7 +3732,6 @@ function initStateFunction(el) {
         nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000*ricInit.drHcw[2][0]).toFixed(3);
     }
     else if (el.id === 'add-satellite-button') {
-        let newTitle = '';
         let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
         let position = {
             r: Number(inputs[7].value), 
@@ -3758,6 +3757,7 @@ function initStateFunction(el) {
             mainWindow.desired.plotWidth = newWidth
         }
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ');
+        updateLockScreen()
         closeAll();
     }
     else if (el.id === 'add-launch-button') {
@@ -3810,6 +3810,7 @@ function editSatellite(button) {
             mainWindow.relativeData.dataReqs[index].origin = Number(mainWindow.relativeData.dataReqs[index].origin) > delSat ? Number(mainWindow.relativeData.dataReqs[index].origin) - 1 : mainWindow.relativeData.dataReqs[index].origin
             mainWindow.relativeData.dataReqs[index].target = Number(mainWindow.relativeData.dataReqs[index].target) > delSat ? Number(mainWindow.relativeData.dataReqs[index].target) - 1 : mainWindow.relativeData.dataReqs[index].target
         }
+        updateLockScreen()
         closeAll();
         return;
     }
