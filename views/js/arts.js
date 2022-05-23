@@ -14,8 +14,14 @@ let newNode = addButton.cloneNode();
 newNode.id = 'add-launch-button';
 newNode.innerText = 'Add Launch';
 addButton.parentNode.insertBefore(newNode, addButton);
-// document.getElementsByClassName('rmoe')[1].parentNodeinnerHTML = 'a'
-
+// Div to lock and unlock
+const lockDiv = document.createElement("div")
+lockDiv.style.position = 'fixed'
+lockDiv.style.top = '15%'
+lockDiv.style.right = '-15%'
+lockDiv.innerText = 'test'
+lockDiv.style.transition = 'right 0.5s'
+document.getElementsByTagName('body')[0].append(lockDiv)
 let currentAction
 let pastActions = []
 let lastSaveName = ''
@@ -800,6 +806,7 @@ class Satellite {
         this.burns = burns;
         this.a = a;
         this.originDate = Date.now()
+        this.locked = false
         setTimeout(() => this.calcTraj(), 250);
     }
     calcTraj = calcSatTwoBody;
@@ -913,7 +920,7 @@ class Satellite {
                 out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < (mainWindow.getPlotWidth() / 80);
             }
         }
-        return out
+        return this.locked ? burns ? false : {ri: false, ci: false, rc: false} : out
     }
     checkBurnProximity(position) {
         let out = {};
@@ -1357,8 +1364,9 @@ let openInstructions = function() {
 }
 
 function alterEditableSatChar(action) {
+    let parElement = action.parentElement
     let element = action.getAttribute('element')
-    let sat = action.getAttribute('sat')
+    let sat = parElement.getAttribute('sat')
     let newEl = action.innerText
     if (element === 'color') {
         if (isNaN(Number('0x' + newEl.substr(1,newEl.length))) || newEl.length > 7 || newEl[0] !== '#') {
@@ -1373,6 +1381,7 @@ function alterEditableSatChar(action) {
     if (element === 'a') {
         mainWindow.satellites[sat].calcTraj()
     }
+    updateLockScreen()
     document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
 }
 
@@ -1416,7 +1425,9 @@ function startContextClick(event) {
         ctxMenu.sat = activeSat;
         let dispPosition = event.altKey ? getCurrentInertial(activeSat) : mainWindow.satellites[activeSat].curPos
         ctxMenu.innerHTML = `
-            <div contentEditable="true" sat="${activeSat}" element="name" oninput="alterEditableSatChar(this)" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeSat].name}</div>
+            <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
+                <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
+            </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
@@ -1460,9 +1471,11 @@ function startContextClick(event) {
         navigator.clipboard.writeText(outText)
     }
     else {
+        let lockScreenStatus = lockDiv.style.right === '-15%' ? false : true
         ctxMenu.innerHTML = `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
             ${mainWindow.satellites.length > 0 ? '<div class="context-item" onclick="openPanel(this)" id="burns">Maneuver List</div>' : ''}
+            ${mainWindow.satellites.length > 0 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Lock Screen</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)"" id="change-origin">Change Origin Sat</div>' : ''}
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
@@ -1482,6 +1495,21 @@ function startContextClick(event) {
     return false;
 }
 
+function changeLockStatus(el) {
+    mainWindow.satellites[el.getAttribute('sat')].locked = !el.checked
+}
+
+function updateLockScreen() {
+    let out = ''
+    mainWindow.satellites.forEach((sat, ii) => {
+        let checked = sat.locked ? '' : 'checked'
+        out += `<div>
+                    <label for="lock-${ii}">${sat.name}</label> <input ${checked} oninput="changeLockStatus(this)" sat="${ii}" id="lock-${ii}" type="checkbox"/>
+                </div>`
+    })
+    lockDiv.innerHTML = out
+}
+
 function handleContextClick(button) {
     if (button.id === 'maneuver-options') {
          button.parentElement.innerHTML = `
@@ -1499,6 +1527,14 @@ function handleContextClick(button) {
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    else if (button.id === 'lock-screen') {
+        if (lockDiv.style.right === '-15%') {
+            updateLockScreen()
+            lockDiv.style.right = '1%'
+        }
+        else lockDiv.style.right = '-15%'
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'display-data-1') {
 
@@ -2393,6 +2429,10 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     let sat = 0, check;
     if (ricCoor === undefined) return;
     while (sat < mainWindow.satellites.length) {
+        if (mainWindow.satellites[sat].locked) {
+            sat++
+            continue
+        }
         check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
         mainWindow.currentTarget = false;
         for (frame in check) mainWindow.currentTarget = check[frame] ? {sat, frame, type: 'current'} : mainWindow.currentTarget
