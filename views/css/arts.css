@@ -111,7 +111,7 @@ html, body {
 }
 
 .context-item {
-    padding: 7.5px 15px;
+    padding: 5px 15px;
     color: white;
     transition: 250ms background-color;
 }
