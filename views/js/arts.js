@@ -2400,7 +2400,10 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     event.preventDefault()
     let subList = document.getElementsByClassName('sub-menu');
     for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
-    if (event.button === 0) document.getElementById('context-menu')?.remove();
+    if (event.button === 0) {
+        document.getElementById('context-menu')?.remove()
+        lockDiv.style.right = '-15%'
+    }
     else if (event.button === 1) return startContextClick(event)
     else return;
     // Check if clicked on time
@@ -3811,6 +3814,7 @@ function editSatellite(button) {
             mainWindow.relativeData.dataReqs[index].target = Number(mainWindow.relativeData.dataReqs[index].target) > delSat ? Number(mainWindow.relativeData.dataReqs[index].target) - 1 : mainWindow.relativeData.dataReqs[index].target
         }
         updateLockScreen()
+        document.title = mainWindow.satellites.map(s => s.name).join(' / ')
         closeAll();
         return;
     }
