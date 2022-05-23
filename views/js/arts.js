@@ -4317,9 +4317,9 @@ function calcSatTwoBody(allBurns = false) {
             if ((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
                 (mainWindow.scenarioTime + 0.5) || allBurns)) {
                 currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc, [0,0,0], t_calc);
-                t_calc += this.burns[satBurn].time - t_calc;
-
-                // RecalcBurns
+                let remainder = mainWindow.timeDelta - (this.burns[satBurn].time - t_calc)
+                t_calc = this.burns[satBurn].time
+                // Recalculate Burns if needed
                 if (allBurns) {
                     this.burns[satBurn].location  = {
                         r: [currentState[0]],
@@ -4352,7 +4352,7 @@ function calcSatTwoBody(allBurns = false) {
                         }
                     }
                 } 
-
+                // Burn duration
                 let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
                     .direction.i, this.burns[satBurn].direction.c
                 ]) / this.a;
@@ -4362,20 +4362,29 @@ function calcSatTwoBody(allBurns = false) {
                 } 
                 t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !allBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
                 
-                // console.log(math.squeeze(currentState));
                 let direction = Object.values(this.burns[satBurn].direction)
-                direction = math.dotMultiply(this.a / math.norm(direction), direction);
+                direction = math.dotMultiply(this.a / math.norm(direction), direction)
+
+                if (t_burn > remainder) {
+                    currentState = runge_kutta(twoBodyRpo, currentState, remainder, direction, t_calc);
+                    t_calc += remainder
+                    this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
+                    remainder = 0
+                }
                 while ((this.burns[satBurn].time + t_burn - t_calc) > mainWindow.timeDelta) {
-                    t_calc += mainWindow.timeDelta;
                     currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, direction, t_calc);
+                    t_calc += mainWindow.timeDelta
                     this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
                 }
                 // console.log(this.burns[satBurn].time + t_burn - t_calc);
                 if (t_burn > 1e-3) {
                     currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time + t_burn - t_calc, direction, t_calc);
+                    remainder = remainder > 0 ? remainder - (this.burns[satBurn].time + t_burn - t_calc) : mainWindow.timeDelta - (this.burns[satBurn].time + t_burn - t_calc)
+                    t_calc = t_burn + this.burns[satBurn].time
                 }
-                t_calc += mainWindow.timeDelta;
-                currentState = runge_kutta(twoBodyRpo, currentState, t_calc - this.burns[satBurn].time - t_burn, [0,0,0], t_calc);
+                t_calc += remainder
+                currentState = runge_kutta(twoBodyRpo, currentState, remainder, [0,0,0], t_calc)
+                // this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
                 satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
                 continue;
             }
