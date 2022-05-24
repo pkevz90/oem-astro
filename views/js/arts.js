@@ -108,11 +108,6 @@ class windowCanvas {
     satellites = [];
     mousePosition = undefined;
     relativeData = {
-        origin: undefined,
-        target: undefined,
-        textSize: 20,
-        positionX: 20,
-        positionY: 100,
         data: {
             range: {
                 exist: false,
@@ -146,8 +141,7 @@ class windowCanvas {
             }
         },
         dataReqs: [],
-        time: 0,
-        fontSize: 20
+        fontSize: 15
     };
     makeGif = {
         start: false,
@@ -1433,8 +1427,9 @@ function startContextClick(event) {
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
             <div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
-            <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">Position (${dispPosition.r.toFixed(2)}, ${dispPosition.i.toFixed(2)}, ${dispPosition.c.toFixed(2)}) km</div>
-            <div style="padding: 10px 15px; color: white; cursor: default;">Velocity (${(1000*dispPosition.rd).toFixed(2)}, ${(1000*dispPosition.id).toFixed(2)}, ${(1000*dispPosition.cd).toFixed(2)}) m/s</div> 
+            <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
+                ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
+            </div>
             <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">Last State Update: ${((Date.now() - mainWindow.satellites[activeSat].originDate) / 60000).toFixed(0)} minutes ago</div> 
             `
         //             <div class="context-item">Export Burns</div><div class="context-item" onclick="generateEphemFile(${activeSat})" id="state-options">Gen .e File</div>
@@ -1504,7 +1499,7 @@ function updateLockScreen() {
     mainWindow.satellites.forEach((sat, ii) => {
         let checked = sat.locked ? '' : 'checked'
         out += `<div style="text-align: right">
-                    <label for="lock-${ii}">${sat.name}</label> <input ${checked} oninput="changeLockStatus(this)" sat="${ii}" id="lock-${ii}" type="checkbox"/>
+                    <label style="cursor: pointer; padding: 5px" for="lock-${ii}">${sat.name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${ii}" id="lock-${ii}" type="checkbox"/>
                 </div>`
     })
     lockDiv.innerHTML = out
