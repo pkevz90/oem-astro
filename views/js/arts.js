@@ -3134,7 +3134,6 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
         [math.norm(math.squeeze(dv1)) / a0 / tf]
     ];
-    console.log(Xret);
     if (Xret[2] < 1e-11) {
         return {
             r: 0,
