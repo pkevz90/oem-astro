@@ -1474,7 +1474,7 @@ function startContextClick(event) {
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)"" id="change-origin">Change Origin Sat</div>' : ''}
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
-            <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept=".sas" onchange="uploadScenario(event)"></div>
+            <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadScenario(event)"></div>
             <div class="context-item" onclick="exportScenario()">Export Scenario</div>
             <div class="context-item" onclick="openPanel(this)" id="instructions">Instructions</div>
             `
@@ -2547,7 +2547,7 @@ document.getElementById('main-plot').addEventListener('mousemove', event => {
         mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
     }
 })
-function exportScenario(name = 'scenario.sas') {
+function exportScenario(name = mainWindow.satellites.map(sat => sat.name).join('_') + '.sas') {
     downloadFile(name, JSON.stringify(mainWindow.getData()));
 }
 function downloadFile(filename, text) {
@@ -2709,6 +2709,7 @@ function uploadScenario() {
     let screenAlert = document.getElementsByClassName('screen-alert');
     if (screenAlert.length > 0) screenAlert[0].remove();
     loadFileAsText(event.path[0].files[0])
+    // loadMultiFile(event.path[0].files[0])
 }
 
 document.getElementById('export-burns').addEventListener('click', () => {
@@ -2764,9 +2765,105 @@ function loadFileAsText(fileToLoad) {
         mainWindow.loadDate(textFromFileLoaded);
         mainWindow.setAxisWidth('set', mainWindow.plotWidth);
     };
+    fileReader.readAsText(fileToLoad, "UTF-8");
+}
+
+function loadMultiFile(fileToLoad) {
+
+    var fileReader = new FileReader();
+    fileReader.onload = function (fileLoadedEvent) {
+        var textFromFileLoaded = fileLoadedEvent.target.result
+        parseMultiFile(textFromFileLoaded)
+    };
 
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
+
+function parseMultiFile(text) {
+    text = text.split('\n')
+    console.log(text);
+    let satellites = [], firstSat = true
+    mainWindow.relativeData.dataReqs = []
+    // Import Chief Details
+    for (let index = 0; index < text.length; index++) {
+        let label = text[index].split(':')[0]
+        let data, newSatellite, timeData = []
+        switch (label.toLowerCase()) {
+            case 'chief':
+                data = text[index].replace(/\s/g, '').split(',').map(s => [s.split(':')[0].toLowerCase(), s.split(':')[1]]) 
+                console.log(data);  
+                newSatellite = new Satellite()
+                for (let jj = 0; jj < data.length; jj++) {
+                    if (data[jj][0] === 'chief') {
+                        newSatellite.name = data[jj][1]
+                    }
+                    else {
+                        newSatellite[data[jj][0]] = data[jj][1]
+                    }
+                }
+                newSatellite.shape = newSatellite.shape.toLowerCase()
+                newSatellite.a = Number(newSatellite.a)
+                newSatellite.position = {
+                    r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0
+                }
+                satellites.push(newSatellite)
+                timeData.push({})
+
+                break
+            case 'sat':
+                data = text[index].replace(/\s/g, '').split(',').map(s => [s.split(':')[0].toLowerCase(), s.split(':')[1]]) 
+                newSatellite = new Satellite()
+                let parsedData = parseArtsText(text[index+1])
+                console.log(data);
+                timeData.push({
+                    time: parsedData.newDate,
+                    sun: parsedData.newSun,
+                    orbit: parsedData.originOrbit
+                })
+                console.log(parsedData);
+                newSatellite.position = {
+                    r: parsedData.newState[0],
+                    i: parsedData.newState[1],
+                    c: parsedData.newState[2],
+                    rd: parsedData.newState[3],
+                    id: parsedData.newState[4],
+                    cd: parsedData.newState[5]
+                }
+                if (firstSat) {
+                    mainWindow.startDate = new Date(parsedData.newDate)
+                    mainWindow.initSun = parsedData.newSun
+                    mainWindow.originOrbit = parsedData.originOrbit
+                    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+                    firstSat = false
+                }
+                else {
+                    // Prop to date
+                    let dt = ((new Date(mainWindow.startDate)) - (new Date(parsedData.newDate))) / 1000
+                    console.log(dt);
+                    newSatellite.propInitialState(dt)
+                }
+                for (let jj = 0; jj < data.length; jj++) {
+                    if (data[jj][0] === 'sat') {
+                        newSatellite.name = data[jj][1]
+                    }
+                    else {
+                        newSatellite[data[jj][0]] = data[jj][1]
+                    }
+                }
+                newSatellite.shape = newSatellite.shape.toLowerCase()
+                newSatellite.a = Number(newSatellite.a)
+                satellites.push(newSatellite)
+                index++
+                break
+            default:
+                break
+        }
+    }
+    console.log(satellites);
+    mainWindow.satellites = satellites
+    mainWindow.satellites.forEach(sat => sat.calcTraj())
+}
+
 function changeBurnType() {
     if (mainWindow.burnType === 'waypoint') {
         document.getElementById('way-arrows').style['fill-opacity'] = 0;
@@ -2817,6 +2914,8 @@ function parseState(button) {
     console.log(parsedState);
     mainWindow.mm = (398600.4418 / parsedState.originOrbit.a ** 3) ** (1/2)
     mainWindow.scenarioLength = 2 * Math.PI / 3600 / mainWindow.mm
+    mainWindow.scenarioLength = mainWindow.scenarioLength < 6 ? 6 : mainWindow.scenarioLength
+    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143
     document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
     let oldDate = mainWindow.startDate + 0
     mainWindow.startDate = parsedState.newDate
@@ -3700,13 +3799,16 @@ function rmoeToRic(rmoes) {
     let initMm = mainWindow.mm + (rmoes.x * Math.PI  / 180) / origPeriod;
     let coeInit = Coe2PosVelObject({
         a: (398600.4418 / initMm ** 2)**(1/3),
-        e: rmoes.ae / 2 / origSemi,
-        i: rmoes.z *Math.PI / 180,
-        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 - rmoes.b * 0*Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi,
-        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180,
-        tA: rmoes.b * Math.PI / 180
+        e: rmoes.ae / 2 / origSemi + mainWindow.originOrbit.e,
+        i: rmoes.z *Math.PI / 180 + mainWindow.originOrbit.i,
+        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 - rmoes.b * 0*Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi + mainWindow.originOrbit.raan,
+        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180 +  + mainWindow.originOrbit.arg,
+        tA: rmoes.b * Math.PI / 180 + mainWindow.originOrbit.tA
     })
-    return Eci2Ric([origSemi, 0, 0], [0, (398600.4418 / origSemi ) ** (1/2), 0], [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
+    console.log(coeInit);
+    let chief = Coe2PosVelObject(mainWindow.originOrbit)
+    console.log(chief);
+    return Eci2Ric(Object.values(chief).slice(0,3), Object.values(chief).slice(3,6), [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
 }
 
 function initStateFunction(el) {
