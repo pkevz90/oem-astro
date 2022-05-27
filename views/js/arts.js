@@ -3160,7 +3160,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         dX = math.multiply(math.inv(S), yErr);
         X = math.add(X, dX)
         X[2][0] = X[2][0] < 0 ? 1e-9 : X[2][0]
-        console.log(X);
+        // console.log(X);
         if (errCount > 20 || X[2][0] < 0) return false;
         errCount++;
     }
