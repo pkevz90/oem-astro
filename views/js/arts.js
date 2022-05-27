@@ -3091,6 +3091,30 @@ function crosstrackVelClosed(z0, zd0, a0, phi, t, n) {
         phi) * Math.sin(n * t)) / Math.pow(n, 2);
 }
 
+function nonLinearBurnEstimator(posInit = [0,0,0], posFinal=[-30,1000,0], dt = 18*3600, start = mainWindow.desired.scenarioTime) {
+    posInit = math.squeeze(posInit)
+    posFinal = math.squeeze(posFinal)
+    console.log(proxOpsTargeter(posInit, posFinal, dt)[0]);
+
+    let chiefInit = {...mainWindow.originOrbit}
+    chiefInit.tA = propTrueAnomaly(chiefInit.tA, chiefInit.a, chiefInit.e, start)
+    chiefInit = Object.values(Coe2PosVelObject(chiefInit))
+    
+    let chiefFinal = {...mainWindow.originOrbit}
+    chiefFinal.tA = propTrueAnomaly(chiefFinal.tA, chiefFinal.a, chiefFinal.e, dt + start)
+    chiefFinal = Object.values(Coe2PosVelObject(chiefFinal))
+    console.log(posInit, [0,0,0], chiefInit.slice(0,3), chiefInit.slice(3,6));
+    posInit = Ric2Eci(posInit, [0,0,0], chiefInit.slice(0,3), chiefInit.slice(3,6))
+    posFinal = Ric2Eci(posFinal, [0,0,0], chiefFinal.slice(0,3), chiefFinal.slice(3,6))
+    let nRevs = math.floor(dt / (2 * Math.PI / mainWindow.mm))
+    let long = (dt - nRevs * (2 * Math.PI / mainWindow.mm)) < (Math.PI / mainWindow.mm)
+    let lamResults1 = solveLambertsProblem(posInit.rEcci, posFinal.rEcci, dt, nRevs, long)
+    let hcw1 = Eci2Ric(chiefInit.slice(0,3), chiefInit.slice(3,6), posInit.rEcci, posInit.drEci)
+    let hcw2 = Eci2Ric(chiefInit.slice(0,3), chiefInit.slice(3,6), posInit.rEcci, math.squeeze(lamResults1.v1))
+    let dV = math.subtract(hcw2.drHcw, hcw1.drHcw)
+    return dV
+}
+
 function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainWindow.mm) {
     let state = math.transpose([Object.values(stateInit)]);
     stateFinal = math.transpose([Object.values(stateFinal)]);
@@ -3110,6 +3134,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
         [math.norm(math.squeeze(dv1)) / a0 / tf]
     ];
+    console.log(Xret);
     if (Xret[2] < 1e-11) {
         return {
             r: 0,
@@ -3135,6 +3160,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         dX = math.multiply(math.inv(S), yErr);
         X = math.add(X, dX)
         X[2][0] = X[2][0] < 0 ? 1e-9 : X[2][0]
+        console.log(X);
         if (errCount > 20 || X[2][0] < 0) return false;
         errCount++;
     }
@@ -3356,13 +3382,13 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, time, n) {
     m = math.dotDivide(math.subtract(m2, m1), 0.01);
     mC = math.concat(mC, m);
     //tB
-    m2 = oneBurnFiniteHcw(state, alpha, phi, tB + 0.01, tF, time, a);
+    m2 = oneBurnFiniteHcw(state, alpha, phi, tB + tB * 0.1, tF, time, a);
     m2 = [
         [m2.x],
         [m2.y],
         [m2.z]
     ];
-    m = math.dotDivide(math.subtract(m2, m1), 0.01);
+    m = math.dotDivide(math.subtract(m2, m1), tB * 0.1);
     mC = math.concat(mC, m);
     return mC;
 }
@@ -4660,6 +4686,7 @@ function testLambertProblem() {
 
 function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
     let r1 = math.norm(r1_vec);
+    console.log(r1_vec);
     let r2 = math.norm(r2_vec);
     let cosNu = math.dot(r1_vec, r2_vec) / r1 / r2;
     if (Math.abs(cosNu + 1) < 1e-3) return 'collinear'
