@@ -5802,7 +5802,6 @@ function cov2ellipse(cov, average) {
     }
 }
 
-
 function randn_bm() {
     var u = 0, v = 0;
     while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
@@ -5810,7 +5809,7 @@ function randn_bm() {
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
 }
 
-function changeOrigin(satIn = 1) {
+function changeOrigin(satIn = 1, time = 0) {
     try {
         let inertStart = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
         let sats = mainWindow.satellites.map((sat, ii) => {
@@ -5882,4 +5881,64 @@ function forcePlaneCrossing(sat = 0, dt = 4) {
     let desVelocity = curPos.c / desTan * mainWindow.mm
     
     return desVelocity
+}
+
+function findMaxPoca(dv = 1, stateTarget = 0, stateDep = 1, a = 1e-5) {
+    stateTarget = Object.values(mainWindow.satellites[stateTarget].curPos)
+    
+    stateDep = Object.values(mainWindow.satellites[stateDep].curPos)
+    dv /= 1000
+    let findPoca = (dir = [1,0,0]) => {
+        let dt = 10
+        let maxTime = 7200
+        let time = 0
+        let targetStart = stateTarget.slice()
+        let depStart = stateDep.slice()
+        let minDist = 1e6
+        let burnTime = math.norm(dir) / a
+        let dirNorm = math.dotDivide(dir, math.norm(dir))
+        while (time < maxTime) {
+            let r = math.norm(math.subtract(targetStart.slice(0,3), depStart.slice(0,3)))
+            if (r < minDist) minDist = r
+            else break
+            depStart = runge_kutta(twoBodyRpo, depStart, dt, [0,0,0], mainWindow.scenarioTime + time)
+            if ((burnTime - time) > dt ) {
+                targetStart = runge_kutta(twoBodyRpo, targetStart, dt, math.dotMultiply(a, dirNorm), mainWindow.scenarioTime + time)
+            }   
+            else if ((burnTime - time) < dt && burnTime > time) {
+                targetStart = runge_kutta(twoBodyRpo, targetStart, burnTime - time, math.dotMultiply(a, dirNorm), mainWindow.scenarioTime + time)
+                targetStart = runge_kutta(twoBodyRpo, targetStart, dt - (burnTime - time), [0,0,0], mainWindow.scenarioTime + time)
+            }
+            else targetStart = runge_kutta(twoBodyRpo, targetStart, dt, [0,0,0], mainWindow.scenarioTime + time)
+            time += dt
+        }
+        return minDist
+    }
+    let maxRange = 0, maxDir
+    for (let ii = 0; ii < 200; ii++) {
+        let dir = [Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI - Math.PI]
+        dir = math.dotDivide(dir, math.norm(dir) / dv)
+        let poca = findPoca(dir)
+        if (poca > maxRange) {
+            // console.log(poca, dir)
+            maxRange = poca
+            maxDir = dir
+        }
+    }
+    
+    return {
+        maxRange,
+        maxDir
+    }
+}
+
+function maxPocaTest(dv = 1) {
+    let max = []
+    for (let index = 0; index < 200; index++) {
+        console.log(index);
+        max.push(findMaxPoca(dv))
+    }
+    let rangeAve = max.reduce((a, b) => a + b.maxRange, 0) / max.length
+    let rangeStd = max.reduce((a, b) => a + (b.maxRange - rangeAve) ** 2, 0) / (max.length - 1)
+    console.log(rangeAve, rangeStd ** 0.5);
 }
