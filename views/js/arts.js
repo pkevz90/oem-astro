@@ -2064,6 +2064,11 @@ function handleContextClick(button) {
             console.log(waypoint);
 
         }
+        logAction({
+            type: 'addBurn',
+            index: mainWindow.satellites[sat].burns.length,
+            sat
+        })
         let origin = target === 'origin' ? {r: [0], i: [0], c: [0]} : mainWindow.satellites[target].currentPosition({
             time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
         })
@@ -5271,6 +5276,12 @@ function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0], burn, tr
         })
     }
     let position = mainWindow.satellites[sat].currentPosition({time});
+    
+    logAction({
+        type: 'addBurn',
+        index: mainWindow.satellites[sat].burns.length,
+        sat
+    })
     mainWindow.satellites[sat].burns.push({
         time: time,
         direction: {
