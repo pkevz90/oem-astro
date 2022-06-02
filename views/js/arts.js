@@ -4467,7 +4467,7 @@ function j2Rpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
     inertChief = Object.values(Coe2PosVelObject(inertChief))
     let inertDep = Ric2Eci(state.slice(0,3), state.slice(3,6), inertChief.slice(0,3), inertChief.slice(3,6))
     inertDep = [...inertDep.rEcci, ...inertDep.drEci]
-    console.log(inertChief, inertDep);
+    
 }
 
 function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
