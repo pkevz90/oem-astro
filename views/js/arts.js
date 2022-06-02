@@ -2918,7 +2918,7 @@ function parseState(button) {
     if (parsedState === undefined) return
     console.log(parsedState);
     mainWindow.mm = (398600.4418 / parsedState.originOrbit.a ** 3) ** (1/2)
-    mainWindow.scenarioLength = 2 * Math.PI / 3600 / mainWindow.mm
+    mainWindow.scenarioLength = math.abs(mainWindow.originOrbit.a - parsedState.originOrbit.a) > 400 ?  2 * Math.PI / 3600 / mainWindow.mm : mainWindow.scenarioLength
     mainWindow.scenarioLength = mainWindow.scenarioLength < 6 ? 6 : mainWindow.scenarioLength
     mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143
     document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
@@ -4459,6 +4459,17 @@ function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
     ];
 }
 
+function j2Rpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
+    let {mu = 398600.4418, r0 = 42164, a = [0,0,0], time= 0} = options
+    
+    let inertChief = {...mainWindow.originOrbit}
+    inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
+    inertChief = Object.values(Coe2PosVelObject(inertChief))
+    let inertDep = Ric2Eci(state.slice(0,3), state.slice(3,6), inertChief.slice(0,3), inertChief.slice(3,6))
+    inertDep = [...inertDep.rEcci, ...inertDep.drEci]
+    console.log(inertChief, inertDep);
+}
+
 function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
     if (mainWindow.prop === 4) {
         let k1 = eom(state, {a, time});
@@ -5952,4 +5963,90 @@ function maxPocaTest(dv = 1) {
     let rangeAve = max.reduce((a, b) => a + b.maxRange, 0) / max.length
     let rangeStd = max.reduce((a, b) => a + (b.maxRange - rangeAve) ** 2, 0) / (max.length - 1)
     console.log(rangeAve, rangeStd ** 0.5);
+}
+
+function accelerationSolver(state = [0,0,0,0.01,0.005,0], vf = [0.02, 0.001, 0.001], tf = 600, startTime = mainWindow.scenarioTime) {
+    // Generate initial guess
+    let direction = math.dotMultiply(-1, state.slice(3,6))
+    let params = {az: 0, el: 0, a: 0.00001}
+    direction = math.dotDivide(direction, math.norm(direction))
+    let numBurnPoints = 60
+    
+    let genJacobPerch = function(params, startState, startT) {
+        let dir = [params.a * Math.cos(params.az) * Math.cos(params.el),
+                   params.a * Math.sin(params.az) * Math.cos(params.el),
+                   params.a * Math.sin(params.el)]
+        let baseState = startState.slice()
+        for (let index = 0; index < numBurnPoints; index++) {
+            baseState = runge_kutta(twoBodyRpo, baseState, tf / numBurnPoints, dir, startT)
+        }
+        baseState = baseState.slice(3,6)
+        let derivative = []
+        let paramsDelta = {...params}
+        paramsDelta.az += 0.01
+        dir = [paramsDelta.a * Math.cos(paramsDelta.az) * Math.cos(paramsDelta.el),
+            paramsDelta.a * Math.sin(paramsDelta.az) * Math.cos(paramsDelta.el),
+            paramsDelta.a * Math.sin(paramsDelta.el)]
+        let deltaState = startState.slice()
+        for (let index = 0; index < numBurnPoints; index++) {
+            deltaState = runge_kutta(twoBodyRpo, deltaState, tf / numBurnPoints, dir, startT)
+        }
+        deltaState = deltaState.slice(3,6)
+        derivative.push(math.dotDivide(math.subtract(deltaState, baseState), 0.01))
+
+        paramsDelta = {...params}
+        paramsDelta.el += 0.01
+        dir = [paramsDelta.a * Math.cos(paramsDelta.az) * Math.cos(paramsDelta.el),
+            paramsDelta.a * Math.sin(paramsDelta.az) * Math.cos(paramsDelta.el),
+            paramsDelta.a * Math.sin(paramsDelta.el)]
+        deltaState = startState.slice()
+        for (let index = 0; index < numBurnPoints; index++) {
+            deltaState = runge_kutta(twoBodyRpo, deltaState, tf / numBurnPoints, dir, startT)
+        }
+        deltaState = deltaState.slice(3,6)
+        derivative.push(math.dotDivide(math.subtract(deltaState, baseState), 0.01))
+
+        paramsDelta = {...params}
+        paramsDelta.a += 0.0001
+        dir = [paramsDelta.a * Math.cos(paramsDelta.az) * Math.cos(paramsDelta.el),
+            paramsDelta.a * Math.sin(paramsDelta.az) * Math.cos(paramsDelta.el),
+            paramsDelta.a * Math.sin(paramsDelta.el)]
+        deltaState = startState.slice()
+        for (let index = 0; index < numBurnPoints; index++) {
+            deltaState = runge_kutta(twoBodyRpo, deltaState, tf / numBurnPoints, dir, startT)
+        }
+        deltaState = deltaState.slice(3,6)
+        derivative.push(math.dotDivide(math.subtract(deltaState, baseState), 0.0001))
+        
+        return math.transpose(derivative)
+    }
+    for (let index = 0; index < 100; index++) {
+        // Generate Jacobian
+        let jac = genJacobPerch(params, state, startTime)
+
+        let dir = [params.a * Math.cos(params.az) * Math.cos(params.el),
+            params.a * Math.sin(params.az) * Math.cos(params.el),
+            params.a * Math.sin(params.el)]
+        // Get final state
+        let stateF = [...state]
+        for (let index = 0; index < numBurnPoints; index++) {
+            stateF = runge_kutta(twoBodyRpo, stateF, tf / numBurnPoints, dir, startTime)
+        }
+        stateF = stateF.slice(3,6)
+
+        let des = vf
+        let residuals = math.transpose([math.subtract(des, stateF)])
+        console.log(jac, residuals);
+        let dParams = math.squeeze(math.multiply(math.inv(jac), residuals))
+        params.az += dParams[0]
+        params.el += dParams[1]
+        params.a += dParams[2]
+        console.log(residuals);
+    }
+    let dir = [params.a * Math.cos(params.az) * Math.cos(params.el),
+        params.a * Math.sin(params.az) * Math.cos(params.el),
+        params.a * Math.sin(params.el)]
+    
+    let stateF = runge_kutta(twoBodyRpo, state, tf, dir, startTime).slice(3,6)
+    return {params, dir}
 }
