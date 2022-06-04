@@ -1340,7 +1340,7 @@ window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
     if (mainWindow.panelOpen) return;
     if (mainWindow.burnStatus.type === 'waypoint') {
-        let tranTimeDelta = event.deltaY > 0 ? -300 : 300
+        let tranTimeDelta = event.deltaY > 0 ? -300 : 1800
         let curCrossState = mainWindow.satellites[mainWindow.burnStatus.sat].currentPosition({
             time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
         })
@@ -1380,7 +1380,7 @@ function alterEditableSatChar(action) {
 }
 
 function startContextClick(event) {
-    console.log(event);
+    // console.log(event);
     if (mainWindow.panelOpen) {
         return false;
     }
@@ -3831,14 +3831,13 @@ function rmoeToRic(rmoes) {
         a: (398600.4418 / initMm ** 2)**(1/3),
         e: rmoes.ae / 2 / origSemi + mainWindow.originOrbit.e,
         i: rmoes.z *Math.PI / 180 + mainWindow.originOrbit.i,
-        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 - rmoes.b * 0*Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi + mainWindow.originOrbit.raan,
+        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi + mainWindow.originOrbit.raan,
         arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180 +  + mainWindow.originOrbit.arg,
         tA: rmoes.b * Math.PI / 180 + mainWindow.originOrbit.tA
     })
-    console.log(coeInit);
+    coeInit = Object.values(coeInit)
     let chief = Coe2PosVelObject(mainWindow.originOrbit)
-    console.log(chief);
-    return Eci2Ric(Object.values(chief).slice(0,3), Object.values(chief).slice(3,6), [coeInit.x, coeInit.y, coeInit.z], [coeInit.vx, coeInit.vy, coeInit.vz])
+    return Eci2Ric(Object.values(chief).slice(0,3), Object.values(chief).slice(3,6), coeInit.slice(0,3), coeInit.slice(3,6))
 }
 
 function initStateFunction(el) {
@@ -4460,16 +4459,60 @@ function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
 }
 
 function j2Rpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
-    let {mu = 398600.4418, r0 = 42164, a = [0,0,0], time= 0} = options
-    
+    let {mu = 398600.4418, a = [0,0,0], time= 0} = options;
     let inertChief = {...mainWindow.originOrbit}
     inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
-    inertChief = Object.values(Coe2PosVelObject(inertChief))
-    let inertDep = Ric2Eci(state.slice(0,3), state.slice(3,6), inertChief.slice(0,3), inertChief.slice(3,6))
-    inertDep = [...inertDep.rEcci, ...inertDep.drEci]
+    inertChief = Coe2PosVelObject(inertChief, true)
+    let r = Object.values(inertChief)
+    let v = r.slice(3,6)
+    r = r.slice(0,3)
+    let rn = math.norm(r)
+    let radRate = math.dot(r, v) / rn
+    let tanRate = (math.norm(v) ** 2 - radRate ** 2) ** (1/2)
     
+    let chiefAcc = twoBodyJ2(r, true).slice(3,6)
+    
+    let h = math.cross(r, v);
+    let ricX = math.dotDivide(r, rn);
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+    let C = [ricX, ricY, ricZ];
+    let depPosition = math.add(r, math.squeeze(math.multiply(math.transpose(C), math.transpose([state.slice(0,3)]))))
+    let depAcc = twoBodyJ2(depPosition, true).slice(3,6)
+    let relAcc = math.squeeze(math.multiply(C, math.transpose([math.subtract(depAcc, chiefAcc)])))
+
+    let n = tanRate / rn
+    let ndot = -2 * radRate * n / rn
+
+    let x = state[0], y = state[1], z = state[2], dx = state[3], dy = state[4], dz = state[5];
+    // console.log(relAcc);
+    return [
+        dx,
+        dy,
+        dz,
+        relAcc[0] + 2 * n * dy + n ** 2 * x + ndot * y +  a[0] + mainWindow.extraAcc[0],
+        relAcc[1] - 2 * n * dx - ndot * x + n ** 2 * y + a[1] + mainWindow.extraAcc[1],
+        relAcc[2] + a[2] + mainWindow.extraAcc[2]
+    ]
 }
 
+function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2Eff = true) {
+    let mu = 398600.44189, j2 = 0.00108262668, re = 6378, x = position[0], y = position[1], z = position[2]
+    let r = math.norm(position.slice(0,3))
+    return j2Eff ? [
+        position[3], position[4], position[5],
+        -mu * x / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 1)),
+        -mu * y / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 1)),
+        -mu * z / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 3))
+    ] : 
+    [
+        position[3], position[4], position[5],
+        -mu * x / r ** 3 ,
+        -mu * y / r ** 3 ,
+        -mu * z / r ** 3 
+    ]
+}
+j2 = true
 function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
     if (mainWindow.prop === 4) {
         let k1 = eom(state, {a, time});
@@ -4478,6 +4521,7 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
         let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a, time: time + dt});
         return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
     }
+    // eom = j2 ? j2Rpo : eom
     let k1 = eom(state, {a, time});
     let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a, time: time + dt/2});
     return math.add(state, math.dotMultiply(dt, k2));
@@ -4572,6 +4616,7 @@ function calcSatTwoBody(allBurns = false) {
                 continue;
             }
         }
+        // console.log(currentState.slice());
         currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, [0,0,0], t_calc);
         t_calc += mainWindow.timeDelta;
     }
@@ -4836,11 +4881,12 @@ function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA:
 
 function Ric2Eci(rHcw = [0,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0]) {
     let h = math.cross(rC, drC);
-    let ricX = math.dotDivide(rC, math.norm(rC));
+    let rcN = math.norm(rC)
+    let ricX = math.dotDivide(rC, rcN);
     let ricZ = math.dotDivide(h, math.norm(h));
     let ricY = math.cross(ricZ, ricX);
 
-    let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+    let ricXd = math.dotMultiply(1 / rcN, math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
     let ricYd = math.cross(ricZ, ricXd);
     let ricZd = [0,0,0];
 
@@ -4854,7 +4900,7 @@ function Ric2Eci(rHcw = [0,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindo
     }
 }
 
-function PosVel2CoeNew(r, v) {
+function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
     let mu = 398600.4418;
     let rn = math.norm(r);
     let vn = math.norm(v);
@@ -4871,7 +4917,7 @@ function PosVel2CoeNew(r, v) {
     let e = math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn));
     let en = math.norm(e);
     if (en < 1e-6) {
-        e = [1, 0, 0];
+        e = n.slice();
         en = 0;
     }
     let inc = Math.acos(math.dot(h, [0, 0, 1]) / hn);
@@ -4881,7 +4927,7 @@ function PosVel2CoeNew(r, v) {
     }
 
     let ar, arDot;
-    if (en === 0) {
+    if (en < 1e-6) {
         arDot = math.dot(n, e) / nn;
     } else {
         arDot = math.dot(n, e) / en / nn;
@@ -4899,8 +4945,8 @@ function PosVel2CoeNew(r, v) {
         ar = 2 * Math.PI - ar;
     }
     let ta, taDot;
-    if (en === 0) {
-        taDot = math.dot(r, e) / rn;
+    if (en < 1e-6) {
+        taDot = math.dot(r, e) / rn / nn;
     } else {
         taDot = math.dot(r, e) / rn / en;
     }
@@ -5483,38 +5529,13 @@ function calcSatelliteEccentricity(position = [10,0,0,0,0,0]) {
     return math.norm(e);
 }
 
-function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2Eff = true) {
-    let mu = 398600.4418, j2 = 0.0010826, re = 6378.137, x = position[0], y = position[1], z = position[2]
-    let r = math.norm(position.slice(0,3))
-    return j2 ? [
-        position[3], position[4], position[5],
-        -mu * x / r ** 3 * (1 + 1.5 * j2 * re ** 2 / r ** 2 - 7.5 * j2 * re ** 2 * z ** 2 / r ** 4),
-        -mu * y / r ** 3 * (1 + 1.5 * j2 * re ** 2 / r ** 2 - 7.5 * j2 * re ** 2 * z ** 2 / r ** 4),
-        -mu * z / r ** 3 * (1 + 4.5 * j2 * re ** 2 / r ** 2 - 7.5 * j2 * re ** 2 * z ** 2 / r ** 4)
-    ] : 
-    [
-        position[3], position[4], position[5],
-        -mu * x / r ** 3 ,
-        -mu * y / r ** 3 ,
-        -mu * z / r ** 3 
-    ]
-}
-
 function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
     let inertChief = {...mainWindow.originOrbit}
     inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
     inertChief = Coe2PosVelObject(inertChief)
     inertChief = [inertChief.x, inertChief.y, inertChief.z, inertChief.vx, inertChief.vy, inertChief.vz]
-    // // console.log(inertChief);
-    // let chiefPos = Coe2PosVelObject(mainWindow.originOrbit)
-    // chiefPos = [chiefPos.x, chiefPos.y, chiefPos.z, chiefPos.vx, chiefPos.vy, chiefPos.vz]
-    // let n = math.floor(time / 2)
-    // for (let index = 0; index < n; index++) {
-    //     chiefPos = runge_kutta(twoBodyJ2, chiefPos, time / n)
-    // }
     let satPos = math.squeeze(Object.values(mainWindow.satellites[sat].currentPosition({time})))
     satPos = Ric2Eci(satPos.slice(0,3), satPos.slice(3,6), inertChief.slice(0,3), inertChief.slice(3,6))
-    // satPos = Ric2Eci([satPos.r[0],satPos.i[0],satPos.c[0]], [satPos.rd[0],satPos.id[0],satPos.cd[0]], chiefPos.slice(0,3), chiefPos.slice(3,6))
     return {
         r: satPos.rEcci[0],
         i: satPos.rEcci[1],
