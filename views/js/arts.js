@@ -1444,7 +1444,7 @@ function startContextClick(event) {
         let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
         ctxMenu.innerHTML = `
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
-            <div class="context-item" onclick="handleContextClick(this)" dir="${burnDir.join('_')}" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-direction-options">Change Direction</div>
+            <div class="context-item" onclick="handleContextClick(this)" dir="${burnDir.join('_')}" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-${event.shiftKey ? 'waypoint' : 'direction'}-options">Change ${event.shiftKey ? 'Waypoint' : 'Direction'}</div>
             <div class="context-item" onclick="handleContextClick(this)" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
@@ -1458,7 +1458,7 @@ function startContextClick(event) {
             outText = burnTime + 'x' + Object.values(burn.waypoint.target).map(x => x.toFixed(4)).join('x') + 'x' + burn.waypoint.tranTime
         }
         else if (event.shiftKey && event.altKey) {
-            outText = `X. UXXXXX; MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}X; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(1)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(3)}, M${math.norm(burnDir).toFixed(1)}`
+            outText = `X. E----z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
         }
         else if (event.shiftKey) {
             outText = `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
@@ -2897,6 +2897,11 @@ function parseArtsText(text) {
     newSun = [-newSun[2], newSun[0], -newSun[1]]
     let originOrbit = [42164, 0, 0, 0, 0, 0]
     let newOrbit = text.slice(10, 16).map(s => Number(s))
+    let chief, dep
+    if (text.length > 17) {
+        chief = text[16]
+        dep = text[17]
+    }
     for (let index = 0; index < newOrbit.length; index++) {
         originOrbit[index] = newOrbit[index]
         if (index > 1) originOrbit[index] *= Math.PI / 180
@@ -2909,14 +2914,13 @@ function parseArtsText(text) {
         arg: originOrbit[4],
         tA: originOrbit[5],
     }
-    return {newDate, newState, newSun, originOrbit}
+    return {newDate, newState, newSun, originOrbit, chief, dep}
 }
 
 function parseState(button) {
     let parsedState = parseArtsText(document.getElementById('parse-text').value)
     let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input')
     if (parsedState === undefined) return
-    console.log(parsedState);
     mainWindow.mm = (398600.4418 / parsedState.originOrbit.a ** 3) ** (1/2)
     mainWindow.scenarioLength = math.abs(mainWindow.originOrbit.a - parsedState.originOrbit.a) > 400 ?  2 * Math.PI / 3600 / mainWindow.mm : mainWindow.scenarioLength
     mainWindow.scenarioLength = mainWindow.scenarioLength < 6 ? 6 : mainWindow.scenarioLength
@@ -2927,6 +2931,21 @@ function parseState(button) {
     let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
     mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
     mainWindow.setInitSun(parsedState.newSun);
+
+    // Add origin sat if chief is defined and nothing exists at [0,0,0,0,0,0]
+    if (parsedState.chief !== undefined) {
+        let originSatellites = mainWindow.satellites.filter(sat => math.norm(Object.values(sat.position)) < 1e-6)
+        if (originSatellites.length === 0) {
+            mainWindow.satellites.push(new Satellite({
+                position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
+                shape: 'diamond',
+                color: '#f0f',
+                name: parsedState.chief
+            }))
+        }
+    } 
+    if (parsedState.dep !== undefined) button.parentNode.parentNode.getElementsByTagName('input')[15].value = parsedState.dep
+
     for (let index = 6; index < stateInputs.length; index++) {
         stateInputs[index].value = parsedState.newState[index - 6] * (index > 8 ? 1000 : 1)
     }
