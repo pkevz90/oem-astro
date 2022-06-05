@@ -1694,6 +1694,36 @@ function handleContextClick(button) {
         let parsedValues = parseArtsText(input.value)
         if (parsedValues == undefined) return
         
+        // Check if RIC origin sat is consistant with original data pull
+        if (parsedValues.chief !== undefined) {
+            let chiefSat = mainWindow.satellites.filter(sat => math.norm(Object.values(sat.position)) < 1e-6)
+            if (chiefSat.length > 0) {
+                if (chiefSat[0].name !== parsedValues.chief) {
+                    let a = confirm(`Expected origin does not match given origin name\nExpected: ${chiefSat[0].name}\nGiven: ${parsedValues.chief}`)
+                    if (!a) return
+                }
+            }
+            else {
+                let a = confirm(`Add satellite at origin named ${parsedValues.chief}?`)
+                if (a) {
+                    mainWindow.satellites.push(new Satellite({
+                        name: parsedValues.chief,
+                        position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
+                        color: '#f0f',
+                        shape: 'diamond',
+                        a: 0.001
+                    }))
+                }
+            }
+        }
+        // Check if satellite name from STK report matches name on ARTS
+        if (parsedValues.dep !== undefined) {
+            if (mainWindow.satellites[sat].name !== parsedValues.dep) {
+                let a = confirm(`Expected name does not match given name from report\nName of Satellite in ARTS: ${mainWindow.satellites[sat].name}\nName Given from Report: ${parsedValues.dep}`)
+                if (!a) return
+            }
+        }
+
         let oldDate = mainWindow.startDate + 0
         mainWindow.startDate = parsedValues.newDate
         let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
@@ -2920,7 +2950,26 @@ function parseArtsText(text) {
 function parseState(button) {
     let parsedState = parseArtsText(document.getElementById('parse-text').value)
     let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input')
+   
     if (parsedState === undefined) return
+    // Add origin sat if chief is defined and nothing exists at [0,0,0,0,0,0]
+    if (parsedState.chief !== undefined) {
+        let originSatellites = mainWindow.satellites.filter(sat => math.norm(Object.values(sat.position)) < 1e-6)
+            if (originSatellites.length === 0) {
+                mainWindow.satellites.push(new Satellite({
+                    position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
+                    shape: 'diamond',
+                    color: '#f0f',
+                        name: parsedState.chief
+                    }))
+            }
+            else {
+                if (parsedState.chief !== originSatellites[0].name) {
+                    let a = confirm(`State origin doesn't match current ARTS origin\nCurrent ARTS Origin: ${originSatellites[0].name}\nParsed Origin: ${parsedState.chief}?`)
+                    if (!a) return
+                }
+            }
+    } 
     mainWindow.mm = (398600.4418 / parsedState.originOrbit.a ** 3) ** (1/2)
     mainWindow.scenarioLength = math.abs(mainWindow.originOrbit.a - parsedState.originOrbit.a) > 400 ?  2 * Math.PI / 3600 / mainWindow.mm : mainWindow.scenarioLength
     mainWindow.scenarioLength = mainWindow.scenarioLength < 6 ? 6 : mainWindow.scenarioLength
@@ -2932,18 +2981,7 @@ function parseState(button) {
     mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
     mainWindow.setInitSun(parsedState.newSun);
 
-    // Add origin sat if chief is defined and nothing exists at [0,0,0,0,0,0]
-    if (parsedState.chief !== undefined) {
-        let originSatellites = mainWindow.satellites.filter(sat => math.norm(Object.values(sat.position)) < 1e-6)
-        if (originSatellites.length === 0) {
-            mainWindow.satellites.push(new Satellite({
-                position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
-                shape: 'diamond',
-                color: '#f0f',
-                name: parsedState.chief
-            }))
-        }
-    } 
+    
     if (parsedState.dep !== undefined) button.parentNode.parentNode.getElementsByTagName('input')[15].value = parsedState.dep
 
     for (let index = 6; index < stateInputs.length; index++) {
