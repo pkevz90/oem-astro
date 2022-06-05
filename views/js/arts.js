@@ -3976,12 +3976,23 @@ function initStateFunction(el) {
             cartInputs[9].value = (state.rd * 1000).toFixed(3);
             cartInputs[10].value = (state.id * 1000).toFixed(3);
         }
-        cartInputs[1].value = (4 * state.r + 2 * state.id / mainWindow.mm).toFixed(3);
-        cartInputs[2].value = (state.i - 2 * state.rd / mainWindow.mm).toFixed(3);
+        let eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+        let eciDep = Ric2Eci(Object.values(state).slice(0,3), Object.values(state).slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
+        console.log(eciDep, eciOrigin);
+        let coeDep = PosVel2CoeNew(eciDep.rEcci, eciDep.drEci)
+        let driftRate = (398600.4418 / coeDep.a ** 3) ** 0.5 - (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+        driftRate *= 86164 * 180 / Math.PI
+        let planeDiff = math.cos(mainWindow.originOrbit.i) * math.cos(coeDep.i) + math.sin(mainWindow.originOrbit.i) * math.sin(coeDep.i) * math.cos(coeDep.raan - mainWindow.originOrbit.raan)
+
+        planeDiff = math.acos(planeDiff) * 180 / Math.PI
+        
+        cartInputs[1].value = driftRate.toFixed(3);
+        cartInputs[2].value = (180 / Math.PI * math.atan2(state.i, state.r + mainWindow.originOrbit.a)).toFixed(3);
         cartInputs[0].value = (2 * Math.sqrt(Math.pow(3 * state.r + 2 * state.id / mainWindow.mm, 2) + Math.pow(state.rd / mainWindow.mm, 2))).toFixed(3);
         cartInputs[3].value = (Math.atan2(state.rd, 3 * mainWindow.mm * state.r + 2 * state.id) * 180 / Math.PI).toFixed(3);
         cartInputs[5].value = (Math.atan2(state.c, state.cd / mainWindow.mm) * 180 / Math.PI).toFixed(3);
-        cartInputs[4].value = (Math.sqrt(Math.pow(state.c, 2) + Math.pow(state.cd / mainWindow.mm, 2))).toFixed(3);
+        cartInputs[4].value = planeDiff.toFixed(3)
+
     }
     
 }
