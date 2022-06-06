@@ -585,7 +585,7 @@ class windowCanvas {
         ctx.textAlign = 'left';
         this.relativeData.dataReqs.forEach(req => {
             ctx.font = "bold " + textSize + "pt Courier";
-            let relDataIn = getRelativeData(req.origin, req.target);
+            let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0);
             ctx.fillText(this.satellites[req.origin].name + String.fromCharCode(8594) + this.satellites[req.target].name, location[0], location[1]);
             ctx.font = textSize + 'px Courier';
             location[1] += textSize*1.1
@@ -1520,6 +1520,7 @@ function handleContextClick(button) {
             <div class="context-item" onclick="handleContextClick(this)" id="perch-maneuver">Perch</div>
             <div class="context-item" onclick="handleContextClick(this)" id="circ-maneuver">Circularize</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
+            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="poca-maneuver">Maximizer POCA</div>' : ''}
         `
         //<div class="context-item" onclick="handleContextClick(this)" id="multi-maneuver">Multi-Burn</div>
             
@@ -1600,6 +1601,37 @@ function handleContextClick(button) {
         })
         document.getElementById('context-menu')?.remove();
     }
+    else if (button.id === 'poca-maneuver') {
+        let html = `
+            <div class="context-item" >dV: <input type="Number" style="width: 3em; font-size: 1em" placeholder="5"> m/s</div>
+        `
+        
+        let sat = button.parentElement.sat
+        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
+            if (sat === ii) continue
+            html += `<div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="${ii}" id="poca-max-execute" tabindex="0">${mainWindow.satellites[ii].name}</div>`
+        }
+        button.parentElement.innerHTML = html
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
+    else if (button.id === 'poca-max-execute') {
+        let targetSat = button.parentElement.sat
+        let depSat = Number(button.getAttribute('target'))
+        let dv = button.parentElement.getElementsByTagName('input')[0].value
+
+        dv = dv === '' ? Number(button.parentElement.getElementsByTagName('input')[0].placeholder) : Number(dv)
+        let data_0dv = findMaxPoca(0, targetSat, depSat, mainWindow.satellites[targetSat].a)
+        let data_dv = findMaxPoca(dv, targetSat, depSat, mainWindow.satellites[targetSat].a)
+        console.log(data_0dv, data_dv);
+        let confirm_answer = confirm(`Accept maneuver?\nCurrent POCA: ${data_0dv.maxRange.toFixed(2)} km\nManeuver POCA: ${data_dv.maxRange.toFixed(2)} km`)
+        if (confirm_answer) {
+            let burn = math.squeeze(data_dv.maxDir)
+            mainWindow.satellites[targetSat].burns = mainWindow.satellites[targetSat].burns.filter(burn => burn.time < mainWindow.scenarioTime)
+            insertDirectionBurn(targetSat, mainWindow.scenarioTime, burn)
+            document.getElementById('context-menu')?.remove();
+        }
+    
+    }
     else if (button.id === 'drift-maneuver') { 
         let inertPos = getCurrentInertial(button.parentElement.sat)
         inertPos = Object.values(inertPos)
@@ -1610,7 +1642,7 @@ function handleContextClick(button) {
         driftRate = Math.round(driftRate * 100) / 100
         let html = `
             <div class="context-item" >Drift Rate: <input type="Number" style="width: 3em; font-size: 1em" placeholder="${driftRate}"> deg/rev</div>
-            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="execute-drift" tabindex="0">Execute</div>
+            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="" tabindex="0">Execute</div>
         `
         button.parentElement.innerHTML = html
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
@@ -6045,7 +6077,7 @@ function findMaxPoca(dv = 1, stateTarget = 0, stateDep = 1, a = 1e-5) {
     dv /= 1000
     let findPoca = (dir = [1,0,0]) => {
         let dt = 10
-        let maxTime = 7200
+        let maxTime = 10800
         let time = 0
         let targetStart = stateTarget.slice()
         let depStart = stateDep.slice()
@@ -6070,7 +6102,7 @@ function findMaxPoca(dv = 1, stateTarget = 0, stateDep = 1, a = 1e-5) {
         return minDist
     }
     let maxRange = 0, maxDir
-    for (let ii = 0; ii < 200; ii++) {
+    for (let ii = 0; ii < 100; ii++) {
         let dir = [Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI - Math.PI]
         dir = math.dotDivide(dir, math.norm(dir) / dv)
         let poca = findPoca(dir)
