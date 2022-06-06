@@ -1642,7 +1642,7 @@ function handleContextClick(button) {
         driftRate = Math.round(driftRate * 100) / 100
         let html = `
             <div class="context-item" >Drift Rate: <input type="Number" style="width: 3em; font-size: 1em" placeholder="${driftRate}"> deg/rev</div>
-            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="" tabindex="0">Execute</div>
+            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" id="execute-drift" tabindex="0">Execute</div>
         `
         button.parentElement.innerHTML = html
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
