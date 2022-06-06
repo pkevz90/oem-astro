@@ -589,12 +589,17 @@ class windowCanvas {
             ctx.fillText(this.satellites[req.origin].name + String.fromCharCode(8594) + this.satellites[req.target].name, location[0], location[1]);
             ctx.font = textSize + 'px Courier';
             location[1] += textSize*1.1
+
+
             req.data.forEach(d => {
                 if (relDataIn[d] !== undefined) {
                     let textOut
                     if (d === 'range') {
                         if (relDataIn.rangeStd !== undefined) textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} +/-${relDataIn.rangeStd.toFixed(2)} km`
                         else textOut = `${this.relativeData.data[d].name} :  ${relDataIn[d].toFixed(1)} km`
+                    }
+                    else if (d === 'interceptData') {
+                        textOut = `1-hr Intercept: [${(1000*relDataIn.interceptData.dV).toFixed(1)}, ${(relDataIn.interceptData.sunAng).toFixed(1)}, ${(1000*relDataIn.interceptData.relVel).toFixed(1)}]`
                     }
                     else {
                         textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} ${this.relativeData.data[d].units}`
@@ -1569,6 +1574,7 @@ function handleContextClick(button) {
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="relativeVelocity"/><label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="poca"/><label style="cursor: pointer" for="poca">POCA</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="sunAngle"/><label style="cursor: pointer" for="sunAngle">CATS</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="interceptData"/><label style="cursor: pointer" for="interceptData">1-hr Intercept</label></div>
         `
 
        button.parentElement.innerHTML = out
@@ -3209,8 +3215,8 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
     if (X[2] > 1) {
         return false;
     }
-    let errCount = 0;
-    while (math.norm(math.squeeze(dX)) > 1e-6) {
+    let errCount = 0
+    while (math.norm(math.squeeze(yErr)) > 1e-6) {
         F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0);
         yErr = [
             [stateFinal[0][0] - F.x],
@@ -3218,7 +3224,11 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
             [stateFinal[2][0] - F.z]
         ];
         S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, n);
-        dX = math.multiply(math.inv(S), yErr);
+        try {
+            dX = math.multiply(math.inv(S), yErr);
+        } catch (error) {
+            dX = math.zeros([3,1])
+        }
         X = math.add(X, dX)
         X[2][0] = X[2][0] < 0 ? 1e-9 : X[2][0]
         // console.log(X);
@@ -4260,7 +4270,7 @@ function drawSatellite(satellite = {}) {
     ctx.fillText(name ? name : '', pixelPosition[0], letterY);
 }
 
-function getRelativeData(n_target, n_origin) {
+function getRelativeData(n_target, n_origin, intercept = true) {
     let sunAngle, rangeRate, range, poca, toca, tanRate, rangeStd;
     let relPos = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getPositionArray(), mainWindow.satellites[n_target]
         .getPositionArray()));
@@ -4279,12 +4289,45 @@ function getRelativeData(n_target, n_origin) {
     sunAngle = 180 - sunAngle; // Appropriate for USSF
     rangeRate = math.dot(relVel, relPos) * 1000 / range;
     // tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
-    let relPosHis;
+    let relPosHis, interceptData
     try {
         relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
 
         poca = math.min(relPosHis);
         toca = relPosHis.findIndex(element => element === poca) * mainWindow.timeDelta;
+        if (intercept !== false) {
+            let point1 = mainWindow.satellites[n_target].currentPosition()
+            let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + 3600})
+            // console.log(point1, point2);
+            let burn = hcwFiniteBurnOneBurn({
+                x: point1.r[0],
+                y: point1.i[0],
+                z: point1.c[0],
+                xd: point1.rd[0],
+                yd: point1.id[0],
+                zd: point1.cd[0]
+            }, {
+                x: point2.r[0],
+                y: point2.i[0],
+                z: point2.c[0],
+                xd: point2.rd[0],
+                yd: point2.id[0],
+                zd: point2.cd[0]
+            }, 3600, mainWindow.satellites[n_target].a, mainWindow.scenarioTime)
+            if (burn) {
+                let lastTimeStepOrigin = [burn.F.x - burn.F.xd, burn.F.y - burn.F.yd, burn.F.z - burn.F.zd]
+                let lastTimeStepTarget = [point2.r[0] -  point2.rd[0], point2.i[0] -  point2.id[0], point2.c[0] -  point2.cd[0]]
+                let relPosInter = math.subtract(lastTimeStepOrigin, lastTimeStepTarget)
+                let sunInter = mainWindow.getCurrentSun(mainWindow.scenarioTime + 3600 - 1)
+                let sunAng = math.acos(math.dot(sunInter, relPosInter) / math.norm(sunInter) / math.norm(relPosInter)) * 180 / Math.PI
+                interceptData = {
+                    dV: math.norm([burn.r, burn.i, burn.c]),
+                    relVel: math.norm(math.subtract([burn.F.xd, burn.F.yd, burn.F.zd], [point2.rd[0], point2.id[0], point2.cd[0]])),
+                    sunAng
+                }
+            }
+            // console.log(interceptData);
+        }
     }
     catch (err) {console.log(err)}
     
@@ -4296,7 +4339,8 @@ function getRelativeData(n_target, n_origin) {
         poca,
         toca,
         tanRate,
-        relativeVelocity: math.norm(relVel)*1000
+        relativeVelocity: math.norm(relVel)*1000,
+        interceptData
     }
 }
 
