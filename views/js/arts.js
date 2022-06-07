@@ -1445,11 +1445,12 @@ function startContextClick(event) {
         let burnDir = [1000*burn.direction.r, 1000*burn.direction.i, 1000*burn.direction.c]
         let rot = translateFrames(activeBurn.sat, {time: burn.time})
         burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
+        let burnWay = [burn.waypoint.target.r, burn.waypoint.target.i, burn.waypoint.target.c, burn.waypoint.tranTime]
         let burnDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000)
         let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
         ctxMenu.innerHTML = `
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
-            <div class="context-item" onclick="handleContextClick(this)" dir="${burnDir.join('_')}" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-${event.shiftKey ? 'waypoint' : 'direction'}-options">Change ${event.shiftKey ? 'Waypoint' : 'Direction'}</div>
+            <div class="context-item" onclick="handleContextClick(this)" dir="${(event.shiftKey ? burnWay : burnDir).join('_')}" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-${event.shiftKey ? 'waypoint' : 'direction'}-options">Change ${event.shiftKey ? 'Waypoint' : 'Direction'}</div>
             <div class="context-item" onclick="handleContextClick(this)" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
@@ -2061,6 +2062,20 @@ function handleContextClick(button) {
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
+    else if (button.id === 'change-waypoint-options') {
+        let sat = button.getAttribute('sat')
+        let burn = button.getAttribute('burn')
+        let dir = button.getAttribute('dir').split('_').map(s => Number(s))
+        console.log();
+        button.parentElement.innerHTML = `
+            <div class="context-item" >R: <input placeholder="${dir[0].toFixed(1)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >I: <input placeholder="${dir[1].toFixed(1)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >C: <input placeholder="${dir[2].toFixed(1)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" >Transfer Time: <input placeholder="${(dir[3] / 3600).toFixed(1)}" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-waypoint" tabindex="0">Change</div>
+        `
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
     else if (button.id === 'direction-maneuver') {
         button.parentElement.innerHTML = `
             <div class="context-item" >R: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
@@ -2093,6 +2108,36 @@ function handleContextClick(button) {
         })
         insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
         // document.getElementById('time-slider-range').value = mainWindow.satellites[sat].burns[burn].time + 3600;
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'execute-change-waypoint') {
+        let sat = button.getAttribute('sat')
+        let burn = button.getAttribute('burn')
+        logAction({
+            type: 'alterBurn',
+            index: burn,
+            sat,
+            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
+        })
+        let inputs = button.parentElement.getElementsByTagName('input');
+        for (let ii = 0; ii < inputs.length; ii++) {
+            if (inputs[ii].value === '') {
+                inputs[ii].value = Number(inputs[ii].placeholder);
+            }
+        }
+        let way = [Number(inputs[0].value), Number(inputs[1].value), Number(inputs[2].value)];
+        let tranTime = Number(inputs[3].value) * 3600
+        logAction({
+            type: 'alterBurn', sat, index: burn, burn: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
+        })
+        mainWindow.satellites[sat].burns[burn].waypoint = {
+            target: {
+                r: way[0], i: way[1], c: way[2]
+            },
+            tranTime
+        }
+        mainWindow.satellites[sat].genBurns()
+        mainWindow.satellites[sat].calcTraj()
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'dsk-maneuver') {
