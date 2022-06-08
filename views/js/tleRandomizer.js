@@ -72,16 +72,17 @@ function exportFile() {
     if (desDate == 'Invalid Date') return;
     let timeDiff = desDate - epochDate;
     timeDiff /= 1000;
+    console.log(timeDiff)
     if (timeDiff < 0) return alert('Time must be during the imported .e file')
     let timeLine = data[1].findIndex(line => {
         return Number(line.split(/ +/)[1]) >= timeDiff;
     });
     // Get propTime
     let lastLine = data[1].length-1
-    while (isNaN(Number(data[1][lastLine].split(/ +/)[1]))) {
+    while (isNaN(Number(data[1][lastLine].split(/ +/).filter(s => s !== '')[0]))) {
         lastLine--
     }
-    let endTime = Number(data[1][lastLine].split(/ +/)[1])
+    let endTime = Number(data[1][lastLine].split(/ +/).filter(s => s !== '')[0])
 
     let saveName = 'sat' + math.floor(data[1][0].split(/ +/).filter(line => line !== '')[1]);
     // Pull initial state from ephemeris file
@@ -110,7 +111,8 @@ function exportFile() {
     stateEphemeris = [`${t.toExponential(16)} ${state[0].toExponential(16)} ${state[1].toExponential(16)} ${state[2].toExponential(16)} ${state[3].toExponential(16)} ${state[4].toExponential(16)} ${state[5].toExponential(16)}`]
 
     let timeDelta = 120
-    for (let ii = timeDelta; ii <= (endTime - timeDiff); ii+=timeDelta) {
+    let propTime = (endTime - timeDiff) > 86400 ? 86400 : endTime - timeDiff
+    for (let ii = timeDelta; ii <= propTime; ii+=timeDelta) {
         let out = propCovariance(P, timeDelta, [state])
         state = out.state
         P = out.P
@@ -180,9 +182,12 @@ function testDrop(event) {
         text[1] = text[1].split(/\n+/);
         text[0] = text[0] + 'EphemerisTimePosVel' + text[1][0];
         text[1].shift();
+        let date = text[0].split('\n').find(line => line.search('ScenarioEpoch') !== -1)
+        console.log(date);
+        date = date.substr(date.search('Epoch') + 6)
+        console.log(date, date.search('Epoch'))
         data = text;
-        let date = text[0].substr(text[0].search('point: ') + 6);
-        epochDate = new Date(date.substr(0,date.search('UTCG') - 1));
+        epochDate = new Date(date);
         exportFile()
     };
     fileReader.readAsText(fileToLoad, "UTF-8");
