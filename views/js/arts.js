@@ -2509,11 +2509,11 @@ function changePlanType(box) {
 }
 
 document.getElementById('main-plot').addEventListener('mousedown', event => {
-    // Close context menu if 
     event.preventDefault()
     let subList = document.getElementsByClassName('sub-menu');
     for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
     if (event.button === 0) {
+        // Close context and lock menu if open
         document.getElementById('context-menu')?.remove()
         lockDiv.style.right = '-15%'
     }
@@ -2654,13 +2654,15 @@ document.getElementById('main-plot').addEventListener('mouseup', event => {
     mainWindow.burnStatus.type = false;
     mainWindow.frameMove = undefined;
 })
-document.getElementById('main-plot').addEventListener('mouseleave', event => {
-    mainWindow.mousePosition = undefined;
-})
+document.getElementById('main-plot').addEventListener('mouseleave', event => mainWindow.mousePosition = undefined)
 document.getElementById('main-plot').addEventListener('mousemove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
+    if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
+        mainWindow.cnvs.style.cursor = 'pointer'
+        return
+    }
+    else mainWindow.cnvs.style.cursor = ''
     if (mainWindow.frameMove) {
-        // console.log('d');
         let delX = event.clientX - mainWindow.frameMove.x;
         mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
     }
@@ -2781,27 +2783,6 @@ document.getElementById('satellite-way-select').addEventListener('input', event 
     generateBurnTable(event.target.value)
     event.target.style.color = mainWindow.satellites[event.target.value].color;
 })
-function openDataTab() {
-    if (mainWindow.satellites.length < 2) {
-        return;
-    }
-    document.getElementById('context-menu')?.remove();
-    let dataSel = document.getElementById('data-select');
-    while (dataSel.firstChild) {
-        dataSel.removeChild(dataSel.firstChild);
-    }
-    mainWindow.satellites.forEach((satOrg, ii) => {
-        mainWindow.satellites.forEach((satTar, jj) => {
-            if (ii !== jj) {
-                addedElement = document.createElement('option');
-                addedElement.value = `${ii}&${jj}`;
-                addedElement.textContent = satOrg.name + ' to ' + satTar.name;
-                dataSel.appendChild(addedElement);
-            } 
-        })
-    })
-    document.getElementById('data-panel').classList.toggle("hidden");
-}
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
     let el = click.target;
     el = el.parentNode.parentNode;
@@ -3267,31 +3248,22 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
     let v1 = v[0],
         yErr= [100], S, dX = 1,
         F;
-    let dv1;
-    if (!false) {
-        dv1 = math.subtract(v1, state.slice(3, 6));
-    }
-    else {
-        dv1 = guess;
-    }
-    let Xret = [
+    let dv1 = math.subtract(v1, state.slice(3, 6))
+    let X = [
         [Math.atan2(dv1[1][0], dv1[0][0])],
-        [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
+        [Math.atan2(dv1[2][0], math.norm([dv1[0][0], dv1[1][0]]))],
         [math.norm(math.squeeze(dv1)) / a0 / tf]
     ];
-    if (Xret[2] < 1e-11) {
+    if (X[2] < 1e-11) {
         return {
             r: 0,
             i: 0,
             c: 0,
             t: [0],
-            F: oneBurnFiniteHcw(stateInit, Xret[0][0], Xret[1][0], Xret[2][0], tf, time, a0)
+            F: oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0)
         }
     }
-    let X = Xret.slice();
-    if (X[2] > 1) {
-        return false;
-    }
+    if (X[2] > 1) return false;
     let errCount = 0
     while (math.norm(math.squeeze(yErr)) > 1e-6) {
         F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0);
@@ -3308,20 +3280,20 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         }
         X = math.add(X, dX)
         X[2][0] = X[2][0] < 0 ? 1e-9 : X[2][0]
-        // console.log(X);
-        if (errCount > 20 || X[2][0] < 0) return false;
+        X[2][0] = X[2][0] > 1 ? 0.95 : X[2][0]
+        if (errCount > 20) return false;
         errCount++;
     }
-    if (X[2] > 1 || X[2] < 0) return false;
+    if (X[2] > 1 || X[2] < 0) return false
+    let cosEl = Math.cos(X[1][0])
     return {
-        r: a0 * X[2] * tf * Math.cos(X[0][0]) * Math.cos(X[1][0]),
-        i: a0 * X[2] * tf * Math.sin(X[0][0]) * Math.cos(X[1][0]),
+        r: a0 * X[2] * tf * Math.cos(X[0][0]) * cosEl,
+        i: a0 * X[2] * tf * Math.sin(X[0][0]) * cosEl,
         c: a0 * X[2] * tf * Math.sin(X[1][0]),
         t: X[2],
         F,
         X
     }
-    // return [Xret,X];
 }
 
 function hcwFiniteBurnTwoBurn(stateInit, stateFinal, tf, a0, n = mainWindow.mm) {
@@ -3478,19 +3450,24 @@ function calcTwoBurn(options = {}) {
     return outBurns;
 }
 
-function oneBurnFiniteHcw(state, alpha, phi, tB, t, time = 0, a0 = 0.00001) {
-    state = [state.x, state.y, state.z, state.xd, state.yd, state.zd];
-    let direction = [a0 * Math.cos(alpha) * Math.cos(phi), a0 * Math.sin(alpha) * Math.cos(phi), a0 * Math.sin(phi)];
-    let numBurnPoints = math.ceil(t * tB / mainWindow.timeDelta)
-    let numDriftPoints = math.ceil((t - t * tB) / mainWindow.timeDelta)
-    numBurnPoints = numBurnPoints < 1 ? 1 : numBurnPoints;
-    numDriftPoints = numDriftPoints < 1 ? 1 : numDriftPoints;
-    for (let ii = 0; ii < numBurnPoints; ii++) {
-        state = runge_kutta(twoBodyRpo, state, t * tB / numBurnPoints, direction, time  + t * tB * ii / numBurnPoints)
+function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.00001) {
+    state = Object.values(state)
+    let cosEl = Math.cos(phi)
+    let direction = [a0 * Math.cos(alpha) * cosEl, a0 * Math.sin(alpha) * cosEl, a0 * Math.sin(phi)];
+    
+    let propTime = 0
+    while ((propTime + mainWindow.timeDelta) < finalTime * tB) {
+        state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, direction, time + propTime)
+        propTime += mainWindow.timeDelta
     }
-    for (let ii = 0; ii < numDriftPoints; ii++) {
-        state = runge_kutta(twoBodyRpo, state, (t - t * tB)/numDriftPoints, [0,0,0], time + t * tB + (t - t * tB) * ii/numDriftPoints); 
+    state = runge_kutta(twoBodyRpo, state, finalTime*tB - propTime, direction, time + propTime)
+    propTime = finalTime * tB
+    while((propTime + mainWindow.timeDelta) < finalTime) {
+        state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime)
+        propTime += mainWindow.timeDelta
     }
+    state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
+    
     return {
         x: state[0],
         y: state[1],
@@ -3503,8 +3480,8 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, t, time = 0, a0 = 0.00001) {
 }
 
 function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, time, n) {
-    let m1, m2, mC, mFinal = [];
-    //alpha
+    let m1, m2, m, mC
+    // alpha; If phi is at 90 degrees, jacobian won't have full rank, set to 89 deg for az jacobian calculation
     let phi2 = math.abs(Math.cos(phi)) < 1e-6 ? 89 * Math.PI / 180 : phi;
     m1 = oneBurnFiniteHcw(state, alpha, phi2, tB, tF, time, a);
     m1 = [
@@ -3519,7 +3496,6 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, time, n) {
         [m2.z]
     ];
     mC = math.dotDivide(math.subtract(m2, m1), 0.01);
-    mFinal = mC;
     //phi
     m2 = oneBurnFiniteHcw(state, alpha, phi + 0.01, tB, tF, time, a);
     m2 = [
