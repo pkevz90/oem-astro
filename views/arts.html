@@ -183,6 +183,19 @@
                 <li>
                     Building a plan
                     <ul>
+                        <li>Importing satellites
+                            <ul>
+                                <li>STK Arts Report should be within scenario</li>
+                                <li>Within STK, run report on desired origin satellite, then select desired deputy satellite</li>
+                                <li>Satellite names for both the chief and deputy are imported, if not origin satellite exists, one will be created with correct name.</li>
+                                <li>Select entire line at report timestep and copy line</li>
+                                <li>Paste into either the satellite menu if no satellite exists, or update state context menu</li>
+                                <li>System will check if names on satellite match the name from the report and origin sat. If does not match, user given chance to override</li>
+                                <li>Satellite will be updated with new state, burns in future will be recalculated to account for new state</li>
+                                <li>Other satellites in scenario will be propagated to the time frame specified by the import</li>
+                                <li>Sim time and Sun vector are also imported from STK</li>
+                            </ul>
+                        </li>
                         <li>Add Satellite by right clicking into satellite menu, then entering either with RMOE or cartesian values</li>
                         <li>By default, all burns are computed with finite accelerations, goto for impulsive burns in 1000 mm/s2</li>
                         <li>To insert a burn, click and hold current satellite position, use slider to change shown time
@@ -191,9 +204,17 @@
                             <ul>
                                 <li>Click and drag to desired waypoint, changing time of flight with mouse wheel</li>
                                 <li>Switch to manual burn direction on right-click menu to click and drag burn direction</li>
-                                <li>Open burns panel with right-click menu and manually insert RIC coordinate and TOF</li>
+                                <li>Open burns panel by right-clicking satellite itself and manually insert RIC coordinate and TOF</li>
                                 <li>More burn options available within right-click menu</li>
-                                <li>Particle Swarm Optimization utilized to find best position to gain sun</li>
+                                <li>Particle Swarm Optimization utilized to find best position to gain sun, based on delta-V</li>
+                            </ul>
+                        </li>
+                        <li>Burn Right Click
+                            <ul>
+                                <li>Right clicking on a burn opens up context menu with options</li>
+                                <li>Right clicking also copies to clipboard text string for ingestion into STK</li>
+                                <li>By default right-clicking shows you burn magnitudes in RIC and allows alteration of burn direction</li>
+                                <li>Shift right-clicking brings up burn waypoint information and allows alteration of waypoint</li>
                             </ul>
                         </li>
                         <li>Burns can be deleted by ctrl-clicking on the burn point</li>

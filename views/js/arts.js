@@ -999,6 +999,7 @@ class Satellite {
             burn.time -= dt
             return burn
         })
+        this.genBurns()
         this.calcTraj();
     }
 }
@@ -1454,7 +1455,7 @@ function startContextClick(event) {
             <div class="context-item" onclick="handleContextClick(this)" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
-            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${burnDir[0].toFixed(3)}, ${burnDir[1].toFixed(3)}, ${burnDir[2].toFixed(3)}) m/s</div>
+            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${(event.shiftKey ? burnWay : burnDir).slice(0,3).map(d => d.toFixed(3)).join(', ')}) m/s ${event.shiftKey ? (burnWay[3] / 3600).toFixed(1) : ''} hrs</div>
         `
         let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
         let padNumber = function(n) {
@@ -1464,7 +1465,7 @@ function startContextClick(event) {
             outText = burnTime + 'x' + Object.values(burn.waypoint.target).map(x => x.toFixed(4)).join('x') + 'x' + burn.waypoint.tranTime
         }
         else if (event.shiftKey && event.altKey) {
-            outText = `X. E----z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
+            outText = `X. E${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
         }
         else if (event.shiftKey) {
             outText = `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
@@ -1475,7 +1476,6 @@ function startContextClick(event) {
         let lockScreenStatus = lockDiv.style.right === '-15%' ? false : true
         ctxMenu.innerHTML = `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
-            ${mainWindow.satellites.length > 0 ? '<div class="context-item" onclick="openPanel(this)" id="burns">Maneuver List</div>' : ''}
             ${mainWindow.satellites.length > 0 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Lock Screen</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)"" id="change-origin">Change Origin Sat</div>' : ''}
