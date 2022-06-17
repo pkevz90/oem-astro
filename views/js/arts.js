@@ -1449,6 +1449,7 @@ function startContextClick(event) {
         let burnWay = [burn.waypoint.target.r, burn.waypoint.target.i, burn.waypoint.target.c, burn.waypoint.tranTime]
         let burnDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000)
         let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
+        let uploadDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000 - 900000)
         ctxMenu.innerHTML = `
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
             <div class="context-item" onclick="handleContextClick(this)" dir="${(event.shiftKey ? burnWay : burnDir).join('_')}" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-${event.shiftKey ? 'waypoint' : 'direction'}-options">Change ${event.shiftKey ? 'Waypoint' : 'Direction'}</div>
@@ -1461,14 +1462,16 @@ function startContextClick(event) {
         let padNumber = function(n) {
             return n < 10 ? '0' + n : n
         }
-        if (event.button === 1) {
-            outText = burnTime + 'x' + Object.values(burn.waypoint.target).map(x => x.toFixed(4)).join('x') + 'x' + burn.waypoint.tranTime
-        }
-        else if (event.shiftKey && event.altKey) {
-            outText = `X. E${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
+         if (event.altKey && event.shiftKey) {
+            outText = `-. E${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
+            // outText = `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
         }
         else if (event.shiftKey) {
-            outText = `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
+            outText = burnTime + 'x' + Object.values(burn.waypoint.target).map(x => x.toFixed(4)).join('x') + 'x' + burn.waypoint.tranTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
+        }
+        else if (event.altKey) {
+            // outText = `X. E${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
+            outText = `U${padNumber(uploadDate.getHours())}--z; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
         }
         navigator.clipboard.writeText(outText)
     }
