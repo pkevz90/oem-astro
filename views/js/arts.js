@@ -4230,7 +4230,7 @@ function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2Eff = true) {
         -mu * z / r ** 3 
     ]
 }
-j2 = true
+
 function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
     if (mainWindow.prop === 4) {
         let k1 = eom(state, {a, time});
@@ -4245,7 +4245,8 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
     return math.add(state, math.dotMultiply(dt, k2));
 }
 
-function calcSatTwoBody(allBurns = false) {
+function calcSatTwoBody(recalcBurns = false) {
+    // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
     let t_calc = 0, currentState = Object.values(this.position), satBurn = this.burns.length > 0 ? 0 : undefined;
     this.stateHistory = [];
     while (t_calc <= mainWindow.scenarioLength * 3600) {
@@ -4260,12 +4261,12 @@ function calcSatTwoBody(allBurns = false) {
         });
         if (satBurn !== undefined) {
             if ((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
-                (mainWindow.scenarioTime + 0.5) || allBurns)) {
+                (mainWindow.scenarioTime + 0.5) || recalcBurns)) {
                 currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc, [0,0,0], t_calc);
                 let remainder = mainWindow.timeDelta - (this.burns[satBurn].time - t_calc)
                 t_calc = this.burns[satBurn].time
                 // Recalculate Burns if needed
-                if (allBurns) {
+                if (recalcBurns) {
                     this.burns[satBurn].location  = {
                         r: [currentState[0]],
                         i: [currentState[1]],
@@ -4305,7 +4306,7 @@ function calcSatTwoBody(allBurns = false) {
                 if (satBurn !== this.burns.length - 1) {
                     t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
                 } 
-                t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !allBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
+                t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !recalcBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
                 
                 let direction = Object.values(this.burns[satBurn].direction)
                 direction = math.dotMultiply(this.a / math.norm(direction), direction)
