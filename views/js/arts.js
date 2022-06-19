@@ -1377,8 +1377,23 @@ function alterEditableSatChar(action) {
         mainWindow.satellites[sat][element] = newEl
         return
     }
-    mainWindow.satellites[sat][element] = element === 'a' ? Number(newEl) : newEl
     if (element === 'a') {
+        if (Number.isNaN(Number(newEl))) {
+            action.innerText = mainWindow.satellites[sat].a * 1000
+            showScreenAlert('Satellite accerlation must be a real number')
+            return
+        }
+        else if (Number(newEl) < 0) {
+            action.innerText = mainWindow.satellites[sat].a * 1000
+            showScreenAlert('Satellite accerlation must be a postive number')
+            return
+        }
+        newEl = Number(newEl) > 1 ? 1 : newEl
+        newEl = Number(newEl) < 0.0001 ? 0.0001 : newEl
+    }
+    mainWindow.satellites[sat][element] = element === 'a' ? Number(newEl) / 1000 : newEl
+    if (element === 'a') {
+        mainWindow.satellites[sat].genBurns()
         mainWindow.satellites[sat].calcTraj()
     }
     updateLockScreen()
@@ -1427,6 +1442,7 @@ function startContextClick(event) {
         ctxMenu.innerHTML = `
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
+                <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].a * 1000}</span> m/s2</span>
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
@@ -2507,9 +2523,7 @@ function showScreenAlert(message = 'test alert') {
 
 }
 
-function changePlanType(box) {
-    mainWindow.burnType = box.checked ? 'waypoint' : 'manual';
-}
+changePlanType = (box) => mainWindow.burnType = box.checked ? 'waypoint' : 'manual';
 
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     event.preventDefault()
@@ -2651,13 +2665,16 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
         return;
     }
 })
-document.getElementById('main-plot').addEventListener('mouseup', event => {
+
+document.getElementById('main-plot').addEventListener('mouseup', () => {
     mainWindow.currentTarget = false;
     mainWindow.satellites.forEach(sat => sat.calcTraj());
     mainWindow.burnStatus.type = false;
     mainWindow.frameMove = undefined;
 })
-document.getElementById('main-plot').addEventListener('mouseleave', event => mainWindow.mousePosition = undefined)
+
+document.getElementById('main-plot').addEventListener('mouseleave', () => mainWindow.mousePosition = undefined)
+
 document.getElementById('main-plot').addEventListener('mousemove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
@@ -2670,9 +2687,11 @@ document.getElementById('main-plot').addEventListener('mousemove', event => {
         mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
     }
 })
+
 function exportScenario(name = mainWindow.satellites.map(sat => sat.name).join('_') + '.sas') {
     downloadFile(name, JSON.stringify(mainWindow.getData()));
 }
+
 function downloadFile(filename, text) {
     var pom = document.createElement('a');
     pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -2686,26 +2705,7 @@ function downloadFile(filename, text) {
         pom.click();
     }
 }
-document.getElementById('add-start-time').addEventListener('input', event => {
-    let startTime = new Date(event.target.value).getTime();
-    let dt = startTime - mainWindow.startDate.getTime() + Number(document.getElementById('add-tran-time').value) * 60000;
-    let crossState = mainWindow.satellites[document.getElementById('satellite-way-select').value].currentPosition({
-        time: dt / 1000
-    });
-    document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
-})
-document.getElementById('add-tran-time').addEventListener('input', () => {
-    let startTime = new Date(document.getElementById('add-start-time').value).getTime();
-    let dt = startTime - mainWindow.startDate.getTime() + Number(document.getElementById('add-tran-time').value) * 60000;
-    let crossState = mainWindow.satellites[document.getElementById('satellite-way-select').value].currentPosition({
-        time: dt / 1000
-    });
-    document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
-})
-document.getElementById('satellite-way-select').addEventListener('input', event => {
-    generateBurnTable(event.target.value)
-    event.target.style.color = mainWindow.satellites[event.target.value].color;
-})
+
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
     let el = click.target;
     el = el.parentNode.parentNode;
@@ -2727,6 +2727,7 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     mainWindow.startDate = new Date(date);
     closeAll();
 })
+
 function uploadScenario() {
     let screenAlert = document.getElementsByClassName('screen-alert');
     if (screenAlert.length > 0) screenAlert[0].remove();
@@ -2734,50 +2735,12 @@ function uploadScenario() {
     // loadMultiFile(event.path[0].files[0])
 }
 
-document.getElementById('export-burns').addEventListener('click', () => {
-    let selectEl = document.getElementById('satellite-way-select').value, time;
-    time = new Date(mainWindow.startDate.getTime()).toString();
-    time = toStkFormat(time);
-    let outString = '';
-    outString += 'Start Time,Position (km), Velocity (m/s), Acceleration (m/s2)\n'
-    outString += `${time},`;
-    outString += `"${mainWindow.satellites[selectEl].position.r.toFixed(2)}  ${mainWindow.satellites[selectEl].position.i.toFixed(2)}  ${mainWindow.satellites[selectEl].position.c.toFixed(2)}",`;
-    outString += `"${(mainWindow.satellites[selectEl].position.rd * 1000).toFixed(2)}  ${(mainWindow.satellites[selectEl].position.id * 1000).toFixed(2)}  ${(mainWindow.satellites[selectEl].position.cd * 1000).toFixed(2)}",`;
-    outString += `${mainWindow.satellites[selectEl].a * 1000},\n\n\n`;
-    outString += 'Time, Magnitude (m/s), Waypoint (km), Transfer Time (min), Direction, Duration (s)\n'
-    // satellites[selectEl].burns.forEach(burn => {
-    //     time = new Date(windowOptions.start_date.getTime() + burn.time * 1000).toString();
-    //     timeEnd = new Date(windowOptions.start_date.getTime() + burn.time * 1000 + burn.waypoint.tranTime * 1000).toString();
-    //     time = toStkFormat(time);
-    //     timeEnd = toStkFormat(timeEnd);
-    //     outString += `Burn Time ${time} \n`
-    //     outString += `Waypoint  r: ${burn.waypoint.target.r.toFixed(1)} km  i: ${burn.waypoint.target.i.toFixed(1)} km  c: ${burn.waypoint.target.c.toFixed(1)} km\n`;
-    //     outString += `Transfer Time: ${(burn.waypoint.tranTime.toFixed(1) / 60).toFixed(1)} minutes    ${timeEnd}\n`;
-    //     outString += `Direction  r: ${burn.direction.r.toFixed(6)}  i: ${burn.direction.i.toFixed(6)}  c: ${burn.direction.c.toFixed(6)}\n`;
-    //     outString += `Burn Duration ${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / satellites[selectEl].a).toFixed(1)} seconds\n`;
-    //     outString += `Estimated Delta-V: ${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) * 1000).toFixed(2)} m/s\n`
-    //     outString += `break${time}break${timeEnd}break${burn.waypoint.target.r.toFixed(2)}break${burn.waypoint.target.i.toFixed(2)}break${burn.waypoint.target.c.toFixed(2)}break${burn.direction.r.toFixed(6)}break${burn.direction.i.toFixed(6)}break${burn.direction.c.toFixed(6)}break${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / satellites[selectEl].a).toFixed(1)}\n\n`
-    // })
-    mainWindow.satellites[selectEl].burns.forEach(burn => {
-        time = new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString();
-        time = toStkFormat(time);
-        // timeEnd = toStkFormat(timeEnd);
-        outString += `${time},`
-        outString += `${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) * 1000).toFixed(2)},`
-        outString += `"${burn.waypoint.target.r.toFixed(1)}  ${burn.waypoint.target.i.toFixed(1)}  ${burn.waypoint.target.c.toFixed(1)}",`;
-        outString += `${(burn.waypoint.tranTime.toFixed(1) / 60).toFixed(1)},`;
-        let mag = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]);
-        outString += `"${(burn.direction.r / mag).toFixed(3)}  ${(burn.direction.i / mag).toFixed(3)}  ${(burn.direction.c / mag).toFixed(3)}",`;
-        outString += `${(mag / mainWindow.satellites[selectEl].a).toFixed(1)},\n`;
-        // outString += `break${time}break${timeEnd}break${burn.waypoint.target.r.toFixed(2)}break${burn.waypoint.target.i.toFixed(2)}break${burn.waypoint.target.c.toFixed(2)}break${burn.direction.r.toFixed(6)}break${burn.direction.i.toFixed(6)}break${burn.direction.c.toFixed(6)}break${(math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / mainWindow.satellites[selectEl].a).toFixed(1)}`
-    })
-    downloadFile('burns.csv', outString);
-})
 function toStkFormat(time) {
     time = time.split('GMT')[0].substring(4, time.split('GMT')[0].length - 1) + '.000';
     time = time.split(' ');
     return time[1] + ' ' + time[0] + ' ' + time[2] + ' ' + time[3];
 }
+
 function loadFileAsText(fileToLoad) {
 
     var fileReader = new FileReader();
