@@ -3525,10 +3525,7 @@ function initStateFunction(el) {
         updateLockScreen()
         closeAll();
     }
-    else if (el.id === 'add-launch-button') {
-        testLambertProblem();
-        closeAll();
-    }
+    else if (el.id === 'add-launch-button') addLaunch();
     else {
         if (el.classList.contains('panel-button')) {
             nodes = el.parentNode.parentNode.children[1];
@@ -4380,9 +4377,11 @@ function getCurrentPosition(options = {}) {
     return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
 }
 
-function testLambertProblem() {
+function addLaunch() {
     var long = prompt("Longitude relative to satellite", "0");
+    if (long == null) return
     var lat = prompt("Latitude", "0");
+    if (lat == null) return
     let checkValue = 1000;
     let semiAxis = (398600.4418 / mainWindow.mm**2)**(1/3);
     let periodOrbit = 2 * Math.PI * (semiAxis ** 3 / 398600.4418) ** (1/2)
@@ -4424,6 +4423,7 @@ function testLambertProblem() {
         position: {r: resHcw.rHcw[0][0], i: resHcw.rHcw[1][0], c: resHcw.rHcw[2][0], rd: resHcw.drHcw[0][0], id: resHcw.drHcw[1][0], cd: resHcw.drHcw[2][0]},
         a: 0.025
     }));
+    closeAll();
 }
 
 function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
