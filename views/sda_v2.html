@@ -6,9 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDA</title>
     <script src="../SupportLibraries/math.js"></script>
+    <script src="./js/sda_sensors.js"></script>
     <script src="./js/sda_v2.js" defer></script>
+
+    <style>
+        #sensor-list {
+            position: fixed;
+            width: 40%;
+            right: 5%;
+            top: 1%;
+            min-height: 20px;
+            z-index: 2;
+        }
+        input {
+            padding: 5px;
+            border-radius: 5px;
+        }
+        #cov-display, #coe-display {
+            padding: 5px;
+        }
+    </style>
 </head>
 <body>
-    <input type="text" oninput="importState(this)">
+    <div id="sensor-list"></div>
+    <div><input type="date" name="" id="date-input" oninput="timeChange(this)"><input type="time" name="" id="time-input" oninput="timeChange(this)"></div>
+    <div>
+        <input type="text" placeholder="SDA Report Input" oninput="importState(this)"> -or- <input style="width: 12ch;" type="Number" placeholder="Longitude" id="long-input"> <button onclick="addSatellite(this)">Create GEO Sat</button>
+    </div>
+    <div id="coe-display"></div>
+    <div>
+        <input type="Number" placeholder="6"> hrs
+        <button onclick="getObHistory(event)">Generate Obs</button>
+        <button onclick="estimateCovariance()">Estimate Covariance</button>
+    </div>
+    <div id="cov-display"></div>
+    <div id="ob-list"></div>
 </body>
 </html>
