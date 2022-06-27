@@ -124,7 +124,7 @@ let sensors = [
         active: false
     },
     {
-        type: 'optical',
+        type: 'radar',
         name: 'Maui Radar',
         noise: {
             angle: 0.031, //deg
