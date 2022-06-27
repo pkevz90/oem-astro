@@ -69,7 +69,6 @@ function exportFile() {
     // Add gaussian error to the initial state
     let rEci2Eci = Ric2EciRedux(state.slice(0,3), state.slice(3,6))
     let stateCov = covFromInputs(rEci2Eci)
-    
     let P = math.dotMultiply(1e6, math.multiply(stateCov, math.transpose(stateCov)))
     let initError = math.transpose(stateCov).reduce((a, b, ii) => {
         if (ii === 1) a = math.dotMultiply(a, normalRandom())
@@ -81,13 +80,13 @@ function exportFile() {
     let pEphemeris = []
     pEphemeris.push(`${t.toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
     stateEphemeris = [toExponentialDigits(t, 16, 2) + ' ' + state.map(s => toExponentialDigits(s, 16, 2)).join(' ')]
-    let timeDelta = 120
+    let timeDelta = 900
     let propTime = (endTime - timeDiff) > 86400 ? 86400 : endTime - timeDiff
+    let points = generateSigmaPoints(P, [state])
     for (let ii = timeDelta; ii <= propTime; ii+=timeDelta) {
-        let out = propCovariance(P, timeDelta, [state])
-        state = out.state
-        P = out.P
-        stateEphemeris.push(toExponentialDigits(t + ii, 16, 2) + ' ' + state.map(s => toExponentialDigits(s, 16, 2)).join(' '))
+        let pointsNew = points.map(s => propToTime(s.map(a => a / 1000), ii).map(a => a * 1000))
+        let {averagePoint, P} = calcSigmaProperties(pointsNew)
+        stateEphemeris.push(toExponentialDigits(t + ii, 16, 2) + ' ' + averagePoint.map(s => toExponentialDigits(s, 16, 2)).join(' '))
         pEphemeris.push(`${(t + ii).toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
         if (isNaN(state[0])) {
             alert('Error in state propagation');
@@ -218,10 +217,8 @@ function runge_kutta(dt = 10, state = [[42164000, 0, 0, 0, -3070, 0]] ) {
 
 function propCovariance(P, dt = 60, state) {
     let {s, w} = generateSigmaPoints(P, state)
-    // console.log(s,w);
-    // console.log(s);
     s = s.map(point => {
-        return [runge_kutta(dt, point)]
+        return [propToTime(point[0].map(s => s / 1000), dt).map(s => s * 1000)]
     })
     let estP = math.zeros([6,6])
     let estState = math.zeros([1,6])
@@ -234,10 +231,9 @@ function propCovariance(P, dt = 60, state) {
     return {P: estP, state: math.squeeze(estState)}
 }
 
-function generateSigmaPoints(P=[[25,0,0,0,0,0], [0,25,0,0,0,0],[0,0,25,0,0,0],[0,0,0,0.0001**2,0,0],[0,0,0,0,0.0001**2,0], [0,0,0,0,0,0.0001**2]], state = [[42164, 0, 0, 0, -((398600.4418 / 42164) ** (1/2)), 0]]) {
-    let L = 6
-    let w = [0.5]
+function generateSigmaPoints(P=[[25,0,0,0,0,0], [0,25,0,0,0,0],[0,0,25,0,0,0],[0,0,0,0.0001**2,0,0],[0,0,0,0,0.0001**2,0], [0,0,0,0,0,0.0001**2]], state = [[42164, 0, 0, 0, -((398600.4418 / 42164) ** (1/2)), 0]], n = 100) {
     let A = choleskyDecomposition(P)
+    
     for (let ii = 0; ii < A.length; ii++) {
         for (let jj = 0; jj < A.length; jj++) {
             if (isNaN(A[ii][jj])) {
@@ -250,17 +246,23 @@ function generateSigmaPoints(P=[[25,0,0,0,0,0], [0,25,0,0,0,0],[0,0,25,0,0,0],[0
             }
         }
     }
-    let s = [state]
-    for (let jj = 0; jj < L; jj++) {
-        s.push(math.transpose(math.add(math.transpose(state), math.dotMultiply((L / (1 - w[0])) ** (1/2), math.column(A, jj)))))
+    let s = []
+    for (let index = 0; index < n; index++) {
+        let stateCorr = state.slice()
+        for (let jj = 0; jj < 6; jj++) {
+            stateCorr = math.transpose(math.add(math.transpose(stateCorr), math.dotMultiply(normalRandom(), math.column(A, jj))))
+        }
+        s.push(stateCorr[0])
     }
-    for (let jj = 0; jj < L; jj++) {
-        s.push(math.transpose(math.subtract(math.transpose(state), math.dotMultiply((L / (1 - w[0])) ** (1/2), math.column(A, jj)))))
-    }
-    for (let jj = 0; jj < 2 * L; jj++) {
-        w.push((1 - w[0]) / 2 / L)    
-    }
-    return {s, w}
+    return s
+}
+
+function calcSigmaProperties(sigma) {
+    let averagePoint = sigma.reduce((a, b) => math.add(a,b), [0,0,0,0,0,0]).map(s => s / sigma.length)
+    // let std = sigma.reduce((a, b) => math.add(a,math.subtract(b, averagePoint).map(b => b ** 2)), [0,0,0,0,0,0]).map(s => s / sigma.length)
+    let std = sigma.map(s => math.subtract(s, averagePoint))
+    std = std.reduce((a, b) => math.add(a, math.multiply(math.transpose([b]), [b])), math.zeros([6,6])).map(s => s.map(t => t / sigma.length))
+    return {averagePoint, P: std}
 }
 
 function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]) {
@@ -408,7 +410,6 @@ function Ric2EciRedux(rC = [(398600.4418 / n ** 2)**(1/3), 0, 0], drC = [0, (398
     let R1 = math.concat(C, math.zeros([3,3]), 1)
     let R2 = math.concat(Cd, C, 1)
     let R = math.concat(R1, R2, 0)
-    console.log(R);
     return R
 }
 
@@ -420,4 +421,155 @@ function toExponentialDigits(inNumber = 1234, nDig = 3, nExp = 2) {
         inNumber[2] = 0 + inNumber[2]
     }
     return inNumber[0] + 'e' + inNumber[1] + inNumber[2]
+}
+
+function propToTime(state, dt) {
+    state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
+    state.tA = propTrueAnomaly(state.tA, state.a, state.e, dt)
+    state = Object.values(Coe2PosVelObject(state))
+    return state
+}
+
+function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
+    let mu = 398600.4418;
+    let rn = math.norm(r);
+    let vn = math.norm(v);
+    let h = math.cross(r, v);
+    let hn = math.norm(h);
+    let n = math.cross([0, 0, 1], h);
+    let nn = math.norm(n);
+    if (nn < 1e-6) {
+        n = [1, 0, 0];
+        nn = 1;
+    }
+    var epsilon = vn * vn / 2 - mu / rn;
+    let a = -mu / 2 / epsilon;
+    let e = math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn));
+    let en = math.norm(e);
+    if (en < 1e-6) {
+        e = n.slice();
+        en = 0;
+    }
+    let inc = Math.acos(math.dot(h, [0, 0, 1]) / hn);
+    let ra = Math.acos(math.dot(n, [1, 0, 0]) / nn);
+    if (n[1] < 0) {
+        ra = 2 * Math.PI - ra;
+    }
+
+    let ar, arDot;
+    if (en < 1e-6) {
+        arDot = math.dot(n, e) / nn;
+    } else {
+        arDot = math.dot(n, e) / en / nn;
+    }
+    if (arDot > 1) {
+        ar = 0;
+    } else if (arDot < -1) {
+        ar = Math.PI;
+    } else {
+        ar = Math.acos(arDot);
+    }
+    if (e[2] < 0) {
+        ar = 2 * Math.PI - ar;
+    } else if (inc < 1e-6 && e[1] < 0) {
+        ar = 2 * Math.PI - ar;
+    }
+    let ta, taDot;
+    if (en < 1e-6) {
+        taDot = math.dot(r, e) / rn / nn;
+    } else {
+        taDot = math.dot(r, e) / rn / en;
+    }
+    if (taDot > 1) {
+        ta = 0;
+    } else if (taDot < -1) {
+        ta = Math.PI;
+    } else {
+        ta = Math.acos(taDot);
+    }
+    if (math.dot(v, e) > 1e-6) {
+        ta = 2 * Math.PI - ta;
+    }
+    // console.log([a,en,inc,ra,ar,ta])
+    return {
+        a: a,
+        e: en,
+        i: inc,
+        raan: ra,
+        arg: ar,
+        tA: ta
+    };
+}
+
+function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, peri = false) {
+    let p = coe.a * (1 - coe.e * coe.e);
+    let cTa = Math.cos(coe.tA);
+    let sTa = Math.sin(coe.tA);
+    let r = [
+        [p * cTa / (1 + coe.e * cTa)],
+        [p * sTa / (1 + coe.e * cTa)],
+        [0]
+    ];
+    let constA = Math.sqrt(398600.4418 / p);
+    let v = [
+        [-constA * sTa],
+        [(coe.e + cTa) * constA],
+        [0]
+    ];
+    if (peri) return {
+        
+        x: r[0][0],
+        y: r[1][0],
+        z: r[2][0],
+        vx: v[0][0],
+        vy: v[1][0],
+        vz: v[2][0]
+    }
+    let cRa = Math.cos(coe.raan);
+    let sRa = Math.sin(coe.raan);
+    let cAr = Math.cos(coe.arg);
+    let sAr = Math.sin(coe.arg);
+    let cIn = Math.cos(coe.i);
+    let sin = Math.sin(coe.i);
+    R = [
+        [cRa * cAr - sRa * sAr * cIn, -cRa * sAr - sRa * cAr * cIn, sRa * sin],
+        [sRa * cAr + cRa * sAr * cIn, -sRa * sAr + cRa * cAr * cIn, -cRa * sin],
+        [sAr * sin, cAr * sin, cIn]
+    ];
+    r = math.multiply(R, r);
+    v = math.multiply(R, v);
+    let state = [r, v];
+    return {
+        x: state[0][0][0],
+        y: state[0][1][0],
+        z: state[0][2][0],
+        vx: state[1][0][0],
+        vy: state[1][1][0],
+        vz: state[1][2][0]
+    };
+}
+
+function propTrueAnomaly(tA = 0, a = 10000, e = 0.1, time = 3600) {
+    function True2Eccentric(e, ta) {
+        return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+    }
+    function Eccentric2True(e,E) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
+    }
+    
+    function solveKeplersEquation(M,e) {
+        let E = M;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+            E -= del;
+        }
+        return E;
+    }
+
+    let eccA = True2Eccentric(e, tA)
+    let meanA = eccA - e * Math.sin(eccA)
+    meanA += Math.sqrt(398600.4418 / (a ** 3)) * time
+    eccA = solveKeplersEquation(meanA, e)
+    return Eccentric2True(e, eccA)
 }

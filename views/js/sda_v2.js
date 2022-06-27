@@ -392,7 +392,7 @@ function listObs(obs) {
 
         let div = document.createElement("div")
         div.innerHTML = `${a.split(' GMT')[0]}--${mainWindow.sensors[ob.sensor].name} <button ob="${ii}" onclick="deleteOb(event)">Delete</button>`
-        div.title = `Az: ${(ob.obs[0] * 180 / Math.PI).toFixed(1)} El: ${(ob.obs[1] * 180 / Math.PI).toFixed(1)}`
+        div.title = `Az: ${(ob.obs[0] * 180 / Math.PI).toFixed(1)} El: ${(ob.obs[1] * 180 / Math.PI).toFixed(1)}` + (mainWindow.sensors[ob.sensor].type === 'radar' ? ` R: ${ob.obs[2]} km` : '')
         obDiv.append(div)
     })
 }
@@ -655,13 +655,83 @@ function timeChange(t) {
     mainWindow.satellites[0].origState = propToTime(mainWindow.satellites[0].origState, delta)
     mainWindow.startTime = a
     updateTime(a)
+    updateCoeDisplay()
 }
 
 function updateCoeDisplay() {
     let div = document.getElementById('coe-display')
     div.innerHTML = ''
     let coes = PosVel2CoeNew(mainWindow.satellites[0].origState.slice(0,3), mainWindow.satellites[0].origState.slice(3,6))
-    div.innerHTML = `a: ${coes.a.toFixed(1)} / e: ${coes.e.toFixed(4)} / Inc: ${(coes.i * 180 / Math.PI).toFixed(1)} / RAAN: ${(coes.raan * 180 / Math.PI).toFixed(1)} / Arg Per: ${(coes.arg * 180 / Math.PI).toFixed(1)} / True A: ${(coes.tA * 180 / Math.PI).toFixed(1)}`
+    div.innerHTML = `a: <span coe="a" contentEditable="true" oninput="coeChange(this)">${coes.a.toFixed(1)}</span> / 
+        e: <span coe="e" contentEditable="true" oninput="coeChange(this)">${coes.e.toFixed(4)}</span> / 
+        Inc: <span coe="i" contentEditable="true" oninput="coeChange(this)">${(coes.i * 180 / Math.PI).toFixed(1)}</span> / 
+        RAAN: <span coe="raan" contentEditable="true" oninput="coeChange(this)">${(coes.raan * 180 / Math.PI).toFixed(1)}</span> / 
+        Arg Per: <span coe="arg" contentEditable="true" oninput="coeChange(this)">${(coes.arg * 180 / Math.PI).toFixed(1)}</span> / 
+        True A: <span coe="tA" contentEditable="true" oninput="coeChange(this)">${(coes.tA * 180 / Math.PI).toFixed(1)}</span>`
+}
+
+function coeChange(t) {
+    let value = Number(t.innerHTML)
+    if (Number.isNaN(value)) {
+        t.style.color = 'red'
+        return
+    }
+    else {
+        t.style.color = 'black'
+    }
+    let c = PosVel2CoeNew(mainWindow.satellites[0].origState.slice(0,3), mainWindow.satellites[0].origState.slice(3,6))
+    let att = t.getAttribute('coe')
+    c[att] = att === 'a' || att === 'e' ? value : value * Math.PI / 180
+    // Check SMA
+    if (c.a < 6600 || c.a > 60000) {
+        t.style.color = 'red'
+        return
+    } 
+    else {
+        t.style.color = 'black'
+    }
+    // Check Ecc
+    if (c.e < 0 || c.e > 0.95) {
+        t.style.color = 'red'
+        return
+    } 
+    else {
+        t.style.color = 'black'
+    }
+    // Check Inc
+    if (c.i < 0 || c.i > 2 * Math.PI) {
+        t.style.color = 'red'
+        return
+    } 
+    else {
+        t.style.color = 'black'
+    }
+    // Check RAAN
+    if (c.raan < 0 || c.raan > 2 * Math.PI) {
+        t.style.color = 'red'
+        return
+    } 
+    else {
+        t.style.color = 'black'
+    }
+    // Check Arg
+    if (c.arg < 0 || c.arg > 2 * Math.PI) {
+        t.style.color = 'red'
+        return
+    } 
+    else {
+        t.style.color = 'black'
+    }
+    // Check True A
+    if (c.tA < 0 || c.tA > 2 * Math.PI) {
+        t.style.color = 'red'
+        return
+    } 
+    else {
+        t.style.color = 'black'
+    }
+
+    mainWindow.satellites[0].origState = Object.values(Coe2PosVelObject(c));
 }
 
 function Eci2Ric() {

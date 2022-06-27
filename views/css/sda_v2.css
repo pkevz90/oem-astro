@@ -1,0 +1,38 @@
+#sensor-list {
+    position: fixed;
+    width: auto;
+    left: 51%;
+    top: 1%;
+    min-height: 20px;
+    z-index: 2;
+    font-size: 2em;
+}
+input {
+    padding: 5px;
+    border-radius: 5px;
+}
+#cov-display, #coe-display {
+    padding: 5px;
+}
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Safari */
+        -khtml-user-select: none; /* Konqueror HTML */
+        -moz-user-select: none; /* Old versions of Firefox */
+            -ms-user-select: none; /* Internet Explorer/Edge */
+                user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome, Edge, Opera and Firefox */
+}
+#results-display {
+    position: fixed;
+    width: auto;
+    left: 1%;
+    top: 1%;
+    min-height: 20px;
+    z-index: 2;
+    font-size: 1em;
+}
+#ob-list {
+    max-height: 800px;
+    overflow-y: scroll;
+}
