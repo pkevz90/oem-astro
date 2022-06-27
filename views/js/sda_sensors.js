@@ -15,6 +15,62 @@ let sensors = [
     },
     {
         type: 'radar',
+        name: 'Clear',
+        noise: {
+            angle: 0.079, //deg
+            r: 0.0625, //km
+        },
+        lat: 64.29, //deg
+        long: -149.19, //deg
+        azMask: [170, 470],
+        elMask: [3,90],
+        maxRange: 4910,
+        active: false
+    },
+    {
+        type: 'radar',
+        name: 'Cape Cod',
+        noise: {
+            angle: 0.026, //deg
+            r: 0.026, //km
+        },
+        lat: 41.75, //deg
+        long: -70.54, //deg
+        azMask: [-13, 227],
+        elMask: [3,80],
+        maxRange: 5555,
+        active: false
+    },
+    {
+        type: 'radar',
+        name: 'Thule',
+        noise: {
+            angle: 0.026, //deg
+            r: 0.026, //km
+        },
+        lat: 76.57, //deg
+        long: -68.3, //deg
+        azMask: [-63, 177],
+        elMask: [3,80],
+        maxRange: 5555,
+        active: false
+    },
+    {
+        type: 'radar',
+        name: 'Cavalier',
+        noise: {
+            angle: 0.0125, //deg
+            r: 0.026, //km
+        },
+        lat: 48.72, //deg
+        long: -97.9, //deg
+        azMask: [-47, 62],
+        elMask: [2,45],
+        maxRange: 3300,
+        active: false
+    },
+    {
+        type: 'radar',
         name: 'Beale',
         noise: {
             angle: 0.033, //deg
@@ -69,6 +125,20 @@ let sensors = [
     },
     {
         type: 'optical',
+        name: 'Maui Radar',
+        noise: {
+            angle: 0.031, //deg
+            r: 0.1629 //km
+        },
+        lat: 20.71, //deg
+        long: -156.26, //deg
+        azMask: [],
+        elMask: [20,90],
+        maxRange: 60000,
+        active: false
+    },
+    {
+        type: 'optical',
         name: 'Diego Garcia',
         noise: {
             angle: 0.0035, //deg
@@ -110,7 +180,7 @@ let sensors = [
     },
     {
         type: 'space',
-        name: 'Sat-1',
+        name: 'Leo-1',
         noise: {
             angle: 0.005, //deg
         },
