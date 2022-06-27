@@ -81,13 +81,20 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
 function estimateCovariance(sat = 0) {
     let blsMatrices = createJacobian(sat)
     let a = math.inv(math.multiply(math.transpose(blsMatrices.jac), blsMatrices.w, blsMatrices.jac))
-    console.log(choleskyDecomposition(a));
     let eigs
+    let r = Eci2Ric()
+    a = math.multiply(math.transpose(r), a, r)
+    console.log(choleskyDecomposition(a));
+    navigator.clipboard.writeText(JSON.stringify({std: a}))
     try {
-        eigs = math.eigs(a).values.map(s => s ** 0.5);
+        eigs = math.eigs(a).values.map(s => s ** 0.5).map(s => Number.isNaN(Number(s)) ? 0 : s);
     } catch (error) {
-        eigs = error.values.map(s => s ** 0.5);
+        eigs = error.values.map(s => s ** 0.5).map(s => Number.isNaN(Number(s)) ? 0 : s);
+        console.log(error);
     }
+    approxEigenvector(a.slice(0,3).map(s => s.slice(0,3)))
+    approxEigenvector(a.slice(3,6).map(s => s.slice(3,6)))
+    console.log(eigs);
     let div = document.getElementById('cov-display')
     div.innerHTML = `Largest Position Error: ${Math.max(...eigs).toFixed(3)} km, Largest Velocity Error: ${(Math.max(...eigs.slice(0,3)) * 1000).toFixed(2)} m/s`
     return a
@@ -126,7 +133,7 @@ function checkSensors(sat = [], time, options ={}) {
             // Check if sun behind optical sensor
             let cats = math.acos(math.dot(relativeSatState, sunPosUnit) / math.norm(relativeSatState)) * 180 / Math.PI
             // console.log(cats);
-            if (cats < 110 && mainWindow.sensors[index].type === 'optical' && mask) continue
+            if (cats < 105 && mainWindow.sensors[index].type === 'optical' && mask) continue
             // Check if satellite in direct sunlight
             let check = lineSphereIntercetionBool(sunPosUnit, sat.slice(0,3), [0,0,0], sphereRadius=6500)
             if (check && mask && mainWindow.sensors[index].type === 'optical') continue
@@ -562,6 +569,7 @@ function updateSensors(sensors) {
         div.innerHTML = `
             <label for="sensor-${ii}">${s.name}</label> <input id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorActivation(this)"/>
         `
+        div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
         sensDiv.append(div)
     })
 }
@@ -656,7 +664,41 @@ function updateCoeDisplay() {
     div.innerHTML = `a: ${coes.a.toFixed(1)} / e: ${coes.e.toFixed(4)} / Inc: ${(coes.i * 180 / Math.PI).toFixed(1)} / RAAN: ${(coes.raan * 180 / Math.PI).toFixed(1)} / Arg Per: ${(coes.arg * 180 / Math.PI).toFixed(1)} / True A: ${(coes.tA * 180 / Math.PI).toFixed(1)}`
 }
 
+function Eci2Ric() {
+    let rC = mainWindow.satellites[0].origState.slice(0,3)
+    let drC = mainWindow.satellites[0].origState.slice(3,6)
+    let h = math.cross(rC, drC);
+    let ricX = math.dotDivide(rC, math.norm(rC));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+
+    let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+    let ricYd = math.cross(ricZ, ricXd);
+    let ricZd = [0,0,0];
+
+    let C = math.transpose([ricX, ricY, ricZ]);
+    let Cd = math.transpose([ricXd, ricYd, ricZd]);
+    let R1 = math.concat(C, math.zeros([3,3]), 1)
+    let R2 = math.concat(Cd, C, 1)
+    let R = math.concat(R1, R2, 0)
+    return R
+}
+
 mainWindow.sensors = sensors
 updateTime()
 updateSensors(mainWindow.sensors)
 addSatellite()
+
+function approxEigenvector(A = [[0.5, 0.4], [0.2, 0.8]]) {
+    guess = math.zeros([A.length, 1]).map(s => [math.random()])
+    for (let index = 0; index < 100; index++) {
+        guess = math.multiply(A, guess)
+        guess = math.dotDivide(guess, math.norm(math.squeeze(guess)))
+    }
+    let eigenVal = (math.multiply(math.transpose(guess), A, guess)[0] / math.multiply(math.transpose(guess), guess)[0])
+    console.log(math.squeeze(guess));
+    console.log(eigenVal);
+    console.log(math.multiply(A, guess));
+    
+    console.log(math.dotMultiply(eigenVal, guess));
+}

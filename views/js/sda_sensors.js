@@ -82,7 +82,7 @@ let sensors = [
     },
     {
         type: 'radar',
-        name: 'Kwaj',
+        name: 'Kwajalein',
         noise: {
             angle: 0.031, //deg
             r: 0.1629 //km

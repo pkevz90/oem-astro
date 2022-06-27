@@ -12,11 +12,12 @@
     <style>
         #sensor-list {
             position: fixed;
-            width: 40%;
-            right: 5%;
+            width: auto;
+            left: 51%;
             top: 1%;
             min-height: 20px;
             z-index: 2;
+            font-size: 2em;
         }
         input {
             padding: 5px;
@@ -25,21 +26,45 @@
         #cov-display, #coe-display {
             padding: 5px;
         }
+        .noselect {
+            -webkit-touch-callout: none; /* iOS Safari */
+                -webkit-user-select: none; /* Safari */
+                -khtml-user-select: none; /* Konqueror HTML */
+                -moz-user-select: none; /* Old versions of Firefox */
+                    -ms-user-select: none; /* Internet Explorer/Edge */
+                        user-select: none; /* Non-prefixed version, currently
+                                            supported by Chrome, Edge, Opera and Firefox */
+        }
+        #results-display {
+            position: fixed;
+            width: auto;
+            left: 1%;
+            top: 1%;
+            min-height: 20px;
+            z-index: 2;
+            font-size: 1em;
+        }
+        #ob-list {
+            max-height: 800px;
+            overflow-y: scroll;
+        }
     </style>
 </head>
-<body>
+<body class="noselect">
     <div id="sensor-list"></div>
-    <div><input type="date" name="" id="date-input" oninput="timeChange(this)"><input type="time" name="" id="time-input" oninput="timeChange(this)"></div>
-    <div>
-        <input type="text" placeholder="SDA Report Input" oninput="importState(this)"> -or- <input style="width: 12ch;" type="Number" placeholder="Longitude" id="long-input"> <button onclick="addSatellite(this)">Create GEO Sat</button>
+    <div id="results-display">
+        <div><input type="date" name="" id="date-input" oninput="timeChange(this)"><input type="time" name="" id="time-input" oninput="timeChange(this)"></div>
+        <div>
+            <input type="text" placeholder="SDA Report Input" oninput="importState(this)"> -or- <input style="width: 12ch;" type="Number" placeholder="Longitude" id="long-input"> <button onclick="addSatellite(this)">Create GEO Sat</button>
+        </div>
+        <div id="coe-display"></div>
+        <div>
+            <input type="Number" placeholder="6"> hrs
+            <button onclick="getObHistory(event)">Generate Obs</button>
+            <button onclick="estimateCovariance()">Estimate Covariance</button>
+        </div>
+        <div id="cov-display"></div>
+        <div id="ob-list"></div>
     </div>
-    <div id="coe-display"></div>
-    <div>
-        <input type="Number" placeholder="6"> hrs
-        <button onclick="getObHistory(event)">Generate Obs</button>
-        <button onclick="estimateCovariance()">Estimate Covariance</button>
-    </div>
-    <div id="cov-display"></div>
-    <div id="ob-list"></div>
 </body>
 </html>
