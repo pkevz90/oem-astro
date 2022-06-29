@@ -81,23 +81,64 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
 function estimateCovariance(sat = 0) {
     let blsMatrices = createJacobian(sat)
     let a = math.inv(math.multiply(math.transpose(blsMatrices.jac), blsMatrices.w, blsMatrices.jac))
-    let eigs
     let r = Eci2Ric()
     a = math.multiply(math.transpose(r), a, r)
     console.log(choleskyDecomposition(a));
-    navigator.clipboard.writeText(JSON.stringify({std: a}))
     try {
-        eigs = math.eigs(a).values.map(s => s ** 0.5).map(s => Number.isNaN(Number(s)) ? 0 : s);
+        console.log(math.eigs(a));
     } catch (error) {
-        eigs = error.values.map(s => s ** 0.5).map(s => Number.isNaN(Number(s)) ? 0 : s);
-        console.log(error);
+        console.log(error.values);
     }
-    approxEigenvector(a.slice(0,3).map(s => s.slice(0,3)))
-    approxEigenvector(a.slice(3,6).map(s => s.slice(3,6)))
-    console.log(eigs);
+    navigator.clipboard.writeText(JSON.stringify({std: a}))
+    let sigData = createSigmaPoints(mainWindow.satellites[0].origState, a)
     let div = document.getElementById('cov-display')
-    div.innerHTML = `Largest Position Error: ${Math.max(...eigs).toFixed(3)} km, Largest Velocity Error: ${(Math.max(...eigs.slice(0,3)) * 1000).toFixed(2)} m/s`
+    div.innerHTML = `StD Position Error: ${sigData.aveRange.toFixed(2)} km, StD Velocity Error: ${(sigData.aveRelVel * 1000).toFixed(2)} m/s`
     return a
+}
+
+function normalRandom() {
+    var val, u, v, s, mul;
+    spareRandom = null;
+    if(spareRandom !== null)
+    {
+        val = spareRandom;
+        spareRandom = null;
+    }
+    else
+    {
+        do
+        {
+            u = Math.random()*2-1;
+            v = Math.random()*2-1;
+
+            s = u*u+v*v;
+        } while(s === 0 || s >= 1);
+
+        mul = Math.sqrt(-2 * Math.log(s) / s);
+
+        val = u * mul;
+        spareRandom = v * mul;
+    }
+    
+    return val;
+}
+
+function createSigmaPoints(state, cov, n = 1000) {
+    cov = math.transpose(choleskyDecomposition(cov))
+    let sigmas = []
+    for (let i = 0; i < n; i++) {
+        let sigmaState = state.slice()
+        for (let j = 0; j < cov.length; j++) {
+            sigmaState = math.add(sigmaState, math.dotMultiply(normalRandom(), cov[j]))
+        }
+        sigmas.push(sigmaState)
+    }
+
+    console.log(state);
+    let aveState = sigmas.reduce((a,b) => math.add(a, b), [0,0,0,0,0,0]).map(s => s/sigmas.length)
+    let aveRange = (sigmas.reduce((a,b) => a + math.norm(math.subtract(b.slice(0,3), aveState.slice(0,3))) ** 2, 0) / sigmas.length) ** 0.5
+    let aveRelVel = (sigmas.reduce((a,b) => a + math.norm(math.subtract(b.slice(3,6), aveState.slice(3,6))) ** 2, 0) / sigmas.length) ** 0.5
+    return {aveRange, aveRelVel}
 }
 
 function checkSensors(sat = [], time, options ={}) {
@@ -108,20 +149,26 @@ function checkSensors(sat = [], time, options ={}) {
     let sunPos = math.subtract(math.squeeze(math.multiply(rotationMatrices(360 * time / 31556952 , 3), math.transpose([mainWindow.initSun]))), sat.slice(0,3))
     let sunPosUnit = math.dotDivide(sunPos, math.norm(sunPos))
     let obs = []
+    let obDate = new Date((new Date(mainWindow.startTime)) - (-time*1000))
     for (let ii = 0; ii < sensors.length; ii++) {
         let index = sensors[ii]
         if (!mainWindow.sensors[index].active) continue
+        if (mainWindow.sensors[index].avail.length > 0) {
+            if (obDate < mainWindow.sensors[index].avail[0] || obDate > mainWindow.sensors[index].avail[1]) continue
+        }
+
         if (mainWindow.sensors[index].type === 'optical' || mainWindow.sensors[index].type === 'radar') {
             let pastSensorObs = pastObs.filter(s => s.sensor === index).filter(ob => math.abs(ob.time - time) < obLimit)
             if (pastSensorObs.length > 0 && mask) continue
-            let sensorPos = math.dotMultiply(mainWindow.planet.r, [math.cos(mainWindow.sensors[index].long * Math.PI / 180) * math.cos(mainWindow.sensors[index].lat * Math.PI / 180),
-                             math.sin(mainWindow.sensors[index].long * Math.PI / 180) * math.cos(mainWindow.sensors[index].lat * Math.PI / 180),
-                             math.sin(mainWindow.sensors[index].lat * Math.PI / 180)])
-            sensorPos = math.squeeze(math.multiply(sidRot, sensorPos))
+            let sensorPos = sensorGeodeticPosition(mainWindow.sensors[index].lat, mainWindow.sensors[index].long, 0)
+            let vert = sensorPos.vert
+            sensorPos = sensorPos.r
+            sensorPos = fk5Reduction(sensorPos, obDate)
+            vert = math.squeeze(math.multiply(sidRot, vert))
             // Check if sensor in direct sunlight
             let siteCats = math.acos(math.dot(sensorPos, sunPosUnit) / math.norm(sensorPos)) * 180 / Math.PI
-            // console.log(siteCats);
             if (siteCats < 90 && mainWindow.sensors[index].type === 'optical' && mask) continue
+            // let topoZ = math.dotDivide(vert, math.norm(vert))
             let topoZ = math.dotDivide(sensorPos, math.norm(sensorPos))
             let topoX = math.cross([0,0,1], topoZ)
             topoX = math.dotDivide(topoX, math.norm(topoX))
@@ -388,11 +435,11 @@ function listObs(obs) {
     let obDiv = document.getElementById('ob-list')
     obDiv.innerHTML = ''
     obs.forEach((ob, ii) => {
-        let a = (new Date(mainWindow.startTime.getTime() + ob.time* 1000)).toString()
-
+        let a = new Date(new Date(mainWindow.startTime.getTime() + ob.time* 1000))
+        a = `${padNumber(a.getHours())}:${padNumber(a.getMinutes())}z ${a.getMonth()+1}/${a.getDate()}/${a.getFullYear()}`
         let div = document.createElement("div")
-        div.innerHTML = `${a.split(' GMT')[0]}--${mainWindow.sensors[ob.sensor].name} <button ob="${ii}" onclick="deleteOb(event)">Delete</button>`
-        div.title = `Az: ${(ob.obs[0] * 180 / Math.PI).toFixed(1)} El: ${(ob.obs[1] * 180 / Math.PI).toFixed(1)}` + (mainWindow.sensors[ob.sensor].type === 'radar' ? ` R: ${ob.obs[2]} km` : '')
+        div.innerHTML = `${a}--${mainWindow.sensors[ob.sensor].name} <button ob="${ii}" onclick="deleteOb(event)">X</button>`
+        div.title = `Az: ${(ob.obs[0] * 180 / Math.PI).toFixed(1)} El: ${(ob.obs[1] * 180 / Math.PI).toFixed(1)}` + (mainWindow.sensors[ob.sensor].type === 'radar' ? ` R: ${ob.obs[2].toFixed(2)} km` : '')
         obDiv.append(div)
     })
 }
@@ -556,8 +603,57 @@ function propTrueAnomaly(tA = 0, a = 10000, e = 0.1, time = 3600) {
     return Eccentric2True(e, eccA)
 }
 
-function changeSensorActivation(s) {
-    mainWindow.sensors[s.getAttribute('sensor')].active = s.checked
+function changeSensorProperty(s) {
+    let ob = s.getAttribute('ob')
+    let sens = s.getAttribute('sensor')
+    if (ob === 'active') {
+        mainWindow.sensors[sens].active = s.checked
+    }
+    else if (ob === 'avail') {
+        let avail = s.innerText
+        avail = avail.split('/')
+        if (avail[0].toLowerCase() === 'all') {
+            s.style.color = 'black'
+            mainWindow.sensors[sens].avail = []
+            return
+        }
+        avail[0] = Number(avail[0])
+        if (avail.length < 2 || Number.isNaN(avail[0]) || avail[0] < 0 || avail > 31) {
+            s.style.color = 'red'
+            return
+        }
+        else s.style.color = 'black'
+        let date = avail[0]
+        avail = avail[1].split('-')
+        if (avail.length < 2 || avail.filter(a => a.length === 4).length < 2) {
+            s.style.color = 'red'
+            return
+        }
+        else s.style.color = 'black'
+        let startDate = new Date(mainWindow.startTime)
+        startDate.setDate(date)
+        startDate.setHours(avail[0].slice(0,2))
+        startDate.setMinutes(avail[0].slice(2,4))
+        startDate.setSeconds(0)
+        let endDate = new Date(mainWindow.startTime)
+        endDate.setDate((avail[0].slice(0,2)*60 + avail[0].slice(2,4)*1) > (avail[1].slice(0,2)*60 + avail[1].slice(2,4)*1) ? date + 1 : date)
+        endDate.setHours(avail[1].slice(0,2))
+        endDate.setMinutes(avail[1].slice(2,4))
+        endDate.setSeconds(0)
+        if (startDate == 'Invalid Date' || endDate == 'Invalid Date') {
+            s.style.color = 'red'
+            return
+        }
+        else s.style.color = 'black'
+        mainWindow.sensors[sens].avail = [startDate, endDate]
+    }
+}
+
+function padNumber(num = 0, n = 2) {
+    num = `${num}`
+    num = num.split('.')
+    while (num[0].length < n) num[0] = '0' + num[0]
+    return num.join('.')
 }
 
 function updateSensors(sensors) {
@@ -565,9 +661,10 @@ function updateSensors(sensors) {
     sensDiv.innerHTML = ''
     sensors.forEach((s, ii) => {
         let div = document.createElement("div")
-        div.style.textAlign = 'right'
+        div.style.textAlign = 'center'
+        let avail = s.avail.length === 0 ? 'All' : `${s.avail[0].getDate()}/${padNumber(s.avail[0].getHours())}${padNumber(s.avail[0].getMinutes())}-${padNumber(s.avail[1].getHours())}${padNumber(s.avail[1].getMinutes())}`
         div.innerHTML = `
-            <label for="sensor-${ii}">${s.name}</label> <input id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorActivation(this)"/>
+            <label for="sensor-${ii}">${s.name}</label> <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> <span style="font-size: 0.5em">Avail: <span contentEditable="true" ob="avail" sensor="${ii}" oninput="changeSensorProperty(this)">${avail}</span></span>
         `
         div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
         sensDiv.append(div)
@@ -591,9 +688,30 @@ function sunFromTime(jdUti=2449444.5) {
      ]
 }
 
-function siderealTime(jdUti=2448855.009722) {
-    let tUti = (jdUti - 2451545) / 36525
-    return ((67310.548 + (876600*3600 + 8640184.812866)*tUti + 0.093104*tUti*tUti - 6.2e-6*tUti*tUti*tUti) % 86400)/240
+function saveCurrentSensors() {
+    let name = prompt('Name File: ','sensor')
+    if (name == null) return
+    name = name === '' ? 'sensors' : name
+    downloadFile(name + '.sassda', JSON.stringify(mainWindow.sensors))
+}
+
+function uploadSensors() {
+    if (event.target.id === 'upload-button') return document.getElementById('file-input').click()
+    let screenAlert = document.getElementsByClassName('screen-alert');
+    if (screenAlert.length > 0) screenAlert[0].remove();
+    loadFileAsText(event.path[0].files[0])
+}
+
+function loadFileAsText(fileToLoad) {
+    var fileReader = new FileReader();
+    fileReader.onload = function (fileLoadedEvent) {
+        var textFromFileLoaded = fileLoadedEvent.target.result;
+        let newSensors = JSON.parse(textFromFileLoaded);
+        for (let index = 0; index < newSensors.length; index++) newSensors[index].avail = newSensors[index].avail.map(s => new Date(s.replace('Z', '')))
+        mainWindow.sensors = newSensors
+        updateSensors(mainWindow.sensors)
+    };
+    fileReader.readAsText(fileToLoad, "UTF-8");
 }
 
 function julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
@@ -755,6 +873,11 @@ function Eci2Ric() {
 }
 
 mainWindow.sensors = sensors
+mainWindow.sensors.forEach(s => {
+    if (s.avail === undefined) {
+        s.avail = []
+    }
+})
 updateTime()
 updateSensors(mainWindow.sensors)
 addSatellite()
@@ -771,4 +894,98 @@ function approxEigenvector(A = [[0.5, 0.4], [0.2, 0.8]]) {
     console.log(math.multiply(A, guess));
     
     console.log(math.dotMultiply(eigenVal, guess));
+}
+
+function downloadFile(filename, text) {
+    var pom = document.createElement('a');
+    pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    pom.setAttribute('download', filename);
+
+    if (document.createEvent) {
+        var event = document.createEvent('MouseEvents');
+        event.initEvent('click', true, true);
+        pom.dispatchEvent(event);
+    } else {
+        pom.click();
+    }
+}
+
+function siderealTime(jdUti=2448855.009722) {
+    let tUti = (jdUti - 2451545) / 36525
+    return ((67310.548 + (876600*3600 + 8640184.812866)*tUti + 0.093104*tUti*tUti - 6.2e-6*tUti*tUti*tUti) % 86400)/240
+}
+
+function julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
+    return 367 * yr - Math.floor(7*(yr+Math.floor((mo+9)/12)) / 4) + Math.floor(275*mo/9) + d + 1721013.5 + ((s/60+min)/60+h)/24
+}
+
+function sensorGeodeticPosition(lat = 39.586667, long = -105.64, h = 4.347667) {
+    lat *= Math.PI / 180
+
+    // let eEarth = 0.081819221
+    let eEarth = 0.006694385 ** 0.5
+    let rEarth = 6378.1363
+    let rFocus = eEarth * rEarth
+
+    let cEarth = rEarth / (1 - eEarth ** 2 * Math.sin(lat) ** 2) ** 0.5
+    let sEarth = rEarth * (1 - eEarth ** 2) / (1 - eEarth ** 2 * Math.sin(lat) ** 2) ** 0.5
+    
+    let rSigma = (cEarth + h) * Math.cos(lat)
+    let rk = (sEarth + h) * Math.sin(lat)
+    // console.log(rSigma, rk / math.tan(lat));
+    r = math.squeeze(math.multiply(rotationMatrices(long, 3),math.transpose([[rSigma, 0, rk]])));
+    rij = math.dotDivide(r.slice(0,2) , math.norm(r.slice(0,2)) /(rk / math.tan(lat)))
+    // console.log(rij, r);
+    return {r, vert: [...rij, r[2]]};
+    
+}
+
+function fk5Reduction(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
+    // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
+    let jd_TT = julianDate(date.getFullYear(), date.getMonth(), date.getDate()) 
+    let t_TT = (jd_TT - 2451545) / 36525
+    let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
+    zeta /= 3600
+    let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
+    theta /= 3600
+    let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
+    z /= 3600
+    let p = math.multiply(rotationMatrices(-zeta, 3), rotationMatrices(theta, 2), rotationMatrices(-z, 3))
+    let thetaGmst = siderealTime(julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + date.getMilliseconds() / 1000))
+    let w = rotationMatrices(thetaGmst, 3)
+    r = math.multiply(p, w, math.transpose([r]))
+    return math.squeeze(r)
+}
+
+function fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
+    // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
+    let jd_TT = julianDate(date.getFullYear(), date.getMonth(), date.getDate()) 
+    let t_TT = (jd_TT - 2451545) / 36525
+    let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
+    zeta /= 3600
+    let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
+    theta /= 3600
+    let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
+    z /= 3600
+    let p = math.multiply(rotationMatrices(-zeta, 3), rotationMatrices(theta, 2), rotationMatrices(-z, 3))
+    let thetaGmst = siderealTime(julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + date.getMilliseconds() / 1000))
+    let w = rotationMatrices(thetaGmst, 3)
+    r = math.multiply(math.transpose(w), math.transpose(p), math.transpose([r]))
+    return math.squeeze(r)
+}
+
+
+function razel(r_eci=[-5505.504883, 56.449170, 3821.871726], date=new Date(1995, 4, 20, 3, 17, 02, 000), lat=39.007, long=-104.883, h = 2.187) {
+    let r_ecef = fk5ReductionTranspose(r_eci, date)
+    let r_site_ecef = sensorGeodeticPosition(lat, long, h).r
+    let rho = math.transpose([math.subtract(r_ecef, r_site_ecef)])
+    lat *= Math.PI / 180
+    long*= Math.PI / 180
+    let r = [[Math.sin(lat) * Math.cos(long), -Math.sin(long), Math.cos(lat) * Math.cos(long)],
+             [Math.sin(lat) * Math.sin(long), Math.cos(long), Math.cos(lat) * Math.sin(long)],
+             [-Math.cos(lat), 0, Math.sin(lat)]]
+    rho = math.squeeze(math.multiply(math.transpose(r), rho))
+    let el = Math.asin(rho[2] / math.norm(rho)) * 180 / Math.PI
+    let az = Math.atan2(rho[1], -rho[0]) * 180 / Math.PI
+    return {el, az}
 }
