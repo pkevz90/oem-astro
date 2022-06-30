@@ -161,52 +161,37 @@ function checkSensors(sat = [], time, options ={}) {
             let pastSensorObs = pastObs.filter(s => s.sensor === index).filter(ob => math.abs(ob.time - time) < obLimit)
             if (pastSensorObs.length > 0 && mask) continue
             let sensorPos = sensorGeodeticPosition(mainWindow.sensors[index].lat, mainWindow.sensors[index].long, 0)
-            let vert = sensorPos.vert
             sensorPos = sensorPos.r
             sensorPos = fk5Reduction(sensorPos, obDate)
-            vert = math.squeeze(math.multiply(sidRot, vert))
             // Check if sensor in direct sunlight
             let siteCats = math.acos(math.dot(sensorPos, sunPosUnit) / math.norm(sensorPos)) * 180 / Math.PI
             if (siteCats < 90 && mainWindow.sensors[index].type === 'optical' && mask) continue
-            // let topoZ = math.dotDivide(vert, math.norm(vert))
-            let topoZ = math.dotDivide(sensorPos, math.norm(sensorPos))
-            let topoX = math.cross([0,0,1], topoZ)
-            topoX = math.dotDivide(topoX, math.norm(topoX))
-            let topoY = math.cross(topoZ, topoX)
-            let rEciToTopo = rotMatrixFrames([topoX, topoY, topoZ])
             let relativeSatState = math.subtract(propSatState.slice(0,3), sensorPos)
             // Check if within range
             if (math.norm(relativeSatState.slice(0,3)) > mainWindow.sensors[index].maxRange && mask) continue
             // Check if sun behind optical sensor
             let cats = math.acos(math.dot(relativeSatState, sunPosUnit) / math.norm(relativeSatState)) * 180 / Math.PI
-            // console.log(cats);
-            if (cats < 105 && mainWindow.sensors[index].type === 'optical' && mask) continue
+            if (cats < 90 && mainWindow.sensors[index].type === 'optical' && mask) continue
             // Check if satellite in direct sunlight
             let check = lineSphereIntercetionBool(sunPosUnit, sat.slice(0,3), [0,0,0], sphereRadius=6500)
             if (check && mask && mainWindow.sensors[index].type === 'optical') continue
-            relativeSatState = math.squeeze(math.multiply(rEciToTopo, math.transpose([relativeSatState])))
-            let satAz = math.atan2(relativeSatState[0], relativeSatState[1])
-            let satEl = math.atan2(relativeSatState[2], math.norm(relativeSatState.slice(0,2)))
-            // console.log(satAz * 180 / Math.PI);
-            // console.log(satEl * 180 / Math.PI);
-            // console.log('break');
+            let {az, el, r} = razel(propSatState.slice(0,3), obDate, mainWindow.sensors[index].lat, mainWindow.sensors[index].long, 0)
             // Check if above horizon
-            if ((satEl * 180 / Math.PI) < mainWindow.sensors[index].elMask[0] && mask) continue
-            if ((satEl * 180 / Math.PI) > mainWindow.sensors[index].elMask[1] && mask) continue
+            if (el < mainWindow.sensors[index].elMask[0] && mask) continue
+            if (el > mainWindow.sensors[index].elMask[1] && mask) continue
             // Check if within az limits
             if (mainWindow.sensors[index].azMask.length > 0) {
-                let sensAz = satAz + 0
+                let sensAz = az * Math.PI / 180 + 0
                 sensAz = sensAz < 0 ? sensAz + 2 * Math.PI : sensAz
                 let maskWidth = (mainWindow.sensors[index].azMask[1] - mainWindow.sensors[index].azMask[0]) / 2
                 let maskCenter = maskWidth + mainWindow.sensors[index].azMask[0]
                 if (math.abs(sensAz * 180 / Math.PI - maskCenter) > maskWidth & mask) continue
             }
-            let satRange = math.norm(relativeSatState)
             if (mainWindow.sensors[index].type === 'optical' ) {
                 obs.push({
                     sensor: index,
                     time,
-                    obs: [satAz, satEl],
+                    obs: [az * Math.PI / 180, el * Math.PI / 180],
                     noise: [mainWindow.sensors[index].noise.angle, mainWindow.sensors[index].noise.angle].map(n => n * Math.PI / 180)
                 })
             }
@@ -214,7 +199,7 @@ function checkSensors(sat = [], time, options ={}) {
                 obs.push({
                     sensor: index,
                     time,
-                    obs: [satAz, satEl, satRange],
+                    obs: [az * Math.PI / 180, el * Math.PI / 180, r],
                     noise: [mainWindow.sensors[index].noise.angle * Math.PI / 180, mainWindow.sensors[index].noise.angle * Math.PI / 180, mainWindow.sensors[index].noise.r]
                 })
             }
@@ -229,7 +214,7 @@ function checkSensors(sat = [], time, options ={}) {
             let vertVec = math.dotDivide(propState.slice(0,3), math.norm(propState.slice(0,3)))
             let relativeSatState = math.subtract(propSatState.slice(0,3), propState.slice(0,3))
             let cats = math.acos(math.dot(relativeSatState, sunPosUnit) / math.norm(relativeSatState)) * 180 / Math.PI
-            if (cats < 110 && mask) {
+            if (cats < 90 && mask) {
                 console.log('out of view');
                 continue
             }
@@ -987,5 +972,6 @@ function razel(r_eci=[-5505.504883, 56.449170, 3821.871726], date=new Date(1995,
     rho = math.squeeze(math.multiply(math.transpose(r), rho))
     let el = Math.asin(rho[2] / math.norm(rho)) * 180 / Math.PI
     let az = Math.atan2(rho[1], -rho[0]) * 180 / Math.PI
-    return {el, az}
+    r = math.norm(rho)
+    return {el, az, r}
 }
