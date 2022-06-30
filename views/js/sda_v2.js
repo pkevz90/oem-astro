@@ -212,6 +212,7 @@ function checkSensors(sat = [], time, options ={}) {
             let propState = propToTime(mainWindow.sensors[index].state.slice(), delta)
 
             let vertVec = math.dotDivide(propState.slice(0,3), math.norm(propState.slice(0,3)))
+            vertVec = math.squeeze(math.multiply(rotationMatrices(mainWindow.sensors[index].elAngle, 3), math.transpose([vertVec])))
             let relativeSatState = math.subtract(propSatState.slice(0,3), propState.slice(0,3))
             let cats = math.acos(math.dot(relativeSatState, sunPosUnit) / math.norm(relativeSatState)) * 180 / Math.PI
             if (cats < 90 && mask) {
@@ -437,9 +438,37 @@ function deleteOb(t) {
     listObs(mainWindow.satellites[0].obs)
 }
 
-function propToTime(state, dt) {
+function propToTimeJ2(state, dt) {
     state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
-    state.tA = propTrueAnomaly(state.tA, state.a, state.e, dt)
+    state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
+    let j2 = 1.082626668e-3
+    let n = (398600.4418 / state.a / state.a / state.a) ** 0.5
+    let rEarth = 6378.1363
+    let p = state.a * (1 - state.e ** 2)
+    let raanJ2Rate = -3*n*rEarth*rEarth*j2*Math.cos(state.i) / 2 / p / p
+    let argJ2Rate = 3 * n * rEarth * rEarth * j2 * (4 - 5 * Math.sin(state.i) ** 2) / 4 / p / p 
+    state.raan += raanJ2Rate * dt
+    state.arg += argJ2Rate * dt
+    state = Object.values(Coe2PosVelObject(state))
+    return state
+}
+
+function propToTime(state, dt, j2 = true) {
+    state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
+    if (j2) {
+        state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
+        let j2 = 1.082626668e-3
+        let n = (398600.4418 / state.a / state.a / state.a) ** 0.5
+        let rEarth = 6378.1363
+        let p = state.a * (1 - state.e ** 2)
+        let raanJ2Rate = -3*n*rEarth*rEarth*j2*Math.cos(state.i) / 2 / p / p
+        let argJ2Rate = 3 * n * rEarth * rEarth * j2 * (4 - 5 * Math.sin(state.i) ** 2) / 4 / p / p 
+        state.raan += raanJ2Rate * dt
+        state.arg += argJ2Rate * dt
+    }
+    else {
+        state.tA = propTrueAnomaly(state.tA, state.a, state.e, dt)
+    }
     state = Object.values(Coe2PosVelObject(state))
     return state
 }
@@ -584,6 +613,37 @@ function propTrueAnomaly(tA = 0, a = 10000, e = 0.1, time = 3600) {
     let eccA = True2Eccentric(e, tA)
     let meanA = eccA - e * Math.sin(eccA)
     meanA += Math.sqrt(398600.4418 / (a ** 3)) * time
+    eccA = solveKeplersEquation(meanA, e)
+    return Eccentric2True(e, eccA)
+}
+
+function propTrueAnomalyj2(tA = 0, a = 10000, e = 0.1, i, time = 3600) {
+    function True2Eccentric(e, ta) {
+        return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+    }
+    function Eccentric2True(e,E) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
+    }
+    
+    let j2 = 1.082626668e-3
+    let n = (398600.4418 / a / a / a) ** 0.5
+    let rEarth = 6378.1363
+    let p = a * (1 - e ** 2)
+    let mAj2rate = -3 * n * rEarth * rEarth * j2 * (1 - e * e) * (3 * Math.sin(i) ** 2 - 2) / 4 / p / p
+    function solveKeplersEquation(M,e) {
+        let E = M;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+            E -= del;
+        }
+        return E;
+    }
+
+    let eccA = True2Eccentric(e, tA)
+    let meanA = eccA - e * Math.sin(eccA)
+    meanA += Math.sqrt(398600.4418 / (a ** 3)) * time
+    meanA += mAj2rate * time
     eccA = solveKeplersEquation(meanA, e)
     return Eccentric2True(e, eccA)
 }
