@@ -1788,6 +1788,7 @@ function handleContextClick(button) {
         mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
         mainWindow.setInitSun(parsedValues.newSun)
         mainWindow.originOrbit = parsedValues.originOrbit
+        mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
         mainWindow.satellites[sat].position = {
             r:  parsedValues.newState[0],
             i:  parsedValues.newState[1],
@@ -2721,7 +2722,7 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
         sat.genBurns();
         sat.calcTraj();
     });
-    sunIR = -Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(2, 4)) / 86400 * 2 * Math.PI;
+    sunIR = (Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(3, 5)*60)) / 86400 * 2 * Math.PI;
     sunC = Number(inputs[4].value) * Math.PI / 180;
     mainWindow.setInitSun([-Math.cos(sunIR) * Math.cos(sunC), Math.sin(sunIR) * Math.cos(sunC), Math.sin(sunC)]);
     mainWindow.startDate = new Date(date);
@@ -2993,12 +2994,15 @@ function openPanel(button) {
         inputs[0].value = dateDiff;
         inputs[1].value = mainWindow.scenarioLength;
         inputs[2].value = Math.pow(398600.4418 / Math.pow(mainWindow.mm, 2), 1/3).toFixed(2);
-        let sunTime = Math.round((24 * math.atan2(mainWindow.initSun[1], -mainWindow.initSun[0]) / 2 / Math.PI));
-        if (sunTime < 0) sunTime = math.round((sunTime + 24));
-        sunTime += '00';
-        if (sunTime.length < 4) sunTime = '0' + sunTime;
+        let sunAngle = math.atan2(mainWindow.initSun[1], -mainWindow.initSun[0]) * 180 / Math.PI
+        sunAngle = sunAngle < 0 ? sunAngle + 360 : sunAngle
+        let sunTime = math.floor(24 * sunAngle / 360).toFixed(0)
+        sunTime = sunTime.length < 2 ? '0' + sunTime : sunTime
+        let sunMinutes = math.floor((24 * sunAngle / 360 - math.floor(24 * sunAngle / 360)) * 60).toFixed(0)
+        sunMinutes = sunMinutes.length < 2 ? '0' + sunMinutes : sunMinutes
+        sunTime += ':' + sunMinutes
         inputs[3].value = sunTime;
-        inputs[4].value = 180 * math.atan2(mainWindow.initSun[2], math.norm(mainWindow.initSun.slice(0,2))) / Math.PI;
+        inputs[4].value = 180 * math.asin(mainWindow.initSun[2]) / Math.PI;
         inputs[10].value = Math.round(mainWindow.scenarioLength * 3600 / mainWindow.timeDelta)
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");

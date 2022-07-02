@@ -179,6 +179,20 @@ let sensors = [
         active: false
     },
     {
+        type: 'radar',
+        name: 'Baton Rouge',
+        noise: {
+            angle: 0.01, //deg
+            r: 0.15 //km
+        },
+        lat: 30.4333, //deg
+        long: -91.16667, //deg
+        azMask: [],
+        elMask: [10,90],
+        maxRange: 60000,
+        active: false
+    },
+    {
         type: 'space',
         name: 'Leo-1',
         noise: {

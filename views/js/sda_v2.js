@@ -89,7 +89,7 @@ function estimateCovariance(sat = 0) {
     } catch (error) {
         console.log(error.values);
     }
-    navigator.clipboard.writeText(JSON.stringify({std: a}))
+    navigator.clipboard.writeText(JSON.stringify({time: mainWindow.startTime, std: a}))
     let sigData = createSigmaPoints(mainWindow.satellites[0].origState, a)
     let div = document.getElementById('cov-display')
     div.innerHTML = `StD Position Error: ${sigData.aveRange.toFixed(2)} km, StD Velocity Error: ${(sigData.aveRelVel * 1000).toFixed(2)} m/s`
@@ -329,12 +329,22 @@ function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA:
 
 function convertObsToVector(obs) {
     obs = obs.map(ob => ob.obs)
-    return math.reshape(obs, [1,-1])[0]
+    let outObs = []
+    obs.forEach(ob => {
+        outObs = math.concat(outObs, ob)
+    })
+    return outObs
+    // return math.reshape(obs, [1,-1])[0]
 }
 
 function convertObsToWeightMatrix(obs) {
-    obs = math.reshape(obs.map(ob => ob.noise), [1,-1])[0].map(n => 1/n/n)
-    return math.diag(obs)
+    // let newObs = math.reshape(obs.map(ob => ob.noise), [1,-1])[0].map(n => 1/n/n)
+    let outObs = []
+    obs.forEach(ob => {
+        outObs = math.concat(outObs, ob.noise.map(n => 1/n/n))
+    })
+    return math.diag(outObs)
+    // return math.diag(newObs)
 }
 
 function createJacobian(sat, state) {
@@ -397,7 +407,7 @@ function importState(t) {
         return
     }
     let position = tV.slice(1,7).map(n => Number(n))
-    if (position.filter(p => Number.isNaN(p)).length > 0) {
+    if (position.filter(p => Number.isNaN(p)).length > 0 || position.length < 6) {
         t.value = ''
         alert('String Not Accepted')
         return
@@ -1018,7 +1028,6 @@ function fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], dat
     r = math.multiply(math.transpose(w), math.transpose(p), math.transpose([r]))
     return math.squeeze(r)
 }
-
 
 function razel(r_eci=[-5505.504883, 56.449170, 3821.871726], date=new Date(1995, 4, 20, 3, 17, 02, 000), lat=39.007, long=-104.883, h = 2.187) {
     let r_ecef = fk5ReductionTranspose(r_eci, date)
