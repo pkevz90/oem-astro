@@ -2,45 +2,100 @@ let mainWindow = {
     site: {
         lat: 30.4333,
         long: -91.16667,
-        h: 0
+        h: 10
     },
     sat: {
-        epoch: new Date('24 Jun 2022 18:00:00.000'),
+        epoch: new Date('24 Jun 2022 21:00:00.000'),
         coes: {
-            a: 42164.1,
+            a: 6900,
             e: 0,
-            i: 0,
+            i: 80*Math.PI / 180,
             raan: 0,
             arg: 0,
-            tA: 0
+            tA: 0 * Math.PI / 180
         }
     },
     startTime: new Date('24 Jun 2022 20:00:00.000')
 }
+
+function loopStartTime(startTime = mainWindow.startTime, loopTime = 72*3600, loopDelta = 60) {
+    let state = [...document.getElementsByClassName('vector')].map(s => Number(s.value))
+    let site = [...document.getElementsByClassName('site')].map(s => Number(s.value))
+    mainWindow.site = {lat: site[0], long: site[1], h: site[2]}
+    mainWindow.sat.coes = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
+    mainWindow.sat.epoch = new Date(document.getElementById('sat-epoch').value)
+    let options = []
+    let time = 0
+    while (time <= loopTime) {
+        let loopStart = new Date(startTime - (-time*1000))
+        let calc = calcInterceptTraj(mainWindow.site, mainWindow.sat, loopStart, 600)
+        let velOptions = [calc.v1Opt1.v1, calc.v1Opt2.v1].filter(s => s !== undefined)
+        velOptions.forEach(vel => {
+            let el = 90-180 / Math.PI * math.acos(math.dot(vel, calc.siteECI) / math.norm(vel) / math.norm(calc.siteECI));
+            if (el > 60) {
+                let groundVel = math.cross([0,0,2 * Math.PI / 86164], calc.siteECI)
+                let delV = math.norm(math.subtract(vel, groundVel))
+                options.push({
+                    time: loopStart.toString().split(' GMT')[0],
+                    startState: [...calc.siteECI, ...vel],
+                    tof: calc.tof,
+                    delV
+                })
+            }
+        })
+        time += loopDelta;
+    }
+    let resultsDiv = document.getElementById('results-div')
+    resultsDiv.innerHTML = ''
+    let newHtml = ''
+    let minIndex = options.findIndex(a => a.delV === Math.min(...options.map(s => s.delV))) 
+    
+    options.forEach((opt, ii) => {
+        newHtml += `<div ${ii === minIndex ? 'style="font-weight: bolder;"' : ''}>${opt.time} [${opt.startState.map(s => s.toFixed(3)).join(' ')}] ${(opt.tof / 60).toFixed(1)} min ${opt.delV.toFixed(3)} km/s</div>`
+    })
+    resultsDiv.innerHTML = newHtml
+    console.log(options);
+}
+
+function estTof(siteECI, satECI) {
+    function True2Eccentric(e, ta) {
+        return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+    }
+    let range = math.norm(math.subtract(siteECI, satECI.slice(0,3)))
+    siteECI = math.norm(siteECI.slice(0,3))
+    satECI = math.norm(satECI.slice(0,3))
+    let per = (siteECI+range) * 0.0147
+    let estA = (satECI + per) / 2
+    let estE = (satECI - per) / (satECI + per)
+    let n = (398600.4418 / estA ** 3) ** 0.5
+    let p = estA * (1 - estE ** 2)
+    let nu = math.acos((p / siteECI - 1) / estE)
+    let eccA = True2Eccentric(estE, nu)
+    let meanA = eccA - estE * Math.sin(eccA)
+    let tof = (Math.PI - meanA) / n
+    return tof
+}
+
 
 function calcInterceptTraj(site = mainWindow.site, sat = mainWindow.sat, startTime = mainWindow.startTime, tof=4*3600) {
     let jdTime = julianDate(startTime.getFullYear(), startTime.getMonth() + 1, startTime.getDate(), startTime.getHours(), startTime.getMinutes(), startTime.getSeconds() + tof)
     let sunEci = sunFromTime(jdTime)
     // sunEci = math.dotDivide(sunEci, math.norm(sunEci))
     let siteECEF = sensorGeodeticPosition(site.lat, site.long, site.h).r
-    let siteECI = fk5Reduction(siteECEF, mainWindow.startTime)
+    let siteECI = fk5Reduction(siteECEF, startTime)
     let satState = Object.values(Coe2PosVelObject(sat.coes))
+    tof = estTof(siteECI, satState)
     satState = propToTime(satState, (startTime - sat.epoch) / 1000 + tof, false)
     let v1Opt1 = solveLambertsProblem(siteECI, satState.slice(0,3), tof, 0, true)
     let v1Opt2 = solveLambertsProblem(siteECI, satState.slice(0,3), tof, 0, false)
-    let v1 = math.dot(v1Opt1.v1, siteECI) > 0 ? v1Opt1.v1 : v1Opt2.v1
-    let launchState = [...siteECI, ...v1];
-    console.log(Object.values(PosVel2CoeNew(launchState.slice(0,3), launchState.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s));
-    let launchStateFuture = propToTime(launchState, tof - 300, false)
-    let satStateFuture = propToTime(Object.values(Coe2PosVelObject(sat.coes)), (startTime - sat.epoch) / 1000 + tof - 300, false)
-    let relState = math.subtract(launchStateFuture, satStateFuture)
-    sunEci = math.add(sunEci, satStateFuture.slice(0,3))
-    let cats = math.acos(math.dot(relState.slice(0,3), sunEci) / math.norm(relState.slice(0,3)) / math.norm(sunEci)) * 180 / Math.PI
-    let rEci2Ric = Eci2Ric(satStateFuture)
-    let sunReal = [-8297524.301198  ,  139270648.018215   , 60388542.437474]
-    sunReal = math.dotDivide(sunReal, math.norm(sunReal))
-    console.log(math.multiply(math.transpose(rEci2Ric), sunEci),math.multiply(math.transpose(rEci2Ric), sunReal), math.multiply(math.transpose(rEci2Ric), relState.slice(0,3)));
-    console.log(cats, satStateFuture, launchStateFuture);
+    // let v1 = math.dot(v1Opt1.v1, siteECI) > 0 ? v1Opt1.v1 : v1Opt2.v1
+    // let launchState = [...siteECI, ...v1];
+    // let launchStateFuture = propToTime(launchState, tof - 300, false)
+    // let satStateFuture = propToTime(Object.values(Coe2PosVelObject(sat.coes)), (startTime - sat.epoch) / 1000 + tof - 300, false)
+    // let relState = math.subtract(launchStateFuture, satStateFuture)
+    // sunEci = math.add(sunEci, satStateFuture.slice(0,3))
+    // let cats = math.acos(math.dot(relState.slice(0,3), sunEci) / math.norm(relState.slice(0,3)) / math.norm(sunEci)) * 180 / Math.PI
+    return {v1Opt1, v1Opt2, siteECI, tof}
 }
 
 function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
@@ -429,3 +484,46 @@ function Eci2Ric(state) {
     let C = math.transpose([ricX, ricY, ricZ])
     return C
 }
+
+function handleInputs(target) {
+    let coesToVector = true
+    if (target !== undefined) {
+        coesToVector = [...target.classList].filter(s => s === 'coe').length > 0
+    }
+    if (coesToVector) {
+        let inputs = [...document.getElementsByClassName('coe')].map(s => Number(s.value))
+        inputs = {
+            a: inputs[0],
+            e: inputs[1],
+            i: inputs[2] * Math.PI / 180,
+            raan: inputs[3] * Math.PI / 180,
+            arg: inputs[4] * Math.PI / 180,
+            tA: inputs[5] * Math.PI / 180
+        }
+        if (inputs.e < 0) {
+            target.value = 0
+            return
+        }
+        let vector = Coe2PosVelObject(inputs)
+        inputs = document.getElementsByClassName('vector')
+        inputs[0].value = vector.x.toFixed(5)
+        inputs[1].value = vector.y.toFixed(5)
+        inputs[2].value = vector.z.toFixed(5)
+        inputs[3].value = vector.vx.toFixed(5)
+        inputs[4].value = vector.vy.toFixed(5)
+        inputs[5].value = vector.vz.toFixed(5)
+    }
+    else {
+        let inputs = [...document.getElementsByClassName('vector')].map(s => Number(s.value))
+        let coes = PosVel2CoeNew(inputs.slice(0,3), inputs.slice(3,6))
+        inputs = document.getElementsByClassName('coe')
+        inputs[0].value = coes.a.toFixed(3)
+        inputs[1].value = coes.e.toFixed(3)
+        inputs[2].value = (180 / Math.PI * coes.i).toFixed(3)
+        inputs[3].value = (180 / Math.PI * coes.raan).toFixed(3)
+        inputs[4].value = (180 / Math.PI * coes.arg).toFixed(3)
+        inputs[5].value = (180 / Math.PI * coes.tA).toFixed(3)
+    }
+    
+}
+handleInputs()

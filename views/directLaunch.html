@@ -7,8 +7,64 @@
     <title>Document</title>
     <script src="../SupportLibraries/math.js"></script>
     <script src="./js/directLaunch.js" defer></script>
+    <style>
+        .state {
+            width: 10ch;   
+        }
+        input {
+            padding: 2px;    
+            text-align: center;
+            margin: 0px 4px;      
+            font-size: 1em;
+        }
+        div {
+            margin: 10px 5px;
+        }
+        .state-label {
+            font-weight: bolder;
+            font-size: 1.25em;
+        }
+        .info-label {
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: 900;
+        }
+    </style>
 </head>
 <body>
-    
+    <div>
+        <div class="info-label">Site Information</div>
+        <div>
+            <span class="state-label"><em>Latitude</em></span><input class="state site" type="number" value="30.43"/><sup>o</sup>
+            <span class="state-label"><em>Longitude</em></span><input class="state site" type="number" value="-91.16"/><sup>o</sup>
+            <span class="state-label"><em>Altitude</em></span><input class="state site" type="number" value="0"/>km
+        </div>
+        <div class="info-label">Satellite Information</div>
+        <div><span class="state-label">Epoch</span><input id="sat-epoch" type="datetime-local" value="2022-06-24T14:00:00"></div>
+        <div>
+            <span class="state-label"><em>a</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="6800"/>
+            <span class="state-label"><em>e</em></span><input class="state coe" oninput="handleInputs(this)" step="0.01" type="number" value="0"/>
+            <span class="state-label"><em>i</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="50"/>
+            <span class="state-label"><em>&#937</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="0"/>
+            <span class="state-label"><em>&#969</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="0"/>
+            <span class="state-label"><em>&#957</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="0"/>
+        </div>
+        <div>
+            <span class="state-label">X</span><input oninput="handleInputs(this)" class="state vector" type="number"/>
+            <span class="state-label">Y</span><input oninput="handleInputs(this)" class="state vector" type="number"/>
+            <span class="state-label">Z</span><input oninput="handleInputs(this)" class="state vector" type="number"/>
+            <span class="state-label">V<sub>x</sub></span><input oninput="handleInputs(this)" class="state vector" type="number"/>
+            <span class="state-label">V<sub>y</sub></span><input oninput="handleInputs(this)" class="state vector" type="number"/>
+            <span class="state-label">V<sub>z</sub></span><input oninput="handleInputs(this)" class="state vector" type="number"/>
+        </div>
+        <div class="info-label">Search Information</div>
+        <div>
+            <span class="state-label"><em>Start Time</em></span><input type="datetime-local" value="2022-06-24T15:25:33">z
+            <span class="state-label"><em>Duration</em></span><input class="state" type="number" value="24"/>hrs
+            <span class="state-label"><em>Time Step</em></span><input class="state" type="number" value="5"/>min
+        </div>
+        <div class="info-label">Results</div>
+        <div id="results-div"></div>
+    </div>
 </body>
 </html>
