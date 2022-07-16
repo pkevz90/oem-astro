@@ -663,6 +663,8 @@ function changeSensorProperty(s) {
     let sens = s.getAttribute('sensor')
     if (ob === 'active') {
         mainWindow.sensors[sens].active = s.checked
+        // s.parentElement.style.color = s.checked ? 'rgb(100,200,100)' : 'rgb(200,80,80)'
+        updateSensors(mainWindow.sensors)
     }
     else if (ob === 'avail') {
         let avail = s.innerText
@@ -713,13 +715,32 @@ function padNumber(num = 0, n = 2) {
 
 function updateSensors(sensors) {
     let sensDiv = document.getElementById('sensor-list')
+    let activeIndexes = getAllIndexes(sensors)
     sensDiv.innerHTML = ''
-    sensors.forEach((s, ii) => {
+    for (let index = 0; index < activeIndexes.length; index++) {
+        let s = sensors[activeIndexes[index]]
+        let ii = activeIndexes[index]
         let div = document.createElement("div")
-        div.style.textAlign = 'center'
         let avail = s.avail.length === 0 ? 'All' : `${s.avail[0].getDate()}/${padNumber(s.avail[0].getHours())}${padNumber(s.avail[0].getMinutes())}-${padNumber(s.avail[1].getHours())}${padNumber(s.avail[1].getMinutes())}`
         div.innerHTML = `
-            <label for="sensor-${ii}">${s.name}</label> <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> <span style="font-size: 0.5em">Avail: <span contentEditable="true" ob="avail" sensor="${ii}" oninput="changeSensorProperty(this)">${avail}</span></span>
+            <label class="sensor-label" style="color: ${s.active ? 'rgb(100,200,100)' : 'rgb(200,80,80)'}" for="sensor-${ii}">
+                <span>${s.name}</span>
+            </label> 
+            <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> <span style="font-size: 0.5em">Avail: <span contentEditable="true" ob="avail" sensor="${ii}" oninput="changeSensorProperty(this)">${avail}</span></span>
+        `
+        div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
+        sensDiv.append(div)
+    }
+    sensors.forEach((s, ii) => {
+        if (activeIndexes.filter(s => s === ii).length > 0) return
+        let div = document.createElement("div")
+        // div.style.textAlign = 'center'
+        let avail = s.avail.length === 0 ? 'All' : `${s.avail[0].getDate()}/${padNumber(s.avail[0].getHours())}${padNumber(s.avail[0].getMinutes())}-${padNumber(s.avail[1].getHours())}${padNumber(s.avail[1].getMinutes())}`
+        div.innerHTML = `
+            <label class="sensor-label" style="color: ${s.active ? 'rgb(100,200,100)' : 'rgb(200,80,80)'}" for="sensor-${ii}">
+                <span>${s.name}</span>
+            </label> 
+            <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> <span style="font-size: 0.5em">Avail: <span contentEditable="true" ob="avail" sensor="${ii}" oninput="changeSensorProperty(this)">${avail}</span></span>
         `
         div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
         sensDiv.append(div)
@@ -835,12 +856,12 @@ function updateCoeDisplay() {
     let div = document.getElementById('coe-display')
     div.innerHTML = ''
     let coes = PosVel2CoeNew(mainWindow.satellites[0].origState.slice(0,3), mainWindow.satellites[0].origState.slice(3,6))
-    div.innerHTML = `a: <span coe="a" contentEditable="true" oninput="coeChange(this)">${coes.a.toFixed(1)}</span> / 
-        e: <span coe="e" contentEditable="true" oninput="coeChange(this)">${coes.e.toFixed(4)}</span> / 
-        Inc: <span coe="i" contentEditable="true" oninput="coeChange(this)">${(coes.i * 180 / Math.PI).toFixed(1)}</span> / 
-        RAAN: <span coe="raan" contentEditable="true" oninput="coeChange(this)">${(coes.raan * 180 / Math.PI).toFixed(1)}</span> / 
-        Arg Per: <span coe="arg" contentEditable="true" oninput="coeChange(this)">${(coes.arg * 180 / Math.PI).toFixed(1)}</span> / 
-        True A: <span coe="tA" contentEditable="true" oninput="coeChange(this)">${(coes.tA * 180 / Math.PI).toFixed(1)}</span>`
+    div.innerHTML = `a: <span class="coe-box" coe="a" contentEditable="true" oninput="coeChange(this)">${coes.a.toFixed(1)}</span> / 
+        e: <span class="coe-box"  coe="e" contentEditable="true" oninput="coeChange(this)">${coes.e.toFixed(4)}</span> / 
+        Inc: <span class="coe-box"  coe="i" contentEditable="true" oninput="coeChange(this)">${(coes.i * 180 / Math.PI).toFixed(1)}</span> / 
+        RAAN: <span class="coe-box"  coe="raan" contentEditable="true" oninput="coeChange(this)">${(coes.raan * 180 / Math.PI).toFixed(1)}</span> / 
+        Arg Per: <span class="coe-box"  coe="arg" contentEditable="true" oninput="coeChange(this)">${(coes.arg * 180 / Math.PI).toFixed(1)}</span> / 
+        True A: <span class="coe-box"  coe="tA" contentEditable="true" oninput="coeChange(this)">${(coes.tA * 180 / Math.PI).toFixed(1)}</span>`
 }
 
 function coeChange(t) {
@@ -1043,4 +1064,12 @@ function razel(r_eci=[-5505.504883, 56.449170, 3821.871726], date=new Date(1995,
     let az = Math.atan2(rho[1], -rho[0]) * 180 / Math.PI
     r = math.norm(rho)
     return {el, az, r}
+}
+
+function getAllIndexes(arr, label = 'active') {
+    var indexes = [], i;
+    for(i = 0; i < arr.length; i++)
+        if (arr[i][label])
+            indexes.push(i);
+    return indexes;
 }

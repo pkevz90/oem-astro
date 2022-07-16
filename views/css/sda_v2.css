@@ -1,16 +1,23 @@
 #main-display {
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between;
     height: 100%;
 }
 #sensor-list {
-    font-size: 4vw;
+    font-size: 3vw;
     overflow-y: scroll;
-    max-height: 900px;
+    max-height: 100vh;
+    padding-right: 30px;
 }
 #results-display div {
     margin: 10px 0px;
     font-size: 1.1em;
+}
+
+.coe-box {
+    padding: 2px 0.5em;
+    border: 1px solid black;
+    border-radius: 7px;
 }
 button {
     color: white;
@@ -43,4 +50,23 @@ input {
             -ms-user-select: none; /* Internet Explorer/Edge */
                 user-select: none; /* Non-prefixed version, currently
                                     supported by Chrome, Edge, Opera and Firefox */
+}
+#ob-list {
+    max-height: 50vh;
+    overflow-y: scroll;
+}
+body {
+    overflow: hidden;
+}
+
+input[type="checkbox"] {
+    display: none;
+}
+
+.sensor-label {
+    cursor: pointer;
+}
+
+.sensor-label:hover {
+    font-weight: 900;
 }
