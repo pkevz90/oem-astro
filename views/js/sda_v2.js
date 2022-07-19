@@ -18,7 +18,7 @@ let mainWindow = {
     ],
     sensors: undefined
 }
-
+let lastCov
 function runge_kutta(state, dt) {
     eom = orbitalDynamics
     let k1 = eom(state);
@@ -78,12 +78,14 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
     return rotMat;
 }
 
-function estimateCovariance(sat = 0) {
+function estimateCovariance(sat = 0, returnDecomp = false) {
     let blsMatrices = createJacobian(sat)
     let a = math.inv(math.multiply(math.transpose(blsMatrices.jac), blsMatrices.w, blsMatrices.jac))
     let r = Eci2Ric()
     a = math.multiply(math.transpose(r), a, r)
-    console.log(choleskyDecomposition(a));
+    lastCov = a
+    console.log(a, choleskyDecomposition(a));
+    if (returnDecomp) return choleskyDecomposition(a)
     try {
         console.log(math.eigs(a));
     } catch (error) {
@@ -123,7 +125,7 @@ function normalRandom() {
     return val;
 }
 
-function createSigmaPoints(state, cov, n = 1000) {
+function createSigmaPoints(state, cov, dt = 0, n = 2000) {
     cov = math.transpose(choleskyDecomposition(cov))
     let sigmas = []
     for (let i = 0; i < n; i++) {
@@ -133,9 +135,14 @@ function createSigmaPoints(state, cov, n = 1000) {
         }
         sigmas.push(sigmaState)
     }
-
-    console.log(state);
+    let origSig = sigmas.slice();
+    let origAve = origSig.reduce((a,b) => math.add(a, b), [0,0,0,0,0,0]).map(s => s/sigmas.length)
+    // console.log(origAve);
+    sigmas = sigmas.map(s => propToTime(s, dt))
+    let del = math.subtract(sigmas, origSig).map(d => math.norm(d))
+    // console.log(origSig.filter((s,ii) => del[ii] > 1e-6), del.filter(d => d > 1e-6));
     let aveState = sigmas.reduce((a,b) => math.add(a, b), [0,0,0,0,0,0]).map(s => s/sigmas.length)
+    // console.log(aveState);
     let aveRange = (sigmas.reduce((a,b) => a + math.norm(math.subtract(b.slice(0,3), aveState.slice(0,3))) ** 2, 0) / sigmas.length) ** 0.5
     let aveRelVel = (sigmas.reduce((a,b) => a + math.norm(math.subtract(b.slice(3,6), aveState.slice(3,6))) ** 2, 0) / sigmas.length) ** 0.5
     return {aveRange, aveRelVel}
@@ -279,54 +286,6 @@ function copyObHistory(state) {
     return outObs
 }
 
-function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, peri = false) {
-    let p = coe.a * (1 - coe.e * coe.e);
-    let cTa = Math.cos(coe.tA);
-    let sTa = Math.sin(coe.tA);
-    let r = [
-        [p * cTa / (1 + coe.e * cTa)],
-        [p * sTa / (1 + coe.e * cTa)],
-        [0]
-    ];
-    let constA = Math.sqrt(398600.4418 / p);
-    let v = [
-        [-constA * sTa],
-        [(coe.e + cTa) * constA],
-        [0]
-    ];
-    if (peri) return {
-        
-        x: r[0][0],
-        y: r[1][0],
-        z: r[2][0],
-        vx: v[0][0],
-        vy: v[1][0],
-        vz: v[2][0]
-    }
-    let cRa = Math.cos(coe.raan);
-    let sRa = Math.sin(coe.raan);
-    let cAr = Math.cos(coe.arg);
-    let sAr = Math.sin(coe.arg);
-    let cIn = Math.cos(coe.i);
-    let sin = Math.sin(coe.i);
-    R = [
-        [cRa * cAr - sRa * sAr * cIn, -cRa * sAr - sRa * cAr * cIn, sRa * sin],
-        [sRa * cAr + cRa * sAr * cIn, -sRa * sAr + cRa * cAr * cIn, -cRa * sin],
-        [sAr * sin, cAr * sin, cIn]
-    ];
-    r = math.multiply(R, r);
-    v = math.multiply(R, v);
-    let state = [r, v];
-    return {
-        x: state[0][0][0],
-        y: state[0][1][0],
-        z: state[0][2][0],
-        vx: state[1][0][0],
-        vy: state[1][1][0],
-        vz: state[1][2][0]
-    };
-}
-
 function convertObsToVector(obs) {
     obs = obs.map(ob => ob.obs)
     let outObs = []
@@ -364,7 +323,7 @@ function createJacobian(sat, state) {
     return {jac, w: convertObsToWeightMatrix(copyObHistory(state))}
 }
 
-function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]) {
+function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]], fixIfNaN = true) {
     let a = math.zeros([matrix.length, matrix.length])    
     for (let ii = 0; ii < a.length; ii++) {
         for (let jj = 0; jj <= ii; jj++) {
@@ -388,6 +347,7 @@ function choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]
             }
         }
     }
+    a = a.map(row => row.map(col => Number.isNaN(col) ? 1e-8 : col ))
     return a
 }
 
@@ -448,21 +408,6 @@ function deleteOb(t) {
     listObs(mainWindow.satellites[0].obs)
 }
 
-function propToTimeJ2(state, dt) {
-    state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
-    state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
-    let j2 = 1.082626668e-3
-    let n = (398600.4418 / state.a / state.a / state.a) ** 0.5
-    let rEarth = 6378.1363
-    let p = state.a * (1 - state.e ** 2)
-    let raanJ2Rate = -3*n*rEarth*rEarth*j2*Math.cos(state.i) / 2 / p / p
-    let argJ2Rate = 3 * n * rEarth * rEarth * j2 * (4 - 5 * Math.sin(state.i) ** 2) / 4 / p / p 
-    state.raan += raanJ2Rate * dt
-    state.arg += argJ2Rate * dt
-    state = Object.values(Coe2PosVelObject(state))
-    return state
-}
-
 function propToTime(state, dt, j2 = true) {
     state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     if (j2) {
@@ -484,37 +429,36 @@ function propToTime(state, dt, j2 = true) {
 }
 
 function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
-    let mu = 398600.4418;
+    let mu = 398600//.4418;
     let rn = math.norm(r);
     let vn = math.norm(v);
     let h = math.cross(r, v);
     let hn = math.norm(h);
     let n = math.cross([0, 0, 1], h);
     let nn = math.norm(n);
-    if (nn < 1e-6) {
+    if (nn < 1e-9) {
         n = [1, 0, 0];
         nn = 1;
     }
     var epsilon = vn * vn / 2 - mu / rn;
     let a = -mu / 2 / epsilon;
-    let e = math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn));
+    // console.log(math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn)))
+    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r),  math.dotMultiply(math.dot(r, v), v)), mu)
     let en = math.norm(e);
-    if (en < 1e-6) {
+    if (en < 1e-9) {
         e = n.slice();
         en = 0;
     }
-    let inc = Math.acos(math.dot(h, [0, 0, 1]) / hn);
-    let ra = Math.acos(math.dot(n, [1, 0, 0]) / nn);
+    let inc = Math.acos(h[2] / hn);
+    let ra = Math.acos(n[0] / nn);
     if (n[1] < 0) {
         ra = 2 * Math.PI - ra;
     }
-
-    let ar, arDot;
-    if (en < 1e-6) {
-        arDot = math.dot(n, e) / nn;
-    } else {
-        arDot = math.dot(n, e) / en / nn;
-    }
+    // console.log({
+    //     n,e
+    // });
+    let ar
+    let arDot = math.dot(n, e) / en / nn;
     if (arDot > 1) {
         ar = 0;
     } else if (arDot < -1) {
@@ -522,17 +466,11 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     } else {
         ar = Math.acos(arDot);
     }
-    if (e[2] < 0) {
-        ar = 2 * Math.PI - ar;
-    } else if (inc < 1e-6 && e[1] < 0) {
+    if (e[2] < 0 || (inc < 1e-8 && e[1] < 0)) {
         ar = 2 * Math.PI - ar;
     }
-    let ta, taDot;
-    if (en < 1e-6) {
-        taDot = math.dot(r, e) / rn / nn;
-    } else {
-        taDot = math.dot(r, e) / rn / en;
-    }
+    let ta;
+    let taDot = math.dot(r, e) / rn / en
     if (taDot > 1) {
         ta = 0;
     } else if (taDot < -1) {
@@ -540,10 +478,10 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     } else {
         ta = Math.acos(taDot);
     }
-    if (math.dot(v, e) > 1e-6) {
+    if (math.dot(v, e) > 0 || math.dot(v, r) < 0) {
         ta = 2 * Math.PI - ta;
     }
-    // console.log([a,en,inc,ra,ar,ta])
+    // // console.log([a,en,inc,ra,ar,ta])
     return {
         a: a,
         e: en,
@@ -1072,4 +1010,196 @@ function getAllIndexes(arr, label = 'active') {
         if (arr[i][label])
             indexes.push(i);
     return indexes;
+}
+
+function showCovariance() {
+    let newDiv = document.createElement('div')
+    let cov = estimateCovariance(0, true).map(s => s.map(v => v.toFixed(4)))
+    let covNum = estimateCovariance(0, true)
+    covNum = math.multiply(covNum, math.transpose(covNum))
+    let timeEst = []
+    for (let index = 0; index <= 12*3600; index+=7200) {
+        timeEst.push([index, createSigmaPoints(mainWindow.satellites[0].origState, covNum, index)]);
+    }
+    // console.log(timeEst.map(t => [t[1].aveRange, t[1].aveRelVel]));
+    newDiv.innerHTML = `
+        <div id="cov-div">
+            <div onclick="closeCovariance(this)" class="exit-button">X</div>
+            <div>
+                <div style="text-align: center; padding-bottom: 10px; font-weight: 900;">Cholesky Decomposition of Covariance</div>
+                <table>
+                    <tr>
+                        <td>${cov[0][0]}</td><td>X</td><td>X</td><td>X</td><td>X</td><td>X</td>
+                    </tr>
+                    <tr>
+                        <td>${cov[1][0]}</td><td>${cov[1][1]}</td><td>X</td><td>X</td><td>X</td><td>X</td>
+                    </tr>
+                    <tr>
+                        <td>${cov[2][0]}</td><td>${cov[2][1]}</td><td>${cov[2][2]}</td><td>X</td><td>X</td><td>X</td>
+                    </tr>
+                    <tr>
+                        <td>${cov[3][0]}</td><td>${cov[3][1]}</td><td>${cov[3][2]}</td><td>${cov[3][3]}</td><td>X</td><td>X</td>
+                    </tr>
+                    <tr>
+                        <td>${cov[4][0]}</td><td>${cov[4][1]}</td><td>${cov[4][2]}</td><td>${cov[4][3]}</td><td>${cov[4][4]}</td><td>X</td>
+                    </tr>
+                    <tr>
+                        <td>${cov[5][0]}</td><td>${cov[5][1]}</td><td>${cov[5][2]}</td><td>${cov[5][3]}</td><td>${cov[5][4]}</td><td>${cov[5][5]}</td>
+                    </tr>
+                </table>
+            </div>
+            <div>
+                <div style="text-align: center; padding-bottom: 10px; font-weight: 900;">Future Uncertainty</div>
+                ${timeEst.map(est => `<div>${est[0] / 3600} hr ${est[1].aveRange.toFixed(2)} km</div>`).join('\n')}
+            </div>
+        </div>
+    `
+    document.getElementsByTagName('body')[0].append(newDiv)
+}   
+
+function closeCovariance(el) {
+    el.parentElement.remove()
+    let cnvss = document.getElementsByTagName('canvas')
+    for (let index = 0; index < cnvss.length; index++) {
+        cnvss[index].remove()
+    }
+}
+
+function showMap() {
+    let newDiv = document.createElement('div')
+    let endTime = Number(document.getElementById('track-time-input').value) * 3600
+    newDiv.innerHTML = `
+        <div id="cov-div">
+            <div onclick="closeCovariance(this)" class="exit-button">X</div>
+            <div class="map-slider"><input oninput="changeMap(this)" type="range" min="-${endTime}" max="0" value="0"/></div>
+            <div>
+                <canvas id="map-canvas"></canvas>
+            </div>
+        </div>
+    `
+    document.getElementsByTagName('body')[0].append(newDiv)
+    let img = new Image()
+    img.src = './Media/2_no_clouds_4k.jpg'
+    let cnvs = document.getElementById('map-canvas')
+    cnvs.height = 400
+    cnvs.width = cnvs.height * 16/9
+    let ctx = cnvs.getContext('2d')
+    img.onload = function(){   
+        
+        console.log(img);    
+        ctx.drawImage(img,0,0,cnvs.width, cnvs.height); 
+        ctx.fillStyle = 'red'
+        mainWindow.sensors.forEach(sens => {
+            if (!sens.active) return
+            let {lat, long} = sens
+            long += 180
+            long = long > 360 ? long - 360 : long
+            lat = 90 - lat
+            ctx.beginPath();
+            ctx.arc(cnvs.width * long / 360, cnvs.height * lat/ 180, cnvs.width / 200, 0, 2 * Math.PI);
+            ctx.fill();
+        })
+        let orbit = mainWindow.satellites[0].origState.slice()
+        
+        let time = 0
+        let timeDelta = 10
+        console.log(endTime);
+        ctx.fillStyle = 'magenta'
+        while (time < endTime) {
+            let ecefPos = fk5ReductionTranspose(orbit.slice(0,3), new Date(mainWindow.startTime - time * 1000))
+            let longSat = math.atan2(ecefPos[1], ecefPos[0])
+            longSat *= 180 / Math.PI
+            let latSat = math.atan2(ecefPos[2], math.norm(ecefPos.slice(0,2)))
+            latSat *= 180 / Math.PI
+            longSat += 180
+            longSat = longSat > 360 ? longSat - 360 : longSat
+            latSat = 90 - latSat
+            ctx.beginPath();
+            ctx.arc(cnvs.width * longSat / 360, cnvs.height * latSat/ 180, cnvs.width /600, 0, 2 * Math.PI);
+            ctx.fill();
+            orbit = propToTime(orbit, -timeDelta)
+            time += timeDelta
+        }
+        
+        drawOnMap()
+    }          
+}
+
+function changeMap(inp) {
+    let inpTime = Number(inp.value)
+    console.log(inpTime);
+    drawOnMap(inpTime)
+} 
+
+function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
+    function getOffset( el ) {
+        var _x = 0;
+        var _y = 0;
+        while( el && !isNaN( el.offsetLeft ) && !isNaN( el.offsetTop ) ) {
+              _x += el.offsetLeft - el.scrollLeft;
+              _y += el.offsetTop - el.scrollTop;
+              el = el.offsetParent;
+        }
+        return { top: _y, left: _x };
+    }
+    if (inCnvs == null) return
+    let idCanvas = 'over-canvas'
+    let cnvs = document.getElementById('over-canvas')
+    if (cnvs == null) {
+        cnvs = document.createElement('canvas')
+        cnvs.id = idCanvas
+        document.body.append(cnvs)
+    }
+    let cnvsPos = getOffset(inCnvs);
+    cnvs.style.position = 'fixed'
+    cnvs.style.top = cnvsPos.top + 2 + 'px'
+    cnvs.style.left = cnvsPos.left + 2 + 'px'
+    cnvs.style.zIndex = '10'
+    cnvs.width = inCnvs.width + 0
+    cnvs.height = inCnvs.height + 0
+
+    let ctx = cnvs.getContext('2d')
+    ctx.clearRect(0,0,cnvs.width,cnvs.height)
+    
+    let jsTime = new Date(mainWindow.startTime - (-time*1000))
+    // Get and draw satellite current position
+    let satState = propToTime(mainWindow.satellites[0].origState, time)
+    let satEcef = fk5ReductionTranspose(satState.slice(0,3), jsTime)
+    let longSat = math.atan2(satEcef[1], satEcef[0])
+    longSat *= 180 / Math.PI
+    let latSat = math.atan2(satEcef[2], math.norm(satEcef.slice(0,2)))
+    latSat *= 180 / Math.PI
+    longSat += 180
+    longSat = longSat > 360 ? longSat - 360 : longSat
+    latSat = 90 - latSat
+    ctx.fillStyle = 'magenta'
+    ctx.beginPath();
+    ctx.arc(cnvs.width * longSat / 360, cnvs.height * latSat/ 180, cnvs.width /150, 0, 2 * Math.PI);
+    ctx.fill();
+    let obs = checkSensors(satState, time)
+    ctx.fillStyle = 'orange'
+    obs.forEach(ob => {
+        s = JSON.parse(JSON.stringify(mainWindow.sensors[ob.sensor]))
+        s.long += 180
+        s.long = s.long > 360 ? s.long - 360 : s.long
+        s.lat = 90 - s.lat
+        ctx.beginPath();
+        ctx.arc(cnvs.width * s.long / 360, cnvs.height * s.lat / 180, cnvs.width / 200, 0, 2 * Math.PI);
+        ctx.fill();
+    })
+    // Draw sun position at time
+    let sunPos = math.squeeze(math.multiply(rotationMatrices(360 * time / 31556952 , 3), math.transpose([mainWindow.initSun])))
+    ctx.fillStyle = 'yellow'
+    let sunEcef = fk5ReductionTranspose(sunPos, jsTime)
+    let longSun = math.atan2(sunEcef[1], sunEcef[0])
+    longSun *= 180 / Math.PI
+    let latSun = math.atan2(sunEcef[2], math.norm(sunEcef.slice(0,2)))
+    latSun *= 180 / Math.PI
+    longSun += 180
+    longSun = longSun > 360 ? longSun - 360 : longSun
+    latSun = 90 - latSun
+    
+    ctx.beginPath();
+    ctx.arc(cnvs.width * longSun / 360, cnvs.height * latSun/ 180, cnvs.width / 100, 0, 2 * Math.PI);
+    ctx.fill()
 }

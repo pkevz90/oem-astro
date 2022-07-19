@@ -4,9 +4,10 @@
     height: 100%;
 }
 #sensor-list {
+    margin-top: 20px;
     font-size: 3vw;
     overflow-y: scroll;
-    max-height: 100vh;
+    max-height: 90vh;
     padding-right: 30px;
 }
 #results-display div {
@@ -69,4 +70,59 @@ input[type="checkbox"] {
 
 .sensor-label:hover {
     font-weight: 900;
+}
+
+#cov-div {
+    position: fixed;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 5;
+    background-color: white;
+    width: 70vw;
+    height: 70vh;
+    left: 15vw;
+    top: 15vh;
+    border: 2px solid black;
+    border-radius: 20px;
+}
+
+.exit-button {
+    position: absolute;
+    left: 1%;
+    top: 1%;
+    font-size: 1.5em;
+    cursor: pointer;
+}
+
+.exit-button:hover {
+    font-weight: 900;
+}
+
+#cov-display {
+    transition: all 250ms;
+}
+
+#cov-display:hover {
+    cursor: pointer;
+    font-size: 1.2em;
+    text-decoration: underline;
+    /* font-weight: 900; */
+}
+
+td {
+    width: 8ch;
+    text-align: center;
+}
+
+.map-slider {
+    position: fixed;
+    width: 50%;
+    left: 25%;
+    top: 2%;
+    z-index: 15;
+}
+
+.map-slider input {
+    width: 100%;
 }
