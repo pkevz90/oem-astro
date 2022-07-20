@@ -51,10 +51,83 @@ function loopStartTime(startTime = mainWindow.startTime, loopTime = 72*3600, loo
     let minIndex = options.findIndex(a => a.delV === Math.min(...options.map(s => s.delV))) 
     
     options.forEach((opt, ii) => {
-        newHtml += `<div ${ii === minIndex ? 'style="font-weight: bolder;"' : ''}>${opt.time} [${opt.startState.map(s => s.toFixed(3)).join(' ')}] ${(opt.tof / 60).toFixed(1)} min ${opt.delV.toFixed(3)} km/s</div>`
+        newHtml += `<div onclick="displayLaunch(this)" time="${opt.time}" state="${opt.startState.map(s => s.toFixed(3)).join(' ')}" tof="${opt.tof}" ${ii === minIndex ? 'style="font-weight: bolder;"' : ''}>${opt.time} [${opt.startState.map(s => s.toFixed(3)).join(' ')}] ${(opt.tof / 60).toFixed(1)} min ${opt.delV.toFixed(3)} km/s</div>`
     })
     resultsDiv.innerHTML = newHtml
     console.log(options);
+}
+
+function displayLaunch(el) {
+    let time = new Date(el.getAttribute('time'))
+    let tof = Number(el.getAttribute('tof'))
+    console.log(time);
+    let state = el.getAttribute('state').split(' ').map(s => Number(s))
+    let stateSat = Object.values(Coe2PosVelObject(mainWindow.sat.coes))
+    let period = 2 * Math.PI * (mainWindow.sat.coes.a ** 3 / 398600.4418) ** 0.5
+    let startSatTime = new Date(time - (period * 2 - tof) * 1000)
+    stateSat = propToTime(stateSat, (startSatTime - mainWindow.sat.epoch) / 1000, false)
+    
+    let timeSatProp = 0, stateSatHist = []
+    while (timeSatProp <= period * 2) {
+        stateSatHist.push({time: timeSatProp, state: propToTime(stateSat, timeSatProp, false)})
+        timeSatProp += tof / 100
+    }
+    stateSatHist = stateSatHist.map(s => {
+        return fk5ReductionTranspose(s.state.slice(0,3), new Date(startSatTime - (-s.time * 1000)))
+    })
+    stateSatHist = stateSatHist.map(s => {
+        return {
+            long: math.atan2(s[1], s[0]) * 180 / Math.PI,
+            lat: 90-math.atan2(s[2], math.norm(s.slice(0,2))) * 180 / Math.PI
+        }
+    })
+    let timeProp = 0, stateHist = []
+    while (timeProp <= tof) {
+        stateHist.push({time: timeProp, state: propToTime(state, timeProp, false)})
+        timeProp += tof / 100
+    }
+    stateHist = stateHist.map(s => {
+        return fk5ReductionTranspose(s.state.slice(0,3), new Date(time - (-s.time * 1000)))
+    })
+    stateHist = stateHist.map(s => {
+        return {
+            long: math.atan2(s[1], s[0]) * 180 / Math.PI,
+            lat: 90-math.atan2(s[2], math.norm(s.slice(0,2))) * 180 / Math.PI
+        }
+    })
+    let cnvs = document.createElement('canvas')
+    cnvs.style.position = 'fixed'
+    cnvs.style.width = '60%'
+    cnvs.style.height = '70%'
+    cnvs.style.left = '20%'
+    cnvs.style.top = '15%'
+    cnvs.width = 800
+    cnvs.height = 450
+    document.getElementsByTagName('body')[0].append(cnvs)
+    let ctx = cnvs.getContext('2d')
+    let img = new Image()
+    img.src = './Media/2_no_clouds_4k.jpg'
+    img.onload = function(){      
+        ctx.drawImage(img,0,0,cnvs.width, cnvs.height);
+        ctx.fillStyle = 'cyan'
+        stateHist.forEach(point => {
+            let long = point.long
+            long += 180
+            long = long > 360 ? long - 360 : long
+            ctx.beginPath();
+            ctx.arc(cnvs.width * long / 360, cnvs.height * point.lat/ 180, cnvs.width /600, 0, 2 * Math.PI);
+            ctx.fill();
+        })
+        ctx.fillStyle = 'yellow'
+        stateSatHist.forEach(point => {
+            let long = point.long
+            long += 180
+            long = long > 360 ? long - 360 : long
+            ctx.beginPath();
+            ctx.arc(cnvs.width * long / 360, cnvs.height * point.lat/ 180, cnvs.width /600, 0, 2 * Math.PI);
+            ctx.fill();
+        })
+    }
 }
 
 function estTof(siteECI, satECI) {
@@ -75,7 +148,6 @@ function estTof(siteECI, satECI) {
     let tof = (Math.PI - meanA) / n
     return tof
 }
-
 
 function calcInterceptTraj(site = mainWindow.site, sat = mainWindow.sat, startTime = mainWindow.startTime, tof=4*3600) {
     let jdTime = julianDate(startTime.getFullYear(), startTime.getMonth() + 1, startTime.getDate(), startTime.getHours(), startTime.getMinutes(), startTime.getSeconds() + tof)
@@ -153,30 +225,29 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     let hn = math.norm(h);
     let n = math.cross([0, 0, 1], h);
     let nn = math.norm(n);
-    if (nn < 1e-6) {
+    if (nn < 1e-9) {
         n = [1, 0, 0];
         nn = 1;
     }
     var epsilon = vn * vn / 2 - mu / rn;
     let a = -mu / 2 / epsilon;
-    let e = math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn));
+    // console.log(math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn)))
+    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r),  math.dotMultiply(math.dot(r, v), v)), mu)
     let en = math.norm(e);
-    if (en < 1e-6) {
+    if (en < 1e-9) {
         e = n.slice();
         en = 0;
     }
-    let inc = Math.acos(math.dot(h, [0, 0, 1]) / hn);
-    let ra = Math.acos(math.dot(n, [1, 0, 0]) / nn);
+    let inc = Math.acos(h[2] / hn);
+    let ra = Math.acos(n[0] / nn);
     if (n[1] < 0) {
         ra = 2 * Math.PI - ra;
     }
-
-    let ar, arDot;
-    if (en < 1e-6) {
-        arDot = math.dot(n, e) / nn;
-    } else {
-        arDot = math.dot(n, e) / en / nn;
-    }
+    // console.log({
+    //     n,e
+    // });
+    let ar
+    let arDot = math.dot(n, e) / en / nn;
     if (arDot > 1) {
         ar = 0;
     } else if (arDot < -1) {
@@ -184,17 +255,11 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     } else {
         ar = Math.acos(arDot);
     }
-    if (e[2] < 0) {
-        ar = 2 * Math.PI - ar;
-    } else if (inc < 1e-6 && e[1] < 0) {
+    if (e[2] < 0 || (inc < 1e-8 && e[1] < 0)) {
         ar = 2 * Math.PI - ar;
     }
-    let ta, taDot;
-    if (en < 1e-6) {
-        taDot = math.dot(r, e) / rn / nn;
-    } else {
-        taDot = math.dot(r, e) / rn / en;
-    }
+    let ta;
+    let taDot = math.dot(r, e) / rn / en
     if (taDot > 1) {
         ta = 0;
     } else if (taDot < -1) {
@@ -202,10 +267,10 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     } else {
         ta = Math.acos(taDot);
     }
-    if (math.dot(v, e) > 1e-6) {
+    if (math.dot(v, e) > 0 || math.dot(v, r) < 0) {
         ta = 2 * Math.PI - ta;
     }
-    // console.log([a,en,inc,ra,ar,ta])
+    // // console.log([a,en,inc,ra,ar,ta])
     return {
         a: a,
         e: en,
