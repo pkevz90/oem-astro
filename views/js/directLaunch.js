@@ -18,9 +18,13 @@ let mainWindow = {
     startTime: new Date('24 Jun 2022 20:00:00.000')
 }
 
-function loopStartTime(startTime = mainWindow.startTime, loopTime = 72*3600, loopDelta = 60) {
+function loopStartTime() {
     let state = [...document.getElementsByClassName('vector')].map(s => Number(s.value))
     let site = [...document.getElementsByClassName('site')].map(s => Number(s.value))
+    let inputs = document.getElementsByTagName('body')[0].getElementsByTagName('input')
+    let startTime = new Date(inputs[inputs.length - 3].value)
+    let loopTime = Number(inputs[inputs.length - 2].value) * 3600
+    let loopDelta = Number(inputs[inputs.length - 1].value) * 60
     mainWindow.site = {lat: site[0], long: site[1], h: site[2]}
     mainWindow.sat.coes = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     mainWindow.sat.epoch = new Date(document.getElementById('sat-epoch').value)
@@ -34,12 +38,19 @@ function loopStartTime(startTime = mainWindow.startTime, loopTime = 72*3600, loo
             let el = 90-180 / Math.PI * math.acos(math.dot(vel, calc.siteECI) / math.norm(vel) / math.norm(calc.siteECI));
             if (el > 60) {
                 let groundVel = math.cross([0,0,2 * Math.PI / 86164], calc.siteECI)
+                let jdTime = julianDate(loopStart.getFullYear(), loopStart.getMonth() + 1, loopStart.getDate(), loopStart.getHours(), loopStart.getMinutes(), loopStart.getSeconds() + calc.tof)
+                let sunEci = sunFromTime(jdTime)
+                let state2 = propToTime([...calc.siteECI, ...vel], calc.tof - 10, false)
+                let state2Chief = propToTime(calc.satState, -10, false)
+                let relVector = math.subtract(state2, state2Chief)
+                let sunAngle = math.acos(math.dot(relVector.slice(0,3), sunEci) / math.norm(sunEci) / math.norm(relVector.slice(0,3))) * 180 / Math.PI
                 let delV = math.norm(math.subtract(vel, groundVel))
                 options.push({
                     time: loopStart.toString().split(' GMT')[0],
                     startState: [...calc.siteECI, ...vel],
                     tof: calc.tof,
-                    delV
+                    delV,
+                    sunAngle
                 })
             }
         })
@@ -51,7 +62,7 @@ function loopStartTime(startTime = mainWindow.startTime, loopTime = 72*3600, loo
     let minIndex = options.findIndex(a => a.delV === Math.min(...options.map(s => s.delV))) 
     
     options.forEach((opt, ii) => {
-        newHtml += `<div onclick="displayLaunch(this)" time="${opt.time}" state="${opt.startState.map(s => s.toFixed(3)).join(' ')}" tof="${opt.tof}" ${ii === minIndex ? 'style="font-weight: bolder;"' : ''}>${opt.time} [${opt.startState.map(s => s.toFixed(3)).join(' ')}] ${(opt.tof / 60).toFixed(1)} min ${opt.delV.toFixed(3)} km/s</div>`
+        newHtml += `<div onclick="displayLaunch(this)" time="${opt.time}" state="${opt.startState.map(s => s.toFixed(3)).join(' ')}" tof="${opt.tof}" ${ii === minIndex ? 'style="font-weight: bolder;"' : ''}>${opt.time} [${opt.startState.map(s => s.toFixed(3)).join(' ')}] ${(opt.tof / 60).toFixed(1)} min ${opt.delV.toFixed(3)} km/s ${opt.sunAngle.toFixed(1)} deg</div>`
     })
     resultsDiv.innerHTML = newHtml
     console.log(options);
@@ -60,7 +71,6 @@ function loopStartTime(startTime = mainWindow.startTime, loopTime = 72*3600, loo
 function displayLaunch(el) {
     let time = new Date(el.getAttribute('time'))
     let tof = Number(el.getAttribute('tof'))
-    console.log(time);
     let state = el.getAttribute('state').split(' ').map(s => Number(s))
     let stateSat = Object.values(Coe2PosVelObject(mainWindow.sat.coes))
     let period = 2 * Math.PI * (mainWindow.sat.coes.a ** 3 / 398600.4418) ** 0.5
@@ -103,6 +113,7 @@ function displayLaunch(el) {
     cnvs.style.top = '15%'
     cnvs.width = 800
     cnvs.height = 450
+    cnvs.onclick = el => el.target.remove()
     document.getElementsByTagName('body')[0].append(cnvs)
     let ctx = cnvs.getContext('2d')
     let img = new Image()
@@ -150,8 +161,6 @@ function estTof(siteECI, satECI) {
 }
 
 function calcInterceptTraj(site = mainWindow.site, sat = mainWindow.sat, startTime = mainWindow.startTime, tof=4*3600) {
-    let jdTime = julianDate(startTime.getFullYear(), startTime.getMonth() + 1, startTime.getDate(), startTime.getHours(), startTime.getMinutes(), startTime.getSeconds() + tof)
-    let sunEci = sunFromTime(jdTime)
     // sunEci = math.dotDivide(sunEci, math.norm(sunEci))
     let siteECEF = sensorGeodeticPosition(site.lat, site.long, site.h).r
     let siteECI = fk5Reduction(siteECEF, startTime)
@@ -167,7 +176,7 @@ function calcInterceptTraj(site = mainWindow.site, sat = mainWindow.sat, startTi
     // let relState = math.subtract(launchStateFuture, satStateFuture)
     // sunEci = math.add(sunEci, satStateFuture.slice(0,3))
     // let cats = math.acos(math.dot(relState.slice(0,3), sunEci) / math.norm(relState.slice(0,3)) / math.norm(sunEci)) * 180 / Math.PI
-    return {v1Opt1, v1Opt2, siteECI, tof}
+    return {v1Opt1, v1Opt2, siteECI, tof, satState}
 }
 
 function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
