@@ -1472,7 +1472,7 @@ function startContextClick(event) {
             <div class="context-item" onclick="handleContextClick(this)" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
-            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${(event.shiftKey ? burnWay : burnDir).slice(0,3).map(d => d.toFixed(3)).join(', ')}) m/s ${event.shiftKey ? (burnWay[3] / 3600).toFixed(1) : ''} hrs</div>
+            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${(event.shiftKey ? burnWay : burnDir).slice(0,3).map(d => d.toFixed(3)).join(', ')}) ${event.shiftKey ? ' km ' : ' m/s '}${event.shiftKey ? (burnWay[3] / 3600).toFixed(1) + ' hrs' : ''}</div>
         `
         let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
         let padNumber = function(n) {
