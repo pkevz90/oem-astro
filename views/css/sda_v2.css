@@ -4,10 +4,10 @@
     height: 100%;
 }
 #sensor-list {
-    margin-top: 20px;
+    margin-top: 2vh;
     font-size: 3vw;
     overflow-y: scroll;
-    max-height: 90vh;
+    max-height: 98vh;
     padding-right: 30px;
 }
 #results-display div {
@@ -125,4 +125,15 @@ td {
 
 .map-slider input {
     width: 100%;
+}
+
+.div-shadow {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.pointer {
+    cursor: pointer;
+}
+.pointer:hover {
+    background-color: lightgray;
 }

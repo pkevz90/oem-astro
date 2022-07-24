@@ -160,9 +160,8 @@ function checkSensors(sat = [], time, options ={}) {
     for (let ii = 0; ii < sensors.length; ii++) {
         let index = sensors[ii]
         if (!mainWindow.sensors[index].active) continue
-        if (mainWindow.sensors[index].avail.length > 0) {
-            if (obDate < mainWindow.sensors[index].avail[0] || obDate > mainWindow.sensors[index].avail[1]) continue
-        }
+        let avail = mainWindow.sensors[index].avail.filter(a => a[0] < obDate && a[1] > obDate).length === 0
+        if (!avail) continue
 
         if (mainWindow.sensors[index].type === 'optical' || mainWindow.sensors[index].type === 'radar') {
             let pastSensorObs = pastObs.filter(s => s.sensor === index).filter(ob => math.abs(ob.time - time) < obLimit)
@@ -659,12 +658,13 @@ function updateSensors(sensors) {
         let s = sensors[activeIndexes[index]]
         let ii = activeIndexes[index]
         let div = document.createElement("div")
-        let avail = s.avail.length === 0 ? 'All' : `${s.avail[0].getDate()}/${padNumber(s.avail[0].getHours())}${padNumber(s.avail[0].getMinutes())}-${padNumber(s.avail[1].getHours())}${padNumber(s.avail[1].getMinutes())}`
+        let realIndex = mainWindow.sensors.findIndex(a => a.name === s.name)
         div.innerHTML = `
             <label class="sensor-label" style="color: ${s.active ? 'rgb(100,200,100)' : 'rgb(200,80,80)'}" for="sensor-${ii}">
                 <span>${s.name}</span>
             </label> 
-            <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> <span style="font-size: 0.5em">Avail: <span contentEditable="true" ob="avail" sensor="${ii}" oninput="changeSensorProperty(this)">${avail}</span></span>
+            <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> 
+            <span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showAvailability(${realIndex})">Availablity</span>
         `
         div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
         sensDiv.append(div)
@@ -672,13 +672,12 @@ function updateSensors(sensors) {
     sensors.forEach((s, ii) => {
         if (activeIndexes.filter(s => s === ii).length > 0) return
         let div = document.createElement("div")
-        // div.style.textAlign = 'center'
-        let avail = s.avail.length === 0 ? 'All' : `${s.avail[0].getDate()}/${padNumber(s.avail[0].getHours())}${padNumber(s.avail[0].getMinutes())}-${padNumber(s.avail[1].getHours())}${padNumber(s.avail[1].getMinutes())}`
         div.innerHTML = `
             <label class="sensor-label" style="color: ${s.active ? 'rgb(100,200,100)' : 'rgb(200,80,80)'}" for="sensor-${ii}">
                 <span>${s.name}</span>
             </label> 
-            <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> <span style="font-size: 0.5em">Avail: <span contentEditable="true" ob="avail" sensor="${ii}" oninput="changeSensorProperty(this)">${avail}</span></span>
+            <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> 
+            <span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showAvailability(${ii})">Availablity</span>
         `
         div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
         sensDiv.append(div)
@@ -721,7 +720,7 @@ function loadFileAsText(fileToLoad) {
     fileReader.onload = function (fileLoadedEvent) {
         var textFromFileLoaded = fileLoadedEvent.target.result;
         let newSensors = JSON.parse(textFromFileLoaded);
-        for (let index = 0; index < newSensors.length; index++) newSensors[index].avail = newSensors[index].avail.map(s => new Date(s.replace('Z', '')))
+        for (let index = 0; index < newSensors.length; index++) newSensors[index].avail = newSensors[index].avail.map(s => s.map(t => new Date(t.replace('Z', 'Z'))))
         mainWindow.sensors = newSensors
         updateSensors(mainWindow.sensors)
     };
@@ -1065,24 +1064,46 @@ function closeCovariance(el) {
     }
 }
 
+function latLong2Pixels(lat, long, cnvs) {
+    long += 180
+    long = long > 360 ? long - 360 : long
+    lat = 90 - lat
+    return {
+        x: cnvs.width * long / 360,
+        y: cnvs.height * lat/ 180
+    }
+}
+
 function showMap() {
-    let newDiv = document.createElement('div')
     let endTime = Number(document.getElementById('track-time-input').value) * 3600
-    newDiv.innerHTML = `
-        <div id="cov-div">
-            <div onclick="closeCovariance(this)" class="exit-button">X</div>
-            <div class="map-slider"><input oninput="changeMap(this)" type="range" min="-${endTime}" max="0" value="0"/></div>
-            <div>
-                <canvas id="map-canvas"></canvas>
-            </div>
-        </div>
-    `
-    document.getElementsByTagName('body')[0].append(newDiv)
+    let cnvs = document.createElement('canvas')
+    cnvs.classList.add('div-shadow')
+    let slideInput = document.createElement('input')
+    slideInput.type = 'range'
+    slideInput.style.position = 'fixed'
+    slideInput.style.height = '5%'
+    slideInput.style.left = '15%'
+    slideInput.style.width = '70%'
+    slideInput.style.top = '10.5%'
+    slideInput.style.zIndex = 20
+    slideInput.oninput = changeMap
+    slideInput.min = -endTime
+    slideInput.max = 0
+    slideInput.value = 0
+    slideInput.id = 'map-slider'
+    cnvs.style.position = 'fixed'
+    cnvs.style.height = '80%'
+    cnvs.style.left = '10%'
+    cnvs.style.width = '80%'
+    cnvs.style.top = '10%'
+    cnvs.width = window.innerWidth * 0.8
+    cnvs.height = window.innerHeight * 0.8
+    cnvs.id = 'map-canvas'
+    cnvs.onclick = (el) => el.target.remove()
+    document.getElementsByTagName('body')[0].append(cnvs)
+    document.getElementsByTagName('body')[0].append(slideInput)
     let img = new Image()
     img.src = './Media/2_no_clouds_4k.jpg'
-    let cnvs = document.getElementById('map-canvas')
-    cnvs.height = 400
-    cnvs.width = cnvs.height * 16/9
     let ctx = cnvs.getContext('2d')
     img.onload = function(){   
         
@@ -1091,19 +1112,37 @@ function showMap() {
         ctx.fillStyle = 'red'
         mainWindow.sensors.forEach(sens => {
             if (!sens.active) return
+            if (sens.type === 'space') {
+                let sensState = propToTime(sens.state, (mainWindow.startTime - sens.epoch) / 1000)
+                let time = 0
+                let timeDelta = 10
+                ctx.fillStyle = 'red'
+                while (time < endTime) {
+                    let ecefPos = fk5ReductionTranspose(sensState.slice(0,3), new Date(mainWindow.startTime - time * 1000))
+                    let longSat = math.atan2(ecefPos[1], ecefPos[0])
+                    longSat *= 180 / Math.PI
+                    let latSat = math.atan2(ecefPos[2], math.norm(ecefPos.slice(0,2)))
+                    latSat *= 180 / Math.PI
+                    longSat += 180
+                    longSat = longSat > 360 ? longSat - 360 : longSat
+                    latSat = 90 - latSat
+                    ctx.beginPath();
+                    ctx.arc(cnvs.width * longSat / 360, cnvs.height * latSat/ 180, cnvs.width /1200, 0, 2 * Math.PI);
+                    ctx.fill();
+                    sensState = propToTime(sensState, -timeDelta)
+                    time += timeDelta
+                }
+            }
             let {lat, long} = sens
-            long += 180
-            long = long > 360 ? long - 360 : long
-            lat = 90 - lat
+            let location = latLong2Pixels(lat, long, cnvs)
             ctx.beginPath();
-            ctx.arc(cnvs.width * long / 360, cnvs.height * lat/ 180, cnvs.width / 200, 0, 2 * Math.PI);
+            ctx.arc(location.x, location.y, cnvs.width / 200, 0, 2 * Math.PI);
             ctx.fill();
         })
         let orbit = mainWindow.satellites[0].origState.slice()
         
         let time = 0
         let timeDelta = 10
-        console.log(endTime);
         ctx.fillStyle = 'magenta'
         while (time < endTime) {
             let ecefPos = fk5ReductionTranspose(orbit.slice(0,3), new Date(mainWindow.startTime - time * 1000))
@@ -1126,22 +1165,12 @@ function showMap() {
 }
 
 function changeMap(inp) {
+    inp = inp.target
     let inpTime = Number(inp.value)
-    console.log(inpTime);
     drawOnMap(inpTime)
 } 
 
 function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
-    function getOffset( el ) {
-        var _x = 0;
-        var _y = 0;
-        while( el && !isNaN( el.offsetLeft ) && !isNaN( el.offsetTop ) ) {
-              _x += el.offsetLeft - el.scrollLeft;
-              _y += el.offsetTop - el.scrollTop;
-              el = el.offsetParent;
-        }
-        return { top: _y, left: _x };
-    }
     if (inCnvs == null) return
     let idCanvas = 'over-canvas'
     let cnvs = document.getElementById('over-canvas')
@@ -1150,14 +1179,17 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
         cnvs.id = idCanvas
         document.body.append(cnvs)
     }
-    let cnvsPos = getOffset(inCnvs);
     cnvs.style.position = 'fixed'
-    cnvs.style.top = cnvsPos.top + 2 + 'px'
-    cnvs.style.left = cnvsPos.left + 2 + 'px'
+    cnvs.style.top = inCnvs.offsetTop + 'px'
+    cnvs.style.left = inCnvs.offsetLeft + 'px'
     cnvs.style.zIndex = '10'
     cnvs.width = inCnvs.width + 0
     cnvs.height = inCnvs.height + 0
-
+    cnvs.onclick = el => {
+        el.target.remove()
+        inCnvs.remove()
+        document.getElementById('map-slider').remove()
+    }
     let ctx = cnvs.getContext('2d')
     ctx.clearRect(0,0,cnvs.width,cnvs.height)
     
@@ -1177,9 +1209,33 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
     ctx.arc(cnvs.width * longSat / 360, cnvs.height * latSat/ 180, cnvs.width /150, 0, 2 * Math.PI);
     ctx.fill();
     let obs = checkSensors(satState, time)
+    ctx.fillStyle = 'red'
+    mainWindow.sensors.filter(s => s.active && s.type === 'space').forEach(sens => {
+        let state = propToTime(sens.state, (jsTime - sens.epoch) / 1000)
+        let satEcef = fk5ReductionTranspose(state.slice(0,3), jsTime)
+        let longSat = math.atan2(satEcef[1], satEcef[0])
+        longSat *= 180 / Math.PI
+        let latSat = math.atan2(satEcef[2], math.norm(satEcef.slice(0,2)))
+        latSat *= 180 / Math.PI
+        let locationSens = latLong2Pixels(latSat, longSat, cnvs)
+        ctx.beginPath();
+        ctx.arc(locationSens.x, locationSens.y, cnvs.width /200, 0, 2 * Math.PI);
+        ctx.fill();
+    })
     ctx.fillStyle = 'orange'
     obs.forEach(ob => {
         s = JSON.parse(JSON.stringify(mainWindow.sensors[ob.sensor]))
+        if (s.type === 'space') {
+            let state = propToTime(s.state, ((jsTime - new Date(s.epoch))) / 1000)
+            let satEcef = fk5ReductionTranspose(state.slice(0,3), jsTime)
+            let longSat = math.atan2(satEcef[1], satEcef[0]) * 180 / Math.PI
+            let latSat = math.atan2(satEcef[2], math.norm(satEcef.slice(0,2))) * 180 / Math.PI
+            let locationSens = latLong2Pixels(latSat, longSat, cnvs)
+            ctx.beginPath();
+            console.log(locationSens.x, locationSens.y);
+            ctx.arc(locationSens.x, locationSens.y, cnvs.width /200, 0, 2 * Math.PI);
+            ctx.fill();
+        }
         s.long += 180
         s.long = s.long > 360 ? s.long - 360 : s.long
         s.lat = 90 - s.lat
@@ -1202,4 +1258,109 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
     ctx.beginPath();
     ctx.arc(cnvs.width * longSun / 360, cnvs.height * latSun/ 180, cnvs.width / 100, 0, 2 * Math.PI);
     ctx.fill()
+    ctx.fillStyle = 'black'
+    ctx.textAlign = 'center'
+    ctx.font = `${window.innerHeight / 969 * 25}px serif`
+    ctx.fillText(toStkFormat(jsTime.toString()), cnvs.width / 2,window.innerHeight / 969 * 25)
+}
+
+function toStkFormat(time) {
+    time = time.split('GMT')[0].substring(4, time.split('GMT')[0].length - 1);
+    time = time.split(' ');
+    return time[1] + ' ' + time[0] + ' ' + time[2] + ' ' + time[3];
+}
+
+function showAvailability(sensor = 0) {
+    console.log(sensor);
+    let div = document.createElement('div')
+    div.innerHTML = `
+        <div style="font-size: 2em; margin-bottom: 20px">${mainWindow.sensors[sensor].name} Sensor Down Time(s)</div>
+    `
+    mainWindow.sensors[sensor].avail.forEach((a,ii) => {
+        let start = a[0]
+        start = [start.getDate(), padNumber(start.getHours()) + padNumber(start.getMinutes())]
+
+        let end = a[1]
+        end = [end.getDate(), padNumber(end.getHours()) + padNumber(end.getMinutes())]
+        console.log(start, end);
+        div.innerHTML += `
+        <div class="down-time-div"> <span style="font-size: 1.5em">${ii+1})</span>
+            Start Date <input clear='y' oninput="availHandlerFunction(this)" id="date" type="text" in="date" style="width:4ch" maxlength="2" value="${start[0]}"/> 
+            Start Time <input clear='y' oninput="availHandlerFunction(this)" id="time" type="text" in="time" style="width:6ch" maxlength="4" value="${start[1]}"/>
+            End Date   <input clear='y' oninput="availHandlerFunction(this)" id="date" type="text" in="date" style="width:4ch" maxlength="2" value="${end[0]}"/> 
+            End Time   <input clear='y' oninput="availHandlerFunction(this)" id="time" type="text" in="time" style="width:6ch" maxlength="4" value="${end[1]}"/>
+        </div>
+        `
+    })
+    div.innerHTML += `
+        <div style="margin-top:30px"><button id="add-avail-button" onclick="availHandlerFunction(this)">Add Down Time</button></div>
+        <div style="margin:30px"><button sensor="${sensor}" id="confirm-avail-button" onclick="availHandlerFunction(this)">Confirm</button><button id="cancel-avail-button" onclick="availHandlerFunction(this)">Cancel</button></div>
+    `
+
+    div.id = 'avail-div'
+    div.style.position = 'fixed'
+    div.style.width = '50%'
+    div.style.top = '10%'
+    div.style.left = '25%'
+    div.style.zIndex = 20
+    div.style.backgroundColor = 'white'
+    div.style.textAlign = 'center'
+    // div.style.border = '1px solid black'
+    div.style.borderRadius = '20px'
+    div.style.minHeight = '50%'
+    div.classList.add('div-shadow')
+    document.getElementsByTagName('body')[0].append(div)
+}
+
+function availHandlerFunction(el) {
+    function setGoodBadFlag(ele, good = true) {
+        ele.setAttribute('clear', good ? 'y' : 'n')
+        el.style.backgroundColor = good ? 'white' : 'pink'
+    }
+    switch (el.id) {
+        case 'add-avail-button':
+            let numDivs = document.getElementsByClassName('down-time-div').length + 1
+            let newDiv = `
+                <div class="down-time-div"> <span style="font-size: 1.5em">${numDivs})</span>
+                    Start Date <input clear='n' oninput="availHandlerFunction(this)" id="date" type="text" in="date" style="width:4ch" maxlength="2"/> 
+                    Start Time <input clear='n' oninput="availHandlerFunction(this)" id="time" type="text" in="time" style="width:6ch" maxlength="4">
+                    End Date   <input clear='n' oninput="availHandlerFunction(this)" id="date" type="text" in="date" style="width:4ch" maxlength="2"/> 
+                    End Time   <input clear='n' oninput="availHandlerFunction(this)" id="time" type="text" in="time" style="width:6ch" maxlength="4">
+                </div>
+            `
+            el.parentElement.insertAdjacentHTML('beforebegin', newDiv)
+            break
+        case 'date':
+            if (Number.isNaN(Number(el.value)) || el.value.search('-') !== -1 || !Number.isInteger(Number(el.value))) return setGoodBadFlag(el, false)
+            else if (Number(el.value.slice(0,2)) > 31 || Number(el.value) < 1) return setGoodBadFlag(el, false)
+            else setGoodBadFlag(el)
+            break
+        case 'time':
+            if (Number.isNaN(Number(el.value)) || el.value.search('-') !== -1 || !Number.isInteger(Number(el.value))) return setGoodBadFlag(el, false)
+            else if (el.value.length > 0 && el.value.length < 4) return setGoodBadFlag(el, false)
+            else if (Number(el.value.slice(0,2)) > 23 || Number(el.value.slice(2,4)) > 59) return setGoodBadFlag(el)
+            else setGoodBadFlag(el)
+            break
+        case 'cancel-avail-button':
+            el.parentElement.parentElement.remove()
+            break
+        case 'confirm-avail-button':
+            let availDivs = document.getElementsByClassName('down-time-div')
+            let avails = []
+            for (let index = 0; index < availDivs.length; index++) {
+                let inputs = [...availDivs[index].getElementsByTagName('input')]
+                if (inputs.map(i => i.getAttribute('clear')).filter(s => s === 'n').length > 0) continue
+                let startTime = [inputs[0].value, inputs[1].value]
+                let endTime = [inputs[2].value, inputs[3].value]
+                startTime = new Date(mainWindow.startTime.getFullYear(), mainWindow.startTime.getMonth(), startTime[0], startTime[1].slice(0,2), startTime[1].slice(2,4))
+                endTime = new Date(mainWindow.startTime.getFullYear(), mainWindow.startTime.getMonth(), endTime[0], endTime[1].slice(0,2), endTime[1].slice(2,4))
+                if (endTime < startTime) continue
+                avails.push([startTime, endTime])
+            }
+            mainWindow.sensors[el.getAttribute('sensor')].avail = avails
+            el.parentElement.parentElement.remove()
+            break
+        default:
+            break
+    }
 }
