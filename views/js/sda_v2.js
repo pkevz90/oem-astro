@@ -1278,17 +1278,16 @@ function showAvailability(sensor = 0) {
     `
     mainWindow.sensors[sensor].avail.forEach((a,ii) => {
         let start = a[0]
-        start = [start.getDate(), padNumber(start.getHours()) + padNumber(start.getMinutes())]
+        let startArr = [start.getDate(), padNumber(start.getHours()) +':'+ padNumber(start.getMinutes())]
 
         let end = a[1]
-        end = [end.getDate(), padNumber(end.getHours()) + padNumber(end.getMinutes())]
+        let endArr = [end.getDate(), padNumber(end.getHours()) + ':' + padNumber(end.getMinutes())]
         console.log(start, end);
         div.innerHTML += `
         <div class="down-time-div"> <span style="font-size: 1.5em">${ii+1})</span>
-            Start Date <input clear='y' oninput="availHandlerFunction(this)" id="date" type="text" in="date" style="width:4ch" maxlength="2" value="${start[0]}"/> 
-            Start Time <input clear='y' oninput="availHandlerFunction(this)" id="time" type="text" in="time" style="width:6ch" maxlength="4" value="${start[1]}"/>
-            End Date   <input clear='y' oninput="availHandlerFunction(this)" id="date" type="text" in="date" style="width:4ch" maxlength="2" value="${end[0]}"/> 
-            End Time   <input clear='y' oninput="availHandlerFunction(this)" id="time" type="text" in="time" style="width:6ch" maxlength="4" value="${end[1]}"/>
+            Start <input type="date" value="${`${start.getFullYear()}-${padNumber(start.getMonth() + 1)}-${padNumber(start.getDate())}`}"> <input type="time" value="${startArr[1]}">
+            Start <input type="date" value="${`${end.getFullYear()}-${padNumber(end.getMonth() + 1)}-${padNumber(end.getDate())}`}"> <input type="time" value="${endArr[1]}"> 
+            <span class="pointer" onclick="availHandlerFunction(this)" style="border: 1px solid black; padding: 2px; border-radius: 25%;" id="delete-avail">X</span>
         </div>
         `
     })
@@ -1313,33 +1312,17 @@ function showAvailability(sensor = 0) {
 }
 
 function availHandlerFunction(el) {
-    function setGoodBadFlag(ele, good = true) {
-        ele.setAttribute('clear', good ? 'y' : 'n')
-        el.style.backgroundColor = good ? 'white' : 'pink'
-    }
     switch (el.id) {
         case 'add-avail-button':
             let numDivs = document.getElementsByClassName('down-time-div').length + 1
             let newDiv = `
                 <div class="down-time-div"> <span style="font-size: 1.5em">${numDivs})</span>
-                    Start Date <input clear='n' oninput="availHandlerFunction(this)" id="date" type="text" in="date" style="width:4ch" maxlength="2"/> 
-                    Start Time <input clear='n' oninput="availHandlerFunction(this)" id="time" type="text" in="time" style="width:6ch" maxlength="4">
-                    End Date   <input clear='n' oninput="availHandlerFunction(this)" id="date" type="text" in="date" style="width:4ch" maxlength="2"/> 
-                    End Time   <input clear='n' oninput="availHandlerFunction(this)" id="time" type="text" in="time" style="width:6ch" maxlength="4">
+                    Start <input type="date" value="${document.getElementById('date-input').value}"> <input type="time" value="00:00"> 
+                    End <input type="date" value="${document.getElementById('date-input').value}"> <input type="time" value="00:00"> 
+                    <span class="pointer" onclick="availHandlerFunction(this)" style="border: 1px solid black; padding: 2px; border-radius: 25%;" id="delete-avail">X</span>
                 </div>
             `
             el.parentElement.insertAdjacentHTML('beforebegin', newDiv)
-            break
-        case 'date':
-            if (Number.isNaN(Number(el.value)) || el.value.search('-') !== -1 || !Number.isInteger(Number(el.value))) return setGoodBadFlag(el, false)
-            else if (Number(el.value.slice(0,2)) > 31 || Number(el.value) < 1) return setGoodBadFlag(el, false)
-            else setGoodBadFlag(el)
-            break
-        case 'time':
-            if (Number.isNaN(Number(el.value)) || el.value.search('-') !== -1 || !Number.isInteger(Number(el.value))) return setGoodBadFlag(el, false)
-            else if (el.value.length > 0 && el.value.length < 4) return setGoodBadFlag(el, false)
-            else if (Number(el.value.slice(0,2)) > 23 || Number(el.value.slice(2,4)) > 59) return setGoodBadFlag(el)
-            else setGoodBadFlag(el)
             break
         case 'cancel-avail-button':
             el.parentElement.parentElement.remove()
@@ -1349,16 +1332,15 @@ function availHandlerFunction(el) {
             let avails = []
             for (let index = 0; index < availDivs.length; index++) {
                 let inputs = [...availDivs[index].getElementsByTagName('input')]
-                if (inputs.map(i => i.getAttribute('clear')).filter(s => s === 'n').length > 0) continue
-                let startTime = [inputs[0].value, inputs[1].value]
-                let endTime = [inputs[2].value, inputs[3].value]
-                startTime = new Date(mainWindow.startTime.getFullYear(), mainWindow.startTime.getMonth(), startTime[0], startTime[1].slice(0,2), startTime[1].slice(2,4))
-                endTime = new Date(mainWindow.startTime.getFullYear(), mainWindow.startTime.getMonth(), endTime[0], endTime[1].slice(0,2), endTime[1].slice(2,4))
-                if (endTime < startTime) continue
-                avails.push([startTime, endTime])
+                let start = new Date(inputs[0].value + ' ' + inputs[1].value)
+                let end = new Date(inputs[2].value + ' ' + inputs[3].value)
+                if (end > start) avails.push([start, end])
             }
             mainWindow.sensors[el.getAttribute('sensor')].avail = avails
             el.parentElement.parentElement.remove()
+            break
+        case 'delete-avail':
+            el.parentElement.remove()
             break
         default:
             break
