@@ -1,20 +1,28 @@
+body, html {
+    margin: 0;
+}
+
 #main-display {
     display: flex;
     justify-content: space-around;
     height: 100%;
 }
 #sensor-list {
-    margin-top: 2vh;
+    padding-top: 1vh;
+    padding-bottom: 2vh;
     font-size: 3vw;
     overflow-y: scroll;
-    max-height: 98vh;
+    max-height: 97vh;
     padding-right: 30px;
 }
 #results-display div {
-    margin: 10px 0px;
+    margin: 1vh 0px;
     font-size: 1.1em;
+    /* height: 4vh; */
 }
-
+#results-display {
+    padding-top: 1vh;
+}
 .coe-box {
     padding: 2px 0.5em;
     border: 1px solid black;

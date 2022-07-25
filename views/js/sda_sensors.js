@@ -188,7 +188,7 @@ let sensors = [
         lat: 30.4333, //deg
         long: -91.16667, //deg
         azMask: [],
-        elMask: [1,90],
+        elMask: [10,90],
         maxRange: 60000,
         active: false
     },

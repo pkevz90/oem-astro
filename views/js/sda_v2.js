@@ -1105,9 +1105,7 @@ function showMap() {
     let img = new Image()
     img.src = './Media/2_no_clouds_4k.jpg'
     let ctx = cnvs.getContext('2d')
-    img.onload = function(){   
-        
-        console.log(img);    
+    img.onload = function(){     
         ctx.drawImage(img,0,0,cnvs.width, cnvs.height); 
         ctx.fillStyle = 'red'
         mainWindow.sensors.forEach(sens => {
@@ -1145,7 +1143,8 @@ function showMap() {
         let timeDelta = 10
         ctx.fillStyle = 'magenta'
         while (time < endTime) {
-            let ecefPos = fk5ReductionTranspose(orbit.slice(0,3), new Date(mainWindow.startTime - time * 1000))
+            let orbitEpoch = propToTime(orbit, -time)
+            let ecefPos = fk5ReductionTranspose(orbitEpoch.slice(0,3), new Date(mainWindow.startTime - time * 1000))
             let longSat = math.atan2(ecefPos[1], ecefPos[0])
             longSat *= 180 / Math.PI
             let latSat = math.atan2(ecefPos[2], math.norm(ecefPos.slice(0,2)))
@@ -1156,7 +1155,6 @@ function showMap() {
             ctx.beginPath();
             ctx.arc(cnvs.width * longSat / 360, cnvs.height * latSat/ 180, cnvs.width /600, 0, 2 * Math.PI);
             ctx.fill();
-            orbit = propToTime(orbit, -timeDelta)
             time += timeDelta
         }
         
@@ -1183,8 +1181,8 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
     cnvs.style.top = inCnvs.offsetTop + 'px'
     cnvs.style.left = inCnvs.offsetLeft + 'px'
     cnvs.style.zIndex = '10'
-    cnvs.width = inCnvs.width + 0
-    cnvs.height = inCnvs.height + 0
+    cnvs.width = inCnvs.width
+    cnvs.height = inCnvs.height
     cnvs.onclick = el => {
         el.target.remove()
         inCnvs.remove()
