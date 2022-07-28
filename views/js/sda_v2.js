@@ -972,6 +972,7 @@ function fk5Reduction(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Dat
 
 function fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
     // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
+    // ECI to ECEF
     let jd_TT = julianDate(date.getFullYear(), date.getMonth(), date.getDate()) 
     let t_TT = (jd_TT - 2451545) / 36525
     let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
@@ -1343,4 +1344,106 @@ function availHandlerFunction(el) {
         default:
             break
     }
+}
+
+function produceEarthSphere(rot = {long: 0, lat: 0}, points = 20000) {
+    function pos2pixels(pos, width) {
+        return [
+            0.5 + pos[0] / width,
+            0.5 - pos[1] / width,
+        ]
+    }
+    let positions
+    if (sphereData === undefined) {
+        let goldenRatio = 1.618
+        let i = math.range(0, points)._data
+        positions = []
+        i.forEach(ii => {
+            let theta = 2 * Math.PI * ii / goldenRatio
+            let phi = math.acos(1 - 2 * (ii + 0.5) / points) - Math.PI / 2
+            let color = getImageColor(phi * 180 / Math.PI , theta * 180 / Math.PI % 360)
+            if (color[2] < math.norm([color[0], color[1]])) {
+                
+                positions.push({
+                    pos: math.multiply(rotationMatrices(-90, 1), math.transpose([math.cos(theta) * math.cos(phi), math.sin(theta) * math.cos(phi), math.sin(phi)])),
+                    color: `rgb(${color[0]}, ${color[1]}, ${color[2]})`
+                })
+            }
+            
+        })
+        console.log(positions.length);
+        sphereData = positions
+    }
+    // console.time()
+    let f = 1
+    let realWidth = 2
+    let r = math.multiply(rotationMatrices(rot.lat, 1), rotationMatrices(rot.long, 2))
+    let drawPosition = sphereData.map(pos => {
+        let rotPos = math.squeeze(math.multiply(r, pos.pos))
+        let z = rotPos[2]
+        rotPos = pos2pixels(math.dotMultiply(-f / (rotPos[2] - 3), rotPos.slice(0,2)), realWidth)       
+        return {color: pos.color, pos: rotPos, z}
+    }).filter(pos => pos.z > filterLevel)
+    .sort(function(a,b) {return a.z - b.z})
+    if (cnvs3d === undefined) {
+        cnvs3d = document.createElement('canvas')
+        cnvs3d.style.position = 'fixed'
+        cnvs3d.style.top = 0
+        cnvs3d.style.left = 0
+        cnvs3d.style.width = '50vw'
+        cnvs3d.style.height = '50vw'
+        cnvs3d.style.zIndex = 50
+        document.getElementsByTagName('body')[0].append(cnvs3d)
+        cnvs3d.width = window.innerWidth / 2
+        cnvs3d.height = window.innerWidth / 2
+    }
+    let ctx = cnvs3d.getContext('2d')
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0,0,cnvs3d.width,cnvs3d.height)
+    
+    // console.timeEnd()
+    // console.time()
+    ctx.strokeStlke = 'black'
+    ctx.beginPath()
+    ctx.arc(cnvs3d.width / 2, cnvs3d.height / 2, cnvs3d.width / 3.45, 0, 2 * Math.PI)
+    ctx.stroke()
+    ctx.fillStyle = 'black'
+    drawPosition.forEach(pos => {
+        // ctx.fillStyle = pos.color
+        ctx.beginPath()
+        // ctx.arc(pos.pos[0] * cnvs3d.width, pos.pos[1] * cnvs3d.height, 6, 0, 2 * Math.PI)
+        let pixelSize = 3
+        ctx.rect(pos.pos[0] * cnvs3d.width-pixelSize / 2, pos.pos[1] * cnvs3d.height-pixelSize / 2,pixelSize,pixelSize)
+        ctx.fill()
+    })
+    
+    // console.timeEnd()
+}
+
+let imgSp = new Image()
+imgSp.src = './Media/2_no_clouds_4k.jpg'
+
+function getImageColor(lat = 47, long = 0) {
+    long = long > 180 ? long - 360 : long
+    const {
+        data
+    } = context.getImageData(shadowCnvs.width *(long + 180) / 360, shadowCnvs.height*(90-lat)/180, 1, 1);
+    return data
+}
+let shadowCnvs = document.createElement('canvas')
+shadowCnvs.width = 10000
+shadowCnvs.height = 10000
+const context = shadowCnvs.getContext('2d');
+imgSp.onload = function() {
+    context.drawImage(imgSp, 0, 0, shadowCnvs.width, shadowCnvs.height);
+}
+let cnvs3d
+let sphereData
+let angle = 0
+let lat = 0
+let filterLevel = 0.4
+function animationFunction() {
+    produceEarthSphere({long: angle, lat})
+    angle += 1
+    window.requestAnimationFrame(animationFunction)
 }
