@@ -8,7 +8,7 @@ let mainWindow = {
     initSun: [-94309.749762,    139482969.590637,    60466737.314102],
     maxTime: 24 * 3600, //seconds
     propTime: 60,
-    startTime: new Date(),
+    startTime: new Date(new Date() - (-21600000)),
     satellites: [
         {
             origState: [42164, 0, 0, 0, 3.0629662506494473, 0.2679748236943305],
@@ -732,7 +732,7 @@ function julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
 }
 
 function updateTime(time = Date.now(), updateEarth = true) {
-    time = new Date(time)
+    time = new Date(time + 21600000)
     let y = time.getFullYear();
     let m = (time.getMonth() + 1).toString();
     let d = time.getDate().toString();
@@ -1419,6 +1419,8 @@ function produceEarthSphere(rot = {long: 0, lat: 0}, points = 20000) {
     
     // console.timeEnd()
 }
+
+
 
 let imgSp = new Image()
 imgSp.src = './Media/2_no_clouds_4k.jpg'

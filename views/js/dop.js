@@ -1,6 +1,7 @@
 let cnvs1 = setupLowerCanvas()
 let ctx1 = cnvs1.getContext('2d')
 let cnvs2 = setupUpperCanvas()
+let skyCnvs
 cnvs2.onclick = (event) => {
     let x = event.offsetX
     let y = event.offsetY
@@ -34,6 +35,27 @@ cnvs2.onmousemove = (event) => {
         return
     }
     cnvs2.style.cursor = 'pointer'
+    if (mainWindow.focusObject === undefined) {
+        let posvel = Object.values(Coe2PosVelObject(mainWindow.satellites[closePoints[0]]))
+        let period = 2 * Math.PI * (mainWindow.satellites[closePoints[0]].a ** 3 / 398600.4418) ** 0.5
+        let time = -period
+        let dt = period / 400
+        let focusOrbit = [], times = []
+
+        while (time < period) {
+            let state = propToTime(posvel, time+mainWindow.time)
+            focusOrbit.push(state)
+            times.push(time)
+            time += dt
+        }
+        focusOrbit = focusOrbit.map((sat, ii) => fk5ReductionTranspose(sat.slice(0,3), new Date(mainWindow.startTime - (-mainWindow.time*1000) - (-times[ii]*1000))))
+            .map(sat => {
+                return {long: math.atan2(sat[1], sat[0]) * 180 / Math.PI, lat: math.atan2(sat[2], math.norm(sat.slice(0,2))) * 180 / Math.PI}
+            })
+            .map(sat => latLong2Pixels(sat.lat, sat.long, cnvs2))
+        mainWindow.focusOrbit = focusOrbit
+    }
+
     mainWindow.focusObject = closePoints[0]
 }
 let ctx2 = cnvs2.getContext('2d')
@@ -43,15 +65,18 @@ ctx2.font = `${window.innerHeight / 50}px serif`;
 let startTime = new Date(new Date() - (-21600000))
 mainWindow = {
     startTime,
+    dt: 1/60,
     time: 0,
     satellites: generateGenericPnt(startTime),
     satPixels: [],
     focusObject: undefined,
+    focusOrbit: [],
     focusLocation: [{
         lat: 0,
         long: 0,
         hist: []
     }],
+    elMask: 15,
     sigmaR: 6.7 // from wikipedia
 }
 function setupLowerCanvas() {
@@ -91,7 +116,7 @@ function generateGenericPnt(time, options = {}) {
     let {planes = 6, satInPlane = 4, inc = 63} = options
     let plane = 0, delta = 0
     let sma = ((43082 / 2 / Math.PI) ** 2 * 398600.4418)**(1/3)
-    satellites = [], ii = 1
+    let satellites = [], ii = 1
     while (plane < 360) {
         position = 0
         while (position < 360) {
@@ -157,22 +182,37 @@ function drawSatellitePositions( time = 0, satellites = mainWindow.satellites, c
     let ctx = cnvs.getContext('2d')
     ctx.fillStyle = color
     ctx.textBaseline = 'top'
+    ctx.textAlign = 'center'
+    
+    ctx.shadowColor = "rgba(50,50,50, 0.75)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 6;
+    ctx.shadowOffsetY = 6;
     mainWindow.satPixels = []
+    let epoch = new Date(mainWindow.startTime - (-time*1000))
     let satellitesLatLong = satellites.map(sat => Object.values(Coe2PosVelObject(sat)))
-        .map(sat => propToTime(sat, time))
-        .map(sat => fk5ReductionTranspose(sat.slice(0,3), new Date(mainWindow.startTime - (-time))))
+        .map(sat => propToTime(sat, (epoch - mainWindow.startTime) / 1000))
+        .map(sat => fk5ReductionTranspose(sat.slice(0,3), epoch))
         .map(sat => {
             return {long: math.atan2(sat[1], sat[0]) * 180 / Math.PI, lat: math.atan2(sat[2], math.norm(sat.slice(0,2))) * 180 / Math.PI}
         })
         .map(sat => latLong2Pixels(sat.lat, sat.long, cnvs))
         .forEach((sat, ii) => {
             mainWindow.satPixels.push({x: sat.x, y: sat.y})
-            ctx.fillStyle = ii === mainWindow.focusObject ? 'yellow' : satellites[ii].active ? 'black' : 'rgb(200,100,100)'
+            ctx.fillStyle = satellites[ii].active ? 'black' : 'rgb(200,100,100)'
             ctx.beginPath()
             ctx.arc(sat.x, sat.y, cnvs.width / 100, 0, 2 * Math.PI)
             ctx.fill()
             ctx.fillText(satellites[ii].name, sat.x, sat.y + cnvs.width / 100)
         })
+    if (mainWindow.focusObject !== undefined) {
+        ctx.fillStyle = satellites[mainWindow.focusObject].active ? 'black' : 'rgb(200,100,100)'
+        mainWindow.focusOrbit.forEach(point => {
+            ctx.beginPath()
+            ctx.arc(point.x, point.y, cnvs.width / 800, 0, 2 * Math.PI)
+            ctx.fill()
+        })
+    }
 }
 
 function propTrueAnomaly(tA = 0, a = 10000, e = 0.1, time = 3600) {
@@ -427,11 +467,12 @@ function razel(r_eci=[-5505.504883, 56.449170, 3821.871726], date=new Date(1995,
     return {el, az, r}
 }
 
-function generateVisibleSatellites(lat = 0, long = 0, satellites = mainWindow.satellites) {
+function generateVisibleSatellites(lat = 0, long = 0, satellites = mainWindow.satellites, time = mainWindow.time) {
     let satAzEl = satellites.filter(sat => sat.active).map(sat => Object.values(Coe2PosVelObject(sat)))
-        .map(sat => propToTime(sat, mainWindow.time))
-        .map(sat => razel(sat.slice(0,3), new Date(mainWindow.startTime - (-mainWindow.time)), lat, long))
-    let minEl = 5
+        .map(sat => propToTime(sat, time))
+        .map(sat => razel(sat.slice(0,3), new Date(mainWindow.startTime - (-time*1000)), lat, long))
+    // console.log(satAzEl);
+    let minEl = mainWindow.elMask
     let visibleSats = satellites.filter(sat => sat.active).filter((sat, ii) => satAzEl[ii].el > minEl)
     return visibleSats
 }
@@ -439,24 +480,30 @@ function generateVisibleSatellites(lat = 0, long = 0, satellites = mainWindow.sa
 function animationLoop() {
     cnvs2.getContext('2d').clearRect(0,0,cnvs2.width, cnvs2.height)
     drawSatellitePositions(mainWindow.time)
-    mainWindow.time += 15
+    mainWindow.time += mainWindow.dt
     for (let index = 0; index < mainWindow.focusLocation.length; index++) {
         let visSats = generateVisibleSatellites(mainWindow.focusLocation[index].lat, mainWindow.focusLocation[index].long)
-        // drawSatellitePositions(mainWindow.time, visSats, cnvs2, 'red')
         let dop = generateDop(mainWindow.focusLocation[index].lat, mainWindow.focusLocation[index].long, visSats)
-        textAtLocation(mainWindow.focusLocation[index].lat, mainWindow.focusLocation[index].long, `${(dop.pdop * mainWindow.sigmaR).toFixed(2)} m`)
+        textAtLocation(mainWindow.focusLocation[index].lat, mainWindow.focusLocation[index].long, `${(dop.pdop * mainWindow.sigmaR).toFixed(2)} m`, visSats)
     }
+    // Display current time
+    let curTime = toStkFormat((new Date(mainWindow.startTime - (-mainWindow.time*1000))).toString())
+    ctx2.fillStyle = 'black'
+    ctx2.textBaseline = 'bottom'
+    ctx2.textAlign = 'left'
+    ctx2.fillText(curTime, 5,cnvs2.height - 5)
+    drawSkyPlot()
     window.requestAnimationFrame(animationLoop)
 }
-
-function generateDop(lat, long, satellites) {
+animationLoop()
+function generateDop(lat, long, satellites, time = mainWindow.time) {
     if (satellites === undefined) {
         satellites = generateVisibleSatellites(lat, long, mainWindow.satellites)
     }
     let r_site_ecef = sensorGeodeticPosition(lat, long, 0).r
     let satellitesPos = satellites.map(sat => Object.values(Coe2PosVelObject(sat)))
-    .map(sat => propToTime(sat, mainWindow.time))
-    .map(sat => fk5ReductionTranspose(sat.slice(0,3), new Date(mainWindow.startTime - (-mainWindow.time))))
+    .map(sat => propToTime(sat, time))
+    .map(sat => fk5ReductionTranspose(sat.slice(0,3), new Date(mainWindow.startTime - (-time*1000))))
     
     let a = []
     satellitesPos.forEach(sat => {
@@ -470,10 +517,23 @@ function generateDop(lat, long, satellites) {
     return {gdop, pdop, tdop}
 }
 
-function textAtLocation(lat = 0, long = 0, text = 'hey', cnvs = cnvs2, color = 'white') {
+function textAtLocation(lat = 0, long = 0, text = 'hey', visibleSats = [], cnvs = cnvs2, color = 'white') {
     let ctx = cnvs.getContext('2d')
+    ctx.strokeStyle = 'black'
+    ctx.lineWidth = 1
     ctx.fillStyle = color
+    
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
     let position = latLong2Pixels(lat,long,cnvs)
+    visibleSats.forEach(sat => {
+        let index = mainWindow.satellites.findIndex(a => a.name === sat.name)
+        ctx.beginPath()
+        ctx.moveTo(position.x, position.y)
+        ctx.lineTo(mainWindow.satPixels[index].x, mainWindow.satPixels[index].y)
+        ctx.stroke()
+    })
     ctx.beginPath()
     ctx.arc(position.x, position.y, cnvs.width / 200, 0, 2 * Math.PI)
     ctx.fill()
@@ -545,6 +605,12 @@ function loadFileAsText(fileToLoad) {
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
 
+function toStkFormat(time) {
+    time = time.split('GMT')[0].substring(4, time.split('GMT')[0].length - 1);
+    time = time.split(' ');
+    return time[1] + ' ' + time[0] + ' ' + time[2] + ' ' + time[3];
+}
+
 function addGui() {
     let body = document.getElementsByTagName('body')[0]
     let div = document.createElement('div')
@@ -558,7 +624,115 @@ function addGui() {
     div.innerHTML = `
             <button id="upload-button" onclick="uploadSatellites()">Load Satellites</button>
             <input style="display: none" id="file-input" onchange="uploadSatellites()" type="file"/>
+            <div style="margin: 10px"><span class="hover"><<</span><span style="margin: 5px">1x</span><span class="hover">>></span></div>
         `
     body.append(div)
+}
+
+function drawSkyPlot(show = false) {
+    if (skyCnvs === undefined) {
+        let body = document.getElementsByTagName('body')[0]
+        skyCnvs = document.createElement('canvas')
+        skyCnvs.scale = 2
+        skyCnvs.style.position = 'fixed'
+        skyCnvs.style.bottom = '5px'
+        skyCnvs.style.right = '5px'
+        skyCnvs.style.width =`${15*skyCnvs.scale}vw`
+        skyCnvs.style.height =`${15*skyCnvs.scale}vw`
+        skyCnvs.style.zIndex = 15 
+        skyCnvs.width = 0.15*skyCnvs.scale * window.innerWidth
+        skyCnvs.height = 0.15 * skyCnvs.scale * window.innerWidth
+        body.append(skyCnvs)
+        skyCnvs.onclick = (el) => {
+            skyCnvs.scale = skyCnvs.scale === 2 ? 3 : skyCnvs.scale === 3 ? 0.75 : 2
+            skyCnvs.style.width =`${15*skyCnvs.scale}vw`
+            skyCnvs.style.height =`${15*skyCnvs.scale}vw`
+            skyCnvs.width = 0.15*skyCnvs.scale * window.innerWidth
+            skyCnvs.height = 0.15 * skyCnvs.scale * window.innerWidth
+        }
+    }
+    let ctx = skyCnvs.getContext('2d')
+    ctx.clearRect(0,0,skyCnvs.width, skyCnvs.height)
+    ctx.strokeStyle = 'black'
+    ctx.fillStyle = 'lightgray'
+    let minEl = mainWindow.elMask
+    ctx.beginPath()
+    ctx.arc(skyCnvs.width / 2, skyCnvs.height / 2, skyCnvs.width / 2, 0, 2 * Math.PI)
+    ctx.fill()
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(skyCnvs.width / 2, skyCnvs.height / 2, skyCnvs.width / 6, 0, 2 * Math.PI)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(skyCnvs.width / 2, skyCnvs.height / 2, 2*skyCnvs.width / 6, 0, 2 * Math.PI)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(skyCnvs.width / 2, 0)
+    ctx.lineTo(skyCnvs.width / 2, skyCnvs.height)
+    ctx.moveTo(0, skyCnvs.height / 2)
+    ctx.lineTo(skyCnvs.width, skyCnvs.height / 2)
+    ctx.moveTo(0, skyCnvs.height / 2)
+    ctx.lineTo(skyCnvs.width, skyCnvs.height / 2)
+    ctx.stroke()
+    
+    let {lat, long} = mainWindow.focusLocation[0]
+    ctx.fillStyle = 'black'
+    ctx.textBaseline = 'top'
+    ctx.textAlign = 'center'
+    ctx.font = `${5 * skyCnvs.scale}px sans-serif`
+    mainWindow.satellites.map(sat => Object.values(Coe2PosVelObject(sat)))
+        .map(sat => propToTime(sat, mainWindow.time))
+        .map((sat, ii) => [ii, razel(sat.slice(0,3), new Date(mainWindow.startTime - (-mainWindow.time*1000)), lat, long)])
+        .filter(sat => mainWindow.satellites[sat[0]].active && sat[1].el > minEl).forEach(sat => {
+            if (show) console.log(sat);
+            let r = skyCnvs.width / 2
+            let x = r + r * (90-sat[1].el) / 90 * Math.sin(sat[1].az * Math.PI / 180)
+            let y = r - r * (90-sat[1].el) / 90 * Math.cos(sat[1].az * Math.PI / 180)
+            ctx.beginPath()
+            ctx.arc(x,y,skyCnvs.width / 60,0,2 * Math.PI)
+            ctx.fill()
+            ctx.fillText(mainWindow.satellites[sat[0]].name, x, y + skyCnvs.width / 60)
+        })
+    
+}
+
+function generateReport(lat = 0, long = 0, start = mainWindow.startTime, length = 86400) {
+    let satellites = mainWindow.satellites, t = 0, dt = 600, dop = [], cnvs = document.createElement('canvas')
+    document.getElementsByTagName('body')[0].append(cnvs)
+    cnvs.style.position = 'fixed'
+    cnvs.style.top = '25vh'
+    cnvs.style.right = '15vw'
+    cnvs.style.width =`70vw`
+    cnvs.style.height =`50vh`
+    cnvs.style.zIndex = 20
+    cnvs.width = 0.7 * window.innerWidth
+    cnvs.height = 0.5 * window.innerHeight
+    cnvs.onclick = (el) => {
+        el.target.remove()
+    }
+    let ctx = cnvs.getContext('2d')
+    ctx.fillStyle = 'rgb(225,225,225)'
+    ctx.fillRect(0,0,cnvs.width, cnvs.height)
+    while (t <= length) {
+        let a = generateDop(lat, long,undefined, new Date(mainWindow.startTime - (-t * 1000)))
+        dop.push([t, a.gdop])
+        t += dt
+    }
+    let upperLimit = math.ceil(math.max(dop.map(s => s[1])));
+    let lowerLimit = 0
+    let steps = dop.length
+    console.log(upperLimit, lowerLimit);
+    let strokeStyle = 'black'
+    ctx.beginPath()
+
+    dop.forEach((d, ii) => {
+        if (ii === 0) {
+            ctx.moveTo(0, cnvs.height - d[1] / (upperLimit - lowerLimit) * cnvs.height)
+        }
+        else {
+            ctx.lineTo(ii / steps * cnvs.width, cnvs.height - d[1] / (upperLimit - lowerLimit) * cnvs.height)
+        }
+    })
+    ctx.stroke()
 }
 addGui()
