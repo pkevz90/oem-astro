@@ -30,13 +30,14 @@ function loopStartTime() {
     mainWindow.sat.epoch = new Date(document.getElementById('sat-epoch').value)
     let options = []
     let time = 0
+    let elMask = Number(document.getElementsByTagName('input')[3].value)
     while (time <= loopTime) {
         let loopStart = new Date(startTime - (-time*1000))
         let calc = calcInterceptTraj(mainWindow.site, mainWindow.sat, loopStart, 600)
         let velOptions = [calc.v1Opt1.v1, calc.v1Opt2.v1].filter(s => s !== undefined)
         velOptions.forEach(vel => {
             let el = 90-180 / Math.PI * math.acos(math.dot(vel, calc.siteECI) / math.norm(vel) / math.norm(calc.siteECI));
-            if (el > 60) {
+            if (el > elMask) {
                 let groundVel = math.cross([0,0,2 * Math.PI / 86164], calc.siteECI)
                 let jdTime = julianDate(loopStart.getFullYear(), loopStart.getMonth() + 1, loopStart.getDate(), loopStart.getHours(), loopStart.getMinutes(), loopStart.getSeconds() + calc.tof)
                 let sunEci = sunFromTime(jdTime)
@@ -600,4 +601,51 @@ function handleInputs(target) {
     }
     
 }
+
+function importState(el) {
+    let inputValue = el.value
+    el.value = ''
+    inputValue = inputValue.split(/ {2,}/);
+    let date = new Date(inputValue.shift())
+    setTimeout(() => {
+        el.placeholder = 'J2000 State'
+    }, 2000)
+    if (date == 'Invalid Date' || inputValue.length < 6) {
+        el.placeholder = 'State Rejected!'
+        return
+    }
+    el.placeholder = 'State Accepted!'
+    inputValue = inputValue.map(s => Number(s))
+    document.getElementById('sat-epoch').value = dateToDateTimeInput(date)
+    a = document.getElementsByTagName('input')
+    a[a.length - 3].value = dateToDateTimeInput(date)
+    let newCoe = PosVel2CoeNew(inputValue.slice(0,3), inputValue.slice(3,6))
+    console.log(inputValue.slice(0,3), inputValue.slice(3,6));
+    console.log(newCoe);
+    let coeInputs = document.getElementsByClassName('coe')
+    let vectorInputs = document.getElementsByClassName('vector')
+    coeInputs[0].value = newCoe.a.toFixed(2)
+    coeInputs[1].value = newCoe.e.toFixed(5)
+    coeInputs[2].value = (newCoe.i*180 / Math.PI).toFixed(2)
+    coeInputs[3].value = (newCoe.raan*180 / Math.PI).toFixed(2)
+    coeInputs[4].value = (newCoe.arg*180 / Math.PI).toFixed(2)
+    coeInputs[5].value = (newCoe.tA*180 / Math.PI).toFixed(2)
+    vectorInputs[0].value = inputValue[0].toFixed(3)
+    vectorInputs[1].value = inputValue[1].toFixed(3)
+    vectorInputs[2].value = inputValue[2].toFixed(3)
+    vectorInputs[3].value = inputValue[3].toFixed(5)
+    vectorInputs[4].value = inputValue[4].toFixed(5)
+    vectorInputs[5].value = inputValue[5].toFixed(5)
+}
+
+function dateToDateTimeInput(date) {
+    padNumString = function(num, n = 2) {
+        while (num.length < n) {
+            num = '0' + num
+        }
+        return num
+    }
+    return `${date.getFullYear()}-${padNumString((date.getMonth() + 1).toFixed(), 2)}-${padNumString(date.getDate().toFixed(), 2)}T${padNumString(date.getHours().toFixed(), 2)}:${padNumString(date.getMinutes().toFixed(), 2)}:${padNumString(date.getSeconds().toFixed(), 2)}`
+}
+
 handleInputs()
