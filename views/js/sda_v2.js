@@ -368,11 +368,11 @@ function importState(t) {
     let position = tV.slice(1,7).map(n => Number(n))
     if (position.filter(p => Number.isNaN(p)).length > 0 || position.length < 6) {
         t.value = ''
-        alert('String Not Accepted')
+        t.placeholder = 'String Not Accepted'
         return
     }
     t.value = ''
-    alert('String Accepted')
+    t.placeholder = 'String Accepted'
     setTimeout(() => {
         t.placeholder = 'SDA Report Input'
     }, 2000)
@@ -1231,7 +1231,6 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
             let latSat = math.atan2(satEcef[2], math.norm(satEcef.slice(0,2))) * 180 / Math.PI
             let locationSens = latLong2Pixels(latSat, longSat, cnvs)
             ctx.beginPath();
-            console.log(locationSens.x, locationSens.y);
             ctx.arc(locationSens.x, locationSens.y, cnvs.width /200, 0, 2 * Math.PI);
             ctx.fill();
         }

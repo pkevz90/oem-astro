@@ -84,12 +84,13 @@ function displayLaunch(el) {
         timeSatProp += tof / 100
     }
     stateSatHist = stateSatHist.map(s => {
-        return fk5ReductionTranspose(s.state.slice(0,3), new Date(startSatTime - (-s.time * 1000)))
+        return [s.time, fk5ReductionTranspose(s.state.slice(0,3), new Date(startSatTime - (-s.time * 1000)))]
     })
     stateSatHist = stateSatHist.map(s => {
         return {
-            long: math.atan2(s[1], s[0]) * 180 / Math.PI,
-            lat: 90-math.atan2(s[2], math.norm(s.slice(0,2))) * 180 / Math.PI
+            time: s[0],
+            long: math.atan2(s[1][1], s[1][0]) * 180 / Math.PI,
+            lat: 90-math.atan2(s[1][2], math.norm(s[1].slice(0,2))) * 180 / Math.PI
         }
     })
     let timeProp = 0, stateHist = []
@@ -647,5 +648,27 @@ function dateToDateTimeInput(date) {
     }
     return `${date.getFullYear()}-${padNumString((date.getMonth() + 1).toFixed(), 2)}-${padNumString(date.getDate().toFixed(), 2)}T${padNumString(date.getHours().toFixed(), 2)}:${padNumString(date.getMinutes().toFixed(), 2)}:${padNumString(date.getSeconds().toFixed(), 2)}`
 }
+
+
+function selectSite(el) {
+    let ii = el.selectedIndex
+    let inputs = document.getElementsByTagName('input')
+
+    inputs[0].value = sites[ii].lat
+    inputs[1].value = sites[ii].long
+}
+
+function importSites() {
+    let sel = document.getElementsByTagName('select')[0]
+    sel.style.fontSize = '1.5em'
+    sites.forEach(s => {
+        let opt = document.createElement('option')
+        opt.innerText = s.name
+        sel.append(opt)
+    })
+    selectSite(sel)
+}
+
+importSites()
 
 handleInputs()

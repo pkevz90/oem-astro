@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <script src="../SupportLibraries/math.js"></script>
+    <script src="./js/directLaunchSites.js"></script>
     <script src="./js/directLaunch.js" defer></script>
     <style>
         .state {
@@ -35,10 +36,12 @@
     <div>
         <div class="info-label">Site Information</div>
         <div>
-            <span class="state-label"><em>Latitude</em></span><input class="state site" type="number" value="30.43"/><sup>o</sup>
+            <span class="state-label"><em>Latitude</em></span><input class="state site" type="number" value="0.43"/><sup>o</sup>
             <span class="state-label"><em>Longitude</em></span><input class="state site" type="number" value="-91.16"/><sup>o</sup>
             <span class="state-label"><em>Altitude</em></span><input class="state site" type="number" value="0"/>km
             <span class="state-label"><em>El Mask</em></span><input class="state site" type="number" value="10"/><sup>o</sup>
+            <select onchange="selectSite(this)" style="font-size: 1.5em;">
+            </select>
         </div>
         <div class="info-label">Satellite Information</div>
         <div><span class="state-label">Epoch</span><input id="sat-epoch" type="datetime-local" value="2022-06-24T14:00:00"></div>
