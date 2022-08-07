@@ -10,9 +10,10 @@ document.getElementById('upload-options-button').remove();
 document.getElementsByClassName('panel-button')[0].remove();
 document.getElementsByTagName('input')[16].setAttribute('list','name-list');
 let addButton = document.getElementById('add-satellite-button');
-let newNode = addButton.cloneNode();
-newNode.id = 'add-launch-button';
-newNode.innerText = 'Add Launch';
+let newNode = addButton.cloneNode()
+newNode.onclick = uploadTles
+newNode.id = 'tle-upload';
+newNode.innerHTML = 'Add TLEs<input oninput="uploadTles()" style="display: none" type="file" id="tle-file"/>';
 addButton.parentNode.insertBefore(newNode, addButton);
 // Div to lock and unlock
 const lockDiv = document.createElement("div")
@@ -1051,10 +1052,15 @@ let timeFunction = false;
             mainWindow.calculateBurn();
         }
         mainWindow.satellites.forEach(sat => {
-            sat.checkInBurn()
-            sat.drawTrajectory();
-            sat.drawBurns();
+            mainWindow.cnvs.getContext('2d').globalAlpha = sat.locked ? 0.05 : 1
+            if (!sat.locked) {
+                sat.checkInBurn()
+                sat.drawTrajectory();
+                sat.drawBurns();
+            }
+            
             sat.drawCurrentPosition();
+            mainWindow.cnvs.getContext('2d').globalAlpha = 1 
         })
         if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
             drawVulnerabilityZone();
@@ -1079,7 +1085,6 @@ let timeFunction = false;
         showScreenAlert('System crash recovering to last autosave');
     }
 })()
-showScreenAlert('Right-click to see planning options')
 //------------------------------------------------------------------
 // Adding event listeners for window objects
 //------------------------------------------------------------------
@@ -2515,11 +2520,15 @@ function showScreenAlert(message = 'test alert') {
         document.getElementsByClassName('screen-alert')[0].style.bottom = message === 'start-screen' ? '60%' : '85%';
     },50)
     setTimeout(() => {
-        document.getElementsByClassName('screen-alert')[0].style.bottom = '100%';
-        document.getElementsByClassName('screen-alert')[0].style.opacity = '0';
-        setTimeout(() => {
-            document.getElementsByClassName('screen-alert')[0].remove();
-        }, 500)
+        try {
+            document.getElementsByClassName('screen-alert')[0].style.bottom = '100%';
+            document.getElementsByClassName('screen-alert')[0].style.opacity = '0';
+            setTimeout(() => {
+                document.getElementsByClassName('screen-alert')[0].remove();
+            }, 500)
+        } catch (error) {
+            
+        }
     },message === 'start-screen' ? 60000 : 3000)
 
 }
@@ -3529,7 +3538,7 @@ function initStateFunction(el) {
         updateLockScreen()
         closeAll();
     }
-    else if (el.id === 'add-launch-button') addLaunch();
+    // else if (el.id === 'add-launch-button') addLaunch();
     else {
         if (el.classList.contains('panel-button')) {
             nodes = el.parentNode.parentNode.children[1];
@@ -4499,7 +4508,7 @@ function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
     return {v1, v2}
 }
 
-function Eci2Ric(rC, drC, rD, drD) {
+function Eci2Ric(rC, drC, rD, drD, c = false) {
     let h = math.cross(rC, drC);
     let ricX = math.dotDivide(rC, math.norm(rC));
     let ricZ = math.dotDivide(h, math.norm(h));
@@ -4510,6 +4519,7 @@ function Eci2Ric(rC, drC, rD, drD) {
     let ricZd = [0,0,0];
 
     let C = [ricX, ricY, ricZ];
+    if (c) return C
     let Cd = [ricXd, ricYd, ricZd];
     return {
         rHcw: math.multiply(C, math.transpose([math.subtract(rD, rC)])),
@@ -4587,37 +4597,36 @@ function Ric2Eci(rHcw = [0,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindo
 }
 
 function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
-    let mu = 398600.4418;
+    let mu = 398600//.4418;
     let rn = math.norm(r);
     let vn = math.norm(v);
     let h = math.cross(r, v);
     let hn = math.norm(h);
     let n = math.cross([0, 0, 1], h);
     let nn = math.norm(n);
-    if (nn < 1e-6) {
+    if (nn < 1e-9) {
         n = [1, 0, 0];
         nn = 1;
     }
     var epsilon = vn * vn / 2 - mu / rn;
     let a = -mu / 2 / epsilon;
-    let e = math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn));
+    // console.log(math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn)))
+    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r),  math.dotMultiply(math.dot(r, v), v)), mu)
     let en = math.norm(e);
-    if (en < 1e-6) {
+    if (en < 1e-9) {
         e = n.slice();
         en = 0;
     }
-    let inc = Math.acos(math.dot(h, [0, 0, 1]) / hn);
-    let ra = Math.acos(math.dot(n, [1, 0, 0]) / nn);
+    let inc = Math.acos(h[2] / hn);
+    let ra = Math.acos(n[0] / nn);
     if (n[1] < 0) {
         ra = 2 * Math.PI - ra;
     }
-
-    let ar, arDot;
-    if (en < 1e-6) {
-        arDot = math.dot(n, e) / nn;
-    } else {
-        arDot = math.dot(n, e) / en / nn;
-    }
+    // console.log({
+    //     n,e
+    // });
+    let ar
+    let arDot = math.dot(n, e) / en / nn;
     if (arDot > 1) {
         ar = 0;
     } else if (arDot < -1) {
@@ -4625,17 +4634,11 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     } else {
         ar = Math.acos(arDot);
     }
-    if (e[2] < 0) {
-        ar = 2 * Math.PI - ar;
-    } else if (inc < 1e-6 && e[1] < 0) {
+    if (e[2] < 0 || (inc < 1e-8 && e[1] < 0)) {
         ar = 2 * Math.PI - ar;
     }
-    let ta, taDot;
-    if (en < 1e-6) {
-        taDot = math.dot(r, e) / rn / nn;
-    } else {
-        taDot = math.dot(r, e) / rn / en;
-    }
+    let ta;
+    let taDot = math.dot(r, e) / rn / en
     if (taDot > 1) {
         ta = 0;
     } else if (taDot < -1) {
@@ -4643,10 +4646,10 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     } else {
         ta = Math.acos(taDot);
     }
-    if (math.dot(v, e) > 1e-6) {
+    if (math.dot(v, e) > 0 || math.dot(v, r) < 0) {
         ta = 2 * Math.PI - ta;
     }
-    // console.log([a,en,inc,ra,ar,ta])
+    // // console.log([a,en,inc,ra,ar,ta])
     return {
         a: a,
         e: en,
@@ -5756,4 +5759,204 @@ function accelerationSolver(state = [0,0,0,0.01,0.005,0], vf = [0.02, 0.001, 0.0
     
     let stateF = runge_kutta(twoBodyRpo, state, tf, dir, startTime).slice(3,6)
     return {params, dir}
+}
+
+function showLogo() {
+    let cnvs = document.createElement('canvas')
+    document.getElementsByTagName('body')[0].append(cnvs)
+    cnvs.style.position = 'fixed'
+    cnvs.style.zIndex = 20
+    cnvs.style.top = 0
+    cnvs.style.left = 0
+    cnvs.style.width = '100vw'
+    cnvs.style.height = '100vh'
+    cnvs.style.transition = 'opacity 0.5s'
+    cnvs.onclick = el => {
+        el.target.style.opacity = 0
+        
+        showScreenAlert('Right-click to see planning options')
+        setTimeout(() => el.target.remove(), 500)
+    }
+    let ctx = cnvs.getContext('2d')
+    cnvs.width = window.innerWidth
+    cnvs.height = window.innerHeight
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0,0,cnvs.width, cnvs.height)
+    ctx.globalAlpha = 0.25
+    ctx.strokeStyle = 'red'
+    ctx.beginPath()
+    ctx.ellipse(cnvs.width / 2, cnvs.height / 2-50, 200, 100, -20*Math.PI / 180, -2 * Math.PI*0.15, 2 * Math.PI*0.8)
+    ctx.stroke()
+    ctx.globalAlpha = 1
+    ctx.fillStyle = 'black'
+    ctx.textBaseline = 'alphabetic'
+    ctx.textAlign = 'center'
+    ctx.font = '190px sans-serif'
+    ctx.fillText('ROTS', cnvs.width / 2, cnvs.height / 2)
+    ctx.textBaseline = 'top'
+    ctx.font = '24px Courier New'
+    ctx.fillText('Relative Orbital Trajectory System', cnvs.width / 2, cnvs.height / 2+2)
+    ctx.textBaseline = 'alphabetic'
+    ctx.fillText('Click anywhere to begin...', cnvs.width / 2, cnvs.height -30)
+}
+showLogo()
+
+function uploadTles() {
+    if (event.target.id === 'tle-upload') return document.getElementById('tle-file').click()
+
+    if (event.path[0].files[0] === undefined) return
+    loadFileTle(event.path[0].files[0])
+}
+
+function loadFileTle(fileToLoad) {
+    function Eccentric2True(e,E) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
+    }
+    
+    function solveKeplersEquation(M,e) {
+        let E = M;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+            E -= del;
+        }
+        return E;
+    }
+    var fileReader = new FileReader();
+    fileReader.onload = function (fileLoadedEvent) {
+        var text = fileLoadedEvent.target.result.split('\n');
+        let coes = []
+        let line = 0
+        while (line < text.length) {
+            if (text[line].search('U') !== -1) {
+                let line1 = text[line].split(/ +/);
+                let line2 = text[line+1].split(/ +/);
+                let e = Number('.' + line2[4])
+                let mA = Number(line2[6]) * Math.PI / 180
+                let eA = solveKeplersEquation(mA, e)
+                let tA = Eccentric2True(e, eA)
+                let newCoe = {
+                    name: line2[1],
+                    epoch: new Date(Number(20 + line1[3].slice(0,2)), 0,Number(line1[3].slice(2,6)),0,0,Number(line1[3].slice(5)) * 86400),
+                    e: Number('.' + line2[4]),
+                    i: Number(line2[2]) * Math.PI / 180,
+                    raan: Number(line2[3]) * Math.PI / 180,
+                    arg: Number(line2[5]) * Math.PI / 180,
+                    tA,
+                    a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3)
+                }
+                line++
+                if (Object.values(newCoe).filter(s => Number.isNaN(s)).length > 0) continue
+                coes.push(newCoe)
+            }
+            line++
+        }
+        let mainTime = coes[0].epoch
+        let sun = sunFromTime(mainTime)
+        let ricCoes = coes.map(c => {
+            let delta = (mainTime - c.epoch) / 1000
+            // c = propToTime(c, delta, true)
+            c.tA = propTrueAnomaly(c.tA, c.a, c.e, delta)
+            return Object.values(Coe2PosVelObject(c))
+        })
+
+        sun = math.squeeze(Eci2Ric(ricCoes[0].slice(0,3), ricCoes[0].slice(3,6), sun, [0,0,0]).rHcw)
+        sun = math.dotDivide(sun, math.norm(sun))
+        mainWindow.initSun = sun
+        ricCoes = ricCoes.map(c => {
+            let ric = Eci2Ric(ricCoes[0].slice(0,3), ricCoes[0].slice(3,6), c.slice(0,3), c.slice(3,6))
+            return [...math.squeeze(ric.rHcw), ...math.squeeze(ric.drHcw)]
+        })
+        mainWindow.satellites = []
+        ricCoes.forEach((c,ii) => {
+            mainWindow.satellites.push(new Satellite({
+                position: {r: c[0], i: c[1], c: c[2], rd: c[3], id: c[4], cd: c[5]},
+                name: coes[ii].name,
+                a: 0.001
+            }))
+        })
+        mainWindow.originOrbit = {
+            a: coes[0].a,
+            e: coes[0].e,
+            i: coes[0].i,
+            raan: coes[0].raan,
+            arg: coes[0].arg,
+            tA: coes[0].tA
+        }
+        mainWindow.startDate = mainTime
+    };
+    fileReader.readAsText(fileToLoad, "UTF-8");
+}
+
+function julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
+    return 367 * yr - Math.floor(7*(yr+Math.floor((mo+9)/12)) / 4) + Math.floor(275*mo/9) + d + 1721013.5 + ((s/60+min)/60+h)/24
+}
+
+function sunFromTime(date = new Date()) {
+    let jdUti = julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds())
+    let tUti = (jdUti - 2451545) / 36525
+    let lamba = 280.4606184 + 36000.770005361 * tUti
+    let m = 357.5277233 + 35999.05034 * tUti
+    let lambaEll = lamba + 1.914666471 * Math.sin(m* Math.PI / 180) + 0.019994643 * Math.sin(2 * m* Math.PI / 180)
+    let phi = 0
+    let epsilon = 23.439291-0.0130042 * tUti
+    let rSun = 1.000140612-0.016708617 * Math.cos(m * Math.PI / 180)-0.000139589*Math.cos(2*m* Math.PI / 180)
+    let au = 149597870.7 //km
+    rSun *= au
+    return [
+       rSun * Math.cos(lambaEll* Math.PI / 180),
+       rSun * Math.cos(epsilon* Math.PI / 180) * Math.sin(lambaEll* Math.PI / 180),
+       rSun * Math.sin(epsilon* Math.PI / 180) * Math.sin(lambaEll* Math.PI / 180)
+    ]
+}
+
+function propToTime(state, dt, j2 = true) {
+    // state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
+    if (j2) {
+        state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
+        let j2 = 1.082626668e-3
+        let n = (398600.4418 / state.a / state.a / state.a) ** 0.5
+        let rEarth = 6378.1363
+        let p = state.a * (1 - state.e ** 2)
+        let raanJ2Rate = -3*n*rEarth*rEarth*j2*Math.cos(state.i) / 2 / p / p
+        let argJ2Rate = 3 * n * rEarth * rEarth * j2 * (4 - 5 * Math.sin(state.i) ** 2) / 4 / p / p 
+        state.raan += raanJ2Rate * dt
+        state.arg += argJ2Rate * dt
+    }
+    else {
+        state.tA = propTrueAnomaly(state.tA, state.a, state.e, dt)
+    }
+    // state = Object.values(Coe2PosVelObject(state))
+    return state
+}
+
+function propTrueAnomalyj2(tA = 0, a = 10000, e = 0.1, i, time = 3600) {
+    function True2Eccentric(e, ta) {
+        return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+    }
+    function Eccentric2True(e,E) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
+    }
+    
+    let j2 = 1.082626668e-3
+    let n = (398600.4418 / a / a / a) ** 0.5
+    let rEarth = 6378.1363
+    let p = a * (1 - e ** 2)
+    let mAj2rate = -3 * n * rEarth * rEarth * j2 * (1 - e * e) * (3 * Math.sin(i) ** 2 - 2) / 4 / p / p
+    function solveKeplersEquation(M,e) {
+        let E = M;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+            E -= del;
+        }
+        return E;
+    }
+
+    let eccA = True2Eccentric(e, tA)
+    let meanA = eccA - e * Math.sin(eccA)
+    meanA += Math.sqrt(398600.4418 / (a ** 3)) * time
+    meanA += mAj2rate * time
+    eccA = solveKeplersEquation(meanA, e)
+    return Eccentric2True(e, eccA)
 }
