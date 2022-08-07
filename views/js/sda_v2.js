@@ -1448,3 +1448,51 @@ function animationFunction() {
     angle += 1
     window.requestAnimationFrame(animationFunction)
 }
+
+function showLogo() {
+    let cnvs = document.createElement('canvas')
+    document.getElementsByTagName('body')[0].append(cnvs)
+    cnvs.style.position = 'fixed'
+    cnvs.style.zIndex = 20
+    cnvs.style.top = 0
+    cnvs.style.left = 0
+    cnvs.style.width = '100vw'
+    cnvs.style.height = '100vh'
+    cnvs.style.transition = 'opacity 0.5s'
+    cnvs.onclick = el => {
+        el.target.style.opacity = 0
+        setTimeout(() => el.target.remove(), 500)
+    }
+    let ctx = cnvs.getContext('2d')
+    cnvs.width = window.innerWidth
+    cnvs.height = window.innerHeight
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0,0,cnvs.width, cnvs.height)
+    ctx.globalAlpha = 0.25
+    ctx.strokeStyle = 'red'
+    ctx.beginPath()
+    ctx.ellipse(cnvs.width / 2+150, cnvs.height / 2-175, 100, 50, -20*Math.PI / 180, 0, 2 * Math.PI)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.ellipse(cnvs.width / 2+150, cnvs.height / 2-175, 100, 15, -20*Math.PI / 180, 0, 2 * Math.PI)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.ellipse(cnvs.width / 2+150, cnvs.height / 2-175, 50, 15, 70*Math.PI / 180, 0, 2 * Math.PI)
+    ctx.stroke()
+    ctx.fillStyle = 'red'
+    ctx.beginPath()
+    ctx.arc(cnvs.width / 2+150, cnvs.height / 2-175, 7, 0, 2 * Math.PI)
+    ctx.fill()
+    ctx.globalAlpha = 1
+    ctx.fillStyle = 'black'
+    ctx.textBaseline = 'alphabetic'
+    ctx.textAlign = 'center'
+    ctx.font = '190px sans-serif'
+    ctx.fillText('RCS', cnvs.width / 2, cnvs.height / 2)
+    ctx.textBaseline = 'top'
+    ctx.font = '24px Courier New'
+    ctx.fillText('Relative Covariance System', cnvs.width / 2, cnvs.height / 2+2)
+    ctx.textBaseline = 'alphabetic'
+    ctx.fillText('Click anywhere to begin...', cnvs.width / 2, cnvs.height -30)
+}
+showLogo()
