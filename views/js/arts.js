@@ -13,7 +13,7 @@ let addButton = document.getElementById('add-satellite-button');
 let newNode = addButton.cloneNode()
 newNode.onclick = uploadTles
 newNode.id = 'tle-upload';
-newNode.innerHTML = 'Add TLEs<input oninput="uploadTles()" style="display: none" type="file" id="tle-file"/>';
+newNode.innerHTML = 'Add State File<input oninput="uploadTles()" style="display: none" type="file" id="tle-file"/>';
 addButton.parentNode.insertBefore(newNode, addButton);
 // Div to lock and unlock
 const lockDiv = document.createElement("div")
@@ -804,7 +804,7 @@ class Satellite {
         this.shape = shape;
         this.name = name;
         this.burns = burns;
-        this.a = a;
+        this.a = Number(a);
         this.originDate = Date.now()
         this.locked = false
         setTimeout(() => this.calcTraj(), 250);
@@ -1052,7 +1052,7 @@ let timeFunction = false;
             mainWindow.calculateBurn();
         }
         mainWindow.satellites.forEach(sat => {
-            mainWindow.cnvs.getContext('2d').globalAlpha = sat.locked ? 0.05 : 1
+            mainWindow.cnvs.getContext('2d').globalAlpha = sat.locked ? 0.15 : 1
             if (!sat.locked) {
                 sat.checkInBurn()
                 sat.drawTrajectory();
@@ -1447,7 +1447,7 @@ function startContextClick(event) {
         ctxMenu.innerHTML = `
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
-                <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].a * 1000}</span> m/s2</span>
+                <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
@@ -5809,81 +5809,67 @@ function uploadTles() {
 }
 
 function loadFileTle(fileToLoad) {
-    function Eccentric2True(e,E) {
-        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
-    }
-    
-    function solveKeplersEquation(M,e) {
-        let E = M;
-        let del = 1;
-        while (Math.abs(del) > 1e-6) {
-            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
-            E -= del;
-        }
-        return E;
-    }
     var fileReader = new FileReader();
     fileReader.onload = function (fileLoadedEvent) {
         var text = fileLoadedEvent.target.result.split('\n');
-        let coes = []
-        let line = 0
-        while (line < text.length) {
-            if (text[line].search('U') !== -1) {
-                let line1 = text[line].split(/ +/);
-                let line2 = text[line+1].split(/ +/);
-                let e = Number('.' + line2[4])
-                let mA = Number(line2[6]) * Math.PI / 180
-                let eA = solveKeplersEquation(mA, e)
-                let tA = Eccentric2True(e, eA)
-                let newCoe = {
-                    name: line2[1],
-                    epoch: new Date(Number(20 + line1[3].slice(0,2)), 0,Number(line1[3].slice(2,6)),0,0,Number(line1[3].slice(5)) * 86400),
-                    e: Number('.' + line2[4]),
-                    i: Number(line2[2]) * Math.PI / 180,
-                    raan: Number(line2[3]) * Math.PI / 180,
-                    arg: Number(line2[5]) * Math.PI / 180,
-                    tA,
-                    a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3)
-                }
-                line++
-                if (Object.values(newCoe).filter(s => Number.isNaN(s)).length > 0) continue
-                coes.push(newCoe)
-            }
+        let line = -1
+        let states = []
+        while (line < text.length-1) {
             line++
+            let focusLine = text[line]
+            if (focusLine.search('properties') !== -1) {
+
+                let propLine = focusLine.split(',').map(s => s.split(':')).map(s => s.map(p => p.trim()))
+                propLine.shift()
+                let state = text[line + 1].split(/ {2,}/)
+                line++
+                let date = new Date(state.shift())
+                state = state.map(s => Number(s))
+                if (date == 'Invalid Date') continue
+                states.push({
+                    date,
+                    state,
+                    properties: propLine
+                })
+            }
         }
-        let mainTime = coes[0].epoch
-        let sun = sunFromTime(mainTime)
-        let ricCoes = coes.map(c => {
-            let delta = (mainTime - c.epoch) / 1000
-            // c = propToTime(c, delta, true)
-            c.tA = propTrueAnomaly(c.tA, c.a, c.e, delta)
-            return Object.values(Coe2PosVelObject(c))
+        let startTime = states[0].date
+        let chiefState = states[0].state
+
+        states = states.map(s => {
+            return {
+                state: propToTime(s.state, (startTime - s.date) / 1000, false),
+                properties: s.properties
+            }
+        }).map(s => {
+            let ricState = Eci2Ric(chiefState.slice(0,3), chiefState.slice(3,6), s.state.slice(0,3), s.state.slice(3,6))
+            return {
+                state: math.squeeze([...ricState.rHcw, ...ricState.drHcw]),
+                properties: s.properties
+            }
         })
 
-        sun = math.squeeze(Eci2Ric(ricCoes[0].slice(0,3), ricCoes[0].slice(3,6), sun, [0,0,0]).rHcw)
+        let sun = sunFromTime(startTime)
+        sun = math.squeeze(Eci2Ric(chiefState.slice(0,3), chiefState.slice(3,6), sun, [0,0,0]).rHcw)
         sun = math.dotDivide(sun, math.norm(sun))
         mainWindow.initSun = sun
-        ricCoes = ricCoes.map(c => {
-            let ric = Eci2Ric(ricCoes[0].slice(0,3), ricCoes[0].slice(3,6), c.slice(0,3), c.slice(3,6))
-            return [...math.squeeze(ric.rHcw), ...math.squeeze(ric.drHcw)]
-        })
         mainWindow.satellites = []
-        ricCoes.forEach((c,ii) => {
-            mainWindow.satellites.push(new Satellite({
-                position: {r: c[0], i: c[1], c: c[2], rd: c[3], id: c[4], cd: c[5]},
-                name: coes[ii].name,
-                a: 0.001
-            }))
+        mainWindow.startDate = startTime
+        states.forEach(s => {
+            let options = {}
+            options.position = {
+                r: s.state[0],
+                i: s.state[1],
+                c: s.state[2],
+                rd: s.state[3],
+                id: s.state[4],
+                cd: s.state[5],
+            }
+            s.properties.forEach(prop => {
+                options[prop[0]] = prop[1]
+            })
+            mainWindow.satellites.push(new Satellite(options))
         })
-        mainWindow.originOrbit = {
-            a: coes[0].a,
-            e: coes[0].e,
-            i: coes[0].i,
-            raan: coes[0].raan,
-            arg: coes[0].arg,
-            tA: coes[0].tA
-        }
-        mainWindow.startDate = mainTime
     };
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
@@ -5911,7 +5897,7 @@ function sunFromTime(date = new Date()) {
 }
 
 function propToTime(state, dt, j2 = true) {
-    // state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
+    state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     if (j2) {
         state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
         let j2 = 1.082626668e-3
@@ -5926,7 +5912,7 @@ function propToTime(state, dt, j2 = true) {
     else {
         state.tA = propTrueAnomaly(state.tA, state.a, state.e, dt)
     }
-    // state = Object.values(Coe2PosVelObject(state))
+    state = Object.values(Coe2PosVelObject(state))
     return state
 }
 
