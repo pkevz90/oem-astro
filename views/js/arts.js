@@ -1062,9 +1062,6 @@ let timeFunction = false;
             sat.drawCurrentPosition();
             mainWindow.cnvs.getContext('2d').globalAlpha = 1 
         })
-        if (mainWindow.vz_reach.shown && mainWindow.satellites.length > 1) {
-            drawVulnerabilityZone();
-        }
         if (timeFunction) console.timeEnd()
         mainWindow.recordFunction();
         if ((Date.now() - lastSaveTime) > 15000) {
@@ -3250,8 +3247,8 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
     return rotMat;
 }
 
-function generateBurns(all = false) {
-    this.calcTraj(true);
+function generateBurns(all = false, burn = 0) {
+    this.calcTraj(true, burn);
 }
 
 function calcBurns() {
@@ -3327,7 +3324,7 @@ function calcBurns() {
     ctx.textBaseline = "middle"
     ctx.textAlign = 'center'
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
-    sat.genBurns(true);
+    sat.genBurns(true, mainWindow.burnStatus.burn);
 }
 
 function generateBurnTable(object = 0) {
@@ -4218,7 +4215,7 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
     return math.add(state, math.dotMultiply(dt, k2));
 }
 
-function calcSatTwoBody(recalcBurns = false) {
+function calcSatTwoBody(recalcBurns = false, burns = 0) {
     // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
     let t_calc = 0, currentState = Object.values(this.position), satBurn = this.burns.length > 0 ? 0 : undefined;
     this.stateHistory = [];
@@ -4239,7 +4236,7 @@ function calcSatTwoBody(recalcBurns = false) {
                 let remainder = mainWindow.timeDelta - (this.burns[satBurn].time - t_calc)
                 t_calc = this.burns[satBurn].time
                 // Recalculate Burns if needed
-                if (recalcBurns) {
+                if (recalcBurns && satBurn >= burns) {
                     this.burns[satBurn].location  = {
                         r: [currentState[0]],
                         i: [currentState[1]],
