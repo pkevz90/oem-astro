@@ -795,7 +795,8 @@ class Satellite {
             shape = 'pentagon',
             a = 0.00001,
             name = 'Sat',
-            burns = []
+            burns = [],
+            locked = false
         } = options; 
         this.position = position;
         this.size = size;
@@ -806,7 +807,7 @@ class Satellite {
         this.burns = burns;
         this.a = Number(a);
         this.originDate = Date.now()
-        this.locked = false
+        this.locked = locked
         setTimeout(() => this.calcTraj(), 250);
     }
     calcTraj = calcSatTwoBody;
@@ -5562,6 +5563,10 @@ function changeOrigin(satIn = 1, time = 0) {
             }
         })
         let newInert = PosVel2CoeNew(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6))
+        let sun = Ric2Eci( math.dotMultiply(151609685.93989992 / math.norm(mainWindow.initSun), mainWindow.initSun), [0,0,0], inertStart.slice(0,3), inertStart.slice(3,6)).rEcci
+        sun = math.squeeze(Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sun.slice(0,3), [0,0,0]).rHcw)
+        sun = math.dotDivide(sun, math.norm(sun))
+        mainWindow.initSun = sun
         mainWindow.mm = (398600.4418 / newInert.a ** 3) ** (1/2)
         mainWindow.originOrbit = newInert
         sats = sats.map((sat, ii) => {
@@ -5582,7 +5587,8 @@ function changeOrigin(satIn = 1, time = 0) {
                 color: mainWindow.satellites[ii].color,
                 shape: mainWindow.satellites[ii].shape,
                 a: mainWindow.satellites[ii].a,
-                name: mainWindow.satellites[ii].name
+                name: mainWindow.satellites[ii].name,
+                locked: mainWindow.satellites[ii].locked
             }))
         })
         mainWindow.satellites = satellitesOut
@@ -5803,6 +5809,7 @@ function uploadTles() {
 
     if (event.path[0].files[0] === undefined) return
     loadFileTle(event.path[0].files[0])
+    document.getElementById('tle-file').value = ''
 }
 
 function loadFileTle(fileToLoad) {
@@ -5852,6 +5859,7 @@ function loadFileTle(fileToLoad) {
         mainWindow.initSun = sun
         mainWindow.satellites = []
         mainWindow.startDate = startTime
+        mainWindow.originOrbit = PosVel2CoeNew(chiefState.slice(0,3), chiefState.slice(3,6))
         states.forEach(s => {
             let options = {}
             options.position = {

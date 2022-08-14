@@ -742,6 +742,7 @@ function updateTime(time = Date.now(), updateEarth = true) {
     while (d.length < 2) {
         d = '0' + d
     }
+    if ([y,m,d].filter(s => Number.isNaN(Number(s))).length > 0) return
     document.getElementById('date-input').value = `${y}-${m}-${d}`
     let h = time.getHours().toString();
     let min = time.getMinutes().toString();
@@ -782,6 +783,7 @@ function addSatellite() {
 function timeChange(t) {
     let inputs = t.parentElement.getElementsByTagName('input')
     a = new Date(inputs[0].value + ' ' + inputs[1].value)
+    if (a == 'Invalid Date') return
     let delta = (a - mainWindow.startTime) / 1000
     mainWindow.satellites[0].origState = propToTime(mainWindow.satellites[0].origState, delta)
     mainWindow.startTime = a
@@ -1108,8 +1110,8 @@ function showMap() {
     let ctx = cnvs.getContext('2d')
     img.onload = function(){     
         ctx.drawImage(img,0,0,cnvs.width, cnvs.height); 
-        ctx.fillStyle = 'red'
         mainWindow.sensors.forEach(sens => {
+            ctx.fillStyle = 'red'
             if (!sens.active) return
             if (sens.type === 'space') {
                 let sensState = propToTime(sens.state, (mainWindow.startTime - sens.epoch) / 1000)
@@ -1137,6 +1139,10 @@ function showMap() {
             ctx.beginPath();
             ctx.arc(location.x, location.y, cnvs.width / 200, 0, 2 * Math.PI);
             ctx.fill();
+            ctx.font = '15px sans-serif'
+            ctx.fillStyle = '#eee'
+            ctx.textAlign = 'center'
+            ctx.fillText(sens.name, location.x, location.y + 20)
         })
         let orbit = mainWindow.satellites[0].origState.slice()
         
@@ -1185,9 +1191,11 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
     cnvs.width = inCnvs.width
     cnvs.height = inCnvs.height
     cnvs.onclick = el => {
-        el.target.remove()
-        inCnvs.remove()
         document.getElementById('map-slider').remove()
+        let a = [...document.querySelectorAll('input[type=range]')]
+        let b = [...document.querySelectorAll('canvas')]
+        a.forEach(el => el.remove())
+        b.forEach(el => el.remove())
     }
     let ctx = cnvs.getContext('2d')
     ctx.clearRect(0,0,cnvs.width,cnvs.height)
@@ -1210,6 +1218,7 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
     let obs = checkSensors(satState, time)
     ctx.fillStyle = 'red'
     mainWindow.sensors.filter(s => s.active && s.type === 'space').forEach(sens => {
+        ctx.fillStyle = 'red'
         let state = propToTime(sens.state, (jsTime - sens.epoch) / 1000)
         let satEcef = fk5ReductionTranspose(state.slice(0,3), jsTime)
         let longSat = math.atan2(satEcef[1], satEcef[0])
@@ -1220,6 +1229,10 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
         ctx.beginPath();
         ctx.arc(locationSens.x, locationSens.y, cnvs.width /200, 0, 2 * Math.PI);
         ctx.fill();
+        ctx.font = '15px sans-serif'
+        ctx.fillStyle = '#eee'
+        ctx.textAlign = 'center'
+        ctx.fillText(sens.name, locationSens.x, locationSens.y + 20)
     })
     ctx.fillStyle = 'orange'
     obs.forEach(ob => {

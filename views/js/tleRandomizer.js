@@ -46,73 +46,103 @@ function normalRandom() {
 }
 
 function exportFile() {
-    let files = window.localStorage.files === undefined ? {} : JSON.parse(window.localStorage.files)
-    let err_inputs = document.getElementsByTagName('input');
-    let desDate = new Date(Number(err_inputs[2].value), Number(err_inputs[0].value) - 1, Number(err_inputs[1].value), Number(err_inputs[3].value), Number(err_inputs[4].value));
-    if (desDate == 'Invalid Date') return alert('Date not in proper format');
-    let timeDiff = desDate - epochDate;
-    timeDiff /= 1000;
-    if (timeDiff < 0) return alert('Time must be during the imported .e file')
-    let timeLine = data[1].findIndex(line => Number(line.split(/ +/).filter(s => s !== '')[0]) >= timeDiff)
-    // Get prop end time from last line in file, found by finding last line in file with valid time
-    let lastLine = data[1].length-1
-    while (isNaN(Number(data[1][lastLine].split(/ +/).filter(s => s !== '')[0]))) lastLine--
-    let endTime = Number(data[1][lastLine].split(/ +/).filter(s => s !== '')[0])
-    let saveName = 'sat' + math.floor(data[1][0].split(/ +/).filter(line => line !== '')[1]);
-    // Pull initial state from ephemeris file
-    let stateEphemeris = data[1].slice(timeLine + 1, timeLine + 2)
-    state = stateEphemeris[0].split(/ +/).filter(s => s !== '').map(s => Number(s))
-    let t = state.shift()
-    //Prop initial state state back to desired time (to avoid any potential burn at desired epoch)
-    for (let ii = 0; ii < 10; ii++) state = runge_kutta(-(t - timeDiff) / 10, [state])
-    t = timeDiff
-    // Add gaussian error to the initial state
-    let rEci2Eci = Ric2EciRedux(state.slice(0,3), state.slice(3,6))
-    let stateCov = covFromInputs(rEci2Eci)
-    let P = math.dotMultiply(1e6, math.multiply(stateCov, math.transpose(stateCov)))
-    let initError = math.transpose(stateCov).reduce((a, b, ii) => {
-        if (ii === 1) a = math.dotMultiply(a, normalRandom())
-        return math.add(a, math.dotMultiply(normalRandom(),b))
-    })
-    initError = math.dotMultiply(1000, initError)
-    state = math.add(state, initError)
-    // Define initial covariance matrix
-    let pEphemeris = []
-    pEphemeris.push(`${t.toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
-    stateEphemeris = [toExponentialDigits(t, 16, 2) + ' ' + state.map(s => toExponentialDigits(s, 16, 2)).join(' ')]
-    let timeDelta = 900
-    let propTime = (endTime - timeDiff) > 86400 ? 86400 : endTime - timeDiff
-    let points = generateSigmaPoints(P, [state])
-    for (let ii = timeDelta; ii <= propTime; ii+=timeDelta) {
-        let pointsNew = points.map(s => propToTime(s.map(a => a / 1000), ii).map(a => a * 1000))
-        let {averagePoint, P} = calcSigmaProperties(pointsNew)
-        stateEphemeris.push(toExponentialDigits(t + ii, 16, 2) + ' ' + averagePoint.map(s => toExponentialDigits(s, 16, 2)).join(' '))
-        pEphemeris.push(`${(t + ii).toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
-        if (isNaN(state[0])) {
-            alert('Error in state propagation');
-            return
+    console.clear()
+    try {
+        let files = window.localStorage.files === undefined ? {} : JSON.parse(window.localStorage.files)
+        let err_inputs = document.getElementsByTagName('input');
+        let desDate = new Date(Number(err_inputs[2].value), Number(err_inputs[0].value) - 1, Number(err_inputs[1].value), Number(err_inputs[3].value), Number(err_inputs[4].value));
+        if (desDate == 'Invalid Date') return alert('Date not in proper format');
+        console.info('Desired date accepted from file\n' + desDate)
+        let timeDiff = desDate - epochDate;
+        timeDiff /= 1000;
+        if (timeDiff < 0) return alert('Time must be during the imported .e file')
+        let timeLine = data[1].findIndex(line => Number(line.split(/ +/).filter(s => s !== '')[0]) >= timeDiff)
+        // Get prop end time from last line in file, found by finding last line in file with valid time
+        let lastLine = data[1].length-1
+        while (isNaN(Number(data[1][lastLine].split(/ +/).filter(s => s !== '')[0]))) lastLine--
+        let endTime = Number(data[1][lastLine].split(/ +/).filter(s => s !== '')[0])
+        let saveName = 'sat' + math.floor(data[1][0].split(/ +/).filter(line => line !== '')[1]);
+        // Pull initial state from ephemeris file
+        let stateEphemeris = data[1].slice(timeLine + 1, timeLine + 2)
+        state = stateEphemeris[0].split(/ +/).filter(s => s !== '').map(s => Number(s))
+        console.info('Pulled state in table below')
+        console.table(state)
+        let t = state.shift()
+        //Prop initial state state back to desired time (to avoid any potential burn at desired epoch)
+        for (let ii = 0; ii < 10; ii++) state = runge_kutta(-(t - timeDiff) / 10, [state])
+        console.info('State after prop to desired time')
+        console.table([timeDiff, ...state])
+        t = timeDiff
+        // Add gaussian error to the initial state
+        let rEci2Eci = Ric2EciRedux(state.slice(0,3), state.slice(3,6))
+        let stateCov = covFromInputs(rEci2Eci)
+        let P = math.dotMultiply(1e6, math.multiply(stateCov, math.transpose(stateCov)))
+        console.info('Initial covariance in table below')
+        console.table(P)
+        let initError = math.transpose(stateCov).reduce((a, b, ii) => {
+            if (ii === 1) a = math.dotMultiply(a, normalRandom())
+            return math.add(a, math.dotMultiply(normalRandom(),b))
+        })
+        initError = math.dotMultiply(1000, initError)
+        state = math.add(state, initError)
+        console.info('State after error added')
+        console.table([timeDiff, ...state])
+        // Define initial covariance matrix
+        let pEphemeris = []
+        pEphemeris.push(`${t.toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
+        stateEphemeris = [toExponentialDigits(t, 16, 2) + ' ' + state.map(s => toExponentialDigits(s, 16, 2)).join(' ')]
+        let timeDelta = 900
+        let propTime = (endTime - timeDiff) > 86400 ? 86400 : endTime - timeDiff
+        let points = generateSigmaPoints(P, [state])
+        for (let ii = timeDelta; ii <= propTime; ii+=timeDelta) {
+            let pointsNew = points.map(s => propToTime(s.map(a => a / 1000), ii).map(a => a * 1000))
+            let {averagePoint, P} = calcSigmaProperties(pointsNew)
+            stateEphemeris.push(toExponentialDigits(t + ii, 16, 2) + ' ' + averagePoint.map(s => toExponentialDigits(s, 16, 2)).join(' '))
+            pEphemeris.push(`${(t + ii).toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
+            if (isNaN(state[0])) {
+                alert('Error in state propagation');
+                return
+            }
         }
-    }
-    // Remove number of ephemeris points to default to read all points
-    let header = data[0]
-    if (files[saveName] === undefined) {
-        // If file is not in records, fill in past with truth
-        while (timeLine > 0) {
-            timeLine--
-            stateEphemeris.unshift(data[1][timeLine].split(/ +/).filter(s => s !== '').join(' '))
+        // Remove number of ephemeris points to default to read all points
+        let header = data[0]
+        if (files[saveName] === undefined) {
+            // If file is not in records, fill in past with truth
+            while (timeLine > 0) {
+                timeLine--
+                stateEphemeris.unshift(data[1][timeLine].split(/ +/).filter(s => s !== '').join(' '))
+            }
+            files[saveName] = {
+                header,
+                data: [{posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff, time: new Date() - 0}]
+            }
         }
-        files[saveName] = {
-            header,
-            data: [{posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff, time: new Date() - 0}]
+        else {
+            files[saveName].header = header
+            files[saveName].data.push({posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff, time: new Date() - 0})
         }
+        files[saveName].data = files[saveName].data.map((d, ii) => {
+            let filterTime
+            if (ii < files[saveName].data.length - 1) {
+                filterTime = Number(files[saveName].data[ii+1].startTime)
+            }
+            else {
+                filterTime = 1e9
+            }
+            return {
+                startTime: d.startTime,
+                time: d.time,
+                posVelData: d.posVelData.filter(data => Number(data.split(' ')[0]) < filterTime),
+                covData: d.covData.filter(data => Number(data.split(' ')[0]) < filterTime)
+            }
+
+
+        })
+        window.localStorage.files = JSON.stringify(files)
+        exportConsolidated(files[saveName], 'bsa_' + fileName + '_' + padNumbers(desDate.getHours()) +  padNumbers(desDate.getMinutes()) + '.e')
+    } catch (error) {
+        alert(error + '\n\nContact Captain (or maybe Major depending on the time period) VanZandt')
     }
-    else {
-        files[saveName].header = header
-        files[saveName].data.push({posVelData: stateEphemeris, covData: pEphemeris, startTime: timeDiff, time: new Date() - 0})
-    }
-    window.localStorage.files = JSON.stringify(files)
-    console.log(JSON.parse(window.localStorage.files))
-    exportConsolidated(files[saveName], 'bsa_' + fileName + '_' + padNumbers(desDate.getHours()) +  padNumbers(desDate.getMinutes()) + '.e')
 }
 
 function exportConsolidated(satelliteData, name) { 
@@ -140,6 +170,10 @@ function exportConsolidated(satelliteData, name) {
     out += files.map(file => file.covData).join('\n')
     out += 'END Ephemeris'
     downloadFile(name, out)
+}
+
+function byteCount(s) {
+    return encodeURI(s).split(/%..|./).length - 1;
 }
 
 function testDrop(event) {
