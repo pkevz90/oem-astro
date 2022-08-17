@@ -1432,6 +1432,101 @@ function produceEarthSphere(rot = {long: 0, lat: 0}, points = 20000) {
     // console.timeEnd()
 }
 
+function showCovShape() {
+    let endTime = Number(document.getElementById('track-time-input').value) * 3600
+    let cnvs = document.createElement('canvas')
+    cnvs.classList.add('div-shadow')
+    cnvs.style.position = 'fixed'
+    cnvs.style.height = '20vw'
+    cnvs.style.left = '30%'
+    cnvs.style.width = '20vw'
+    cnvs.style.top = '30%'
+    cnvs.width = window.innerWidth * 0.2
+    cnvs.height = window.innerWidth * 0.2
+    cnvs.id = 'map-canvas'
+    cnvs.onclick = (el) => el.target.remove()
+    document.getElementsByTagName('body')[0].append(cnvs)
+
+    // CalcEllipse
+    let ellipse = {x: 4, y: 0.4, z: 1}
+    let points = [], n = 500, l = 4
+    for (let index = 0; index < n; index++) {
+        let angle = index * 2 * Math.PI / n
+        points.push({point: [
+            ellipse.x * Math.cos(angle),
+            ellipse.y * Math.sin(angle),
+            0
+        ], color: 'red', size: 1})
+        points.push({point: [
+            ellipse.x * Math.cos(angle),
+            0,
+            ellipse.z * Math.sin(angle)
+        ], color: 'red', size: 1})
+        points.push({point: [
+            0,
+            ellipse.y * Math.cos(angle),
+            ellipse.z * Math.sin(angle)
+        ], color: 'red', size: 1})
+        points.push({point: math.multiply(rotationMatrices(45,1),[
+            ellipse.x * Math.cos(angle),
+            ellipse.y * Math.sin(angle),
+            0
+        ]), color: 'red', size: 1})
+        points.push({point: math.multiply(rotationMatrices(-45,1),[
+            ellipse.x * Math.cos(angle),
+            ellipse.y * Math.sin(angle),
+            0
+        ]), color: 'red', size: 1})
+        let midAngle = 30
+        x = ellipse.x * Math.sin(midAngle * Math.PI / 180)
+        points.push({point: [
+            x,
+            ellipse.y * Math.cos(angle) * Math.cos(midAngle * Math.PI / 180),
+            ellipse.z * Math.sin(angle) * Math.cos(midAngle * Math.PI / 180)
+        ], color: 'red', size: 1})
+        points.push({point: [
+            -x,
+            ellipse.y * Math.cos(angle) * Math.cos(midAngle * Math.PI / 180),
+            ellipse.z * Math.sin(angle) * Math.cos(midAngle * Math.PI / 180)
+        ], color: 'red', size: 1})
+
+        points.push({point: [
+            l*index / n,0,0
+        ], color: 'black', size: 3})
+        points.push({point: [
+            0,l*index / n,0
+        ], color: 'black', size: 3})
+        points.push({point: [
+            0,0,l*index / n
+        ], color: 'black', size: 3})
+    }
+
+    points = points.map(p => {
+        let r1 = rotationMatrices(-20, 2)
+        let r2 = rotationMatrices(-20, 3)
+        return {point: math.multiply(r1, r2, p.point), color: p.color, size: p.size}
+    })
+    points = points.sort((a,b) => a.point[2] - b.point[2])
+    
+    let plotSize = 5
+    let ctx = cnvs.getContext('2d')
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0,0,cnvs.width, cnvs.height)
+    ctx.fillStyle = 'black'
+    let baseSize = 0.5
+    points.forEach(p => {
+        let pixel = [
+            cnvs.height / 2 - p.point[0] / plotSize / 2 * cnvs.height,
+            cnvs.width / 2 - p.point[1] / plotSize / 2 * cnvs.width,
+        ]
+        ctx.fillStyle = p.color
+        ctx.beginPath()
+        ctx.arc(pixel[1], pixel[0], p.size * baseSize, 0, 2 * Math.PI)
+        ctx.fill()
+    })
+
+}
+
 
 
 let imgSp = new Image()
