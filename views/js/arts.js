@@ -1498,9 +1498,8 @@ function startContextClick(event) {
         let lockScreenStatus = lockDiv.style.right === '-15%' ? false : true
         ctxMenu.innerHTML = `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
-            ${mainWindow.satellites.length > 0 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Lock Screen</div>` : ''}
+            ${mainWindow.satellites.length > 0 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
-            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)"" id="change-origin">Change Origin Sat</div>' : ''}
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadScenario(event)"></div>
             <div class="context-item" onclick="exportScenario()">Export Scenario</div>
@@ -1524,12 +1523,25 @@ function changeLockStatus(el) {
 
 function updateLockScreen() {
     let out = ''
-    mainWindow.satellites.forEach((sat, ii) => {
-        let checked = sat.locked ? '' : 'checked'
-        out += `<div style="text-align: right">
-                    <label style="cursor: pointer; padding: 5px" for="lock-${ii}">${sat.name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${ii}" id="lock-${ii}" type="checkbox"/>
-                </div>`
+    let lanes = demarcateLanes()
+    console.log(lanes);
+    lanes.forEach((lane, ii) => {
+        out += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
+        lane.forEach(sat => {
+            let checked = mainWindow.satellites[sat].locked ? '' : 'checked'
+            out += `<div style="text-align: right">
+                        <label style="cursor: pointer; padding: 5px" for="lock-${sat}">${mainWindow.satellites[sat].name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${sat}" id="lock-${sat}" type="checkbox"/>
+                        <button onclick="changeOrigin(${sat})">Center</button>
+                    </div>`
+
+        })
     })
+    // mainWindow.satellites.forEach((sat, ii) => {
+    //     let checked = sat.locked ? '' : 'checked'
+    //     out += `<div style="text-align: right">
+    //                 <label style="cursor: pointer; padding: 5px" for="lock-${ii}">${sat.name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${ii}" id="lock-${ii}" type="checkbox"/>
+    //             </div>`
+    // })
     lockDiv.innerHTML = out
 }
 
@@ -5575,7 +5587,8 @@ function changeOrigin(satIn = 1, time = 0) {
             return {
                 position: {r: relPos[0], i: relPos[1], c: relPos[2], rd: relPos[3], id: relPos[4], cd: relPos[5]},
                 a: sat.a,
-                burns: sat.burns
+                burns: sat.burns,
+                locked: math.norm(relPos.slice(0,3)) > 2500
             }
         })
         satellitesOut = []
@@ -5588,7 +5601,7 @@ function changeOrigin(satIn = 1, time = 0) {
                 shape: mainWindow.satellites[ii].shape,
                 a: mainWindow.satellites[ii].a,
                 name: mainWindow.satellites[ii].name,
-                locked: mainWindow.satellites[ii].locked
+                locked: sat.locked
             }))
         })
         mainWindow.satellites = satellitesOut
@@ -5599,6 +5612,8 @@ function changeOrigin(satIn = 1, time = 0) {
                 })
             })
             mainWindow.relativeData.dataReqs = dataReqs
+            
+            updateLockScreen()
         }, 500)
     } catch (error) {
         showScreenAlert('Error in changing ref satellite')
@@ -5870,6 +5885,7 @@ function loadFileTle(fileToLoad) {
                 id: s.state[4],
                 cd: s.state[5],
             }
+            options.locked = math.norm(Object.values(options.position).slice(0,3)) > 2500
             s.properties.forEach(prop => {
                 options[prop[0]] = prop[1]
             })
@@ -5950,4 +5966,34 @@ function propTrueAnomalyj2(tA = 0, a = 10000, e = 0.1, i, time = 3600) {
     meanA += mAj2rate * time
     eccA = solveKeplersEquation(meanA, e)
     return Eccentric2True(e, eccA)
+}
+
+function demarcateLanes(laneWidth = 1.25, sats = mainWindow.satellites) {
+    // Lane width in degrees, splits satellites in system into lanes 
+    lanes = []
+    let satIndexes = math.range(0, sats.length)._data
+    while (satIndexes.length > 0) {
+        let lane = []
+        let laneAnchor = satIndexes.shift()
+        let anchorPosition = Object.values(sats[laneAnchor].position).slice(0,3)
+        anchorPosition[0] += mainWindow.originOrbit.a
+        anchorPosition[2] = 0
+        lane.push(laneAnchor)
+        for (let index = 0; index < satIndexes.length; index++) {
+            let position = Object.values(sats[satIndexes[index]].position).slice(0,3)
+            position[0] += mainWindow.originOrbit.a
+            position[2] = 0
+            let angle = math.acos(math.dot(anchorPosition, position) / math.norm(anchorPosition) / math.norm(position)) * 180 / Math.PI
+            if (angle < laneWidth) {
+                lane.push(satIndexes.splice(index, 1)[0])
+                index--
+            }
+        }
+        
+        lanes.push(lane)
+    }
+    lanes.sort((a,b) => {
+        return -mainWindow.satellites[a[0]].position.i + mainWindow.satellites[b[0]].position.i
+    })
+    return lanes
 }

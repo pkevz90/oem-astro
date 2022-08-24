@@ -1211,10 +1211,22 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
     longSat += 180
     longSat = longSat > 360 ? longSat - 360 : longSat
     latSat = 90 - latSat
-    ctx.fillStyle = 'magenta'
-    ctx.beginPath();
-    ctx.arc(cnvs.width * longSat / 360, cnvs.height * latSat/ 180, cnvs.width /150, 0, 2 * Math.PI);
-    ctx.fill();
+    ctx.fillStyle = '#e9e'
+    ctx.strokeStyle = 'black'
+    let satPoints = drawSatellite({size: 40})
+    satPoints.forEach((p, ii) => {
+        if (ii === 0) {
+            ctx.beginPath()
+            ctx.moveTo(p[0] + cnvs.width * longSat / 360, p[1] + cnvs.height * latSat/ 180)
+        }
+        else ctx.lineTo(p[0] + cnvs.width * longSat / 360, p[1] + cnvs.height * latSat/ 180)
+    })
+    ctx.fill()
+    ctx.stroke()
+    ctx.font = '15px sans-serif'
+    ctx.fillStyle = '#eee'
+    ctx.textAlign = 'center'
+    ctx.fillText('Target', cnvs.width * longSat / 360, cnvs.height * latSat/ 180 + 20)
     let obs = checkSensors(satState, time)
     ctx.fillStyle = 'red'
     mainWindow.sensors.filter(s => s.active && s.type === 'space').forEach(sens => {
@@ -1226,9 +1238,19 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
         let latSat = math.atan2(satEcef[2], math.norm(satEcef.slice(0,2)))
         latSat *= 180 / Math.PI
         let locationSens = latLong2Pixels(latSat, longSat, cnvs)
-        ctx.beginPath();
-        ctx.arc(locationSens.x, locationSens.y, cnvs.width /200, 0, 2 * Math.PI);
-        ctx.fill();
+        // ctx.beginPath();
+        // ctx.arc(locationSens.x, locationSens.y, cnvs.width /200, 0, 2 * Math.PI);
+        // ctx.fill();
+        let satPoints = drawSatellite({size: 35})
+        satPoints.forEach((p, ii) => {
+            if (ii === 0) {
+                ctx.beginPath()
+                ctx.moveTo(p[0] +locationSens.x, p[1] + locationSens.y)
+            }
+            else ctx.lineTo(p[0] +locationSens.x, p[1] + locationSens.y)
+        })
+        ctx.fill()
+        ctx.stroke()
         ctx.font = '15px sans-serif'
         ctx.fillStyle = '#eee'
         ctx.textAlign = 'center'
@@ -1432,23 +1454,39 @@ function produceEarthSphere(rot = {long: 0, lat: 0}, points = 20000) {
     // console.timeEnd()
 }
 
+let cnvsCov
+let ang = 0
 function showCovShape() {
-    let endTime = Number(document.getElementById('track-time-input').value) * 3600
     let cnvs = document.createElement('canvas')
     cnvs.classList.add('div-shadow')
     cnvs.style.position = 'fixed'
-    cnvs.style.height = '20vw'
+    cnvs.style.height = '40vw'
     cnvs.style.left = '30%'
-    cnvs.style.width = '20vw'
+    cnvs.style.width = '40vw'
     cnvs.style.top = '30%'
-    cnvs.width = window.innerWidth * 0.2
-    cnvs.height = window.innerWidth * 0.2
+    cnvs.width = window.innerWidth * 0.4
+    cnvs.height = window.innerWidth * 0.4
     cnvs.id = 'map-canvas'
     cnvs.onclick = (el) => el.target.remove()
     document.getElementsByTagName('body')[0].append(cnvs)
+    cnvsCov = cnvs
+    
+    let covMatrix = [[1,2,0],
+        [2,1,0],
+        [0,0,1]]
 
-    // CalcEllipse
-    let ellipse = {x: 4, y: 0.4, z: 1}
+    drawCovShape(covMatrix)
+    
+
+}
+
+function drawCovShape(matrix) {
+    let eig = math.eigs(matrix);
+    let val = eig.values
+    let vec = eig.vectors
+    let ellipse = {x: val[2], y: val[1], z: val[0]}
+    let rCov = math.transpose(vec).reverse()
+    let ctxCov = cnvsCov.getContext('2d')
     let points = [], n = 500, l = 4
     for (let index = 0; index < n; index++) {
         let angle = index * 2 * Math.PI / n
@@ -1490,6 +1528,11 @@ function showCovShape() {
             ellipse.z * Math.sin(angle) * Math.cos(midAngle * Math.PI / 180)
         ], color: 'red', size: 1})
 
+    }
+    points = points.map(p => {
+        return {point: math.multiply(rCov, p.point), color: p.color, size: p.size}
+    })
+    for (let index = 0; index < n; index++) {
         points.push({point: [
             l*index / n,0,0
         ], color: 'black', size: 3})
@@ -1502,32 +1545,69 @@ function showCovShape() {
     }
 
     points = points.map(p => {
-        let r1 = rotationMatrices(-20, 2)
-        let r2 = rotationMatrices(-20, 3)
+        let r1 = rotationMatrices(-45, 2)
+        let r2 = rotationMatrices(ang, 3)
         return {point: math.multiply(r1, r2, p.point), color: p.color, size: p.size}
     })
     points = points.sort((a,b) => a.point[2] - b.point[2])
     
     let plotSize = 5
-    let ctx = cnvs.getContext('2d')
-    ctx.fillStyle = 'white'
-    ctx.fillRect(0,0,cnvs.width, cnvs.height)
-    ctx.fillStyle = 'black'
+    ctxCov.fillStyle = 'white'
+    ctxCov.fillRect(0,0,cnvsCov.width, cnvsCov.height)
+    ctxCov.fillStyle = 'black'
     let baseSize = 0.5
     points.forEach(p => {
         let pixel = [
-            cnvs.height / 2 - p.point[0] / plotSize / 2 * cnvs.height,
-            cnvs.width / 2 - p.point[1] / plotSize / 2 * cnvs.width,
+            cnvsCov.height / 2 - p.point[0] / plotSize / 2 * cnvsCov.height,
+            cnvsCov.width / 2 - p.point[1] / plotSize / 2 * cnvsCov.width,
         ]
-        ctx.fillStyle = p.color
-        ctx.beginPath()
-        ctx.arc(pixel[1], pixel[0], p.size * baseSize, 0, 2 * Math.PI)
-        ctx.fill()
+        ctxCov.fillStyle = p.color
+        ctxCov.beginPath()
+        ctxCov.arc(pixel[1], pixel[0], p.size * baseSize, 0, 2 * Math.PI)
+        ctxCov.fill()
     })
-
+    ang += 1
+    setTimeout(drawCovShape, 20, matrix)
 }
 
-
+function drawSatellite(options = {}) {
+    let {size = 60, ratio = 0.25, angle = -45, body = 0.33, gap = 1.3} = options
+    size /= 2
+    points = [
+        [0, -size * ratio],
+        [-body * size, -size * ratio],
+        [-body * size, -size * ratio/3],
+        [-body*gap * size, -size * ratio/3],
+        [-body*gap * size, -size * ratio/2],
+        [-size, -size * ratio/2],
+        [-size, size * ratio/2],
+        [-body*gap * size, size * ratio/2],
+        [-body*gap * size, size * ratio/3],
+        [-body * size, size * ratio/3],
+        [-body * size, size * ratio/2],
+        [-body * size, size * ratio],
+        [body * size, size * ratio],
+        [body * size, size * ratio/3],
+        [body*gap * size, size * ratio/3],
+        [body*gap * size, size * ratio/2],
+        [body * size, size * ratio/2],
+        [size, size * ratio/2],
+        [size, -size * ratio/2],
+        [body*gap * size, -size * ratio/2],
+        [body*gap * size, -size * ratio/3],
+        [body * size, -size * ratio/3],
+        [body * size, -size * ratio/2],
+        [body * size, -size * ratio],
+        [0, -size * ratio]
+    ]
+    points = points.map(p => {
+        return [
+            p[0] * Math.cos(angle * Math.PI / 180) - p[1] * Math.sin(angle * Math.PI / 180),
+            p[0] * Math.sin(angle * Math.PI / 180) + p[1] * Math.cos(angle * Math.PI / 180)
+        ]
+    })
+    return points
+}
 
 let imgSp = new Image()
 imgSp.src = './Media/2_no_clouds_4k.jpg'

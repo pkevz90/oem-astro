@@ -61,6 +61,8 @@ function exportFile() {
         let lastLine = data[1].length-1
         while (isNaN(Number(data[1][lastLine].split(/ +/).filter(s => s !== '')[0]))) lastLine--
         let endTime = Number(data[1][lastLine].split(/ +/).filter(s => s !== '')[0])
+        console.info('Start Time: ' + (timeDiff/3600).toFixed(2) + ' hrs')
+        console.info('End Time: ' + (endTime/3600).toFixed(2) + ' hrs')
         let saveName = 'sat' + math.floor(data[1][0].split(/ +/).filter(line => line !== '')[1]);
         // Pull initial state from ephemeris file
         let stateEphemeris = data[1].slice(timeLine + 1, timeLine + 2)
@@ -93,6 +95,7 @@ function exportFile() {
         stateEphemeris = [toExponentialDigits(t, 16, 2) + ' ' + state.map(s => toExponentialDigits(s, 16, 2)).join(' ')]
         let timeDelta = 900
         let propTime = (endTime - timeDiff) > 86400 ? 86400 : endTime - timeDiff
+        console.info('Prop Time: ' + (propTime / 3600).toFixed(2) + ' hr')
         let points = generateSigmaPoints(P, [state])
         for (let ii = timeDelta; ii <= propTime; ii+=timeDelta) {
             let pointsNew = points.map(s => propToTime(s.map(a => a / 1000), ii).map(a => a * 1000))
