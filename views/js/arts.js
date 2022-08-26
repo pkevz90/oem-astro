@@ -5588,7 +5588,7 @@ function changeOrigin(satIn = 1, time = 0) {
                 position: {r: relPos[0], i: relPos[1], c: relPos[2], rd: relPos[3], id: relPos[4], cd: relPos[5]},
                 a: sat.a,
                 burns: sat.burns,
-                locked: math.norm(relPos.slice(0,3)) > 2500
+                locked: math.norm(relPos.slice(0,3)) > 2500 || math.norm(relPos.slice(3,6)) > .075
             }
         })
         satellitesOut = []
@@ -5827,9 +5827,77 @@ function uploadTles() {
     document.getElementById('tle-file').value = ''
 }
 
+function tellInputStateFileType(file) {
+    // Tells if file comes straight from STK or the custom style
+    let testString = 'J2000 Position & Velocity'
+    return file.search(testString) !== -1
+}
+
+function handleStkJ200File(file) {
+    let satNames = file.split('\n')[1].split('Satellite-')[1].split(':  J')[0].split(',').map(name => name.trim())
+    file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2).filter(row => row !== '').map(row => row.split(/ {2,}/)).map(row => {
+        return [
+            new Date(row[0]),
+            Number(row[1]),
+            Number(row[2]),
+            Number(row[3]),
+            Number(row[4]),
+            Number(row[5]),
+            Number(row[6]),
+        ]
+    }))
+    console.log(file);
+    satNames.slice(0,file.length)
+    let defaultTime = file[0][0][0]
+    let desiredTime = prompt('What time to pull states from?', toStkFormat(defaultTime.toString()))
+    if (desiredTime === null) return
+    desiredTime = new Date(desiredTime)
+    if (desiredTime == 'Invalid Date') return alert('Invalid Time')
+    
+    closeAll()
+    let timeFile = file.map(sec => {
+        let times = sec.map(row => Math.abs(row[0] - desiredTime))
+        let minTime = math.min(times)
+        let index = times.findIndex(el => el=== minTime)
+        return sec[index]
+    }).map(sec => {
+        let time = sec.shift()
+        sec = propToTime(sec, (desiredTime - time) / 1000, false)
+        return sec
+    })
+    let originState = timeFile.shift()
+    mainWindow.satellites = []
+    mainWindow.satellites.push(new Satellite({
+        position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
+        name: satNames.shift()
+    }))
+    let sun = sunFromTime(desiredTime)  
+    sun = math.squeeze(Eci2Ric(originState.slice(0,3), originState.slice(3,6), sun, [0,0,0]).rHcw)
+    sun = math.dotDivide(sun, math.norm(sun))
+    mainWindow.initSun = sun
+    mainWindow.startDate = desiredTime
+    timeFile.forEach((state, ii) => {
+        let ricState = Eci2Ric(originState.slice(0,3), originState.slice(3,6), state.slice(0,3), state.slice(3,6))
+        mainWindow.satellites.push(new Satellite({
+            position: {r: ricState.rHcw[0][0], 
+                i: ricState.rHcw[1][0], 
+                c: ricState.rHcw[2][0], 
+                rd: ricState.drHcw[0][0], 
+                id: ricState.drHcw[1][0], 
+                cd: ricState.drHcw[2][0]},
+            name: satNames[ii],
+            locked: math.norm(math.squeeze(ricState.rHcw)) > 2500 || math.norm(math.squeeze(ricState.drHcw)) > 0.075
+        }))
+
+    })
+}
+
 function loadFileTle(fileToLoad) {
     var fileReader = new FileReader();
     fileReader.onload = function (fileLoadedEvent) {
+        if (tellInputStateFileType(fileLoadedEvent.target.result)) return handleStkJ200File(fileLoadedEvent.target.result)
+        
+        closeAll()
         var text = fileLoadedEvent.target.result.split('\n');
         let line = -1
         let states = []
@@ -5885,7 +5953,7 @@ function loadFileTle(fileToLoad) {
                 id: s.state[4],
                 cd: s.state[5],
             }
-            options.locked = math.norm(Object.values(options.position).slice(0,3)) > 2500
+            options.locked = math.norm(Object.values(options.position).slice(0,3)) > 2500 || math.norm(Object.values(options.position).slice(3,6)) > 0.075
             s.properties.forEach(prop => {
                 options[prop[0]] = prop[1]
             })
