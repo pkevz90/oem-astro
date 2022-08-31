@@ -70,6 +70,8 @@ class windowCanvas {
     normalizeDirection = true;
     frameMove = undefined;
     initSun = [1, 0, 0];
+    laneWidth = 1;
+    laneCross = 500;
     desired = { 
         scenarioTime: 0,
         plotCenter: 0,
@@ -3482,7 +3484,6 @@ function initStateFunction(el) {
         }
         let eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
         let eciDep = Ric2Eci(Object.values(state).slice(0,3), Object.values(state).slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
-        console.log(eciDep, eciOrigin);
         let coeDep = PosVel2CoeNew(eciDep.rEcci, eciDep.drEci)
         let driftRate = (398600.4418 / coeDep.a ** 3) ** 0.5 - (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
         driftRate *= 86164 * 180 / Math.PI
@@ -5489,11 +5490,13 @@ function changeOrigin(satIn = 1, time = 0) {
         sats = sats.map((sat, ii) => {
             let relPos = Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sat.inertPos.slice(0,3), sat.inertPos.slice(3,6))
             relPos = math.squeeze([...relPos.rHcw, ...relPos.drHcw])
+            let relLong = math.atan(relPos[1] / (relPos[0] + mainWindow.originOrbit.a)) * 180 / Math.PI
+            let maxCrossTrack = (relPos[2] ** 2 + (relPos[5] / mainWindow.mm) ** 2) ** 0.5
             return {
                 position: {r: relPos[0], i: relPos[1], c: relPos[2], rd: relPos[3], id: relPos[4], cd: relPos[5]},
                 a: sat.a,
                 burns: sat.burns,
-                locked: math.norm(relPos.slice(0,3)) > 2500 || math.norm(relPos.slice(3,6)) > .075
+                locked: relLong > mainWindow.laneWidth || maxCrossTrack > mainWindow.laneCross
             }
         })
         satellitesOut = []
@@ -5943,7 +5946,7 @@ function propTrueAnomalyj2(tA = 0, a = 10000, e = 0.1, i, time = 3600) {
     return Eccentric2True(e, eccA)
 }
 
-function demarcateLanes(laneWidth = 1.25, sats = mainWindow.satellites) {
+function demarcateLanes(sats = mainWindow.satellites) {
     // Lane width in degrees, splits satellites in system into lanes 
     lanes = []
     let satIndexes = math.range(0, sats.length)._data
@@ -5959,7 +5962,7 @@ function demarcateLanes(laneWidth = 1.25, sats = mainWindow.satellites) {
             position[0] += mainWindow.originOrbit.a
             position[2] = 0
             let angle = math.acos(math.dot(anchorPosition, position) / math.norm(anchorPosition) / math.norm(position)) * 180 / Math.PI
-            if (angle < laneWidth) {
+            if (angle < mainWindow.laneWidth) {
                 lane.push(satIndexes.splice(index, 1)[0])
                 index--
             }
