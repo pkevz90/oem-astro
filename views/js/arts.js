@@ -1448,6 +1448,7 @@ function startContextClick(event) {
         ctxMenu.innerHTML = `
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
+                <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
                 <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
@@ -1574,6 +1575,11 @@ function handleContextClick(button) {
             lockDiv.style.right = '1%'
         }
         else lockDiv.style.right = '-15%'
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'lock-sat-button') {
+        let sat = button.getAttribute('sat')
+        mainWindow.satellites[sat].locked = true
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'display-data-1') {
@@ -5775,6 +5781,8 @@ function handleStkJ200File(file) {
     let originState = timeFile.shift()
     mainWindow.satellites = []
     mainWindow.satellites.push(new Satellite({
+        shape: 'delta',
+        color: '#55f',
         position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
         name: satNames.shift()
     }))
@@ -5788,6 +5796,8 @@ function handleStkJ200File(file) {
     timeFile.forEach((state, ii) => {
         let ricState = Eci2Ric(originState.slice(0,3), originState.slice(3,6), state.slice(0,3), state.slice(3,6))
         mainWindow.satellites.push(new Satellite({
+            shape: 'delta',
+            color: '#55f',
             position: {r: ricState.rHcw[0][0], 
                 i: ricState.rHcw[1][0], 
                 c: ricState.rHcw[2][0], 
