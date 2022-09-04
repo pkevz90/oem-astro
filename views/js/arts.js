@@ -1041,6 +1041,7 @@ let timeFunction = false;
 
 (function animationLoop() {
     try {
+        mainWindow.cnvs.getContext('2d').globalAlpha = 1 
         if (timeFunction) console.time()
         mainWindow.clear();
         mainWindow.updateSettings();
@@ -1063,7 +1064,6 @@ let timeFunction = false;
             }
             
             sat.drawCurrentPosition();
-            mainWindow.cnvs.getContext('2d').globalAlpha = 1 
         })
         if (timeFunction) console.timeEnd()
         mainWindow.recordFunction();
@@ -1448,7 +1448,7 @@ function startContextClick(event) {
         ctxMenu.innerHTML = `
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
-                <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
+                <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
                 <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
@@ -5496,7 +5496,7 @@ function changeOrigin(satIn = 1, time = 0) {
         sats = sats.map((sat, ii) => {
             let relPos = Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sat.inertPos.slice(0,3), sat.inertPos.slice(3,6))
             relPos = math.squeeze([...relPos.rHcw, ...relPos.drHcw])
-            let relLong = math.atan(relPos[1] / (relPos[0] + mainWindow.originOrbit.a)) * 180 / Math.PI
+            let relLong = math.abs(math.atan(relPos[1] / (relPos[0] + mainWindow.originOrbit.a)) * 180 / Math.PI)
             let maxCrossTrack = (relPos[2] ** 2 + (relPos[5] / mainWindow.mm) ** 2) ** 0.5
             return {
                 position: {r: relPos[0], i: relPos[1], c: relPos[2], rd: relPos[3], id: relPos[4], cd: relPos[5]},
