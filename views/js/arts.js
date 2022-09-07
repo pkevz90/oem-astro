@@ -1276,7 +1276,7 @@ function keydownFunction(key) {
                 name: 'Chief',
                 position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
                 shape: 'diamond',
-                color: '#b0b',
+                color: '#bb00bb',
                 a: 0.001
             }) : 
             new Satellite({
@@ -1374,12 +1374,13 @@ function alterEditableSatChar(action) {
     let sat = parElement.getAttribute('sat')
     let newEl = action.innerText
     if (element === 'color') {
-        if (isNaN(Number('0x' + newEl.substr(1,newEl.length))) || newEl.length > 7 || newEl[0] !== '#') {
-            if (newEl.length === 1 && newEl === '#') return
-            action.innerText = mainWindow.satellites[sat].color
-            return
-        }
-        mainWindow.satellites[sat][element] = newEl
+        mainWindow.satellites[sat][element] = action.value
+        return
+    }
+    if (element === 'shape') {
+        console.log(action);
+        mainWindow.satellites[sat][element] = action.value
+        action.selectedIndex = 0
         return
     }
     if (element === 'a') {
@@ -1449,6 +1450,16 @@ function startContextClick(event) {
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
                 <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
+                <input title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+                <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
+                    <option value=""></option>
+                    <option value="delta">Delta</option>
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="diamond">Diamond</option>
+                    <option value="4-star">4-Point Star</option>
+                    <option value="star">5-Point Star</option>
+                </select>
                 <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
@@ -5778,14 +5789,16 @@ function handleStkJ200File(file) {
         sec = propToTime(sec, (desiredTime - time) / 1000, false)
         return sec
     })
-    let originState = timeFile.shift()
-    mainWindow.satellites = []
-    mainWindow.satellites.push(new Satellite({
-        shape: 'delta',
-        color: '#55f',
-        position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
-        name: satNames.shift()
-    }))
+    // See what satellite is focused on right now, if satellite is within new data, focus on it
+    let oldOrigin = mainWindow.satellites.find(sat => {
+        return (sat.position.r ** 2 + sat.position.i ** 2 + sat.position.c ** 2) < 1e-6
+    })
+    oldOrigin = oldOrigin !== undefined ? oldOrigin.name : oldOrigin
+    oldOrigin = satNames.findIndex(sat => sat === oldOrigin)
+    oldOrigin = oldOrigin === -1 ? 0 : oldOrigin
+    let originState = timeFile[0]
+    let newSatellites = []
+    // mainWindow.satellites = []
     let sun = sunFromTime(desiredTime)  
     sun = math.squeeze(Eci2Ric(originState.slice(0,3), originState.slice(3,6), sun, [0,0,0]).rHcw)
     sun = math.dotDivide(sun, math.norm(sun))
@@ -5795,20 +5808,31 @@ function handleStkJ200File(file) {
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     timeFile.forEach((state, ii) => {
         let ricState = Eci2Ric(originState.slice(0,3), originState.slice(3,6), state.slice(0,3), state.slice(3,6))
-        mainWindow.satellites.push(new Satellite({
+        // If satellite with name already exists, copy settings from it
+        let matchSat = mainWindow.satellites.find(sat => {
+            return sat.name === satNames[ii]
+        })
+        let options = matchSat !== undefined ? {
+            shape: matchSat.shape,
+            color: matchSat.color,
+            a: matchSat.a
+        } : {
             shape: 'delta',
-            color: '#55f',
-            position: {r: ricState.rHcw[0][0], 
-                i: ricState.rHcw[1][0], 
-                c: ricState.rHcw[2][0], 
-                rd: ricState.drHcw[0][0], 
-                id: ricState.drHcw[1][0], 
-                cd: ricState.drHcw[2][0]},
-            name: satNames[ii],
-            locked: math.norm(math.squeeze(ricState.rHcw)) > 2500 || math.norm(math.squeeze(ricState.drHcw)) > 0.075
-        }))
+            color: '#5555ff',
+        }
+        options.name = satNames[ii]
+        options.position = {r: ricState.rHcw[0][0], 
+            i: ricState.rHcw[1][0], 
+            c: ricState.rHcw[2][0], 
+            rd: ricState.drHcw[0][0], 
+            id: ricState.drHcw[1][0], 
+            cd: ricState.drHcw[2][0]}
+        options.locked = math.norm(math.squeeze(ricState.rHcw)) > 2500 || math.norm(math.squeeze(ricState.drHcw)) > 0.075
+        newSatellites.push(new Satellite(options))
 
     })
+    mainWindow.satellites = newSatellites
+    changeOrigin(oldOrigin)
 }
 
 function loadFileTle(fileToLoad) {
