@@ -793,7 +793,7 @@ class Satellite {
         let {
             position = {r: 40 * Math.random() - 20, i: 40 * Math.random() - 20, c: 40 * Math.random() - 20, rd: 0.002 * Math.random() - 0.001, id: 0.002 * Math.random() - 0.001, cd: 0.002 * Math.random() - 0.001},
             size = 4,
-            color = 'blue',
+            color = '#ff0000',
             shape = 'pentagon',
             a = 0.00001,
             name = 'Sat',
