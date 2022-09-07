@@ -5777,9 +5777,11 @@ function handleStkJ200File(file) {
     if (desiredTime === null) return
     desiredTime = new Date(desiredTime)
     if (desiredTime == 'Invalid Date') return alert('Invalid Time')
-    
+    satNames = satNames.filter((name, ii) => file[ii].length > 0)
+    file = file.filter(t => t.length > 0)
     closeAll()
     let timeFile = file.map(sec => {
+        console.log(sec);
         let times = sec.map(row => Math.abs(row[0] - desiredTime))
         let minTime = math.min(times)
         let index = times.findIndex(el => el=== minTime)
