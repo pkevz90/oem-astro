@@ -428,7 +428,7 @@ function propToTime(state, dt, j2 = true) {
 }
 
 function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
-    let mu = 398600//.4418;
+    let mu = 398600.4418;
     let rn = math.norm(r);
     let vn = math.norm(v);
     let h = math.cross(r, v);

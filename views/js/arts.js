@@ -1352,6 +1352,7 @@ window.addEventListener('wheel', event => {
     if (mainWindow.panelOpen) return;
     if (mainWindow.burnStatus.type === 'waypoint') {
         let tranTimeDelta = event.deltaY > 0 ? -300 : 1800
+        document.querySelector('#time-slider-range').value = Number(document.querySelector('#time-slider-range').value) + tranTimeDelta
         let curCrossState = mainWindow.satellites[mainWindow.burnStatus.sat].currentPosition({
             time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
         })
@@ -2893,29 +2894,7 @@ function openPanel(button) {
     if (screenAlert.length > 0) screenAlert[0].remove();
     if (button.id === 'edit-select') return;
     mainWindow.panelOpen = true;
-    if (button.id === 'burns') {
-        if (mainWindow.satellites.length === 0) {
-            mainWindow.panelOpen = false;
-            return;
-        }
-        mainWindow.desired.scenarioTime = mainWindow.scenarioLength*3600;
-        let selectEl = document.getElementById('satellite-way-select');
-        let chosenSat = Number(selectEl.value);
-        generateBurnTable(chosenSat);
-        while (selectEl.firstChild) {
-            selectEl.removeChild(selectEl.firstChild);
-        }
-        mainWindow.satellites.forEach((sat, ii) => {
-            addedElement = document.createElement('option');
-            addedElement.value = ii;
-            addedElement.textContent = sat.name  ? sat.name : sat.shape;
-            addedElement.style.color = sat.color;
-            selectEl.appendChild(addedElement);
-        })
-        selectEl.selectedIndex = chosenSat;
-        selectEl.style.color = mainWindow.satellites[chosenSat].color;
-    }
-    else if (button.id === 'add-satellite' || button.id === 'add-satellite-2') {
+    if (button.id === 'add-satellite' || button.id === 'add-satellite-2') {
         let selectEl = document.getElementById('edit-select');
         selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = '';
         document.getElementById('parse-text').value = "";
@@ -3085,6 +3064,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
 
 function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.00001) {
     state = Object.values(state)
+    // console.log( tB);
     let cosEl = Math.cos(phi)
     let direction = [a0 * Math.cos(alpha) * cosEl, a0 * Math.sin(alpha) * cosEl, a0 * Math.sin(phi)];
     
@@ -3094,13 +3074,20 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.000
         propTime += mainWindow.timeDelta
     }
     state = runge_kutta(twoBodyRpo, state, finalTime*tB - propTime, direction, time + propTime)
+    // console.log(state);
+    // let state0 = state.slice()
     propTime = finalTime * tB
-    while((propTime + mainWindow.timeDelta) < finalTime) {
-        state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime)
-        propTime += mainWindow.timeDelta
-    }
-    state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
-    
+    let propTwoBody = finalTime - propTime
+    // console.log(propTwoBody);
+    // while((propTime + mainWindow.timeDelta) < finalTime) {
+    //     state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime)
+    //     propTime += mainWindow.timeDelta
+    // }
+    // // state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
+    // console.log(math.norm(math.subtract(state, propRelMotionTwoBodyAnalytic(state0, propTwoBody))))
+    // console.log(state0);
+    state = propRelMotionTwoBodyAnalytic(state, propTwoBody, time + propTime)
+    // console.log(state);
     return {
         x: state[0],
         y: state[1],
@@ -3264,146 +3251,9 @@ function calcBurns() {
     sat.genBurns(true, mainWindow.burnStatus.burn);
 }
 
-function generateBurnTable(object = 0) {
-    let table = document.getElementById('waypoint-table').children[1];
-    while (table.firstChild) {
-        table.removeChild(table.firstChild);
-    }
-    let addStartTime = document.getElementById('add-start-time');
-    let tranTime = Number(document.getElementById('add-tran-time').value);
-    let endTime = mainWindow.satellites[object].burns.length === 0 ? mainWindow.startDate : new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[mainWindow.satellites[object].burns.length - 1].time * 1000 + mainWindow.satellites[object].burns[mainWindow.satellites[object].burns.length - 1].waypoint.tranTime * 1000);
-    let dt = (endTime.getTime() - mainWindow.startDate.getTime() + tranTime * 60000) / 1000;
-    let crossState = mainWindow.satellites[object].currentPosition({
-        time: dt
-    });
-    document.getElementById('add-cross').value = crossState.c[0].toFixed(2);
-    addStartTime.value = new Date(new Date(endTime).toString().split(' GMT')[0].substring(4) + 'Z').toISOString().substr(0, 19);
-
-    if (mainWindow.satellites[object].burns.length === 0) return;
-    let addedElement;
-    for (let burn = 0; burn < mainWindow.satellites[object].burns.length; burn++) {
-        addedElement = document.createElement('tr');
-        addedElement.classList.add('tool-container')
-        let burnDir = [1000*mainWindow.satellites[object].burns[burn].direction.r, 1000*mainWindow.satellites[object].burns[burn].direction.i, 1000*mainWindow.satellites[object].burns[burn].direction.c]
-        let rot = translateFrames(object, {time: mainWindow.satellites[object].burns[burn].time})
-        burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
-        addedElement.innerHTML = `
-            <td>${new Date(mainWindow.startDate.getTime() + mainWindow.satellites[object].burns[burn].time * 1000).toString()
-        .split(' GMT')[0].substring(4)}</td>
-            <td onclick="addToolTip(this)" class="" title="${'r: ' + burnDir[0].toFixed(3) + '  i: ' + burnDir[1].toFixed(3) + '  c: ' + burnDir[2].toFixed(3) + ' dur: ' + (math.norm(burnDir) / mainWindow.satellites[object].a / 1000).toFixed(2)}"><span>(${(mainWindow.satellites[object].burns[burn].waypoint.target.r).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.i).toFixed(3)}, ${(mainWindow.satellites[object].burns[burn].waypoint.target.c).toFixed(3)})</span></td>
-            <td><span>${(mainWindow.satellites[object].burns[burn].waypoint.tranTime / 60).toFixed(1)}</span></td>
-            <td class="edit-button ctrl-switch">Edit</td>
-        `;
-        table.appendChild(addedElement);
-    }
-    let editButtons = document.getElementsByClassName('edit-button');
-    for (let button = 0; button < editButtons.length; button++) {
-        editButtons[button].addEventListener('click', editButtonFunction);
-    }
-}
-
 function addToolTip(element) {
     if (element.getElementsByTagName('input').length > 0) return;
     element.classList.toggle('tooltip')
-}
-
-function editButtonFunction(event) {
-    let tdList = event.target.parentElement.children,
-        oldValue;
-    if (event.target.innerText === 'Confirm') {
-        event.target.innerText = 'Edit';
-        oldValue = new Date(tdList[0].children[0].value).toString()
-            .split(' GMT')[0].substring(4);
-        tdList[0].innerText = oldValue;
-        let tarList = tdList[1].children[0].getElementsByTagName('input');
-        tdList[1].children[0].innerText = `(${tarList[0].value}, ${tarList[1].value}, ${tarList[2].value})`
-        tdList[2].children[0].innerText = tdList[2].children[0].getElementsByTagName('input')[0].value;
-        table2burns(Number(document.getElementById('satellite-way-select').value));
-        return;
-    }
-    else if (event.target.innerText === 'Delete') {
-        let buttons = document.getElementsByClassName('ctrl-switch'), el;
-        for (let ii = 0; ii < buttons.length; ii++) {
-            if (buttons[ii] === event.target) el = ii;
-        }
-        event.target.parentElement.parentElement.removeChild(event.target.parentElement);
-        table2burns(Number(document.getElementById('satellite-way-select').value));
-
-        return;
-    }
-    event.target.innerText = 'Confirm';
-    // nextValue = new Date(new Date(event.target.parentElement.nextSibling.children[0].innerText + 'Z') - 15 * 60 * 1000);
-    let tarList = tdList[1].children[0].innerText.substr(1, tdList[1].children[0].innerText.length - 2).split(',');
-    oldValue = tdList[0].innerText + 'Z';
-    tdList[0].innerHTML = `<input type="datetime-local" oninput="editChanged(this)" id="edit-date" style="width: 12vw" value="${new Date(oldValue).toISOString().substr(0,19)}"/>`;
-    // tdList[0].children[0].value = '2014-02-09';
-    tdList[1].children[0].innerHTML = `(<input style="width: 9vw; font-size: 2.25vw;" type="number" value="${Number(tarList[0])}"/>, <input style="width: 8vw; font-size: 2.25vw;" type="number" value="${Number(tarList[1])}"/>, <input style="width: 8vw; font-size: 2.25vw;" type="number" value="${Number(tarList[2])}"/>)`;
-    tdList[2].children[0].innerHTML = `<input style="width: 9vw; font-size: 2.25vw;" type="number" value="${tdList[2].children[0].innerText}"/>`;
-    
-}
-
-function editChanged(el) {
-    let sat = document.getElementById('satellite-way-select').value;
-    let parent = el.type === 'number' ? el.parentNode.parentNode.parentNode : el.parentNode.parentNode;
-    let tranTime = Number(parent.children[2].children[0].children[0].value) * 60;
-    let time = new Date(parent.children[0].children[0].value).getTime() - new Date(mainWindow.startDate).getTime();
-    time /= 1000;
-    let targetState = mainWindow.satellites[sat].currentPosition({
-        time: time + tranTime
-    });
-    let tarList = parent.children[1].getElementsByTagName('input');
-    tarList[2].value = targetState.c[0].toFixed(1);
-}
-
-function waypoints2table(waypoints) {
-    let table = document.getElementById('waypoint-table').children[1];
-    while (table.firstChild) {
-        table.removeChild(table.firstChild);
-    }
-    let addedElement;
-    waypoints.forEach(point => {
-        addedElement = document.createElement('tr');
-        addedElement.innerHTML = `
-            <td>${new Date(point.time).toString()
-        .split(' GMT')[0].substring(4)}</td>
-            <td><span>(${(point.r).toFixed(3)}, ${(point.i).toFixed(3)}, ${(point.c).toFixed(3)})</span></td>
-            <td><span>${(point.tranTime).toFixed(3)}</span></td>
-            <td class="edit-button ctrl-switch" onclick="editButtonFunction(event)">Edit</td>
-        `;
-        table.appendChild(addedElement);
-    });
-}
-
-function table2burns(object) {
-    let tableTrs = document.getElementById('waypoint-table').children[1].children,
-        time, tranTime, startTime = mainWindow.startDate.getTime(),
-        burns = [], target;
-    for (let tr = 0; tr < tableTrs.length; tr++) {
-        time = (Date.parse(tableTrs[tr].children[0].innerText) - startTime) / 1000;
-        tranTime = Number(tableTrs[tr].children[2].innerText) * 60;
-        target = tableTrs[tr].children[1].children[0].innerText.substr(1, tableTrs[tr].children[1].children[0].innerText.length - 2).split(',');
-        burns.push({
-            time,
-            shown: false,
-            direction: {
-                r: 0,
-                i: 0,
-                c: 0
-            },
-            waypoint: {
-                tranTime,
-                target: {
-                    r: Number(target[0]),
-                    i: Number(target[1]),
-                    c: Number(target[2])
-                }
-            }
-        });
-    }
-    mainWindow.satellites[object].burns = [...burns];
-    
-    mainWindow.satellites[object].genBurns();
-    mainWindow.satellites[object].genBurns();
 }
 
 function rmoeToRic(rmoes) {
@@ -3864,53 +3714,6 @@ function findMinDistance(vector1, vector2) {
         ]));
     }
     return outVec
-}
-
-function drawVulnerabilityZone() {
-    let ctx = mainWindow.getContext();
-    let point, pointText;
-    let tarPos = mainWindow.satellites[mainWindow.vz_reach.target].currentPosition({time: mainWindow.scenarioTime + mainWindow.vz_reach.time})
-    let objPos = mainWindow.satellites[mainWindow.vz_reach.object].currentPosition({time: mainWindow.scenarioTime})
-    objPos = {
-        x: objPos.r[0],
-        y: objPos.i[0],
-        z: objPos.c[0],
-        xd: objPos.rd[0],
-        yd: objPos.id[0],
-        zd: objPos.cd[0]
-    }
-    let burn, results = [], textLoc;
-    ctx.fillStyle = 'black';
-    ctx.strokeStyle = 'black';
-    ctx.font = '15px serif';
-    for (let ang = 0; ang < 2 * Math.PI; ang += Math.PI / 4) {
-        point = {
-            x: tarPos.r[0] + mainWindow.vz_reach.distance * Math.sin(ang),
-            y: tarPos.i[0] + mainWindow.vz_reach.distance * Math.cos(ang),
-            z: tarPos.c[0],
-            xd: 0,
-            yd: 0,
-            zd: 0 
-        };
-        pointText = {
-            r: tarPos.r[0] + mainWindow.vz_reach.distance * Math.sin(ang)*1.1,
-            i: tarPos.i[0] + mainWindow.vz_reach.distance * Math.cos(ang)*1.1,
-            c: tarPos.c[0]
-        };
-        textLoc = mainWindow.convertToPixels(pointText).ri;
-        burn = hcwFiniteBurnOneBurn(objPos, point, mainWindow.vz_reach.time, 0.001);
-        results.push(burn ? {
-            dV: math.norm([burn.r, burn.i, burn.c]),
-            vel: math.norm([burn.F.xd-tarPos.rd[0], burn.F.yd-tarPos.id[0], burn.F.zd-tarPos.cd[0]])
-        } : false)
-        // console.log(textLoc);
-        ctx.fillText(burn ? (1000*math.norm([burn.r, burn.i, burn.c])).toFixed(0) : '--', textLoc.x, textLoc.y)
-        ctx.fillText(burn ? (1000*math.norm([burn.F.xd-tarPos.rd[0], burn.F.yd-tarPos.id[0], burn.F.zd-tarPos.cd[0]])).toFixed(0) : '--', textLoc.x, textLoc.y+15)
-    }
-    let zoneCenter = mainWindow.convertToPixels({r: tarPos.r[0], i: tarPos.i[0], c: tarPos.c[0]}).ri;
-    ctx.beginPath();
-    ctx.arc(zoneCenter.x, zoneCenter.y, mainWindow.vz_reach.distance / mainWindow.getPlotWidth() * mainWindow.getWidth(),0, 2 * Math.PI);
-    ctx.stroke();
 }
 
 function drawCurve(ctx, points) {
@@ -4530,7 +4333,9 @@ function Ric2Eci(rHcw = [0,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindo
 }
 
 function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
-    let mu = 398600//.4418;
+    r = r.map(num => math.abs(num) < 1e-8 ? 0 : num)
+    v = v.map(num => math.abs(num) < 1e-8 ? 0 : num)
+    let mu = 398600.4418;
     let rn = math.norm(r);
     let vn = math.norm(v);
     let h = math.cross(r, v);
@@ -4543,7 +4348,6 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     }
     var epsilon = vn * vn / 2 - mu / rn;
     let a = -mu / 2 / epsilon;
-    // console.log(math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn)))
     let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r),  math.dotMultiply(math.dot(r, v), v)), mu)
     let en = math.norm(e);
     if (en < 1e-9) {
@@ -4555,11 +4359,8 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     if (n[1] < 0) {
         ra = 2 * Math.PI - ra;
     }
-    // console.log({
-    //     n,e
-    // });
     let ar
-    let arDot = math.dot(n, e) / en / nn;
+    let arDot = math.dot(n, e) / (en < 1e-9 ? nn : en) / nn;
     if (arDot > 1) {
         ar = 0;
     } else if (arDot < -1) {
@@ -4582,7 +4383,14 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     if (math.dot(v, e) > 0 || math.dot(v, r) < 0) {
         ta = 2 * Math.PI - ta;
     }
-    // // console.log([a,en,inc,ra,ar,ta])
+    // console.log({
+    //     a: a,
+    //     e: en,
+    //     i: inc,
+    //     raan: ra,
+    //     arg: ar,
+    //     tA: ta
+    // });
     return {
         a: a,
         e: en,
@@ -5781,7 +5589,6 @@ function handleStkJ200File(file) {
     file = file.filter(t => t.length > 0)
     closeAll()
     let timeFile = file.map(sec => {
-        console.log(sec);
         let times = sec.map(row => Math.abs(row[0] - desiredTime))
         let minTime = math.min(times)
         let index = times.findIndex(el => el=== minTime)
@@ -6010,4 +5817,23 @@ function demarcateLanes(sats = mainWindow.satellites) {
         return -mainWindow.satellites[a[0]].position.i + mainWindow.satellites[b[0]].position.i
     })
     return lanes
+}
+
+function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime) {
+    let initialInertState = {...mainWindow.originOrbit}
+    initialInertState.tA = propTrueAnomaly(initialInertState.tA, initialInertState.a, initialInertState.e, scenTime)
+    let initState = Object.values(Coe2PosVelObject(initialInertState))
+    // console.log(initState);
+    initialInertState.tA = propTrueAnomaly(initialInertState.tA, initialInertState.a, initialInertState.e, dt)
+    let depInitState = Ric2Eci(r1Ric.slice(0,3), r1Ric.slice(3,6), initState.slice(0,3), initState.slice(3,6))
+    depInitState = [...depInitState.rEcci, ...depInitState.drEci]
+    // console.log(depInitState);
+    // console.log(PosVel2CoeNew(depInitState.slice(0,3), depInitState.slice(3,6)));
+    let depFinalState = propToTime(depInitState, dt, false)
+    // console.log(PosVel2CoeNew(depFinalState.slice(0,3), depFinalState.slice(3,6)));
+    // console.log(depFinalState);
+    let finalState = Object.values(Coe2PosVelObject(initialInertState))
+    let depRicFinal = Eci2Ric(finalState.slice(0,3), finalState.slice(3,6), depFinalState.slice(0,3), depFinalState.slice(3,6))
+    depRicFinal = math.squeeze([...depRicFinal.rHcw, ...depRicFinal.drHcw])
+    return depRicFinal
 }
