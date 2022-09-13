@@ -19,7 +19,7 @@ addButton.parentNode.insertBefore(newNode, addButton);
 const lockDiv = document.createElement("div")
 lockDiv.style.position = 'fixed'
 lockDiv.style.top = '15%'
-lockDiv.style.right = '-15%'
+lockDiv.style.right = '-25%'
 lockDiv.innerText = 'test'
 lockDiv.style.transition = 'right 0.5s'
 document.getElementsByTagName('body')[0].append(lockDiv)
@@ -71,7 +71,7 @@ class windowCanvas {
     frameMove = undefined;
     initSun = [1, 0, 0];
     laneWidth = 1;
-    laneCross = 500;
+    laneCross = 1000;
     desired = { 
         scenarioTime: 0,
         plotCenter: 0,
@@ -511,19 +511,13 @@ class windowCanvas {
         line.forEach((point, ii) => {
             let pixelPos = this.convertToPixels(point);
             if (this.state.search('ri') !== -1 && Math.abs(point.r) < (this.plotHeight / 2 * this.frameCenter.ri.h) && Math.abs(point.i - this.plotCenter) < (this.plotWidth / 2* this.frameCenter.ri.w)) {
-                ctx.beginPath();
-                ctx.arc(pixelPos.ri.x, pixelPos.ri.y, size, 0, 2 * Math.PI);
-                ctx.fill()
+                ctx.fillRect(pixelPos.ri.x - size, pixelPos.ri.y - size, size*2, size*2)
             }
             if (this.state.search('ci') !== -1 && Math.abs(point.c) < (this.plotHeight / 2 * this.frameCenter.ci.h) && Math.abs(point.i - this.plotCenter) < (this.plotWidth / 2 * this.frameCenter.ci.w)){
-                ctx.beginPath();
-                ctx.arc(pixelPos.ci.x, pixelPos.ci.y, size, 0, 2 * Math.PI);
-                ctx.fill()
+                ctx.fillRect(pixelPos.ci.x - size, pixelPos.ci.y - size, size*2, size*2)
             }
             if (this.state.search('rc') !== -1 && Math.abs(point.c) < (this.plotHeight / 2 * this.frameCenter.rc.h) && Math.abs(point.r) < (this.plotWidth / 2 * this.frameCenter.rc.w)) {
-                ctx.beginPath();
-                ctx.arc(pixelPos.rc.x, pixelPos.rc.y, size, 0, 2 * Math.PI);
-                ctx.fill()
+                ctx.fillRect(pixelPos.rc.x - size, pixelPos.rc.y - size, size*2, size*2)
             }
         })
     }
@@ -1512,7 +1506,7 @@ function startContextClick(event) {
         navigator.clipboard.writeText(outText)
     }
     else {
-        let lockScreenStatus = lockDiv.style.right === '-15%' ? false : true
+        let lockScreenStatus = lockDiv.style.right === '-25%' ? false : true
         ctxMenu.innerHTML = `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
             ${mainWindow.satellites.length > 0 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
@@ -1538,10 +1532,17 @@ function changeLockStatus(el) {
     mainWindow.satellites[el.getAttribute('sat')].locked = !el.checked
 }
 
+function changeLaneWidth(element) {
+    if (element.id === 'refresh-lanes') return updateLockScreen()
+    let newWidth = Number(element.value)
+    newWidth = newWidth < 0.1 ? 0.1 : newWidth
+    newWidth = newWidth > 10 ? 10 : newWidth
+    mainWindow.laneWidth = newWidth
+}
+
 function updateLockScreen() {
     let out = ''
     let lanes = demarcateLanes()
-    console.log(lanes);
     lanes.forEach((lane, ii) => {
         out += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
         lane.forEach(sat => {
@@ -1553,12 +1554,12 @@ function updateLockScreen() {
 
         })
     })
-    // mainWindow.satellites.forEach((sat, ii) => {
-    //     let checked = sat.locked ? '' : 'checked'
-    //     out += `<div style="text-align: right">
-    //                 <label style="cursor: pointer; padding: 5px" for="lock-${ii}">${sat.name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${ii}" id="lock-${ii}" type="checkbox"/>
-    //             </div>`
-    // })
+    out += `
+        <div>
+            Lane Width <input step="0.1" oninput="changeLaneWidth(this)" style="width: 5ch;" type="number" value="${mainWindow.laneWidth}"/><sup>o</sup>
+        </div>
+        <div style="float: right;"><button onclick="changeLaneWidth(this)" id="refresh-lanes">Refresh Lanes</button></div>
+    `
     lockDiv.innerHTML = out
 }
 
@@ -1582,11 +1583,11 @@ function handleContextClick(button) {
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
     }
     else if (button.id === 'lock-screen') {
-        if (lockDiv.style.right === '-15%') {
+        if (lockDiv.style.right === '-25%') {
             updateLockScreen()
             lockDiv.style.right = '1%'
         }
-        else lockDiv.style.right = '-15%'
+        else lockDiv.style.right = '-25%'
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'lock-sat-button') {
@@ -2574,7 +2575,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     if (event.button === 0) {
         // Close context and lock menu if open
         document.getElementById('context-menu')?.remove()
-        lockDiv.style.right = '-15%'
+        lockDiv.style.right = '-25%'
     }
     else if (event.button === 1) return startContextClick(event)
     else return;
@@ -3627,8 +3628,8 @@ function drawSatellite(satellite = {}) {
     
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    let letterY = pixelPosition[1] + shapeHeight / 2 + size * 3
-    ctx.font = `${size * 7}px Courier`;
+    let letterY = pixelPosition[1] + shapeHeight / 2 + size * 2.5
+    ctx.font = `${size * 5}px Courier`;
     ctx.fillText(name ? name : '', pixelPosition[0], letterY);
 }
 
