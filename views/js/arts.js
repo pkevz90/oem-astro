@@ -70,8 +70,7 @@ class windowCanvas {
     normalizeDirection = true;
     frameMove = undefined;
     initSun = [1, 0, 0];
-    laneWidth = 1;
-    laneCross = 1000;
+    nLane = 4
     desired = { 
         scenarioTime: 0,
         plotCenter: 0,
@@ -1274,6 +1273,7 @@ function keydownFunction(key) {
                 a: 0.001
             }) : 
             new Satellite({
+                position: {r: 0, i: -1500 + 3000 * Math.random(), c: 0, rd: 0, id: 0, cd: 0},
                 name: 'Sat-' + (mainWindow.satellites.length + 1),
                 a: 0.001
             })
@@ -1532,17 +1532,16 @@ function changeLockStatus(el) {
     mainWindow.satellites[el.getAttribute('sat')].locked = !el.checked
 }
 
-function changeLaneWidth(element) {
+function changeNumLanes(element) {
     if (element.id === 'refresh-lanes') return updateLockScreen()
     let newWidth = Number(element.value)
-    newWidth = newWidth < 0.1 ? 0.1 : newWidth
-    newWidth = newWidth > 10 ? 10 : newWidth
-    mainWindow.laneWidth = newWidth
+    newWidth = newWidth < 1 ? 1 : newWidth
+    mainWindow.nLane = newWidth
 }
 
 function updateLockScreen() {
     let out = ''
-    let lanes = demarcateLanes()
+    let lanes = satClusterK()
     lanes.forEach((lane, ii) => {
         out += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
         lane.forEach(sat => {
@@ -1556,9 +1555,9 @@ function updateLockScreen() {
     })
     out += `
         <div>
-            Lane Width <input step="0.1" oninput="changeLaneWidth(this)" style="width: 5ch;" type="number" value="${mainWindow.laneWidth}"/><sup>o</sup>
+            # Lanes<input step="1" oninput="changeNumLanes(this)" style="width: 5ch;" type="number" value="${mainWindow.nLane}"/>
         </div>
-        <div style="float: right;"><button onclick="changeLaneWidth(this)" id="refresh-lanes">Refresh Lanes</button></div>
+        <div style="float: right;"><button onclick="changeNumLanes(this)" id="refresh-lanes">Refresh Lanes</button></div>
     `
     lockDiv.innerHTML = out
 }
@@ -5313,16 +5312,17 @@ function changeOrigin(satIn = 1, time = 0) {
         mainWindow.initSun = sun
         mainWindow.mm = (398600.4418 / newInert.a ** 3) ** (1/2)
         mainWindow.originOrbit = newInert
+        let lanes = satClusterK()
         sats = sats.map((sat, ii) => {
             let relPos = Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sat.inertPos.slice(0,3), sat.inertPos.slice(3,6))
             relPos = math.squeeze([...relPos.rHcw, ...relPos.drHcw])
-            let relLong = math.abs(math.atan(relPos[1] / (relPos[0] + mainWindow.originOrbit.a)) * 180 / Math.PI)
-            let maxCrossTrack = (relPos[2] ** 2 + (relPos[5] / mainWindow.mm) ** 2) ** 0.5
+            let laneSatIn = lanes.find(s => s.find(n => n === satIn) !== undefined)
+            console.log(laneSatIn, ii);
             return {
                 position: {r: relPos[0], i: relPos[1], c: relPos[2], rd: relPos[3], id: relPos[4], cd: relPos[5]},
                 a: sat.a,
                 burns: sat.burns,
-                locked: relLong > mainWindow.laneWidth || maxCrossTrack > mainWindow.laneCross
+                locked: laneSatIn.find(s => s === ii) === undefined
             }
         })
         satellitesOut = []
@@ -5837,4 +5837,42 @@ function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime)
     let depRicFinal = Eci2Ric(finalState.slice(0,3), finalState.slice(3,6), depFinalState.slice(0,3), depFinalState.slice(3,6))
     depRicFinal = math.squeeze([...depRicFinal.rHcw, ...depRicFinal.drHcw])
     return depRicFinal
+}
+
+function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites) {
+    nClusters = nClusters > sats.length ? sats.length : nClusters
+    nClusters = math.floor(nClusters)
+    sats = sats.map(s => {
+        let a = mainWindow.originOrbit.a
+        let x = s.position.r + a
+        let y = s.position.i
+        return {long: Math.tan(y/x) * 180 / Math.PI, cluster: undefined}
+    })
+    let maxLong = math.max(sats.map(s => s.long))
+    let minLong = math.min(sats.map(s => s.long))
+    let clusters = math.range(maxLong, minLong, -(maxLong - minLong) / (nClusters - 1), true)._data
+    for (let index = 0; index < 10; index++) {
+        console.log(clusters);
+        // Assign points to clusters
+        sats = sats.map(s => {
+            let c = clusters.map(c => math.abs(c - s.long))
+            c = c.findIndex(n => n === math.min(c))
+
+            return {
+                long: s.long, cluster: c
+            }
+        })
+        // Adjust clusters
+        for (let ii = 0; ii < clusters.length; ii++) {
+            if (sats.filter(s => s.cluster === ii).length === 0) continue
+            clusters[ii] = math.mean(sats.filter(s => s.cluster === ii).map(s => s.long))
+        }
+    }
+    sats = sats.map((s, ii) => {return {cluster: s.cluster, sat: ii}})
+    let output = []
+    for (let index = 0; index < clusters.length; index++) {
+        output.push(sats.filter(s => s.cluster === index).map(s => s.sat))
+    }
+    output = output.filter(s => s.length > 0)
+    return output
 }
