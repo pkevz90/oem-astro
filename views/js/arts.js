@@ -4976,37 +4976,31 @@ function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
     }
 }
 
-function generateEphemFile(sat = 0) {
-    let start = `stk.v.11.0
-
-    # WrittenBy    STK_v11.7.1
-    
-    BEGIN Ephemeris
-    
-        NumberOfEphemerisPoints		 200
-    
-        ScenarioEpoch		 ${toStkFormat(new Date(mainWindow.startDate.getTime()).toString())}
-    
-    # Epoch in JDate format: 2459697.25000000000000
-    # Epoch in YYDDD format:   22117.75000000000000
-    
-    
-        InterpolationMethod		 Lagrange
-    
-        InterpolationSamplesM1		 5
-    
-        CentralBody		 Earth
-    
-        CoordinateSystem		 ICRF
-    
-    # Time of first point: ` + toStkFormat(new Date(mainWindow.startDate.getTime()).toString()) + '\n\n\tEphemerisTimePosVel\n\n'
-    for (let time = 0; time < mainWindow.scenarioLength * 3600; time += mainWindow.scenarioLength * 18) {
-        let curPos = getCurrentInertial(sat, time)
-
-        start += `${time} ${curPos.r * 1000} ${curPos.i * 1000} ${curPos.c * 1000} ${curPos.rd * 1000} ${curPos.id * 1000} ${curPos.cd * 1000}\n`
-    }
-    start += `\n\nEND Ephemeris`
-    downloadFile(mainWindow.satellites[sat].name + '.e', start)
+function generateJ2000File() {
+    let origOrbit = mainWindow.originOrbit
+    let startEphem = `Time (UTCG)              x (km)           y (km)         z (km)     vx (km/sec)    vy (km/sec)    vz (km/sec)
+-----------------------    -------------    -------------    ---------    -----------    -----------    -----------
+`
+    let fileText = `\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t ${Date.now()}
+    Satellite-${mainWindow.satellites.map(s => s.name).join(', ')}:  J2000 Position & Velocity
+    `
+    mainWindow.satellites.forEach(sat => {
+        fileText += `\n\n${startEphem}`
+        sat.stateHistory.forEach(point => {
+            let state = [point.r, point.i, point.c, point.rd, point.id, point.cd]
+            let refState = {...origOrbit}
+            refState.tA = propTrueAnomaly(refState.tA, refState.a, refState.e, point.t)
+            refState = Object.values(Coe2PosVelObject(refState))
+            let eciState = Ric2Eci(state.slice(0,3), state.slice(3,6), refState.slice(0,3), refState.slice(3,6))
+            eciState = [...eciState.rEcci, ...eciState.drEci]
+            let pointTime = new Date(mainWindow.startDate - (-point.t*1000))
+            pointTime = toStkFormat(pointTime.toString())
+            fileText += `${pointTime}     ${eciState.map(n => n.toFixed(5)).join('     ')}\n`
+        })
+        
+    })
+    console.log(fileText);
+    downloadFile('test.e', fileText)
 }
 
 function logAction(options = {}) {
@@ -5567,6 +5561,14 @@ function tellInputStateFileType(file) {
     return file.search(testString) !== -1
 }
 
+function setSun(time=mainWindow.startDate, origin = mainWindow.originOrbit) {
+    let sun = sunFromTime(time)  
+    let originState = Object.values(Coe2PosVelObject(origin))
+    sun = math.squeeze(Eci2Ric(originState.slice(0,3), originState.slice(3,6), sun, [0,0,0]).rHcw)
+    sun = math.dotDivide(sun, math.norm(sun))
+    mainWindow.initSun = sun
+}
+
 function handleStkJ200File(file) {
     let satNames = file.split('\n')[1].split('Satellite-')[1].split(':  J')[0].split(',').map(name => name.trim())
     file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2).filter(row => row !== '').map(row => row.split(/ {2,}/)).map(row => {
@@ -5596,6 +5598,7 @@ function handleStkJ200File(file) {
         return sec[index]
     }).map(sec => {
         let time = sec.shift()
+        console.log(sec);
         sec = propToTime(sec, (desiredTime - time) / 1000, false)
         return sec
     })
@@ -5614,6 +5617,7 @@ function handleStkJ200File(file) {
     sun = math.dotDivide(sun, math.norm(sun))
     mainWindow.initSun = sun
     mainWindow.startDate = desiredTime
+    console.log(originState);
     mainWindow.originOrbit = PosVel2CoeNew(originState.slice(0,3), originState.slice(3,6))
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     timeFile.forEach((state, ii) => {
@@ -5876,3 +5880,4 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites)
     output = output.filter(s => s.length > 0)
     return output
 }
+setSun()
