@@ -1513,7 +1513,7 @@ function startContextClick(event) {
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadScenario(event)"></div>
-            <div class="context-item" onclick="exportScenario()">Export Scenario</div>
+            <div class="context-item" onclick="generateJ2000File()">Export Scenario</div>
             <div class="context-item" onclick="openPanel(this)" id="instructions">Instructions</div>
             `
 
@@ -5000,7 +5000,7 @@ function generateJ2000File() {
         
     })
     console.log(fileText);
-    downloadFile('test.e', fileText)
+    downloadFile('exported.e', fileText)
 }
 
 function logAction(options = {}) {
