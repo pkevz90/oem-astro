@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div style="font-size: 8em;"id="time-display"></div>
+    <div>Time Step <input id="time-input" type="number" name="" value="1">x</div>
+    <div><button onclick="changeButton(this)" id="time-button">Play</button></div>
+    <script>
+        let time = new Date('1 june 2019 00:00')
+        let displayDiv = document.querySelector('#time-display')
+        let timeInput = document.querySelector('#time-input')
+        let timeButton = document.querySelector('#time-button')
+        function animationLoop(params) {
+            window.requestAnimationFrame(animationLoop)
+        }
+        function changeButton(button) {
+            if (button.innerText === 'Play') {
+                button.innerText = 'Pause'
+            }
+            else {
+                button.innerText = 'Play'
+            }
+        }
+        setInterval(() => {
+            let timeStep = timeButton.innerText === 'Play' ? 0 : (timeInput.value)
+            displayDiv.innerHTML = time.toString().split('GMT')[0]
+            time = new Date(time - (-timeStep * 1000))
+        }, 1000)
+        animationLoop()
+
+    </script>
+</body>
+</html>

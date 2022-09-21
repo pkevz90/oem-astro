@@ -618,6 +618,7 @@ class windowCanvas {
     showTime() {
         let ctx = this.getContext();
         ctx.textAlign = 'left';
+        ctx.fillStyle = 'black'
         // console.log(ctx.textBaseline);
         ctx.textBaseline = 'bottom'
         let fontSize = (this.cnvs.height < this.cnvs.width ? this.cnvs.height : this.cnvs.width) * 0.05
@@ -1030,20 +1031,26 @@ function sleep(milliseconds) {
       }
     }
 }
+let threeD = false
 let timeFunction = false;
-
 (function animationLoop() {
     try {
         mainWindow.cnvs.getContext('2d').globalAlpha = 1 
         if (timeFunction) console.time()
         mainWindow.clear();
         mainWindow.updateSettings();
+        mainWindow.showTime();
+        mainWindow.showData();
+        if (threeD) {
+            mainWindow.satellites.forEach(sat => sat.checkInBurn())
+            draw3dScene()
+            if (timeFunction) console.timeEnd()
+            return requestAnimationFrame(animationLoop)
+        }
         mainWindow.drawInertialOrbit(); 
         mainWindow.drawAxes();
         mainWindow.drawPlot();
         mainWindow.drawEllipses()
-        mainWindow.showData();
-        mainWindow.showTime();
         mainWindow.showLocation();
         if (mainWindow.burnStatus.type) {
             mainWindow.calculateBurn();
@@ -1065,7 +1072,7 @@ let timeFunction = false;
             console.log(`Autosaved on ${(new Date()).toString()}`)
             lastSaveTime = Date.now()
         }
-        window.requestAnimationFrame(animationLoop)
+        return window.requestAnimationFrame(animationLoop)
     } catch (error) {
         errorList.push(error)
         let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
@@ -1117,6 +1124,10 @@ function keydownFunction(key) {
     }
     if (mainWindow.panelOpen) return;
     if (key.key === ' ') {
+        if (threeD) {
+            threeD = false
+            return
+        }
         switch (mainWindow.getState()) {
             case 'ri': 
                 mainWindow.setState('ri ci');
@@ -1224,6 +1235,7 @@ function keydownFunction(key) {
                 })
                 break;
             case 'ci': 
+                threeD = true
                 mainWindow.setState('ri');
                 mainWindow.setFrameCenter({
                     ri: {
@@ -1513,7 +1525,7 @@ function startContextClick(event) {
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadScenario(event)"></div>
-            <div class="context-item" onclick="generateJ2000File()">Export Scenario</div>
+            <div class="context-item" onclick="generateJ2000File(event)">Export Scenario</div>
             <div class="context-item" onclick="openPanel(this)" id="instructions">Instructions</div>
             `
 
@@ -2701,7 +2713,10 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
         try {
             mainWindow.frameMove = {
                 x: mainWindow.mousePosition[0],
-                origin: mainWindow.plotCenter
+                y: mainWindow.mousePosition[1],
+                origin: mainWindow.plotCenter,
+                el: elD + 0,
+                az: azD + 0
             };
         } catch (error) {errorList.push(error.stack)}
         return;
@@ -2726,6 +2741,13 @@ document.getElementById('main-plot').addEventListener('mousemove', event => {
     else mainWindow.cnvs.style.cursor = ''
     if (mainWindow.frameMove) {
         let delX = event.clientX - mainWindow.frameMove.x;
+        let delY = event.clientY - mainWindow.frameMove.y;
+        if (threeD) {
+            elD = mainWindow.frameMove.el + delY * 0.4
+            azD = mainWindow.frameMove.az + delX * 0.4
+            return
+
+        }
         mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
     }
 })
@@ -4976,7 +4998,8 @@ function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
     }
 }
 
-function generateJ2000File() {
+function generateJ2000File(event) {
+    if (!event.ctrlKey) return exportScenario()
     let origOrbit = mainWindow.originOrbit
     let startEphem = `Time (UTCG)              x (km)           y (km)         z (km)     vx (km/sec)    vy (km/sec)    vz (km/sec)
 -----------------------    -------------    -------------    ---------    -----------    -----------    -----------
@@ -5881,3 +5904,80 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites)
     return output
 }
 setSun()
+let focLen = 1, azD = 45, elD = 45
+function draw3dScene(az = azD, el = elD) {
+    el = 90 - el
+    let linePoints = 200
+    let lineLength = 0.25 * mainWindow.plotHeight
+    let sunLength = lineLength * 0.8
+    let points = []
+    let ctx = mainWindow.getContext()
+    let d = lineLength * 2 
+    let r = math.multiply( rotationMatrices(el, 2), rotationMatrices(az, 3))
+    let curSun = mainWindow.getCurrentSun().map(s => s * sunLength)
+    // Calc points for axis lines
+    for (let index = 0; index <= linePoints; index++) {
+
+        points.push({
+            color: '#000000',
+            position: math.multiply(r, [lineLength * index / linePoints, 0, 0]),
+            size: 2
+        },{
+            color: '#000000',
+            position: math.multiply(r, [0, lineLength * index / linePoints, 0]),
+            size: 2
+        },{
+            color: '#000000',
+            position: math.multiply(r, [0, 0, lineLength * index / linePoints]),
+            size: 2
+        },{
+            color: '#ffa500',
+            position: math.multiply(r, math.dotMultiply(index / linePoints, curSun)),
+            size: 2
+        })
+    }
+    points.push({
+        color: '#000000',
+        position: math.multiply(r, [lineLength, 0, 0]),
+        size: 2,
+        text: 'R'
+    },{
+        color: '#000000',
+        position: math.multiply(r, [0,lineLength, 0]),
+        size: 2,
+        text: 'I'
+    },{
+        color: '#000000',
+        position: math.multiply(r, [0,0,lineLength]),
+        size: 2,
+        text: 'C'
+    })
+    mainWindow.satellites.forEach(sat => {
+        let cur = sat.currentPosition(mainWindow.scenarioTime);
+        cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
+        sat.curPos = cur;
+        sat.stateHistory.forEach(point => {
+            points.push({
+                color: sat.color,
+                position: math.multiply(r, [point.r, point.i, point.c]),
+                size: 2
+            })
+        })
+        points.push({
+            color: sat.color,
+            position: math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c]),
+            size: 10,
+            text: sat.name
+        })
+    })
+    points = points.sort((a,b) => a.position[2] - b.position[2])
+    ctx.textAlign = 'center'
+    points.map(p => {
+        pos = mainWindow.convertToPixels(p.position).ri
+        ctx.fillStyle = p.color
+        ctx.fillRect(pos.x - p.size / 2, pos.y - p.size / 2,p.size,p.size)
+        if (p.text !== undefined) {
+            ctx.fillText(p.text, pos.x, pos.y)
+        }
+    })
+}
