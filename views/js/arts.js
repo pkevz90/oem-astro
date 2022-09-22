@@ -5981,3 +5981,275 @@ function draw3dScene(az = azD, el = elD) {
         }
     })
 }
+
+function hcwFiniteBurnTwoBurn(stateInit = {x: 00, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, stateFinal = {x: 10, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, tf = 7200, a0 = 0.00001, n = mainWindow.mm) {
+    state = [
+        [stateInit.x],
+        [stateInit.y],
+        [stateInit.z],
+        [stateInit.xd],
+        [stateInit.yd],
+        [stateInit.zd]
+    ];
+    stateFinal = [
+        [stateFinal.x],
+        [stateFinal.y],
+        [stateFinal.z],
+        [stateFinal.xd],
+        [stateFinal.yd],
+        [stateFinal.zd]
+    ];
+    let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
+    let v1 = v[0],
+        v2 = v[1],
+        yErr, S, dX = 1,
+        F, invS, invSSt, ii = 0;
+    let dv1 = math.subtract(v1, state.slice(3, 6));
+    let dv2 = math.subtract(state.slice(3, 6), v2);
+    // [alpha - in plane angle, phi - out of plane angle, tB - total burn time %]
+    let X = [
+        [Math.atan2(dv1[1][0], dv1[0][0])],
+        [Math.atan2(dv1[2], math.norm([dv1[0][0], dv1[1][0]]))],
+        [math.norm(math.squeeze(dv1)) / a0 / tf],
+        [Math.atan2(dv2[1][0], dv2[0][0])],
+        [Math.atan2(dv2[2], math.norm([dv2[0][0], dv2[1][0]]))],
+        [math.norm(math.squeeze(dv2)) / a0 / tf]
+    ];
+    // console.log(X);
+    while (math.norm(math.squeeze(dX)) > 1e-6) {
+        
+        F = twoBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[3][0], X[4][0], X[2][0], X[5][0], tf, a0, n);
+        
+        console.log(X, F);
+        yErr = [
+            [stateFinal[0][0] - F.x],
+            [stateFinal[1][0] - F.y],
+            [stateFinal[2][0] - F.z],
+            [stateFinal[3][0] - F.xd],
+            [stateFinal[4][0] - F.yd],
+            [stateFinal[5][0] - F.zd]
+        ];
+        S = proxOpsJacobianTwoBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], X[3][0], X[4][0], X[5][0], tf, n);
+        invSSt = math.inv(math.multiply(S, math.transpose(S)));
+        invS = math.multiply(math.transpose(S), invSSt);
+        // console.log(multiplyMatrix(math.transpose(S),invSSt))
+        dX = math.multiply(invS, yErr);
+        // console.log(yErr);
+        // console.log(F)
+        X = math.add(X, dX)
+        ii++
+        if (ii > 50) {
+            break;
+        }
+    }
+    return {
+        burn1: {
+            r: a0 * X[2] * tf * Math.cos(X[0][0]) * Math.cos(X[1][0]),
+            i: a0 * X[2] * tf * Math.sin(X[0][0]) * Math.cos(X[1][0]),
+            c: a0 * X[2] * tf * Math.sin(X[1][0]),
+            t: X[2][0] * tf
+        },
+        burn2: {
+            r: a0 * X[5] * tf * Math.cos(X[3][0]) * Math.cos(X[4][0]),
+            i: a0 * X[5] * tf * Math.sin(X[3][0]) * Math.cos(X[4][0]),
+            c: a0 * X[5] * tf * Math.sin(X[4][0]),
+            t: X[5][0] * tf
+        }
+    }
+    // return X;
+}
+
+function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, tF, n) {
+    let m1, m2, mC, mFinal = [];
+    //alpha1
+    m1 = twoBurnFiniteHcw(state, alpha1 - 0.0001, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = [
+        [m1.x],
+        [m1.y],
+        [m1.z],
+        [m1.xd],
+        [m1.yd],
+        [m1.zd]
+    ];
+    m2 = twoBurnFiniteHcw(state, alpha1 + 0.0001, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
+    m2 = [
+        [m2.x],
+        [m2.y],
+        [m2.z],
+        [m2.xd],
+        [m2.yd],
+        [m2.zd]
+    ];
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    mFinal = mC;
+    //phi1
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1 - 0.0001, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = [
+        [m1.x],
+        [m1.y],
+        [m1.z],
+        [m1.xd],
+        [m1.yd],
+        [m1.zd]
+    ];
+    m2 = twoBurnFiniteHcw(state, alpha1, phi1 + 0.0001, alpha2, phi2, tB1, tB2, tF, a, n);
+    m2 = [
+        [m2.x],
+        [m2.y],
+        [m2.z],
+        [m2.xd],
+        [m2.yd],
+        [m2.zd]
+    ];
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    mFinal = math.concat(mFinal, mC);
+    //tB1
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1 - 0.0001, tB2, tF, a, n);
+    m1 = [
+        [m1.x],
+        [m1.y],
+        [m1.z],
+        [m1.xd],
+        [m1.yd],
+        [m1.zd]
+    ];
+    m2 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1 + 0.0001, tB2, tF, a, n);
+    m2 = [
+        [m2.x],
+        [m2.y],
+        [m2.z],
+        [m2.xd],
+        [m2.yd],
+        [m2.zd]
+    ];
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    mFinal = math.concat(mFinal, mC);
+    //alpha2
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2 - 0.0001, phi2, tB1, tB2, tF, a, n);
+    m1 = [
+        [m1.x],
+        [m1.y],
+        [m1.z],
+        [m1.xd],
+        [m1.yd],
+        [m1.zd]
+    ];
+    m2 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2 + 0.0001, phi2, tB1, tB2, tF, a, n);
+    m2 = [
+        [m2.x],
+        [m2.y],
+        [m2.z],
+        [m2.xd],
+        [m2.yd],
+        [m2.zd]
+    ];
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    mFinal = math.concat(mFinal, mC);
+    //phi2
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2 - 0.0001, tB1, tB2, tF, a, n);
+    m1 = [
+        [m1.x],
+        [m1.y],
+        [m1.z],
+        [m1.xd],
+        [m1.yd],
+        [m1.zd]
+    ];
+    m2 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2 + 0.0001, tB1, tB2, tF, a, n);
+    m2 = [
+        [m2.x],
+        [m2.y],
+        [m2.z],
+        [m2.xd],
+        [m2.yd],
+        [m2.zd]
+    ];
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    mFinal = math.concat(mFinal, mC);
+    //tB2
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2 - 0.0001, tF, a, n);
+    m1 = [
+        [m1.x],
+        [m1.y],
+        [m1.z],
+        [m1.xd],
+        [m1.yd],
+        [m1.zd]
+    ];
+    m2 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2 + 0.0001, tF, a, n);
+    m2 = [
+        [m2.x],
+        [m2.y],
+        [m2.z],
+        [m2.xd],
+        [m2.yd],
+        [m2.zd]
+    ];
+    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    mFinal = math.concat(mFinal, mC);
+    return mFinal;
+}
+
+function twoBurnFiniteHcw(state = {x: 0, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, alpha1=0, phi1=0, alpha2=0, phi2=0, tB1=0.05, tB2=0.05, tf=7200, a0=0.00001, n = mainWindow.mm) {
+    state = Object.values(state)
+    let t1 = tB1 * tf,
+        t2 = tf - tB1 * tf - tB2 * tf,
+        t3 = tB2 * tf;
+    let direction1 = [Math.cos(alpha1) * Math.cos(phi1), Math.sin(alpha1) * Math.cos(phi1), Math.sin(phi1)].map(s => s * a0)
+    let direction2 = [Math.cos(alpha2) * Math.cos(phi2), Math.sin(alpha2) * Math.cos(phi2), Math.sin(phi2)].map(s => s * a0)
+    let propTime = 0
+    while ((propTime + mainWindow.timeDelta) < t1) {
+        state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, direction1)
+        propTime += mainWindow.timeDelta
+    }
+    state = runge_kutta(twoBodyRpo, state, t1 - propTime, direction1)
+    
+    state = propRelMotionTwoBodyAnalytic(state, t2)
+    propTime = 0
+    while ((propTime + mainWindow.timeDelta) < t3) {
+        state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, direction2)
+        propTime += mainWindow.timeDelta
+    }
+    state = runge_kutta(twoBodyRpo, state, t3 - propTime, direction2)
+    
+    
+
+    return {
+        x: state[0],
+        y: state[1],
+        z: state[2],
+        xd: state[3],
+        yd: state[4],
+        zd: state[5]
+    };
+
+}
+
+function satTargetRmoes(sat = 0, options = {}) {
+    let {tof = 7200, ae = 20, x = 0, y = 0, m = 0, b = 0, z = 0} = options
+    let ric = rmoeToRic({
+        ae, x, y, z, m, b
+    })
+    let startPos = mainWindow.satellites[sat].curPos
+    startPos = {
+        x: startPos.r,
+        y: startPos.i,
+        z: startPos.c,
+        xd: startPos.rd,
+        yd: startPos.id,
+        zd: startPos.cd
+    }
+    let endPos = {
+        x: ric.rHcw[0][0],
+        y: ric.rHcw[1][0],
+        z: ric.rHcw[2][0],
+        xd: ric.drHcw[0][0],
+        yd: ric.drHcw[1][0],
+        zd: ric.drHcw[2][0]
+    }
+    console.log(startPos, endPos);
+    let burns = hcwFiniteBurnTwoBurn(startPos, endPos, tof, mainWindow.satellites[sat].a)
+    if (burns.burn1.t < 0 || burns.burn2.t < 0 || burns.burn1.t > tof || burns.burn2.t > tof) return showScreenAlert('Outside of kinematic reach')
+    insertDirectionBurn(sat, mainWindow.scenarioTime,[burns.burn1.r, burns.burn1.i, burns.burn1.c])
+    insertDirectionBurn(sat, mainWindow.scenarioTime + tof - burns.burn2.t,[burns.burn2.r, burns.burn2.i, burns.burn2.c])
+}
