@@ -1074,6 +1074,7 @@ let timeFunction = false;
         }
         return window.requestAnimationFrame(animationLoop)
     } catch (error) {
+        console.log(error);
         errorList.push(error)
         let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
         mainWindow = new windowCanvas(document.getElementById('main-plot'));
@@ -1579,6 +1580,7 @@ function handleContextClick(button) {
          button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
             <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="rmoes-maneuver">Target RMOE's</div>
             <div class="context-item" onclick="handleContextClick(this)" id="dsk-maneuver">DSK</div>
             <div class="context-item" onclick="handleContextClick(this)" id="drift-maneuver">Set Drift Rate</div>
             <div class="context-item" onclick="handleContextClick(this)" id="perch-maneuver">Perch</div>
@@ -2011,6 +2013,20 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = html
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
+    else if (button.id === 'rmoes-maneuver') {
+        let html = `
+            <div class="context-item" >TOF: <input placeholder="5" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" >A<sub>e</sub>: <input placeholder="20" type="Number" style="width: 3em; font-size: 1em"> km</div>
+            <div class="context-item" >Drift: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg/rev</div>
+            <div class="context-item" >Rel Long: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg</div>
+            <div class="context-item" >In-Plane Phase: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg</div>
+            <div class="context-item" >Max Out-of-Plane: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> km</div>
+            <div class="context-item" >Out-of-Plane Phase: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg</div>
+            <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-rmoes" tabindex="0">RIC Origin</div>
+        `
+        button.parentElement.innerHTML = html
+        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
+    }
     else if (button.id === 'change-origin') {
         let html = ``
         for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
@@ -2280,6 +2296,32 @@ function handleContextClick(button) {
         }
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + Number(inputs[3].value) * 3600;
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'execute-rmoes') {
+        let inputs = button.parentElement.getElementsByTagName('input');
+        for (let ii = 0; ii < inputs.length; ii++) {
+            if ((ii === 0 && inputs[ii].value !== '' && inputs[ii].value < 0.25)) {
+                inputs[ii].style.backgroundColor = 'rgb(255,150,150)'
+                return
+            }
+            else inputs[ii].style.backgroundColor = 'white'
+            if (inputs[ii].value === '') inputs[ii].value = inputs[ii].placeholder
+        }
+        let sat = button.parentElement.sat;
+        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
+            return burn.time < mainWindow.scenarioTime;
+        })
+        let rmoes = {
+            tof: Number(inputs[0].value) * 3600,
+            ae: Number(inputs[1].value), 
+            x: Number(inputs[2].value), 
+            y: Number(inputs[3].value), 
+            b: Number(inputs[4].value), 
+            z: Number(inputs[5].value), 
+            m: Number(inputs[6].value)
+        }
+        satTargetRmoes(sat, rmoes)
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-direction') {
@@ -3278,20 +3320,41 @@ function addToolTip(element) {
     element.classList.toggle('tooltip')
 }
 
-function rmoeToRic(rmoes) {
+function rmoeToRic(rmoes, time = mainWindow.scenarioTime, top = true) {
     let origSemi = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
     let origPeriod = 2 * Math.PI / mainWindow.mm;
     let initMm = mainWindow.mm + (rmoes.x * Math.PI  / 180) / origPeriod;
+    let originOrbit = {...mainWindow.originOrbit}
+    originOrbit.tA = propTrueAnomaly(origPeriod.tA, originOrbit.a, originOrbit.e, time)
+    let findZeroPhaseOutOfPlane = function(rmoesIn) {
+        let delta = 0.1
+        let rmoes1 = {...rmoesIn}
+        let rmoes2 = {...rmoesIn}
+        let m = 0
+        for (let index = 0; index < 10; index++) {
+            rmoes1.m = m
+            rmoes2.m = m + delta
+            let state1 = rmoeToRic(rmoes1, time, false)
+            let state2 = rmoeToRic(rmoes2, time, false)
+            let del = (state2.rHcw[2] - state1.rHcw[2]) / delta
+            console.log(state1, state2, m, del);
+            m += (0 - state1.rHcw[2]) / del
+        }
+        let state1 = rmoeToRic(rmoes1, time, false)
+        m = state1.drHcw[2] < 0 ? m + 180 : m
+        return m
+    }
+    if (top && rmoes.z > 1e-6) rmoes.m += findZeroPhaseOutOfPlane(rmoes, time)
     let coeInit = Coe2PosVelObject({
         a: (398600.4418 / initMm ** 2)**(1/3),
-        e: rmoes.ae / 2 / origSemi + mainWindow.originOrbit.e,
-        i: rmoes.z *Math.PI / 180 + mainWindow.originOrbit.i,
-        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi + mainWindow.originOrbit.raan,
-        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180 +  + mainWindow.originOrbit.arg,
-        tA: rmoes.b * Math.PI / 180 + mainWindow.originOrbit.tA
+        e: rmoes.ae / 2 / origSemi + originOrbit.e,
+        i: rmoes.z *Math.PI / 180 + originOrbit.i,
+        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi+ originOrbit.raan,
+        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180 + originOrbit.arg + originOrbit.tA,
+        tA: rmoes.b * Math.PI / 180
     })
     coeInit = Object.values(coeInit)
-    let chief = Coe2PosVelObject(mainWindow.originOrbit)
+    let chief = Coe2PosVelObject(originOrbit)
     return Eci2Ric(Object.values(chief).slice(0,3), Object.values(chief).slice(3,6), coeInit.slice(0,3), coeInit.slice(3,6))
 }
 
@@ -5334,7 +5397,6 @@ function changeOrigin(satIn = 1, time = 0) {
             let relPos = Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sat.inertPos.slice(0,3), sat.inertPos.slice(3,6))
             relPos = math.squeeze([...relPos.rHcw, ...relPos.drHcw])
             let laneSatIn = lanes.find(s => s.find(n => n === satIn) !== undefined)
-            console.log(laneSatIn, ii);
             return {
                 position: {r: relPos[0], i: relPos[1], c: relPos[2], rd: relPos[3], id: relPos[4], cd: relPos[5]},
                 a: sat.a,
@@ -5363,7 +5425,6 @@ function changeOrigin(satIn = 1, time = 0) {
                 })
             })
             mainWindow.relativeData.dataReqs = dataReqs
-            
             updateLockScreen()
         }, 500)
     } catch (error) {
@@ -5875,11 +5936,11 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites)
         let y = s.position.i
         return {long: Math.tan(y/x) * 180 / Math.PI, cluster: undefined}
     })
+
     let maxLong = math.max(sats.map(s => s.long))
     let minLong = math.min(sats.map(s => s.long))
     let clusters = math.range(maxLong, minLong, -(maxLong - minLong) / (nClusters - 1), true)._data
     for (let index = 0; index < 10; index++) {
-        console.log(clusters);
         // Assign points to clusters
         sats = sats.map(s => {
             let c = clusters.map(c => math.abs(c - s.long))
@@ -5953,16 +6014,18 @@ function draw3dScene(az = azD, el = elD) {
         text: 'C'
     })
     mainWindow.satellites.forEach(sat => {
+        if (sat.stateHistory === undefined) sat.calcTraj()
         let cur = sat.currentPosition(mainWindow.scenarioTime);
         cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
         sat.curPos = cur;
-        sat.stateHistory.forEach(point => {
+        if (!sat.locked) sat.stateHistory.forEach(point => {
             points.push({
                 color: sat.color,
                 position: math.multiply(r, [point.r, point.i, point.c]),
                 size: 2
             })
         })
+        
         points.push({
             color: sat.color,
             position: math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c]),
@@ -6020,7 +6083,7 @@ function hcwFiniteBurnTwoBurn(stateInit = {x: 00, y: 0, z: 0, xd: 0, yd: 0, zd: 
         
         F = twoBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[3][0], X[4][0], X[2][0], X[5][0], tf, a0, n);
         
-        console.log(X, F);
+        console.log(math.squeeze(X), F);
         yErr = [
             [stateFinal[0][0] - F.x],
             [stateFinal[1][0] - F.y],
@@ -6034,12 +6097,15 @@ function hcwFiniteBurnTwoBurn(stateInit = {x: 00, y: 0, z: 0, xd: 0, yd: 0, zd: 
         invS = math.multiply(math.transpose(S), invSSt);
         // console.log(multiplyMatrix(math.transpose(S),invSSt))
         dX = math.multiply(invS, yErr);
-        // console.log(yErr);
-        // console.log(F)
         X = math.add(X, dX)
+        X[2][0] = X[2][0] < 0 ? 0.1 : X[2][0]
+        X[2][0] = X[2][0] > 0.5 ? 0.4 : X[2][0]
+        X[5][0] = X[5][0] < 0 ? 0.1 : X[5][0]
+        X[5][0] = X[5][0] > 0.5 ? 0.4 : X[5][0]
+        console.log(math.squeeze(X));
         ii++
         if (ii > 50) {
-            break;
+            return false
         }
     }
     return {
@@ -6229,7 +6295,10 @@ function satTargetRmoes(sat = 0, options = {}) {
     let {tof = 7200, ae = 20, x = 0, y = 0, m = 0, b = 0, z = 0} = options
     let ric = rmoeToRic({
         ae, x, y, z, m, b
-    })
+    }, mainWindow.scenarioTime + tof)
+    console.log(ric,{
+        ae, x, y, z, m, b
+    }, mainWindow.scenarioTime + tof);
     let startPos = mainWindow.satellites[sat].curPos
     startPos = {
         x: startPos.r,
@@ -6249,7 +6318,11 @@ function satTargetRmoes(sat = 0, options = {}) {
     }
     console.log(startPos, endPos);
     let burns = hcwFiniteBurnTwoBurn(startPos, endPos, tof, mainWindow.satellites[sat].a)
-    if (burns.burn1.t < 0 || burns.burn2.t < 0 || burns.burn1.t > tof || burns.burn2.t > tof) return showScreenAlert('Outside of kinematic reach')
+    console.log(burns);
+    if (burns === false) return showScreenAlert('Outside of kinematic reach')
+    if (burns.burn1.t < 0 || burns.burn2.t < 0 || (burns.burn1.t + burns.burn2.t) > tof) return showScreenAlert('Outside of kinematic reach')
+    if (Object.values(burns.burn1).filter(s => Number.isNaN(s)).length > 0 || Object.values(burns.burn2).filter(s => Number.isNaN(s)).length > 0) return showScreenAlert('No Valid Solution Found')
+
     insertDirectionBurn(sat, mainWindow.scenarioTime,[burns.burn1.r, burns.burn1.i, burns.burn1.c])
     insertDirectionBurn(sat, mainWindow.scenarioTime + tof - burns.burn2.t,[burns.burn2.r, burns.burn2.i, burns.burn2.c])
 }
