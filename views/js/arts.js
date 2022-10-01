@@ -804,6 +804,7 @@ class Satellite {
         this.a = Number(a);
         this.originDate = Date.now()
         this.locked = locked
+        this.pixelPos = [0,0]
         setTimeout(() => this.calcTraj(), 250);
     }
     calcTraj = calcSatTwoBody;
@@ -1039,17 +1040,21 @@ let timeFunction = false;
         if (timeFunction) console.time()
         mainWindow.clear();
         mainWindow.updateSettings();
-        mainWindow.showTime();
-        mainWindow.showData();
         if (threeD) {
             mainWindow.satellites.forEach(sat => sat.checkInBurn())
             draw3dScene()
+            
+            mainWindow.showTime();
+            mainWindow.showData();
             if (timeFunction) console.timeEnd()
             return requestAnimationFrame(animationLoop)
         }
         mainWindow.drawInertialOrbit(); 
         mainWindow.drawAxes();
         mainWindow.drawPlot();
+        
+        mainWindow.showTime();
+        mainWindow.showData();
         mainWindow.drawEllipses()
         mainWindow.showLocation();
         if (mainWindow.burnStatus.type) {
@@ -1422,7 +1427,13 @@ function startContextClick(event) {
 
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY])
     // Check if clicked on satellite
-    let checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor)).findIndex(sat => sat.ri || sat.rc || sat.ci)
+    let checkProxSats
+    if (threeD) {
+        checkProxSats = mainWindow.satellites.map(sat => math.norm(math.subtract([event.clientX, event.clientY], Object.values(sat.pixelPos)))).findIndex(sat => sat < 10)
+    }
+    else {
+        checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, false)).findIndex(sat => sat.ri || sat.rc || sat.ci)
+    }
     let activeSat = checkProxSats === -1 ? false : checkProxSats
     activeSat = event.ctrlKey ? false : activeSat
 
@@ -1431,7 +1442,6 @@ function startContextClick(event) {
     // Find index of satellite burn clicked on
     let burnIndexSat = checkProxSats.findIndex(sat => sat !== false)
     let activeBurn = burnIndexSat === -1 ? false : {sat: burnIndexSat, burn: checkProxSats[burnIndexSat]}
-
     let ctxMenu;
     if (document.getElementById('context-menu') === null) {
         ctxMenu = document.createElement('div');
@@ -2020,7 +2030,7 @@ function handleContextClick(button) {
             <div class="context-item" >Drift: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg/rev</div>
             <div class="context-item" >Rel Long: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg</div>
             <div class="context-item" >In-Plane Phase: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg</div>
-            <div class="context-item" >Max Out-of-Plane: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> km</div>
+            <div class="context-item" >Out-of-Plane: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg</div>
             <div class="context-item" >Out-of-Plane Phase: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> deg</div>
             <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-rmoes" tabindex="0">RIC Origin</div>
         `
@@ -3325,7 +3335,13 @@ function rmoeToRic(rmoes, time = mainWindow.scenarioTime, top = true) {
     let origPeriod = 2 * Math.PI / mainWindow.mm;
     let initMm = mainWindow.mm + (rmoes.x * Math.PI  / 180) / origPeriod;
     let originOrbit = {...mainWindow.originOrbit}
+    // originOrbit.raan = 0
+    // originOrbit.arg = 0
+    // originOrbit.i = 0
     originOrbit.tA = propTrueAnomaly(origPeriod.tA, originOrbit.a, originOrbit.e, time)
+    // originOrbit.tA = 0
+    let oldE = originOrbit.e + 0
+    originOrbit.e = 0
     let findZeroPhaseOutOfPlane = function(rmoesIn) {
         let delta = 0.1
         let rmoes1 = {...rmoesIn}
@@ -3345,15 +3361,15 @@ function rmoeToRic(rmoes, time = mainWindow.scenarioTime, top = true) {
         return m
     }
     if (top && rmoes.z > 1e-6) rmoes.m += findZeroPhaseOutOfPlane(rmoes, time)
-    let coeInit = Coe2PosVelObject({
+    let coeInit = Object.values(Coe2PosVelObject({
         a: (398600.4418 / initMm ** 2)**(1/3),
         e: rmoes.ae / 2 / origSemi + originOrbit.e,
         i: rmoes.z *Math.PI / 180 + originOrbit.i,
         raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi+ originOrbit.raan,
         arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180 + originOrbit.arg + originOrbit.tA,
         tA: rmoes.b * Math.PI / 180
-    })
-    coeInit = Object.values(coeInit)
+    }))
+    originOrbit.e = oldE
     let chief = Coe2PosVelObject(originOrbit)
     return Eci2Ric(Object.values(chief).slice(0,3), Object.values(chief).slice(3,6), coeInit.slice(0,3), coeInit.slice(3,6))
 }
@@ -4887,6 +4903,8 @@ function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0], burn, tr
     mainWindow.satellites[sat].genBurns();
     if (burn !== undefined) return
     mainWindow.desired.scenarioTime = time + 3600;
+    document.querySelector('#time-slider-range').value = mainWindow.desired.scenarioTime
+
 }
 
 function perchSatellite(sat = 0, time = mainWindow.scenarioTime) {
@@ -6025,12 +6043,14 @@ function draw3dScene(az = azD, el = elD) {
                 size: 2
             })
         })
-        
+        let pos = math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c])
+        sat.pixelPos = mainWindow.convertToPixels(pos).ri
         points.push({
             color: sat.color,
-            position: math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c]),
+            position: pos,
             size: 10,
-            text: sat.name
+            text: sat.name,
+            shape: sat.shape
         })
     })
     points = points.sort((a,b) => a.position[2] - b.position[2])
@@ -6042,6 +6062,14 @@ function draw3dScene(az = azD, el = elD) {
         if (p.text !== undefined) {
             ctx.fillText(p.text, pos.x, pos.y)
         }
+        // if (p.shape !== undefined) {
+        //     drawSatellite({
+        //         pixelPosition: [p.x, p.y],
+        //         shape: p.shape,
+        //         cnvs: mainWindow.cnvs,
+        //         ctx
+        //     })
+        // }
     })
 }
 
@@ -6325,4 +6353,47 @@ function satTargetRmoes(sat = 0, options = {}) {
 
     insertDirectionBurn(sat, mainWindow.scenarioTime,[burns.burn1.r, burns.burn1.i, burns.burn1.c])
     insertDirectionBurn(sat, mainWindow.scenarioTime + tof - burns.burn2.t,[burns.burn2.r, burns.burn2.i, burns.burn2.c])
+}
+
+function findMinDistanceRedux(sat1 = 0, sat2 = 1) {
+    let hist1 = mainWindow.satellites[sat1].stateHistory
+    let hist2 = mainWindow.satellites[sat2].stateHistory
+    let dist = hist1.map((val, ii) => math.norm(math.subtract(Object.values(val).slice(1), Object.values(hist2[ii]).slice(1))))
+    let minVal = math.min(dist)
+    let minIndex = dist.findIndex(s => s === minVal)
+    let index = -2
+    index = minIndex < 2 ? -minIndex : minIndex > (dist.length - 3) ? dist.length - 5 : index
+    console.log(minIndex, index);
+    let x = [], y = []
+    for (let ii = 0; ii < 4; ii++) {
+        x.push(hist1[minIndex + index].t)
+        y.push(dist[minIndex + index])
+        index++   
+    }
+    let c = fitPolynomial(x,math.transpose([y]))
+    console.log(c);
+    let dC = c[1]
+    console.log((-dC[1]+(dC[1]**2-4*dC[2]*dC[0]) ** 0.5) / 2 / dC[2])
+    console.log((-dC[1]-(dC[1]**2-4*dC[2]*dC[0]) ** 0.5) / 2 / dC[2]);
+}
+
+function fitPolynomial(x = [0, 1, 2, 3], y = [[1],[-2],[4],[9]], d=3) {
+    if (x.length !== y.length) return console.error('X & Y values need to be the same length')
+    d = (x.length-1) < d ? x.length - 1 : d
+    let jac = []
+    for (let ii = 0; ii < x.length; ii++) {
+        let line = []
+        for (let jj = 0; jj <= d; jj++) {
+            line.push(x[ii] ** jj)
+        }
+        jac.push(line)
+    }
+    let consts = math.squeeze(math.multiply(math.inv(jac), y))
+    console.log(x,math.squeeze(y));
+    console.log(x.map(val => {
+        return consts.reduce((a,b,ii) => {
+            return a + b * val ** ii
+        },0);
+    }));
+    return [consts,consts.map((val,ii) => val * ii).slice(1)]
 }

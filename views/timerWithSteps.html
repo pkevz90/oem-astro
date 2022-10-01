@@ -4,33 +4,62 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .time-step {
+            font-size: 3em;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .time-step:hover {
+            font-weight: bolder
+        }
+        .selected {
+            text-decoration: underline;
+        }
+    </style>
     <title>Document</title>
 </head>
 <body>
     <div style="font-size: 8em;"id="time-display"></div>
-    <div>Time Step <input id="time-input" type="number" name="" value="1">x</div>
-    <div><button onclick="changeButton(this)" id="time-button">Play</button></div>
+    <div>
+        <span onclick="changeTimeStep(this)" class="time-step selected">0x</span>
+        <span onclick="changeTimeStep(this)" class="time-step">1x</span>
+        <span onclick="changeTimeStep(this)" class="time-step">2x</span>
+        <span onclick="changeTimeStep(this)" class="time-step">5x</span>
+        <span onclick="changeTimeStep(this)" class="time-step">10x</span>
+        <span onclick="changeTimeStep(this)" class="time-step">20x</span>
+        <span onclick="changeTimeStep(this)" class="time-step">50x</span>
+        <span onclick="changeTimeStep(this)" class="time-step">100x</span>
+    </div>
     <script>
-        let time = new Date('1 june 2019 00:00')
+        let timeStep = 0
+        let lastTimeStep = 0
+        let time = new Date('1 Aug 2022 00:00')
         let displayDiv = document.querySelector('#time-display')
         let timeInput = document.querySelector('#time-input')
         let timeButton = document.querySelector('#time-button')
+        document.addEventListener('keyup', k => {
+            switch (k.key) {
+                case ' ':
+                    let lastTime = lastTimeStep
+                    lastTimeStep = timeStep + 0
+                    timeStep = timeStep === 0 ? lastTime : 0
+            }
+        })
+        let lastTime = 0
         function animationLoop(params) {
+            params = params === undefined ? 0 : params
+            time = new Date(time - (-(params - lastTime)*timeStep))
+            displayDiv.innerHTML = time.toString().split('GMT')[0]
+            lastTime = params
             window.requestAnimationFrame(animationLoop)
         }
-        function changeButton(button) {
-            if (button.innerText === 'Play') {
-                button.innerText = 'Pause'
-            }
-            else {
-                button.innerText = 'Play'
-            }
+        function changeTimeStep(el) {
+            let stepSpans = document.querySelectorAll('.time-step')
+            for (let index = 0; index < stepSpans.length; index++) stepSpans[index].classList.remove('selected')
+            el.classList.add('selected')
+            timeStep = Number(el.innerText.split('x')[0]);
         }
-        setInterval(() => {
-            let timeStep = timeButton.innerText === 'Play' ? 0 : (timeInput.value)
-            displayDiv.innerHTML = time.toString().split('GMT')[0]
-            time = new Date(time - (-timeStep * 1000))
-        }, 1000)
         animationLoop()
 
     </script>
