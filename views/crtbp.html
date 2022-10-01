@@ -18,7 +18,7 @@
     <canvas id="main-cnvs"></canvas>
     <div id="controls">
         <div>J <input type="Number" style="width: 10ch;" value="3.332" title="Jacobi's Constant" step="0.001" oninput="updateJ(this)"> km</div>
-        <div>Lagrange R <input type="Number" style="width: 10ch;" value="300000" title="Starting X for Lyapunov Orbit"></div>
+        <div>Lagrange R <input type="Number" style="width: 10ch;" value="300000" step="1000" title="Starting X for Lyapunov Orbit"></div>
         <div>Inertial <input id="inert-check" type="checkbox" style="width: 10ch;"></div>
         <div><button id="update-button" onclick="calcLyapunov(this)">Calculate Lyapunov Orbit</button></div>
         <div id="calc-data"></div>
