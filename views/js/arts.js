@@ -918,6 +918,18 @@ class Satellite {
                 out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < (mainWindow.getPlotWidth() / 80);
             }
         }
+        if (this.locked && (out.ri || out.ci || out.rc)) {
+            lastHiddenSatClicked = lastHiddenSatClicked === false ? {name: this.name, ii: 0} : lastHiddenSatClicked
+            lastHiddenSatClicked.ii++
+            lastHiddenSatClicked = lastHiddenSatClicked.name === this.name ? lastHiddenSatClicked : {name: this.name, ii: 1}
+            if (lastHiddenSatClicked.ii > 1) {
+                this.locked = false
+                lastHiddenSatClicked = false
+            }
+        } 
+        else {
+            lastHiddenSatClicked = lastHiddenSatClicked.name === this.name ? false : lastHiddenSatClicked
+        }
         return this.locked ? burns ? false : {ri: false, ci: false, rc: false} : out
     }
     checkBurnProximity(position) {
@@ -1616,6 +1628,7 @@ function handleContextClick(button) {
     else if (button.id === 'lock-sat-button') {
         let sat = button.getAttribute('sat')
         mainWindow.satellites[sat].locked = true
+        updateLockScreen()
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'display-data-1') {
@@ -2630,7 +2643,7 @@ function showScreenAlert(message = 'test alert') {
 }
 
 changePlanType = (box) => mainWindow.burnType = box.checked ? 'waypoint' : 'manual';
-
+let lastHiddenSatClicked = false
 document.getElementById('main-plot').addEventListener('mousedown', event => {
     event.preventDefault()
     let subList = document.getElementsByClassName('sub-menu');
@@ -2668,11 +2681,11 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     let sat = 0, check;
     if (ricCoor === undefined) return;
     while (sat < mainWindow.satellites.length) {
+        check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
         if (mainWindow.satellites[sat].locked) {
             sat++
             continue
         }
-        check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
         mainWindow.currentTarget = false;
         for (frame in check) mainWindow.currentTarget = check[frame] ? {sat, frame, type: 'current'} : mainWindow.currentTarget
         if (mainWindow.currentTarget) {
@@ -5446,6 +5459,7 @@ function changeOrigin(satIn = 1, time = 0) {
             updateLockScreen()
         }, 500)
     } catch (error) {
+        console.error(error);
         showScreenAlert('Error in changing ref satellite')
     }
 }
@@ -6361,26 +6375,28 @@ function findMinDistanceRedux(sat1 = 0, sat2 = 1) {
     let dist = hist1.map((val, ii) => math.norm(math.subtract(Object.values(val).slice(1), Object.values(hist2[ii]).slice(1))))
     let minVal = math.min(dist)
     let minIndex = dist.findIndex(s => s === minVal)
-    let index = -2
-    index = minIndex < 2 ? -minIndex : minIndex > (dist.length - 3) ? dist.length - 5 : index
+    let index = -1
+    index = minIndex <1 ? -minIndex : minIndex > (dist.length - 2) ? dist.length - 3 : index
     console.log(minIndex, index);
     let x = [], y = []
-    for (let ii = 0; ii < 4; ii++) {
+    for (let ii = 0; ii < 3; ii++) {
         x.push(hist1[minIndex + index].t)
         y.push(dist[minIndex + index])
         index++   
     }
-    let c = fitPolynomial(x,math.transpose([y]))
-    console.log(c);
+    let c = fitPolynomial(x,math.transpose([y]), 2)
     let dC = c[1]
-    console.log((-dC[1]+(dC[1]**2-4*dC[2]*dC[0]) ** 0.5) / 2 / dC[2])
-    console.log((-dC[1]-(dC[1]**2-4*dC[2]*dC[0]) ** 0.5) / 2 / dC[2]);
+    let minTime = -dC[0] / dC[1]
+    return c[0].reduce((a,b,ii) => {
+        return a + b * minTime ** ii
+    },0);
 }
 
-function fitPolynomial(x = [0, 1, 2, 3], y = [[1],[-2],[4],[9]], d=3) {
+function fitPolynomial(x = [0, 1, 2], y = [[1],[-2],[4]], d=2) {
     if (x.length !== y.length) return console.error('X & Y values need to be the same length')
     d = (x.length-1) < d ? x.length - 1 : d
     let jac = []
+    console.log(x,y);
     for (let ii = 0; ii < x.length; ii++) {
         let line = []
         for (let jj = 0; jj <= d; jj++) {
@@ -6388,12 +6404,13 @@ function fitPolynomial(x = [0, 1, 2, 3], y = [[1],[-2],[4],[9]], d=3) {
         }
         jac.push(line)
     }
+    console.log(jac);
     let consts = math.squeeze(math.multiply(math.inv(jac), y))
-    console.log(x,math.squeeze(y));
-    console.log(x.map(val => {
-        return consts.reduce((a,b,ii) => {
-            return a + b * val ** ii
-        },0);
-    }));
+    // console.log(x,math.squeeze(y));
+    // console.log(x.map(val => {
+    //     return consts.reduce((a,b,ii) => {
+    //         return a + b * val ** ii
+    //     },0);
+    // }));
     return [consts,consts.map((val,ii) => val * ii).slice(1)]
 }
