@@ -143,7 +143,7 @@ class windowCanvas {
             }
         },
         dataReqs: [],
-        fontSize: 15
+        fontSize: 10
     };
     makeGif = {
         start: false,
@@ -918,12 +918,12 @@ class Satellite {
                 out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < (mainWindow.getPlotWidth() / 80);
             }
         }
-        if (this.locked && (out.ri || out.ci || out.rc)) {
+        if (out.ri || out.ci || out.rc) {
             lastHiddenSatClicked = lastHiddenSatClicked === false ? {name: this.name, ii: 0} : lastHiddenSatClicked
             lastHiddenSatClicked.ii++
             lastHiddenSatClicked = lastHiddenSatClicked.name === this.name ? lastHiddenSatClicked : {name: this.name, ii: 1}
-            if (lastHiddenSatClicked.ii > 1) {
-                this.locked = false
+            if (lastHiddenSatClicked.ii > 2) {
+                this.locked = !this.locked
                 lastHiddenSatClicked = false
             }
         } 
@@ -1521,8 +1521,9 @@ function startContextClick(event) {
             <div class="context-item" onclick="handleContextClick(this)" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
-            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(${(event.shiftKey ? burnWay : burnDir).slice(0,3).map(d => d.toFixed(3)).join(', ')}) ${event.shiftKey ? ' km ' : ' m/s '}${event.shiftKey ? (burnWay[3] / 3600).toFixed(1) + ' hrs' : ''}</div>
-        `
+            <div style="margin-bottom: 2px; padding: 5px 15px; color: white; cursor: default;">(${(event.shiftKey ? burnWay : burnDir).slice(0,3).map(d => d.toFixed(3)).join(', ')}) ${event.shiftKey ? ' km ' : ' m/s '}${event.shiftKey ? (burnWay[3] / 3600).toFixed(1) + ' hrs' : ''}</div>
+            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(Az: ${(math.atan2(burnDir[1], burnDir[0])*180 / Math.PI).toFixed(2)}, El: ${(math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))*180/Math.PI).toFixed(2)}, M: ${math.norm(burnDir).toFixed(2)} m/s)</div>
+            `
         let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
         let padNumber = function(n) {
             return n < 10 ? '0' + n : n
@@ -1638,7 +1639,7 @@ function handleContextClick(button) {
            <div class="context-item" onclick="handleContextClick(this)" id="display-data-2">Confirm</div>
         `
        for (let index = 0; index < mainWindow.satellites.length; index++) {
-          if (index === sat) continue
+          if (index === sat || mainWindow.satellites[index].locked) continue
           let checked = ''
           if (mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) === sat && Number(req.target) === index).length > 0) checked = 'checked'
           out += `<div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" ${checked} id="${index}-box"/><label style="cursor: pointer" for="${index}-box">${mainWindow.satellites[index].name}</label></div>`
@@ -5757,6 +5758,7 @@ function handleStkJ200File(file) {
             rd: ricState.drHcw[0][0], 
             id: ricState.drHcw[1][0], 
             cd: ricState.drHcw[2][0]}
+        options.a = 0.001
         options.locked = math.norm(math.squeeze(ricState.rHcw)) > 2500 || math.norm(math.squeeze(ricState.drHcw)) > 0.075
         newSatellites.push(new Satellite(options))
 
