@@ -1517,12 +1517,12 @@ function startContextClick(event) {
         let uploadDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000 - 900000)
         ctxMenu.innerHTML = `
             <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
-            <div class="context-item" onclick="handleContextClick(this)" dir="${(event.shiftKey ? burnWay : burnDir).join('_')}" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-${event.shiftKey ? 'waypoint' : 'direction'}-options">Change ${event.shiftKey ? 'Waypoint' : 'Direction'}</div>
             <div class="context-item" onclick="handleContextClick(this)" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
-            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
-            <div style="padding: 5px 15px; color: white; cursor: default;">${burnTime}</div>
-            <div style="margin-bottom: 2px; padding: 5px 15px; color: white; cursor: default;">(${(event.shiftKey ? burnWay : burnDir).slice(0,3).map(d => d.toFixed(3)).join(', ')}) ${event.shiftKey ? ' km ' : ' m/s '}${event.shiftKey ? (burnWay[3] / 3600).toFixed(1) + ' hrs' : ''}</div>
-            <div style="margin-bottom: 10px; padding: 5px 15px; color: white; cursor: default;">(Az: ${(math.atan2(burnDir[1], burnDir[0])*180 / Math.PI).toFixed(2)}, El: ${(math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))*180/Math.PI).toFixed(2)}, M: ${math.norm(burnDir).toFixed(2)} m/s)</div>
+            <div style="background-color: white; cursor: default; width: 100%; height: 2px; margin: 2.5px 0px"></div>
+            <div style="font-size: 0.9em; padding: 2.5px 15px; color: white; cursor: default;">${burnTime}</div>
+            <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" type="direction" onclick="handleContextClick(this)" class="context-item" title="Direction" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnDir[0].toFixed(2)} I: ${burnDir[1].toFixed(2)} C: ${burnDir[2].toFixed(2)} m/s</div>
+            <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnWay[0].toFixed(2)} I: ${burnWay[1].toFixed(2)} C: ${burnWay[2].toFixed(2)} km TT: ${(burnWay[3]/3600).toFixed(2)} hrs</div>
+            <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="angle" class="context-item" title="Az,El,Mag" style="font-size: 0.9em; margin-bottom: 10px; padding: 2.5px 15px; color: white;">Az: ${(math.atan2(burnDir[1], burnDir[0])*180 / Math.PI).toFixed(2)}<sup>o</sup>, El: ${(math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))*180/Math.PI).toFixed(2)}<sup>o</sup>, M: ${math.norm(burnDir).toFixed(2)} m/s</div>
             `
         let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
         let padNumber = function(n) {
@@ -2159,30 +2159,39 @@ function handleContextClick(button) {
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
     }
-    else if (button.id === 'change-direction-options') {
+    else if (button.id === 'change-burn') {
         let sat = button.getAttribute('sat')
         let burn = button.getAttribute('burn')
-        let dir = button.getAttribute('dir').split('_').map(s => Number(s))
-        button.parentElement.innerHTML = `
-            <div class="context-item" >R: <input placeholder="${dir[0].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >I: <input placeholder="${dir[1].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >C: <input placeholder="${dir[2].toFixed(4)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-direction" tabindex="0">Change</div>
-        `
-        document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
-    }
-    else if (button.id === 'change-waypoint-options') {
-        let sat = button.getAttribute('sat')
-        let burn = button.getAttribute('burn')
-        let dir = button.getAttribute('dir').split('_').map(s => Number(s))
-        console.log();
-        button.parentElement.innerHTML = `
-            <div class="context-item" >R: <input placeholder="${dir[0].toFixed(1)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >I: <input placeholder="${dir[1].toFixed(1)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >C: <input placeholder="${dir[2].toFixed(1)}" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >Transfer Time: <input placeholder="${(dir[3] / 3600).toFixed(1)}" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
-            <div class="context-item" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-waypoint" tabindex="0">Change</div>
-        `
+        let burnDirection = button.getAttribute('dir').split('_').map(s => Number(s))
+        let burnWaypoint = Object.values(mainWindow.satellites[sat].burns[burn].waypoint.target)
+        let burnTT = mainWindow.satellites[sat].burns[burn].waypoint.tranTime / 3600
+        let burnAngles = [math.atan2(burnDirection[1], burnDirection[0]) * 180 / Math.PI, math.atan2(burnDirection[2], math.norm(burnDirection.slice(0,2))) * 180 / Math.PI, math.norm(burnDirection)]
+        let type = button.getAttribute('type')
+        if (button.getAttribute('type') === 'direction') {
+            button.parentElement.innerHTML = `
+                <div class="context-item" >R: <input placeholder="${burnDirection[0].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> m/s</div>
+                <div class="context-item" >I: <input placeholder="${burnDirection[1].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> m/s</div>
+                <div class="context-item" >C: <input placeholder="${burnDirection[2].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> m/s</div>
+                <div class="context-item" type="${type}" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-burn" tabindex="0">Change</div>
+            `
+        }
+        else if (button.getAttribute('type') === 'waypoint') {
+            button.parentElement.innerHTML = `
+                <div class="context-item" >R: <input placeholder="${burnWaypoint[0].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
+                <div class="context-item" >I: <input placeholder="${burnWaypoint[1].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
+                <div class="context-item" >C: <input placeholder="${burnWaypoint[2].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
+                <div class="context-item" >TT: <input placeholder="${burnTT.toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> hrs</div>
+                <div class="context-item" type="${type}" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-burn" tabindex="0">Change</div>
+            `
+        }
+        else if (button.getAttribute('type') === 'angle') {
+            button.parentElement.innerHTML = `
+                <div class="context-item" >Az: <input placeholder="${burnAngles[0].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"><sup>o</sup></div>
+                <div class="context-item" >El: <input placeholder="${burnAngles[1].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"><sup>o</sup></div>
+                <div class="context-item" >Mag: <input placeholder="${burnAngles[2].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> m/s</div>
+                <div class="context-item" type="${type}" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-burn" tabindex="0">Change</div>
+            `
+        }
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
     else if (button.id === 'direction-maneuver') {
@@ -2194,9 +2203,10 @@ function handleContextClick(button) {
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
-    else if (button.id === 'execute-change-direction') {
+    else if (button.id === 'execute-change-burn') {
         let sat = button.getAttribute('sat')
         let burn = button.getAttribute('burn')
+        let type = button.getAttribute('type')
         logAction({
             type: 'alterBurn',
             index: burn,
@@ -2205,48 +2215,36 @@ function handleContextClick(button) {
         })
         let inputs = button.parentElement.getElementsByTagName('input');
         for (let ii = 0; ii < inputs.length; ii++) {
-            if (inputs[ii].value === '') {
-                inputs[ii].value = Number(inputs[ii].placeholder);
-            }
+            inputs[ii].value = inputs[ii].value === '' ? Number(inputs[ii].placeholder) : inputs[ii].value
         }
-        let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
-        let rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
-        dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
-        logAction({
-            type: 'alterBurn', sat, index: burn, burn: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
-        })
-        insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
-        // document.getElementById('time-slider-range').value = mainWindow.satellites[sat].burns[burn].time + 3600;
-        document.getElementById('context-menu')?.remove();
-    }
-    else if (button.id === 'execute-change-waypoint') {
-        let sat = button.getAttribute('sat')
-        let burn = button.getAttribute('burn')
-        logAction({
-            type: 'alterBurn',
-            index: burn,
-            sat,
-            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
-        })
-        let inputs = button.parentElement.getElementsByTagName('input');
-        for (let ii = 0; ii < inputs.length; ii++) {
-            if (inputs[ii].value === '') {
-                inputs[ii].value = Number(inputs[ii].placeholder);
-            }
+        let dir, rot
+        switch (type) {
+            case 'direction':
+                dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
+                rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
+                dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
+                insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
+                break
+            case 'waypoint':
+                let way = [Number(inputs[0].value), Number(inputs[1].value), Number(inputs[2].value)];
+                let tranTime = Number(inputs[3].value) * 3600
+                mainWindow.satellites[sat].burns[burn].waypoint = {
+                    target: {
+                        r: way[0], i: way[1], c: way[2]
+                    },
+                    tranTime
+                }
+                mainWindow.satellites[sat].genBurns()
+                mainWindow.satellites[sat].calcTraj()
+                break
+            case 'angle':
+                dir = [Number(inputs[0].value) * Math.PI / 180, Number(inputs[1].value) * Math.PI / 180, Number(inputs[2].value) / 1000];
+                dir = [dir[2] * math.cos(dir[0]) * Math.cos(dir[1]), dir[2] * math.sin(dir[0]) * Math.cos(dir[1]), dir[2] * math.sin(dir[1])]
+                rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
+                dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
+                insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
+                break
         }
-        let way = [Number(inputs[0].value), Number(inputs[1].value), Number(inputs[2].value)];
-        let tranTime = Number(inputs[3].value) * 3600
-        logAction({
-            type: 'alterBurn', sat, index: burn, burn: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
-        })
-        mainWindow.satellites[sat].burns[burn].waypoint = {
-            target: {
-                r: way[0], i: way[1], c: way[2]
-            },
-            tranTime
-        }
-        mainWindow.satellites[sat].genBurns()
-        mainWindow.satellites[sat].calcTraj()
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'dsk-maneuver') {
