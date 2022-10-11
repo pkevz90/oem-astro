@@ -1480,7 +1480,15 @@ function startContextClick(event) {
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
                 <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
-                <input title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+                <input list="sat-color-picker" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+                <datalist id="sat-color-picker">
+                    <option value="#c86464"></option>
+                    <option value="#64c864"></option>
+                    <option value="#6464c8"></option>
+                    <option value="#c864c8"></option>
+                    <option value="#969696"></option>
+                    <option value="#000000"></option>
+                </datalist>
                 <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
                     <option value=""></option>
                     <option value="delta">Delta</option>
