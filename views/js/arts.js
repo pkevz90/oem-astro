@@ -55,6 +55,7 @@ class windowCanvas {
     plotWidth = 200;
     plotHeight;
     plotCenter = 0;
+    error = {p: 40, v: 0.01}; // at right after manuever while generating J2000 states, halves every hour
     frameCenter= {
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
         ci: {x: 0.5, y: 1, w: 1, h: 0},
@@ -5100,6 +5101,7 @@ function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
 }
 
 function generateJ2000File(event) {
+    let dispTime = mainWindow.scenarioTime
     if (!event.ctrlKey) return exportScenario()
     let origOrbit = mainWindow.originOrbit
     let startEphem = `Time (UTCG)              x (km)           y (km)         z (km)     vx (km/sec)    vy (km/sec)    vz (km/sec)
@@ -5108,8 +5110,35 @@ function generateJ2000File(event) {
     let fileText = `\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t ${Date.now()}
     Satellite-${mainWindow.satellites.map(s => s.name).join(', ')}:  J2000 Position & Velocity
     `
+    let errors = []
     mainWindow.satellites.forEach(sat => {
         fileText += `\n\n${startEphem}`
+        let oldState = {...sat.position}
+        let oldBurns = [...sat.burns]
+        let lastBurnTime = [-18000, ...sat.burns.filter(s => s.time < dispTime).map(s => s.time)]
+        lastBurnTime = lastBurnTime[lastBurnTime.length - 1]
+        let error = errorFromTime(mainWindow.scenarioTime - lastBurnTime)
+        errors.push(error)
+        let currentPos = Object.values(sat.curPos).map((s,ii) => s + error[ii] * 0.57706 * randn_bm())
+        let propTime = dispTime + 0
+        console.log(currentPos);
+        while((propTime - mainWindow.timeDelta) > 0) {
+            currentPos = runge_kutta(twoBodyRpo, currentPos, -mainWindow.timeDelta, [0,0,0], propTime)
+            propTime -= mainWindow.timeDelta
+        }
+        currentPos = runge_kutta(twoBodyRpo, currentPos, -propTime, [0,0,0], propTime)
+        // currentPos = propRelMotionTwoBodyAnalytic(currentPos, -dispTime, dispTime)
+        sat.position = {
+            r: currentPos[0], 
+            i: currentPos[1],
+            c: currentPos[2],
+            rd: currentPos[3],
+            id: currentPos[4],
+            cd: currentPos[5]
+        }
+        console.log(error);
+        sat.burns = []
+        sat.calcTraj()
         sat.stateHistory.forEach(point => {
             let state = [point.r, point.i, point.c, point.rd, point.id, point.cd]
             let refState = {...origOrbit}
@@ -5121,10 +5150,13 @@ function generateJ2000File(event) {
             pointTime = toStkFormat(pointTime.toString())
             fileText += `${pointTime}     ${eciState.map(n => n.toFixed(5)).join('     ')}\n`
         })
-        
+        sat.position = oldState
+        sat.burns = oldBurns
+        sat.calcTraj()
     })
-    console.log(fileText);
-    downloadFile('exported.e', fileText)
+    // return
+    let time = toStkFormat((new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))).toString()).replaceAll(' ','_')
+    downloadFile(`${mainWindow.satellites.map((sat,ii) => `${sat.name}_${errors[ii][0].toFixed(1)}_${(errors[ii][3]*1000).toFixed(1)}`).join('_')}_${time}.txt`, fileText)
 }
 
 function logAction(options = {}) {
@@ -6421,4 +6453,10 @@ function fitPolynomial(x = [0, 1, 2], y = [[1],[-2],[4]], d=2) {
     //     },0);
     // }));
     return [consts,consts.map((val,ii) => val * ii).slice(1)]
+}
+
+function errorFromTime(t = mainWindow.scenarioTime) {
+    let p = mainWindow.error.p / (1.8 ** (t / 3600))
+    let v = mainWindow.error.v / (1.5 ** (t / 3600))
+    return [p,p,p,v,v,v]
 }
