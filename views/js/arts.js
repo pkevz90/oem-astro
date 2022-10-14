@@ -55,7 +55,11 @@ class windowCanvas {
     plotWidth = 200;
     plotHeight;
     plotCenter = 0;
-    error = {p: 40, v: 0.01}; // at right after manuever while generating J2000 states, halves every hour
+    error = { // at right after manuever while generating J2000 states, halves every hour
+        neutral: {p: 100, v: 0.01, c: 50, a: 2.7}, // Full Error
+        friendly: {p: 10, v: 0.0025, c: 2.5, a: 2.5}, // reduced error
+        closed: {p: 0, v: 0, c: 0, a: 1} // no error
+    }; 
     frameCenter= {
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
         ci: {x: 0.5, y: 1, w: 1, h: 0},
@@ -793,7 +797,8 @@ class Satellite {
             a = 0.00001,
             name = 'Sat',
             burns = [],
-            locked = false
+            locked = false,
+            side = 'neutral'
         } = options; 
         this.position = position;
         this.size = size;
@@ -802,6 +807,7 @@ class Satellite {
         this.shape = shape;
         this.name = name;
         this.burns = burns;
+        this.side = side
         this.a = Number(a);
         this.originDate = Date.now()
         this.locked = locked
@@ -1554,7 +1560,7 @@ function startContextClick(event) {
         let lockScreenStatus = lockDiv.style.right === '-25%' ? false : true
         ctxMenu.innerHTML = `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
-            ${mainWindow.satellites.length > 0 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
+            ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadScenario(event)"></div>
@@ -1584,16 +1590,35 @@ function changeNumLanes(element) {
     mainWindow.nLane = newWidth
 }
 
+function changeSide(sat) {
+    switch (mainWindow.satellites[sat].side) {
+        case 'neutral':
+            mainWindow.satellites[sat].side = 'friendly'
+            break
+        case 'friendly':
+            mainWindow.satellites[sat].side = 'closed'
+            break
+        case 'closed':
+            mainWindow.satellites[sat].side = 'neutral'
+            break
+    }
+    showScreenAlert(`${mainWindow.satellites[sat].name} set to ${mainWindow.satellites[sat].side}`)
+    updateLockScreen()
+}
+
 function updateLockScreen() {
     let out = ''
     let lanes = satClusterK()
+    console.log(lanes);
     lanes.forEach((lane, ii) => {
         out += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
         lane.forEach(sat => {
             let checked = mainWindow.satellites[sat].locked ? '' : 'checked'
+            let side = mainWindow.satellites[sat].side
             out += `<div style="text-align: right">
                         <label style="cursor: pointer; padding: 5px" for="lock-${sat}">${mainWindow.satellites[sat].name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${sat}" id="lock-${sat}" type="checkbox"/>
                         <button onclick="changeOrigin(${sat})">Center</button>
+                        <button onclick="changeSide(${sat})" style="cursor: pointer; width: 17px; height: 17px; background-color: ${side === 'neutral' ? 'gray' : side === 'friendly' ? 'blue' : 'red'}"></button>
                     </div>`
 
         })
@@ -2620,6 +2645,10 @@ function plotRelativeData() {
 
 function showScreenAlert(message = 'test alert') {
     
+    let currentAlerts = document.querySelectorAll('.screen-alert')
+    for (let index = 0; index < currentAlerts.length; index++) {
+        currentAlerts[index].remove()
+    }
     let alertMessage = document.createElement('div');
     alertMessage.classList.add('screen-alert');
     if (message === 'start-screen') {
@@ -5117,7 +5146,7 @@ function generateJ2000File(event) {
         let oldBurns = [...sat.burns]
         let lastBurnTime = [-18000, ...sat.burns.filter(s => s.time < dispTime).map(s => s.time)]
         lastBurnTime = lastBurnTime[lastBurnTime.length - 1]
-        let error = errorFromTime(mainWindow.scenarioTime - lastBurnTime)
+        let error = errorFromTime(mainWindow.scenarioTime - lastBurnTime, mainWindow.error[sat.side])
         errors.push(error)
         let currentPos = Object.values(sat.curPos).map((s,ii) => s + error[ii] * 0.57706 * randn_bm())
         let propTime = dispTime + 0
@@ -5127,7 +5156,6 @@ function generateJ2000File(event) {
             propTime -= mainWindow.timeDelta
         }
         currentPos = runge_kutta(twoBodyRpo, currentPos, -propTime, [0,0,0], propTime)
-        // currentPos = propRelMotionTwoBodyAnalytic(currentPos, -dispTime, dispTime)
         sat.position = {
             r: currentPos[0], 
             i: currentPos[1],
@@ -6455,8 +6483,8 @@ function fitPolynomial(x = [0, 1, 2], y = [[1],[-2],[4]], d=2) {
     return [consts,consts.map((val,ii) => val * ii).slice(1)]
 }
 
-function errorFromTime(t = mainWindow.scenarioTime) {
-    let p = mainWindow.error.p / (1.8 ** (t / 3600))
-    let v = mainWindow.error.v / (1.5 ** (t / 3600))
+function errorFromTime(t = mainWindow.scenarioTime, error = mainWindow.error.neutral) {
+    let p = error.p / (error.a ** (t / 3600)) + error.c /  ((error.a*3) ** (t / 3600))
+    let v = error.v / ((error.a/2) ** (t / 3600))
     return [p,p,p,v,v,v]
 }
