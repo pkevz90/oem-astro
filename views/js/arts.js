@@ -3,10 +3,6 @@ var stopWaypoint = 0;
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
-document.getElementById('export-option-button').remove();
-document.getElementsByTagName('label')[0].remove();
-document.getElementById('data-button').remove();
-document.getElementById('upload-options-button').remove();
 document.getElementsByClassName('panel-button')[0].remove();
 document.getElementsByTagName('input')[16].setAttribute('list','name-list');
 let addButton = document.getElementById('add-satellite-button');
@@ -2872,25 +2868,44 @@ function downloadFile(filename, text) {
     }
 }
 
+function checkJ200StringValid(string) {
+    string = string.split(/ {2,}/).filter(s => s !== '')
+    if (string.length < 7) return false
+    date = string.shift()
+    date = new Date(date)
+    if (date == 'Invalid Date') return false
+    string = string.map(s => Number(s))
+    if (string.filter(s => Number.isNaN(s)).length > 0) return false
+    return {date, state: string}
+}
+
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
-    let el = click.target;
-    el = el.parentNode.parentNode;
-    let inputs = el.getElementsByTagName('input')
-    let date = inputs[0].value;
-    let sun = inputs[3].value;
-    mainWindow.mm = Math.sqrt(398600.4418 / Math.pow(Number(inputs[2].value), 3));
-    mainWindow.originOrbit.a = Number(inputs[2].value)
-    mainWindow.scenarioLength = Number(inputs[1].value);
-    document.getElementById('time-slider-range').max = mainWindow.scenarioLength * 3600;
-    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / Number(inputs[10].value)
-    mainWindow.satellites.forEach(sat => {
-        sat.genBurns();
-        sat.calcTraj();
-    });
-    sunIR = (Number(sun.substring(0, 2)) * 3600 + Number(sun.substring(3, 5)*60)) / 86400 * 2 * Math.PI;
-    sunC = Number(inputs[4].value) * Math.PI / 180;
-    mainWindow.setInitSun([-Math.cos(sunIR) * Math.cos(sunC), Math.sin(sunIR) * Math.cos(sunC), Math.sin(sunC)]);
-    mainWindow.startDate = new Date(date);
+    let stateInputs = document.querySelectorAll('.origin-input')
+    let coe = document.getElementById('coe-radio').checked
+    let state = [...stateInputs].map(s => Number(s.value))
+    if (!coe) {
+        state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
+    }
+    else {
+        state = {
+            a: state[0],
+            e: state[1],
+            i: state[2] * Math.PI / 180,
+            raan: state[3] * Math.PI / 180,
+            arg: state[4] * Math.PI / 180,
+            tA: state[5] * Math.PI / 180
+        }
+    }
+    if (state.e > 0.01) return showScreenAlert('State has an eccentricity of over 0.01, rejected')
+    let startDate = new Date(document.getElementById('start-time').value)
+    let eciState = Object.values(Coe2PosVelObject(state))
+    let sun = sunFromTime(startDate) 
+    sun = math.squeeze(Eci2Ric(eciState.slice(0,3), eciState.slice(3,6), sun, [0,0,0]).rHcw)
+    sun = math.dotDivide(sun, math.norm(sun))
+    mainWindow.initSun = sun
+    mainWindow.originOrbit = state
+    mainWindow.startDate = startDate
+    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     closeAll();
 })
 
@@ -2967,47 +2982,62 @@ function parseArtsText(text) {
 }
 
 function parseState(button) {
-    let parsedState = parseArtsText(document.getElementById('parse-text').value)
-    let stateInputs = button.parentNode.parentNode.children[1].children[1].getElementsByTagName('input')
-   
-    if (parsedState === undefined) return
-    // Add origin sat if chief is defined and nothing exists at [0,0,0,0,0,0]
-    if (parsedState.chief !== undefined) {
-        let originSatellites = mainWindow.satellites.filter(sat => math.norm(Object.values(sat.position)) < 1e-6)
-            if (originSatellites.length === 0) {
-                mainWindow.satellites.push(new Satellite({
-                    position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
-                    shape: 'diamond',
-                    color: '#f0f',
-                        name: parsedState.chief
-                    }))
-            }
-            else {
-                if (parsedState.chief !== originSatellites[0].name) {
-                    let a = confirm(`State origin doesn't match current ARTS origin\nCurrent ARTS Origin: ${originSatellites[0].name}\nParsed Origin: ${parsedState.chief}?`)
-                    if (!a) return
+    let values = document.getElementById('parse-text').value
+    values = checkJ200StringValid(values)
+    if (!values) return showScreenAlert('J200 string from STK not valid')
+    document.getElementById('parse-text').value = ''
+    switch (button.id) {
+        case 'parse-to-ric':
+            let eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+            let dt = (mainWindow.startDate - values.date) / 1000
+            values.state = propToTime(values.state, dt, false)
+            if (math.abs(dt) > 2 * 86164) return showScreenAlert(`Epoch difference too big: ${(math.abs(dt) / 86164).toFixed(1)} days`)
+            let ric = Eci2Ric(eciOrigin.slice(0,3), eciOrigin.slice(3,6), values.state.slice(0,3), values.state.slice(3,6))
+            ric = math.squeeze([...ric.rHcw, ...ric.drHcw])
+            mainWindow.satellites.push(new Satellite({
+                position: {
+                    r: ric[0],
+                    i: ric[1],
+                    c: ric[2],
+                    rd: ric[3],
+                    id: ric[4],
+                    cd: ric[5],
                 }
+            }))
+            closeAll()
+            break
+        case 'parse-set-origin':
+            if (mainWindow.satellites.length > 0) {
+                let a = confirm("Reseting origin will delete existing satellites");
+                if (!a) return
+                mainWindow.satellites = []
             }
-    } 
-    mainWindow.mm = (398600.4418 / parsedState.originOrbit.a ** 3) ** (1/2)
-    mainWindow.scenarioLength = math.abs(mainWindow.originOrbit.a - parsedState.originOrbit.a) > 400 ?  2 * Math.PI / 3600 / mainWindow.mm : mainWindow.scenarioLength
-    mainWindow.scenarioLength = mainWindow.scenarioLength < 6 ? 6 : mainWindow.scenarioLength
-    mainWindow.timeDelta = mainWindow.scenarioLength * 3600 / 334.2463209693143
-    document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
-    let oldDate = mainWindow.startDate + 0
-    mainWindow.startDate = parsedState.newDate
-    let delta = (new Date(mainWindow.startDate) - new Date(oldDate)) / 1000
-    mainWindow.satellites.forEach(sat => sat.propInitialState(delta))
-    mainWindow.setInitSun(parsedState.newSun);
-
-    
-    if (parsedState.dep !== undefined) button.parentNode.parentNode.getElementsByTagName('input')[15].value = parsedState.dep
-
-    for (let index = 6; index < stateInputs.length; index++) {
-        stateInputs[index].value = parsedState.newState[index - 6] * (index > 8 ? 1000 : 1)
+            mainWindow.startDate = values.date
+            let originOrbit = PosVel2CoeNew(values.state.slice(0,3), values.state.slice(3,6))
+            mainWindow.mm = (398600.4418 / originOrbit.a ** 3) ** 0.5
+            let sun = sunFromTime(values.date) 
+            sun = math.squeeze(Eci2Ric(values.state.slice(0,3), values.state.slice(3,6), sun, [0,0,0]).rHcw)
+            sun = math.dotDivide(sun, math.norm(sun))
+            mainWindow.initSun = sun
+            mainWindow.originOrbit = originOrbit
+            mainWindow.satellites.push(new Satellite({
+                name: 'Origin',
+                position: {
+                    r: 0,
+                    i: 0,
+                    c: 0,
+                    rd: 0,
+                    id: 0,
+                    cd: 0,
+                }
+            }))
+            break
+        
     }
-    mainWindow.originOrbit = parsedState.originOrbit
-    initStateFunction(stateInputs[6]);
+    document.getElementById('parse-text').placeholder = 'State Accepted!'
+    setTimeout(() => {
+        document.getElementById('parse-text').placeholder = 'ECI State'
+    }, 3000)
 }
 //------------------------------------------------------------------
 // Adding functions to handle data planels, etc.
@@ -3034,25 +3064,53 @@ function openPanel(button) {
         })
     }
     else if (button.id === 'options') {
-        let inputs = document.getElementById('options-panel').getElementsByTagName('input');
-        let dateDiff = new Date(mainWindow.startDate.toString().split('GMT')[0]).getTimezoneOffset()*60*1000;
-        dateDiff = new Date(mainWindow.startDate-dateDiff).toISOString().substr(0,19);
-        inputs[0].value = dateDiff;
-        inputs[1].value = mainWindow.scenarioLength;
-        inputs[2].value = Math.pow(398600.4418 / Math.pow(mainWindow.mm, 2), 1/3).toFixed(2);
-        let sunAngle = math.atan2(mainWindow.initSun[1], -mainWindow.initSun[0]) * 180 / Math.PI
-        sunAngle = sunAngle < 0 ? sunAngle + 360 : sunAngle
-        let sunTime = math.floor(24 * sunAngle / 360).toFixed(0)
-        sunTime = sunTime.length < 2 ? '0' + sunTime : sunTime
-        let sunMinutes = math.floor((24 * sunAngle / 360 - math.floor(24 * sunAngle / 360)) * 60).toFixed(0)
-        sunMinutes = sunMinutes.length < 2 ? '0' + sunMinutes : sunMinutes
-        sunTime += ':' + sunMinutes
-        inputs[3].value = sunTime;
-        inputs[4].value = 180 * math.asin(mainWindow.initSun[2]) / Math.PI;
-        inputs[10].value = Math.round(mainWindow.scenarioLength * 3600 / mainWindow.timeDelta)
+        document.getElementById('coe-radio').checked = true
+        changeOriginInput({id: 'coe-radio'})
+        let inputs = document.querySelectorAll('.origin-input')
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     // mainWindow.panelOpen = true;
+}
+
+function changeOriginInput(el) {
+    let newType = el.id.split('-')[0]
+    let inputs = document.querySelectorAll('.origin-input')
+    let padNumber = function(n) {
+        return n < 10 ? '0' + n : n
+    }
+    switch (newType) {
+        case 'coe':
+            inputs[0].parentElement.innerHTML = `<em>a</em> <input value="${mainWindow.originOrbit.a.toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[1].parentElement.innerHTML = `<em>e</em> <input value="${mainWindow.originOrbit.e.toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1">`
+            inputs[2].parentElement.innerHTML = `<em>i</em> <input value="${(mainWindow.originOrbit.i*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
+            inputs[3].parentElement.innerHTML = `&#937      <input value="${(mainWindow.originOrbit.raan*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
+            inputs[4].parentElement.innerHTML = `&#969      <input value="${(mainWindow.originOrbit.arg*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
+            inputs[5].parentElement.innerHTML = `&#957      <input value="${(mainWindow.originOrbit.tA*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
+            break
+        case 'eci':
+            let eciState = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+            inputs[0].parentElement.innerHTML = `X  <input value="${eciState[0].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[1].parentElement.innerHTML = `Y  <input value="${eciState[1].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[2].parentElement.innerHTML = `z  <input value="${eciState[2].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[3].parentElement.innerHTML = `dX <input value="${eciState[3].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            inputs[4].parentElement.innerHTML = `dY <input value="${eciState[4].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            inputs[5].parentElement.innerHTML = `dZ <input value="${eciState[5].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            break
+        case 'string':
+            let values = checkJ200StringValid(el.value)
+            el.value = ''
+            if (!values) return showScreenAlert('Not a valid J2000 STK string')
+            let date = new Date(values.date)
+            document.getElementById('start-time').value = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
+            document.getElementById('eci-radio').checked = true
+            inputs[0].parentElement.innerHTML = `X  <input value="${values.state[0].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[1].parentElement.innerHTML = `Y  <input value="${values.state[1].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[2].parentElement.innerHTML = `z  <input value="${values.state[2].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[3].parentElement.innerHTML = `dX <input value="${values.state[3].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            inputs[4].parentElement.innerHTML = `dY <input value="${values.state[4].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            inputs[5].parentElement.innerHTML = `dZ <input value="${values.state[5].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            break
+    }
 }
 
 function closeAll() {

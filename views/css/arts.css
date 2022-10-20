@@ -108,6 +108,7 @@ html, body {
     box-shadow: 5px 5px 10px black;
     text-align: center;
     transition: bottom 500ms, opacity 500ms;
+    z-index: 30;
 }
 
 .context-item {
