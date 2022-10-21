@@ -30,22 +30,19 @@
             <div class="title-text">Initial State</div>
             <div style="display: flex; justify-content: space-evenly; align-items: center;">
                 <div>
-                    <div style="margin: 20px 5px">A<sub>e</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
-                    <div style="margin: 20px 5px">R<sub>c</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
-                    <div style="margin: 20px 5px">I<sub>c</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
-                    <div style="margin: 20px 5px">B<sub>o</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> deg</div>
-                    <div style="margin: 20px 5px">Z<sub>max</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
-                    <div style="margin: 20px 5px">M<sub>o</sub> <input class="rmoe" oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> deg</div>
-                </div>
-                <div>
-                    <div style="margin: 20px 5px">R <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
-                    <div style="margin: 20px 5px">I <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
-                    <div style="margin: 20px 5px">C <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> km</div>
-                    <div style="margin: 20px 5px">V<sub>x</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
-                    <div style="margin: 20px 5px">V<sub>y</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
-                    <div style="margin: 20px 5px">V<sub>z</sub> <input oninput=initStateFunction(this) style="width: 4em" type="Number" value="0"> m/s</div>
-                </div>
-                
+                    <div>
+                        <label for="ric-sat-input">RIC</label><input onchange="changeSatelliteInputType(this)" type="radio" id="ric-sat-input" name="sat-input-radio" checked>
+                        <label for="eci-sat-input">ECI</label><input onchange="changeSatelliteInputType(this)" type="radio" id="eci-sat-input" name="sat-input-radio">
+                        <label for="rmoe-sat-input">RMOE</label><input onchange="changeSatelliteInputType(this)" type="radio" id="rmoe-sat-input" name="sat-input-radio">
+                    </div>
+                    <div class="satellite-input" style="margin: 20px 5px; font-size: 1.25em;"></div>
+                    <div class="satellite-input" style="margin: 20px 5px; font-size: 1.25em;">R <input class="sat-input"  style="font-size: 1.25em; width: 10ch;" type="Number" value="0"> km</div>
+                    <div class="satellite-input" style="margin: 20px 5px; font-size: 1.25em;">I <input class="sat-input"  style="font-size: 1.25em; width: 10ch;" type="Number" value="0"> km</div>
+                    <div class="satellite-input" style="margin: 20px 5px; font-size: 1.25em;">C <input class="sat-input"  style="font-size: 1.25em; width: 10ch;" type="Number" value="0"> km</div>
+                    <div class="satellite-input" style="margin: 20px 5px; font-size: 1.25em;">dR <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" value="0"> m/s</div>
+                    <div class="satellite-input" style="margin: 20px 5px; font-size: 1.25em;">dI <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" value="0"> m/s</div>
+                    <div class="satellite-input" style="margin: 20px 5px; font-size: 1.25em;">dC <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" value="0"> m/s</div>
+                </div>  
             </div>
             <div onclick=initStateFunction(this) style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">To Curvilinear</div>
             <div style="margin: 20px 5px"><input autocomplete="off" title="Time X Y Z dX dY dZ" placeholder="ECI String" style="width: 100%;" value="" type="text" id="parse-text"></div>
@@ -56,7 +53,7 @@
         <div>
             <div class="title-text">Satellite Details</div>
             <div style="margin: 20px 5px">
-                <select name="" id="">
+                <select class="sat-style-input" name="" id="">
                     <option value="delta">Delta</option>
                     <option value="3-star">3-Point Star</option>
                     <option value="4-star">4-Point Star</option>
@@ -70,9 +67,24 @@
                     <option value="octagon">Octagon</option>
                 </select>
             </div>
-            <div style="margin: 20px 5px">Acceleration <input style="width: 4em;" value="10" type="Number"> mm/s<sup>2</sup></div>
-            <div style="margin: 20px 5px">Color</sub> <input style="width: 4em;" value="#ff0000" type="color"></div>
-            <div style="margin: 20px 5px">Name <input style="width: 6em;" value="" type="text"></div>
+            <div style="margin: 20px 5px">Acceleration <input list="sat-acc-picker" class="sat-style-input" style="width: 10ch;" placeholder="10" type="Number"> mm/s<sup>2</sup></div>
+            <datalist id="sat-acc-picker">
+                <option value="1000">Impulsive</option>
+                <option value="100"></option>
+                <option value="20"></option>
+                <option value="10"></option>
+                <option value="1"></option>
+            </datalist>
+            <div style="margin: 20px 5px">Color</sub> <input  list="sat-input-color-picker" class="sat-style-input" style="width: 7em;" value="#ff0000" type="color"></div>
+            <datalist id="sat-input-color-picker">
+                <option value="#c86464"></option>
+                <option value="#64c864"></option>
+                <option value="#6464c8"></option>
+                <option value="#c864c8"></option>
+                <option value="#969696"></option>
+                <option value="#000000"></option>
+            </datalist>
+            <div style="margin: 20px 5px">Name <input class="sat-style-input" style="width: 6em;" value="" type="text"></div>
             <div onclick="initStateFunction(this)" id="add-satellite-button" style="font-size: 1.5em; padding: 14px 4px;" class="panel-button hoverable noselect">Add Satellite</div>
             <div><span onclick="editSatellite(this)" style="font-size: 1.5em; padding: 2px 4px; width: 50%;" class="panel-button hoverable noselect">Update</span><select onchange="openPanel(this)" style="font-size: 2em; width: 50%;" name="" id="edit-select">
                 
@@ -94,6 +106,8 @@
                 <input onchange="changeOriginInput(this)" type="radio" id="eci-radio" name="input-type">
                 <label for="coe-radio">COE</label>
                 <input onchange="changeOriginInput(this)" type="radio" id="coe-radio" name="input-type" checked>
+                <!-- <label for="geo-radio">GEO Belt</label>
+                <input onchange="changeOriginInput(this)" type="radio" id="geo-radio" name="input-type"> -->
             </div>
             
             <div style="margin: 20px 5px"><em>a</em> <input class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km</div>

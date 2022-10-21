@@ -25,15 +25,6 @@ let lastSaveName = ''
 let errorList = []
 let ellipses = []
 let monteCarloData = null
-document.getElementsByClassName('rmoe')[1].parentNode.innerHTML = `
-    Drift <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> degs/rev
-`
-document.getElementsByClassName('rmoe')[2].parentNode.innerHTML = `
-    Rel Long <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> deg
-`
-document.getElementsByClassName('rmoe')[4].parentNode.innerHTML = `
-    Plane Diff <input class="rmoe" oninput="initStateFunction(this)" style="width: 4em" type="Number" value="0"> deg
-`
 document.getElementById('time-slider-range').max = 48*3600
 /*
 var listDiv = document.createElement('div');
@@ -2868,6 +2859,40 @@ function downloadFile(filename, text) {
     }
 }
 
+function changeSatelliteInputType(el) {
+    let satInputs = document.querySelectorAll('.satellite-input')
+    switch (el.id) {
+        case 'eci-sat-input':
+            satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="2019-06-01T00:00">`
+            satInputs[1].innerHTML = `X <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[2].innerHTML = `Y <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[3].innerHTML = `Z <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[4].innerHTML = `dX <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[5].innerHTML = `dY <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[6].innerHTML = `dZ <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
+            break
+        case 'ric-sat-input':
+            satInputs[0].innerHTML = ``
+            satInputs[1].innerHTML = `R <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[2].innerHTML = `I <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[3].innerHTML = `C <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[4].innerHTML = `dR <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[5].innerHTML = `dI <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[6].innerHTML = `dC <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
+            break
+        case 'rmoe-sat-input':
+            satInputs[0].innerHTML = ``
+            satInputs[1].innerHTML = `A <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[2].innerHTML = `Drift <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg/rev</div>`
+            satInputs[3].innerHTML = `Rel Long <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
+            satInputs[4].innerHTML = `In-Plane <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
+            satInputs[5].innerHTML = `Z-Max <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
+            satInputs[6].innerHTML = `Out-of-Plane <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
+            break
+    }
+
+}
+
 function checkJ200StringValid(string) {
     string = string.split(/ {2,}/).filter(s => s !== '')
     if (string.length < 7) return false
@@ -2994,17 +3019,16 @@ function parseState(button) {
             if (math.abs(dt) > 2 * 86164) return showScreenAlert(`Epoch difference too big: ${(math.abs(dt) / 86164).toFixed(1)} days`)
             let ric = Eci2Ric(eciOrigin.slice(0,3), eciOrigin.slice(3,6), values.state.slice(0,3), values.state.slice(3,6))
             ric = math.squeeze([...ric.rHcw, ...ric.drHcw])
-            mainWindow.satellites.push(new Satellite({
-                position: {
-                    r: ric[0],
-                    i: ric[1],
-                    c: ric[2],
-                    rd: ric[3],
-                    id: ric[4],
-                    cd: ric[5],
-                }
-            }))
-            closeAll()
+            document.querySelector('#ric-sat-input').checked = true
+            changeSatelliteInputType({id: 'ric-sat-input'})
+            let ricInputs = document.querySelectorAll('.sat-input')
+            ricInputs[0].value = ric[0].toFixed(4)
+            ricInputs[1].value = ric[1].toFixed(4)
+            ricInputs[2].value = ric[2].toFixed(4)
+            ricInputs[3].value = (ric[3]*1000).toFixed(4)
+            ricInputs[4].value = (ric[4]*1000).toFixed(4)
+            ricInputs[5].value = (ric[5]*1000).toFixed(4)
+
             break
         case 'parse-set-origin':
             if (mainWindow.satellites.length > 0) {
@@ -3066,7 +3090,6 @@ function openPanel(button) {
     else if (button.id === 'options') {
         document.getElementById('coe-radio').checked = true
         changeOriginInput({id: 'coe-radio'})
-        let inputs = document.querySelectorAll('.origin-input')
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     // mainWindow.panelOpen = true;
@@ -3095,6 +3118,14 @@ function changeOriginInput(el) {
             inputs[3].parentElement.innerHTML = `dX <input value="${eciState[3].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
             inputs[4].parentElement.innerHTML = `dY <input value="${eciState[4].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
             inputs[5].parentElement.innerHTML = `dZ <input value="${eciState[5].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            break
+        case 'geo':
+            inputs[0].parentElement.innerHTML = `Longitude  <input value="0" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"><sup>o</sup>`
+            inputs[1].parentElement.innerHTML = `<input hidden class="origin-input" style="width: 15ch;" type="Number" step="1" disabled>`
+            inputs[2].parentElement.innerHTML = `<input hidden class="origin-input" style="width: 15ch;" type="Number" step="1" disabled>`
+            inputs[3].parentElement.innerHTML = `<input hidden class="origin-input" style="width: 15ch;" type="Number" step="1" disabled>`
+            inputs[4].parentElement.innerHTML = `<input hidden class="origin-input" style="width: 15ch;" type="Number" step="1" disabled>`
+            inputs[5].parentElement.innerHTML = `<input hidden class="origin-input" style="width: 15ch;" type="Number" step="1" disabled>`
             break
         case 'string':
             let values = checkJ200StringValid(el.value)
@@ -3503,26 +3534,80 @@ function initStateFunction(el) {
         nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000*ricInit.drHcw[2][0]).toFixed(3);
     }
     else if (el.id === 'add-satellite-button') {
-        let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
-        let position = {
-            r: Number(inputs[7].value), 
-            i: Number(inputs[8].value), 
-            c: Number(inputs[9].value), 
-            rd: Number(inputs[10].value)  / 1000, 
-            id: Number(inputs[11].value) / 1000, 
-            cd: Number(inputs[12].value) / 1000
+        let inputs = document.querySelectorAll('.sat-input')
+        let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
+        let ricState
+        switch (radioId) {
+            case 'ric-sat-input':
+                ricState = [
+                    inputs[0].value,
+                    inputs[1].value,
+                    inputs[2].value,
+                    inputs[3].value,
+                    inputs[4].value,
+                    inputs[5].value,
+                ].map((s, ii) => Number(s) / (ii > 2 ? 1000 : 1))
+                break
+            case 'eci-sat-input':
+                let date = new Date(inputs[0].value)
+                let eciState = [
+                    inputs[1].value,
+                    inputs[2].value,
+                    inputs[3].value,
+                    inputs[4].value,
+                    inputs[5].value,
+                    inputs[6].value,
+                ].map(s => Number(s))
+                let dt = (mainWindow.startDate - date) / 1000
+                eciState = propToTime(eciState, dt, false)
+                let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+                ricState = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), eciState.slice(0,3), eciState.slice(3,6))
+                ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+                break
+            case 'rmoe-sat-input':
+                let rmoes = [
+                    inputs[0].value,
+                    inputs[1].value,
+                    inputs[2].value,
+                    inputs[3].value,
+                    inputs[4].value,
+                    inputs[5].value,
+                ].map((s,ii) => Number(s))
+                console.log({
+                    ae: rmoes[0],
+                    x: rmoes[1],
+                    y: rmoes[2],
+                    b: rmoes[3],
+                    z: rmoes[4],
+                    m: rmoes[5]
+                });
+                ricState = rmoeToRic({
+                    ae: rmoes[0],
+                    x: rmoes[1],
+                    y: rmoes[2],
+                    b: rmoes[3],
+                    z: rmoes[4],
+                    m: rmoes[5]
+                })
+                ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+                break
         }
-        let shape = el.parentNode.parentNode.parentNode.getElementsByTagName('select')[0].value;
-        let a = Number(inputs[14].value) / 1e6;
-        let color = inputs[15].value;
-        let name = inputs[16].value === '' ? `Sat-${mainWindow.satellites.length+1}` : inputs[16].value;
+        position = {
+            r: ricState[0],
+            i: ricState[1],
+            c: ricState[2],
+            rd: ricState[3],
+            id: ricState[4],
+            cd: ricState[5]
+        }
+        let styleInputs = document.querySelectorAll('.sat-style-input')
         mainWindow.satellites.push(new Satellite({
             position,
-            shape,
-            a,
-            color,
-            name
-        }));
+            shape: styleInputs[0].value,
+            a: Number(styleInputs[1].value === '' ? styleInputs[1].placeholder : styleInputs[1].value) / 1000000,
+            color: styleInputs[2].value,
+            name: styleInputs[3].value === '' ? 'Sat' : styleInputs[3].value
+        }))
         let newWidth = (Math.abs(position.i) * 2.2) > (Math.abs(position.r) * 2.4 / mainWindow.getRatio()) ? Math.abs(position.i) * 2.2 : Math.abs(position.r) * 2.4 / mainWindow.getRatio()
         if (newWidth > mainWindow.desired.plotWidth) {
             mainWindow.desired.plotWidth = newWidth
