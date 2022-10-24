@@ -2905,6 +2905,11 @@ function checkJ200StringValid(string) {
 }
 
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
+    if (mainWindow.satellites.length > 0) {
+        let confirmAns = confirm('Changing origin will delete current satellites, continue?') 
+        if (!confirmAns) return
+        mainWindow.satellites = []
+    }
     let stateInputs = document.querySelectorAll('.origin-input')
     let coe = document.getElementById('coe-radio').checked
     let state = [...stateInputs].map(s => Number(s.value))
@@ -2931,6 +2936,8 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     mainWindow.originOrbit = state
     mainWindow.startDate = startDate
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+    mainWindow.scenarioLength = Number(document.querySelector('#scen-length-input').value === '' ? document.querySelector('#scen-length-input').placeholder : document.querySelector('#scen-length-input').value)
+    document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
     closeAll();
 })
 
@@ -3090,6 +3097,8 @@ function openPanel(button) {
     else if (button.id === 'options') {
         document.getElementById('coe-radio').checked = true
         changeOriginInput({id: 'coe-radio'})
+        document.querySelector('#scen-length-input').value = ''
+        document.querySelector('#scen-length-input').placeholder = mainWindow.scenarioLength
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     // mainWindow.panelOpen = true;
