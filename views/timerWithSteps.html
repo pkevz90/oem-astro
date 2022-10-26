@@ -20,7 +20,7 @@
     <title>Document</title>
 </head>
 <body>
-    <div style="font-size: 8em;"id="time-display"></div>
+    <div style="font-size: 8em;"id="time-display" onclick="changeTime()"></div>
     <div>
         <span onclick="changeTimeStep(this)" class="time-step selected">0x</span>
         <span onclick="changeTimeStep(this)" class="time-step">1x</span>
@@ -59,6 +59,13 @@
             for (let index = 0; index < stepSpans.length; index++) stepSpans[index].classList.remove('selected')
             el.classList.add('selected')
             timeStep = Number(el.innerText.split('x')[0]);
+        }
+        function changeTime(el) {
+            let newTime = prompt('Enter new time', time.toString().slice(4).split('GMT')[0])
+            if (!newTime) return
+            newTime = new Date(newTime)
+            if (newTime == 'Invalid Date') return alert('Time not accepted')
+            time = newTime
         }
         animationLoop()
 
