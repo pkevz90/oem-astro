@@ -2861,9 +2861,14 @@ function downloadFile(filename, text) {
 
 function changeSatelliteInputType(el) {
     let satInputs = document.querySelectorAll('.satellite-input')
+    let padNumber = function(n) {
+        return n < 10 ? '0' + n : n
+    }
     switch (el.id) {
         case 'eci-sat-input':
-            satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="2019-06-01T00:00">`
+            let date = new Date(mainWindow.startDate)
+            date = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
+            satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">`
             satInputs[1].innerHTML = `X <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
             satInputs[2].innerHTML = `Y <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
             satInputs[3].innerHTML = `Z <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
@@ -2876,9 +2881,9 @@ function changeSatelliteInputType(el) {
             satInputs[1].innerHTML = `R <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
             satInputs[2].innerHTML = `I <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
             satInputs[3].innerHTML = `C <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[4].innerHTML = `dR <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
-            satInputs[5].innerHTML = `dI <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
-            satInputs[6].innerHTML = `dC <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[4].innerHTML = `dR <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> m/s</div>`
+            satInputs[5].innerHTML = `dI <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> m/s</div>`
+            satInputs[6].innerHTML = `dC <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> m/s</div>`
             break
         case 'rmoe-sat-input':
             satInputs[0].innerHTML = ``
@@ -2905,14 +2910,23 @@ function checkJ200StringValid(string) {
 }
 
 document.getElementById('confirm-option-button').addEventListener('click', (click) => {
-    if (mainWindow.satellites.length > 0) {
+    let stateInputs = document.querySelectorAll('.origin-input')
+    let coe = document.getElementById('coe-radio').checked
+    let state = [...stateInputs].map(s => Number(s.value === '' ? s.placeholder : s.value))
+    let compState = coe ? Object.values(Coe2PosVelObject({
+        a: state[0],
+        e: state[1],
+        i: state[2] * Math.PI / 180,
+        raan: state[3] * Math.PI / 180,
+        arg: state[4] * Math.PI / 180,
+        tA: state[5] * Math.PI / 180
+    })) : state
+    // Check if satellites exist and if origin changed, if so wipe slate of satellites
+    if (mainWindow.satellites.length > 0 && math.norm(math.subtract(compState, Object.values(Coe2PosVelObject(mainWindow.originOrbit)))) > 1e-6) {
         let confirmAns = confirm('Changing origin will delete current satellites, continue?') 
         if (!confirmAns) return
         mainWindow.satellites = []
     }
-    let stateInputs = document.querySelectorAll('.origin-input')
-    let coe = document.getElementById('coe-radio').checked
-    let state = [...stateInputs].map(s => Number(s.value))
     if (!coe) {
         state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     }
@@ -3105,31 +3119,33 @@ function openPanel(button) {
 }
 
 function changeOriginInput(el) {
-    let newType = el.id.split('-')[0]
-    let inputs = document.querySelectorAll('.origin-input')
     let padNumber = function(n) {
         return n < 10 ? '0' + n : n
     }
+    let date = new Date(mainWindow.startDate)
+    document.getElementById('start-time').value = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
+    let newType = el.id.split('-')[0]
+    let inputs = document.querySelectorAll('.origin-input')
     switch (newType) {
         case 'coe':
-            inputs[0].parentElement.innerHTML = `<em>a</em> <input value="${mainWindow.originOrbit.a.toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
-            inputs[1].parentElement.innerHTML = `<em>e</em> <input value="${mainWindow.originOrbit.e.toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1">`
-            inputs[2].parentElement.innerHTML = `<em>i</em> <input value="${(mainWindow.originOrbit.i*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
-            inputs[3].parentElement.innerHTML = `&#937      <input value="${(mainWindow.originOrbit.raan*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
-            inputs[4].parentElement.innerHTML = `&#969      <input value="${(mainWindow.originOrbit.arg*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
-            inputs[5].parentElement.innerHTML = `&#957      <input value="${(mainWindow.originOrbit.tA*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
+            inputs[0].parentElement.innerHTML = `<em>a</em> <input placeholder="${mainWindow.originOrbit.a.toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[1].parentElement.innerHTML = `<em>e</em> <input placeholder="${mainWindow.originOrbit.e.toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1">`
+            inputs[2].parentElement.innerHTML = `<em>i</em> <input placeholder="${(mainWindow.originOrbit.i*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
+            inputs[3].parentElement.innerHTML = `&#937      <input placeholder="${(mainWindow.originOrbit.raan*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
+            inputs[4].parentElement.innerHTML = `&#969      <input placeholder="${(mainWindow.originOrbit.arg*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
+            inputs[5].parentElement.innerHTML = `&#957      <input placeholder="${(mainWindow.originOrbit.tA*180 / Math.PI).toFixed(6)}"class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> deg`
             break
         case 'eci':
             let eciState = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-            inputs[0].parentElement.innerHTML = `X  <input value="${eciState[0].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
-            inputs[1].parentElement.innerHTML = `Y  <input value="${eciState[1].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
-            inputs[2].parentElement.innerHTML = `z  <input value="${eciState[2].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
-            inputs[3].parentElement.innerHTML = `dX <input value="${eciState[3].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
-            inputs[4].parentElement.innerHTML = `dY <input value="${eciState[4].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
-            inputs[5].parentElement.innerHTML = `dZ <input value="${eciState[5].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            inputs[0].parentElement.innerHTML = `X  <input placeholder="${eciState[0].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[1].parentElement.innerHTML = `Y  <input placeholder="${eciState[1].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[2].parentElement.innerHTML = `z  <input placeholder="${eciState[2].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km`
+            inputs[3].parentElement.innerHTML = `dX <input placeholder="${eciState[3].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            inputs[4].parentElement.innerHTML = `dY <input placeholder="${eciState[4].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
+            inputs[5].parentElement.innerHTML = `dZ <input placeholder="${eciState[5].toFixed(6)}" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"> km/s`
             break
         case 'geo':
-            inputs[0].parentElement.innerHTML = `Longitude  <input value="0" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"><sup>o</sup>`
+            inputs[0].parentElement.innerHTML = `Longitude  <input placeholder="0" class="origin-input" style="width: 15ch;" placeholder="0" type="Number" step="1"><sup>o</sup>`
             inputs[1].parentElement.innerHTML = `<input hidden class="origin-input" style="width: 15ch;" type="Number" step="1" disabled>`
             inputs[2].parentElement.innerHTML = `<input hidden class="origin-input" style="width: 15ch;" type="Number" step="1" disabled>`
             inputs[3].parentElement.innerHTML = `<input hidden class="origin-input" style="width: 15ch;" type="Number" step="1" disabled>`
