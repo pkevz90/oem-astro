@@ -2869,21 +2869,21 @@ function changeSatelliteInputType(el) {
             let date = new Date(mainWindow.startDate)
             date = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
             satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">`
-            satInputs[1].innerHTML = `X <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[2].innerHTML = `Y <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[3].innerHTML = `Z <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[4].innerHTML = `dX <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
-            satInputs[5].innerHTML = `dY <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
-            satInputs[6].innerHTML = `dZ <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[1].innerHTML = `X <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[2].innerHTML = `Y <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[3].innerHTML = `Z <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[4].innerHTML = `dX <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[5].innerHTML = `dY <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[6].innerHTML = `dZ <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km/s</div>`
             break
         case 'ric-sat-input':
             satInputs[0].innerHTML = ``
-            satInputs[1].innerHTML = `R <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[2].innerHTML = `I <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[3].innerHTML = `C <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[4].innerHTML = `dR <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> m/s</div>`
-            satInputs[5].innerHTML = `dI <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> m/s</div>`
-            satInputs[6].innerHTML = `dC <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> m/s</div>`
+            satInputs[1].innerHTML = `R <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[2].innerHTML = `I <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[3].innerHTML = `C <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
+            satInputs[4].innerHTML = `dR <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> m/s</div>`
+            satInputs[5].innerHTML = `dI <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> m/s</div>`
+            satInputs[6].innerHTML = `dC <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> m/s</div>`
             break
         case 'rmoe-sat-input':
             satInputs[0].innerHTML = ``
