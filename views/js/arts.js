@@ -1430,7 +1430,7 @@ function startContextClick(event) {
     if (mainWindow.panelOpen) {
         return false;
     }
-
+    console.log([event.clientX, event.clientY]);
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY])
     // Check if clicked on satellite
     let checkProxSats
@@ -2680,27 +2680,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     else if (event.button === 1) return startContextClick(event)
     else return;
     // Check if clicked on time
-    if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
-        if (event.altKey) {
-            let curStart = new Date(mainWindow.startDate.getTime()).toString().split(' GMT')[0].substring(4)
-            let newStart = prompt('Enter scenario start time:',curStart)
-            if (new Date(newStart) == 'Invalid Date') showScreenAlert('Invalid Time String')
-            mainWindow.startDate = new Date(newStart)
-            return
-        l
-        }
-        let curTime = new Date(mainWindow.startDate.getTime() + mainWindow.scenarioTime * 1000).toString().split(' GMT')[0].substring(4)
-        let newTime = prompt('Enter scenario time:',curTime)
-        let desTime = new Date(newTime)
-        let delTime = desTime - mainWindow.startDate
-        if (delTime/3600000 < mainWindow.scenarioLength && delTime > 0) {
-            mainWindow.desired.scenarioTime = delTime / 1000;
-            mainWindow.scenarioTime = delTime / 1000;
-            document.getElementById('time-slider-range').value = delTime / 1000;
-        }
-        else showScreenAlert('Invalid Time String')
-        return
-    }
+    if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) return openTimePrompt()
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
     let sat = 0, check;
     if (ricCoor === undefined) return;
@@ -6655,4 +6635,79 @@ function errorFromTime(t = mainWindow.scenarioTime, error = mainWindow.error.neu
     let p = error.p / (error.a ** (t / 3600)) + error.c /  ((error.a*3) ** (t / 3600))
     let v = error.v / ((error.a/2) ** (t / 3600))
     return [p,p,p,v,v,v]
+}
+
+function convertTimeToDateTimeInput(timeIn = mainWindow.startDate, seconds = true) {
+    let padNumber = function(n) {
+        return n < 10 ? '0' + n : n
+    }
+    timeIn = new Date(timeIn)
+    if (timeIn == 'Invalid Date') return
+    if (seconds) {
+        return `${timeIn.getFullYear()}-${padNumber(timeIn.getMonth()+1)}-${padNumber(timeIn.getDate())}T${padNumber(timeIn.getHours())}:${padNumber(timeIn.getMinutes())}`
+    }
+    return `${timeIn.getFullYear()}-${padNumber(timeIn.getMonth()+1)}-${padNumber(timeIn.getDate())}T${padNumber(timeIn.getHours())}:${padNumber(timeIn.getMinutes())}:${padNumber(timeIn.getSeconds())}`
+}
+
+function setTimeFromPrompt(el) {
+    console.log(el.parentElement.parentElement.getElementsByTagName('input'));
+    let newTime = new Date(el.parentElement.parentElement.getElementsByTagName('input')[0].value) - mainWindow.startDate
+    mainWindow.desired.scenarioTime = newTime / 1000
+    mainWindow.scenarioTime = newTime / 1000
+    document.getElementById('time-slider-range').value = newTime / 1000
+    document.getElementById('larger-time-div').remove()
+}
+
+function openTimePrompt() {
+    let curTime = new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))
+    let dateOptions = []
+    for (let index = 0; index < 12; index++) {
+        let optionTime = new Date(mainWindow.startDate - (-index*(mainWindow.scenarioLength / 12) * 3600 * 1000))
+        dateOptions.push(optionTime)
+    }
+    
+    let inner = `
+        <div>
+            <input type="datetime-local" style="width: 100%; font-size: 2em" list="date-options" value="${convertTimeToDateTimeInput(curTime)}">
+            <datalist id="date-options">
+                ${dateOptions.map(opt => `<option value="${convertTimeToDateTimeInput(opt)}"></option>`)}
+            </datalist>
+        </div>
+        <div>
+            <button onclick="setTimeFromPrompt(this)"style="width: 100%; margin-top: 10px">Set Time</button>
+        </div>
+    `
+    openQuickWindow(inner)
+}
+
+function openQuickWindow(innerCode = 'Hey') {
+    let largerDiv = document.createElement('div')
+    largerDiv.style.display = 'flex'
+    largerDiv.style.justifyContent = 'space-around'
+    largerDiv.style.alignItems = 'center'
+    largerDiv.style.position = 'fixed'
+    largerDiv.style.left = '0%'
+    largerDiv.style.top = '0%'
+    largerDiv.style.width = '100%'
+    largerDiv.style.height = '100%'
+    largerDiv.style.zIndex = '90'
+    largerDiv.id = 'larger-time-div'
+    largerDiv.onclick = (el) => {
+        if (el.target.id !== 'larger-time-div') return
+        document.getElementById('larger-time-div').remove()
+    }
+    let newDiv = document.createElement('div')
+    newDiv.innerHTML = innerCode
+    // newDiv.style.position = 'fixed'
+    // newDiv.style.top = '20px'
+    // newDiv.style.left = '20px'
+    // newDiv.style.zIndex = 100
+    newDiv.style.width = 'auto'
+    newDiv.style.height = 'auto'
+    newDiv.style.background = '#ffffff'
+    newDiv.style.border = '1px solid black'
+    newDiv.style.borderRadius = '20px'
+    newDiv.style.padding = '30px'
+    largerDiv.append(newDiv)
+    document.body.append(largerDiv)
 }
