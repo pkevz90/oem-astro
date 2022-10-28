@@ -62,7 +62,7 @@ class windowCanvas {
     normalizeDirection = true;
     frameMove = undefined;
     initSun = [1, 0, 0];
-    nLane = 4
+    nLane = 1
     desired = { 
         scenarioTime: 0,
         plotCenter: 0,
@@ -5918,6 +5918,8 @@ function handleStkJ200File(file) {
     let desiredTime = prompt('What time to pull states from?', toStkFormat(defaultTime.toString()))
     if (desiredTime === null) return
     desiredTime = new Date(desiredTime)
+    let timeDeltaFromCurrent = (desiredTime - mainWindow.startDate) / 1000
+    console.log(timeDeltaFromCurrent);
     if (desiredTime == 'Invalid Date') return alert('Invalid Time')
     satNames = satNames.filter((name, ii) => file[ii].length > 0)
     file = file.filter(t => t.length > 0)
@@ -5948,13 +5950,16 @@ function handleStkJ200File(file) {
     sun = math.dotDivide(sun, math.norm(sun))
     mainWindow.initSun = sun
     mainWindow.startDate = desiredTime
-    console.log(originState);
     mainWindow.originOrbit = PosVel2CoeNew(originState.slice(0,3), originState.slice(3,6))
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+    let oldBurns = []
     timeFile.forEach((state, ii) => {
         let ricState = Eci2Ric(originState.slice(0,3), originState.slice(3,6), state.slice(0,3), state.slice(3,6))
         // If satellite with name already exists, copy settings from it
         let matchSat = mainWindow.satellites.find(sat => {
+            return sat.name === satNames[ii]
+        })
+        let matchSatIndex = mainWindow.satellites.findIndex(sat => {
             return sat.name === satNames[ii]
         })
         let options = matchSat !== undefined ? {
@@ -5964,6 +5969,17 @@ function handleStkJ200File(file) {
         } : {
             shape: 'delta',
             color: '#5555ff',
+        }
+        // Record old burns
+        if (matchSat !== undefined) {
+            oldBurns.push(matchSat.burns.map(b => {
+                let rot = translateFrames(matchSatIndex, {time: b.time})
+                let burnDir = [1000*b.direction.r, 1000*b.direction.i, 1000*b.direction.c]
+                burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
+                return {
+                    time: b.time - timeDeltaFromCurrent, burnDir
+                }
+            }).filter(a => a.time >= 0))
         }
         options.name = satNames[ii]
         options.position = {r: ricState.rHcw[0][0], 
@@ -5979,6 +5995,15 @@ function handleStkJ200File(file) {
     })
     mainWindow.satellites = newSatellites
     changeOrigin(oldOrigin)
+    setTimeout(() => {
+        oldBurns.forEach((satBurns, ii) => {
+            satBurns.forEach(burn => {
+                let rot = translateFrames(ii, {time: burn.time})
+                burn.burnDir = math.squeeze(math.multiply(math.transpose(rot), math.transpose([burn.burnDir])))
+                insertDirectionBurn(ii, burn.time, burn.burnDir.map(s => s / 1000))
+            })
+        })
+    }, 1000)
 }
 
 function loadFileTle(fileToLoad) {
