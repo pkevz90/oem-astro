@@ -427,7 +427,7 @@ function propToTime(state, dt, j2 = true) {
     return state
 }
 
-function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
+function PosVel2CoeNewOld(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
     let mu = 398600.4418;
     let rn = math.norm(r);
     let vn = math.norm(v);
@@ -481,6 +481,66 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
         ta = 2 * Math.PI - ta;
     }
     // // console.log([a,en,inc,ra,ar,ta])
+    return {
+        a: a,
+        e: en,
+        i: inc,
+        raan: ra,
+        arg: ar,
+        tA: ta
+    };
+}
+
+function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
+    r = r.map(num => math.abs(num) < 1e-8 ? 0 : num)
+    v = v.map(num => math.abs(num) < 1e-8 ? 0 : num)
+    let mu = 398600.4418;
+    let rn = math.norm(r);
+    let vn = math.norm(v);
+    let h = math.cross(r, v);
+    let hn = math.norm(h);
+    let n = math.cross([0, 0, 1], h);
+    let nn = math.norm(n);
+    if (nn < 1e-9) {
+        n = [1, 0, 0];
+        nn = 1;
+    }
+    var epsilon = vn * vn / 2 - mu / rn;
+    let a = -mu / 2 / epsilon;
+    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r),  math.dotMultiply(math.dot(r, v), v)), mu)
+    let en = math.norm(e);
+    if (en < 1e-9) {
+        e = n.slice();
+        en = 0;
+    }
+    let inc = Math.acos(h[2] / hn);
+    let ra = Math.acos(n[0] / nn);
+    if (n[1] < 0) {
+        ra = 2 * Math.PI - ra;
+    }
+    let ar
+    let arDot = math.dot(n, e) / (en < 1e-9 ? nn : en) / nn;
+    if (arDot > 1) {
+        ar = 0;
+    } else if (arDot < -1) {
+        ar = Math.PI;
+    } else {
+        ar = Math.acos(arDot);
+    }
+    if (e[2] < 0 || (inc < 1e-8 && e[1] < 0)) {
+        ar = 2 * Math.PI - ar;
+    }
+    let ta, taDot = math.dot(r, e) / rn / math.norm(e)
+    if (taDot > 1) {
+        ta = 0;
+    } else if (taDot < -1) {
+        ta = Math.PI;
+    } else {
+        ta = Math.acos(taDot);
+    }
+    if (math.dot(v, e) > 0 || math.dot(v, r) < (-1e-8)) {
+        ta = 2 * Math.PI - ta;
+    }
     return {
         a: a,
         e: en,
@@ -772,9 +832,9 @@ function addSatellite() {
         a: 42164.140100123965,
         e: 0,
         i: 0,
-        raan: mainWindow.planet.sidAngle + long * Math.PI / 180,
+        raan: 0,
         arg: 0,
-        tA: 0
+        tA: mainWindow.planet.sidAngle + long * Math.PI / 180
     })
     mainWindow.satellites[0].origState = Object.values(state)
     updateCoeDisplay()
