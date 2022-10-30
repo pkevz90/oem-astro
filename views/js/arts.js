@@ -43,9 +43,9 @@ class windowCanvas {
     plotHeight;
     plotCenter = 0;
     error = { // at right after manuever while generating J2000 states, halves every hour
-        neutral: {p: 100, v: 0.01, c: 50, a: 2.7}, // Full Error
-        friendly: {p: 10, v: 0.0025, c: 2.5, a: 2.5}, // reduced error
-        closed: {p: 0, v: 0, c: 0, a: 1} // no error
+        neutral: {p: 25.6, v: 36.158}, // Full Error
+        friendly: {p: 25.6 / 3, v: 36.158 / 3}, // reduced error
+        closed: {p: 0, v: 0} // no error
     }; 
     frameCenter= {
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
@@ -6657,8 +6657,8 @@ function fitPolynomial(x = [0, 1, 2], y = [[1],[-2],[4]], d=2) {
 }
 
 function errorFromTime(t = mainWindow.scenarioTime, error = mainWindow.error.neutral) {
-    let p = error.p / (error.a ** (t / 3600)) + error.c /  ((error.a*3) ** (t / 3600))
-    let v = error.v / ((error.a/2) ** (t / 3600))
+    let p = error.p / (1.6 ** (t / 3600))
+    let v = error.v / (4.51977 ** (t / 3600)) / 1000
     return [p,p,p,v,v,v]
 }
 
