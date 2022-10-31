@@ -1320,9 +1320,10 @@ function keydownFunction(key) {
     else if (key.key === 'E' && key.shiftKey && key.altKey) downloadFile('error_file.txt', errorList.map(e => e.stack).join('\n'))
 }
 function sliderFunction(slider) {
-
     let timeDelta = Number(slider.value) - mainWindow.desired.scenarioTime
     mainWindow.desired.scenarioTime += timeDelta
+    
+    updateWhiteCellTimeAndErrors()
     if (monteCarloData !== null) {
         let td = mainWindow.desired.scenarioTime - monteCarloData.time
         td = mainWindow.desired.scenarioTime < monteCarloData.minTime ? monteCarloData.minTime - monteCarloData.time : td
@@ -1377,7 +1378,8 @@ window.addEventListener('wheel', event => {
         mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target.c = curCrossState.c[0]
         mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime += tranTimeDelta 
         mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
-
+        
+        updateWhiteCellTimeAndErrors()
         return;
     }
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
@@ -1552,7 +1554,7 @@ function startContextClick(event) {
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadScenario(event)"></div>
             <div class="context-item" onclick="generateJ2000File(event)">Export Scenario</div>
-            <div class="context-item" onclick="openPanel(this)" id="instructions">Instructions</div>
+            <div class="context-item" onclick="openInstructionWindow()" id="instructions">Instructions</div>
             `
 
     }
@@ -1577,20 +1579,8 @@ function changeNumLanes(element) {
     mainWindow.nLane = newWidth
 }
 
-function changeSide(sat) {
-    switch (mainWindow.satellites[sat].side) {
-        case 'neutral':
-            mainWindow.satellites[sat].side = 'friendly'
-            break
-        case 'friendly':
-            mainWindow.satellites[sat].side = 'closed'
-            break
-        case 'closed':
-            mainWindow.satellites[sat].side = 'neutral'
-            break
-    }
-    showScreenAlert(`${mainWindow.satellites[sat].name} set to ${mainWindow.satellites[sat].side}`)
-    updateLockScreen()
+function changeSide(sat, side="neutral") {
+    mainWindow.satellites[sat].side = side
 }
 
 function updateLockScreen() {
@@ -1605,7 +1595,6 @@ function updateLockScreen() {
             out += `<div style="text-align: right">
                         <label style="cursor: pointer; padding: 5px" for="lock-${sat}">${mainWindow.satellites[sat].name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${sat}" id="lock-${sat}" type="checkbox"/>
                         <button onclick="changeOrigin(${sat})">Center</button>
-                        <button onclick="changeSide(${sat})" style="cursor: pointer; width: 17px; height: 17px; background-color: ${side === 'neutral' ? 'gray' : side === 'friendly' ? 'blue' : 'red'}"></button>
                     </div>`
 
         })
@@ -6681,6 +6670,7 @@ function setTimeFromPrompt(el) {
     mainWindow.scenarioTime = newTime / 1000
     document.getElementById('time-slider-range').value = newTime / 1000
     document.getElementById('larger-time-div').remove()
+    updateWhiteCellTimeAndErrors()
 }
 
 function openTimePrompt() {
@@ -6735,4 +6725,172 @@ function openQuickWindow(innerCode = 'Hey') {
     newDiv.style.padding = '30px'
     largerDiv.append(newDiv)
     document.body.append(largerDiv)
+}
+let instructionWindow
+function openInstructionWindow() {
+    instructionWindow = window.open('', 'instructions', "width=400,height=400")
+    let instructions = `
+    <div>
+    <ul>
+        <li>
+            Building a plan
+            <ul>
+                <li>Importing satellites
+                    <ul>
+                        <li>Import J2000 report from STK
+                            <ul>
+                                <li>Position and Vecocity Report from STK Report and Graph Manager</li>
+                                <li>Can contain any number of satellites</li>
+                            </ul>
+                        </li>
+                        <li>Enter origin J2000 state manually under <em>Options</em>, then add satellites with <em>Satellite Menu</em></li>
+                        <li> Import .SAS file with <em>Import Scenario</em></li>
+                    </ul>
+                </li>
+                <li>By default, all burns are computed with finite accelerations, goto for impulsive burns in 1000 mm/s<sup>2</sup></li>
+                <li>To insert a burn, click and hold current satellite position, use slider to change shown time
+                </li>
+                <li>Burn planning options
+                    <ul>
+                        <li>Click and drag to desired waypoint, changing time of flight with mouse wheel</li>
+                        <li>Switch to manual burn direction on right-click menu to click and drag burn direction</li>
+                        <li>Open <em>Maneuver Options</em> panel by right-clicking satellite itself and manually insert RIC coordinate and TOF</li>
+                        <li>More burn options available within right-click menu</li>
+                        <li>Particle Swarm Optimization utilized to find best position to gain sun, based on delta-V</li>
+                    </ul>
+                </li>
+                <li>Burn Right Click
+                    <ul>
+                        <li>Right clicking on a burn opens up context menu with options</li>
+                        <li>Right clicking also copies to clipboard text string for ingestion into STK</li>
+                        <li>By default right-clicking shows you burn magnitudes in RIC and allows alteration of burn direction</li>
+                        <li>Shift right-clicking brings up burn waypoint information and allows alteration of waypoint</li>
+                    </ul>
+                </li>
+                <li>Burns can be deleted by ctrl-clicking on the burn point</li>
+                <li>Limitations
+                    <ul>
+                        <li>Burns durations are limited to 6 hours for mathematical stability</li>
+                        <li>Burns are limited to once every 30 minutes</li>
+                        <li>Two-body dynamics are utilized, therefore an error of ~100m per hour can be expected compared to full relative dynamics</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>Spacebar changes current view</li>
+    </ul>
+    </div>`
+    instructionWindow.document.write(instructions)
+}
+let whiteCellWindow
+function openWhiteCellWindow() {
+    whiteCellWindow = window.open('', 'instructions', "width=600px,height=600px")
+    whiteCellWindow.changeSide = (el) => {
+        mainWindow.satellites[el.getAttribute('sat')].side = el.id.split('-')[1]
+        updateWhiteCellTimeAndErrors()
+    }
+    whiteCellWindow.exportStates = (el) => {
+        generateJ2000File({ctrlKey: true})
+    }
+    whiteCellWindow.addBurn = (el) => {
+        let inputs = el.parentElement.parentElement.querySelectorAll('input')
+        let time = new Date(inputs[0].value)
+        time = (time - mainWindow.startDate) / 1000
+        let dir = [...inputs].slice(1,4).map(s => Number(s.value) / 1000)
+        let error = [...inputs].slice(4).map(s => Number(s.value === '' ? s.placeholder : s.value))
+        dir = [math.atan2(dir[1], dir[0]), math.atan2(dir[2], math.norm(dir.slice(0,2))), math.norm(dir)]
+        dir = [dir[0] + randn_bm() * Math.PI / 180 * error[0], dir[1] + randn_bm() * Math.PI / 180 * error[0], dir[2] + randn_bm() * dir[2] * error[1] / 100]
+        dir = [dir[2] * Math.cos(dir[0]) * Math.cos(dir[1]), dir[2] * Math.sin(dir[0]) * Math.cos(dir[1]), dir[2] * Math.sin(dir[1])]
+        let select = el.parentElement.parentElement.querySelector('select')
+        insertDirectionBurn(select.value, time, dir)
+        updateWhiteCellTimeAndErrors()
+    }
+    whiteCellWindow.setTime = (el) => {
+        let newDate = new Date(el.parentElement.querySelector('input').value)
+        newDate = (newDate - mainWindow.startDate) / 1000
+        if (newDate < 0 || (newDate / 3600) > mainWindow.scenarioLength) return
+        mainWindow.desired.scenarioTime = newDate
+        updateWhiteCellTimeAndErrors()
+    }
+    updateWhiteCellWindow()
+}
+
+function updateWhiteCellTimeAndErrors() {
+    if (whiteCellWindow === undefined) return
+    let time = mainWindow.desired.scenarioTime
+    let posErrors = whiteCellWindow.document.querySelectorAll('.pos-error')
+    let velErrors = whiteCellWindow.document.querySelectorAll('.vel-error')
+    for (let index = 0; index < posErrors.length; index++) {
+        let burns = mainWindow.satellites[index].burns.filter(b => b.time < time)
+        let lastBurnTime = burns.length > 0 ? burns.pop().time : -42164 // If no burns exist assume been tracking 12 hours time
+        let errors = errorFromTime(time - lastBurnTime, mainWindow.error[mainWindow.satellites[index].side])
+        posErrors[index].placeholder = errors[0].toFixed(2)
+        velErrors[index].placeholder = (errors[3]*1000).toFixed(2)
+    }
+    whiteCellWindow.document.getElementById('main-time').value = convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-time * 1000)))
+}
+
+function updateWhiteCellWindow() {
+    whiteCellWindow.document.body.innerHTML = ``
+    let curTime = new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))
+    let satelliteList = mainWindow.satellites.map((sat, satii) => {
+        return `<div>${sat.name} 
+            <span style="margin-left: 20px">
+                <label for="${satii}-open">Open</label><input sat="${satii}" onchange="changeSide(this)" ${sat.side === 'neutral' ? 'checked' : ''} id="${satii}-open" type="radio" name="${sat.name}-type"/>
+                <label for="${satii}-closed">Closed</label><input sat="${satii}" onchange="changeSide(this)" ${sat.side === 'closed' ? 'checked' : ''} id="${satii}-closed" type="radio" name="${sat.name}-type"/>
+                <label for="${satii}-friendly">Self</label><input sat="${satii}" onchange="changeSide(this)" ${sat.side === 'friendly' ? 'checked' : ''} id="${satii}-friendly" type="radio" name="${sat.name}-type"/>
+                Error StD <input class="pos-error" style="width: 10ch"placeholder="0" type="Number"> km <input class="vel-error" style="width: 10ch" placeholder="0" type="Number"> m/s
+            </span>
+        </div>`
+    })
+    let innerStyles = `
+    <div>
+        <div style="width: 100%; font-size: 2em; text-align: center;">ARTS White Cell Toolbox</div>
+        <div style="width: 100%; display: flex; justify-content: space-around; margin: 20px 0px">
+            <div>
+                <div>
+                    Add Burn 
+                    <select>
+                        ${mainWindow.satellites.map((sat,ii) => `<option value="${ii}">${sat.name}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    Time <input value="${convertTimeToDateTimeInput(curTime)}" type="datetime-local" style="width: 30ch"/>
+                </div>
+                <div>
+                    R <input placeholder="0" style="width: 10ch" type="Number">
+                    I <input placeholder="0" style="width: 10ch" type="Number">
+                    C <input placeholder="0" style="width: 10ch" type="Number"> m/s
+                </div>
+                <div style="width: 100%; text-align: center">Error</div>
+                <div>
+                    Angle <input placeholder="1" style="width: 5ch" type="Number"><sup>0</sup>
+                    Magnitude <input placeholder="10" style="width: 5ch" type="Number">%
+                </div>
+                <div>
+                    <button onclick="addBurn(this)" style="width: 100%">Execute Burn</button>
+                </div>
+            </div>
+        </div>
+        <div style="width: 100%; display: flex; justify-content: space-around; flex-direction: column; align-items: center">
+            <div>
+                ${satelliteList.join('')}
+            </div>
+            <div style="margin-top: 30px">
+                <input 
+                    type="datetime-local" id="main-time" value="${convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000)))}"/> <button onclick="setTime(this)">Set Time</button>
+            </div>
+        </div>
+        <div style="width: 100%; margin-top: 30px">
+            <button onclick="exportStates(this)" style="width: 100%">Export Current State</button>
+        </div>
+    </div>
+    `
+    whiteCellWindow.document.write(innerStyles)
+    updateWhiteCellTimeAndErrors()
+}
+
+window.onbeforeunload = () => {
+    whiteCellWindow.close()
+    instructionWindow.close()
 }
