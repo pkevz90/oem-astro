@@ -1424,6 +1424,7 @@ function alterEditableSatChar(action) {
         mainWindow.satellites[sat].calcTraj()
     }
     updateLockScreen()
+    updateWhiteCellWindow()
     document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
 }
 
@@ -1499,7 +1500,6 @@ function startContextClick(event) {
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
             <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
                 ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
@@ -1558,6 +1558,8 @@ function startContextClick(event) {
             `
 
     }
+    //<div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
+            
     if ((ctxMenu.offsetHeight + event.clientY) > window.innerHeight) {
         ctxMenu.style.top = (window.innerHeight - ctxMenu.offsetHeight) + 'px';
     }
@@ -3045,6 +3047,7 @@ function parseState(button) {
                     cd: 0,
                 }
             }))
+            updateWhiteCellWindow()
             break
         
     }
@@ -3600,13 +3603,14 @@ function initStateFunction(el) {
             shape: styleInputs[0].value,
             a: Number(styleInputs[1].value === '' ? styleInputs[1].placeholder : styleInputs[1].value) / 1000000,
             color: styleInputs[2].value,
-            name: styleInputs[3].value === '' ? 'Sat' : styleInputs[3].value
+            name: styleInputs[3].value === '' ? 'Sat' + (mainWindow.satellites.length + 1) : styleInputs[3].value
         }))
         let newWidth = (Math.abs(position.i) * 2.2) > (Math.abs(position.r) * 2.4 / mainWindow.getRatio()) ? Math.abs(position.i) * 2.2 : Math.abs(position.r) * 2.4 / mainWindow.getRatio()
         if (newWidth > mainWindow.desired.plotWidth) {
             mainWindow.desired.plotWidth = newWidth
         }
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ');
+        updateWhiteCellWindow()
         updateLockScreen()
         closeAll();
     }
@@ -3668,26 +3672,81 @@ function editSatellite(button) {
             mainWindow.relativeData.dataReqs[index].target = Number(mainWindow.relativeData.dataReqs[index].target) > delSat ? Number(mainWindow.relativeData.dataReqs[index].target) - 1 : mainWindow.relativeData.dataReqs[index].target
         }
         updateLockScreen()
+        updateWhiteCellWindow()
         document.title = mainWindow.satellites.map(s => s.name).join(' / ')
         closeAll();
         return;
     }
     if (button.nextSibling.selectedIndex < 0) return;
-    let el = button.parentNode.parentNode.parentNode;
-    
-    let inputs = el.parentNode.parentNode.parentNode.getElementsByTagName('input');
-        
+    let inputs = document.querySelectorAll('.sat-input')
+    let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
+    let ricState
+    switch (radioId) {
+        case 'ric-sat-input':
+            ricState = [
+                inputs[0].value,
+                inputs[1].value,
+                inputs[2].value,
+                inputs[3].value,
+                inputs[4].value,
+                inputs[5].value,
+            ].map((s, ii) => Number(s) / (ii > 2 ? 1000 : 1))
+            break
+        case 'eci-sat-input':
+            let date = new Date(inputs[0].value)
+            let eciState = [
+                inputs[1].value,
+                inputs[2].value,
+                inputs[3].value,
+                inputs[4].value,
+                inputs[5].value,
+                inputs[6].value,
+            ].map(s => Number(s))
+            let dt = (mainWindow.startDate - date) / 1000
+            eciState = propToTime(eciState, dt, false)
+            let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+            ricState = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), eciState.slice(0,3), eciState.slice(3,6))
+            ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+            break
+        case 'rmoe-sat-input':
+            let rmoes = [
+                inputs[0].value,
+                inputs[1].value,
+                inputs[2].value,
+                inputs[3].value,
+                inputs[4].value,
+                inputs[5].value,
+            ].map((s,ii) => Number(s))
+            console.log({
+                ae: rmoes[0],
+                x: rmoes[1],
+                y: rmoes[2],
+                b: rmoes[3],
+                z: rmoes[4],
+                m: rmoes[5]
+            });
+            ricState = rmoeToRic({
+                ae: rmoes[0],
+                x: rmoes[1],
+                y: rmoes[2],
+                b: rmoes[3],
+                z: rmoes[4],
+                m: rmoes[5]
+            })
+            ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+            break
+    }   
     let color = mainWindow.satellites[button.nextSibling.selectedIndex].color;
     let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
     let shape = mainWindow.satellites[button.nextSibling.selectedIndex].shape;
     let a = mainWindow.satellites[button.nextSibling.selectedIndex].a;
     state = {
-        r:  Number(inputs[7].value ),
-        i:  Number(inputs[8].value ),
-        c:  Number(inputs[9].value ),
-        rd: Number(inputs[10].value) / 1000,
-        id: Number(inputs[11].value) / 1000,
-        cd: Number(inputs[12].value) / 1000,
+        r:  ricState[0],
+        i:  ricState[1],
+        c:  ricState[2],
+        rd: ricState[3],
+        id: ricState[4],
+        cd: ricState[5],
     }
     let sat = new Satellite({
         position: state,
@@ -6729,6 +6788,7 @@ function openQuickWindow(innerCode = 'Hey') {
 let instructionWindow
 function openInstructionWindow() {
     instructionWindow = window.open('', 'instructions', "width=400,height=400")
+    setTimeout(() => instructionWindow.document.title = 'ARTS Instructions', 1000)
     let instructions = `
     <div>
     <ul>
@@ -6748,8 +6808,8 @@ function openInstructionWindow() {
                     </ul>
                 </li>
                 <li>By default, all burns are computed with finite accelerations, goto for impulsive burns in 1000 mm/s<sup>2</sup></li>
-                <li>To insert a burn, click and hold current satellite position, use slider to change shown time
-                </li>
+                <li>To insert a burn, click and hold current satellite position, use slider to change shown time</li>
+                <li>To delete a burn, hold the control key and right-click on the burn dot</li>
                 <li>Burn planning options
                     <ul>
                         <li>Click and drag to desired waypoint, changing time of flight with mouse wheel</li>
@@ -6785,6 +6845,7 @@ function openInstructionWindow() {
 let whiteCellWindow
 function openWhiteCellWindow() {
     whiteCellWindow = window.open('', 'instructions', "width=600px,height=600px")
+    setTimeout(() => whiteCellWindow.document.title = 'White Cell Tool', 1000)
     whiteCellWindow.changeSide = (el) => {
         mainWindow.satellites[el.getAttribute('sat')].side = el.id.split('-')[1]
         updateWhiteCellTimeAndErrors()
@@ -6831,6 +6892,7 @@ function updateWhiteCellTimeAndErrors() {
 }
 
 function updateWhiteCellWindow() {
+    if (whiteCellWindow === undefined) return
     whiteCellWindow.document.body.innerHTML = ``
     let curTime = new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))
     let satelliteList = mainWindow.satellites.map((sat, satii) => {
