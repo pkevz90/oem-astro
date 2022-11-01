@@ -2293,7 +2293,6 @@ function handleContextClick(button) {
             waypoint = math.reshape([Number(inputs[1].value), Number(inputs[2].value), Number(inputs[3].value)], [3,1])
             waypoint = math.multiply(math.transpose(rot), waypoint)
             waypoint = {r: waypoint[0][0], i: waypoint[1][0], c: waypoint[2][0]}
-            console.log(waypoint);
 
         }
         logAction({
@@ -2304,32 +2303,7 @@ function handleContextClick(button) {
         let origin = target === 'origin' ? {r: [0], i: [0], c: [0]} : mainWindow.satellites[target].currentPosition({
             time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
         })
-        mainWindow.satellites[sat].burns.push({
-            time: mainWindow.desired.scenarioTime,
-            direction: {
-                r: 0,
-                i: 0,
-                c: 0
-            },
-            waypoint: {
-                tranTime: Number(inputs[0].value) * 3600,
-                target: {
-                    r: Number(waypoint.r) + origin.r[0],
-                    i: Number(waypoint.i) + origin.i[0],
-                    c: Number(waypoint.c) + origin.c[0],
-                }
-            }
-        })
-        mainWindow.satellites[sat].genBurns();
-        let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
-        if (math.norm([checkBurn.direction.r, checkBurn.direction.i, checkBurn.direction.c]) < 1e-8) {
-            mainWindow.satellites[sat].burns.pop();
-            mainWindow.satellites[sat].genBurns();
-            showScreenAlert('Waypoint outside kinematic reach or error in calculating burn');
-            return;
-        }
-        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
-        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + Number(inputs[3].value) * 3600;
+        insertWaypointBurn(sat, mainWindow.desired.scenarioTime, Object.values(waypoint), 3600*Number(inputs[0].value),math.squeeze(Object.values(origin)) )
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-rmoes') {
@@ -2403,58 +2377,6 @@ function handleContextClick(button) {
         mainWindow.satellites[sat].genBurns();
         mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
-        document.getElementById('context-menu')?.remove();
-    }
-    else if (button.id === 'intercept-maneuver') {
-        let innerString = '';
-        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
-            if (ii === button.parentElement.sat) continue;
-            innerString += `<div onclick="handleContextClick(this)" class="context-item" id="execute-intercept" sat="${ii}">${mainWindow.satellites[ii].name}</div>`
-        }
-        innerString += `<div class="context-item" >TOF: <input placeholder="1" type="Number" style="width: 3em; font-size: 1em"> hrs</div>`;
-
-        button.parentElement.innerHTML = innerString;
-
-    }
-    else if (button.id === 'execute-intercept') {
-        let inputs = button.parentElement.getElementsByTagName('input')[0];
-        if (inputs.value < 0) {
-            inputs.style.backgroundColor = 'rgb(255,150,150)';
-            return;
-        }
-        inputs.value = inputs.value === '' ? inputs.placeholder : inputs.value
-        let tof = Number(inputs.value) * 3600;
-        let targetSat = button.getAttribute('sat');
-        let chaserSat = button.parentElement.sat;
-        mainWindow.satellites[chaserSat].burns = mainWindow.satellites[chaserSat].burns.filter(burn => {
-            return burn.time < mainWindow.scenarioTime;
-        })
-        let target = mainWindow.satellites[targetSat].currentPosition({time: mainWindow.desired.scenarioTime + tof});
-        mainWindow.satellites[chaserSat].burns.push({
-            time: mainWindow.desired.scenarioTime,
-            direction: {
-                r: 0,
-                i: 0,
-                c: 0
-            },
-            waypoint: {
-                tranTime: tof,
-                target: {
-                    r: target.r[0],
-                    i: target.i[0],
-                    c: target.c[0],
-                }
-            }
-        })
-        mainWindow.satellites[chaserSat].genBurns();
-        let dir = mainWindow.satellites[chaserSat].burns[mainWindow.satellites[chaserSat].burns.length-1].direction;
-        if (math.norm([dir.r, dir.i, dir.c]) < 1e-6) {
-            mainWindow.satellites[sat].burns.pop();
-            mainWindow.satellites[sat].genBurns();
-            showScreenAlert('Intercept solution not found');
-        }
-        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + tof;
-        document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'sun-maneuver') {
@@ -2741,7 +2663,6 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     }
     else if (mainWindow.currentTarget.type === 'burn') {
         if (event.ctrlKey) {
-            console.log(check[mainWindow.currentTarget.frame]);
             logAction({
                 type: 'deleteBurn',
                 index: check[mainWindow.currentTarget.frame],
@@ -5150,7 +5071,38 @@ function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0], burn, tr
     if (burn !== undefined) return
     mainWindow.desired.scenarioTime = time + 3600;
     document.querySelector('#time-slider-range').value = mainWindow.desired.scenarioTime
+    updateWhiteCellWindow()
+}
 
+function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, origin = [0,0,0]) {
+    mainWindow.satellites[sat].burns.push({
+        time,
+        direction: {
+            r: 0,
+            i: 0,
+            c: 0
+        },
+        waypoint: {
+            tranTime: tof,
+            target: {
+                r: way[0] + origin[0],
+                i: way[1] + origin[1],
+                c: way[2] + origin[2],
+            }
+        }
+    })
+    mainWindow.satellites[sat].genBurns();
+    let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
+    mainWindow.desired.scenarioTime = time + 3600;
+    document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
+    if (math.norm(Object.values(checkBurn.direction)) < 1e-8) {
+        mainWindow.satellites[sat].burns.pop();
+        mainWindow.satellites[sat].genBurns();
+        showScreenAlert('Waypoint outside kinematic reach or error in calculating burn');
+        return false;
+    }
+    updateWhiteCellWindow()
+    return true
 }
 
 function perchSatellite(sat = 0, time = mainWindow.scenarioTime) {
@@ -6864,7 +6816,11 @@ function openWhiteCellWindow() {
         dir = [dir[2] * Math.cos(dir[0]) * Math.cos(dir[1]), dir[2] * Math.sin(dir[0]) * Math.cos(dir[1]), dir[2] * Math.sin(dir[1])]
         let select = el.parentElement.parentElement.querySelector('select')
         insertDirectionBurn(select.value, time, dir)
-        updateWhiteCellTimeAndErrors()
+        for (let index = 1; index < 4; index++) {
+            inputs[index].value = ''
+        }
+        // updateWhiteCellTimeAndErrors()
+        updateWhiteCellWindow()
     }
     whiteCellWindow.setTime = (el) => {
         let newDate = new Date(el.parentElement.querySelector('input').value)
@@ -6873,6 +6829,14 @@ function openWhiteCellWindow() {
         mainWindow.desired.scenarioTime = newDate
         updateWhiteCellTimeAndErrors()
     }
+    whiteCellWindow.deleteBurn = (el) => {
+        let sat = el.getAttribute('sat')
+        let burn = el.getAttribute('burn')
+        mainWindow.satellites[sat].burns.splice(burn, 1);
+        mainWindow.satellites[sat].genBurns();
+        updateWhiteCellWindow()
+    }
+    closeAll()
     updateWhiteCellWindow()
 }
 
@@ -6903,6 +6867,15 @@ function updateWhiteCellWindow() {
                 <label for="${satii}-friendly">Self</label><input sat="${satii}" onchange="changeSide(this)" ${sat.side === 'friendly' ? 'checked' : ''} id="${satii}-friendly" type="radio" name="${sat.name}-type"/>
                 Error StD <input class="pos-error" style="width: 10ch"placeholder="0" type="Number"> km <input class="vel-error" style="width: 10ch" placeholder="0" type="Number"> m/s
             </span>
+        </div>
+        <div style="padding-left: 30px">
+            ${sat.burns.map((b,burnii) => {
+                return `
+                    <div>
+                        <button sat="${satii}" burn="${burnii}" onclick="deleteBurn(this)">X</button> ${toStkFormat((new Date(mainWindow.startDate - (-b.time * 1000))).toString())} ${(1000*math.norm(Object.values(b.direction))).toFixed(2)} m/s
+                    </div>
+                `
+            }).join('')}
         </div>`
     })
     let innerStyles = `
