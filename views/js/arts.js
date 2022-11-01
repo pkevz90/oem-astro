@@ -6819,8 +6819,6 @@ function openWhiteCellWindow() {
         for (let index = 1; index < 4; index++) {
             inputs[index].value = ''
         }
-        // updateWhiteCellTimeAndErrors()
-        updateWhiteCellWindow()
     }
     whiteCellWindow.setTime = (el) => {
         let newDate = new Date(el.parentElement.querySelector('input').value)
