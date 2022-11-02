@@ -5638,8 +5638,9 @@ function changeOrigin(satIn = 1, time = 0) {
         sun = math.dotDivide(sun, math.norm(sun))
         mainWindow.initSun = sun
         mainWindow.mm = (398600.4418 / newInert.a ** 3) ** (1/2)
+
+        let lanes = satClusterK(mainWindow.nClusters, mainWindow.satellites, mainWindow.originOrbit)
         mainWindow.originOrbit = newInert
-        let lanes = satClusterK()
         sats = sats.map((sat, ii) => {
             let relPos = Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sat.inertPos.slice(0,3), sat.inertPos.slice(3,6))
             relPos = math.squeeze([...relPos.rHcw, ...relPos.drHcw])
@@ -6201,18 +6202,17 @@ function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime)
     return depRicFinal
 }
 
-function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites) {
+function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites, origin = mainWindow.originOrbit) {
     nClusters = nClusters > sats.length ? sats.length : nClusters
     nClusters = math.floor(nClusters)
-    let originECI = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+    let originECI = Object.values(Coe2PosVelObject(origin))
     sats = sats.map(s => {
         let satRic = Object.values(s.position)
         let satEci = Ric2Eci(satRic.slice(0,3), satRic.slice(3,6), originECI.slice(0,3), originECI.slice(3,6))
         let y = satEci.rEcci[1]
         let x = satEci.rEcci[0]
-        return {long: Math.tan(y/x) * 180 / Math.PI, cluster: undefined}
+        return {long: Math.atan2(y,x) * 180 / Math.PI, cluster: undefined}
     })
-    console.log(sats.map(s => s.long).sort());
     let maxLong = math.max(sats.map(s => s.long))
     let minLong = math.min(sats.map(s => s.long))
     let clusters = math.range(maxLong, minLong, -(maxLong - minLong) / (nClusters - 1), true)._data
