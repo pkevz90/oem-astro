@@ -14,7 +14,7 @@ addButton.parentNode.insertBefore(newNode, addButton);
 // Div to lock and unlock
 const lockDiv = document.createElement("div")
 lockDiv.style.position = 'fixed'
-lockDiv.style.top = '15%'
+lockDiv.style.top = '5%'
 lockDiv.style.right = '-25%'
 lockDiv.innerText = 'test'
 lockDiv.style.transition = 'right 0.5s'
@@ -135,7 +135,7 @@ class windowCanvas {
             }
         },
         dataReqs: [],
-        fontSize: 10
+        fontSize: 12.5
     };
     makeGif = {
         start: false,
@@ -574,7 +574,7 @@ class windowCanvas {
         this.relativeData.dataReqs.forEach(req => {
             ctx.font = "bold " + textSize + "pt Courier";
             let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0);
-            ctx.fillText(this.satellites[req.origin].name + String.fromCharCode(8594) + this.satellites[req.target].name, location[0], location[1]);
+            ctx.fillText(shortenString(this.satellites[req.origin].name, 12) + String.fromCharCode(8594) + shortenString(this.satellites[req.target].name,12), location[0], location[1]);
             ctx.font = textSize + 'px Courier';
             location[1] += textSize*1.1
 
@@ -1368,7 +1368,7 @@ window.addEventListener('keyup', key => {
 })
 window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
-    if (mainWindow.panelOpen) return;
+    if (mainWindow.panelOpen || event.target.id !== 'main-plot') return;
     if (mainWindow.burnStatus.type === 'waypoint') {
         let tranTimeDelta = event.deltaY > 0 ? -300 : 1800
         document.querySelector('#time-slider-range').value = Number(document.querySelector('#time-slider-range').value) + tranTimeDelta
@@ -1589,19 +1589,20 @@ function updateLockScreen() {
     let out = ''
     let lanes = satClusterK()
     console.log(lanes);
+    let height = 0.86 * window.innerHeight
+    out += `<div class="no-scroll" style="overflow: scroll; max-height: ${height}px">`
     lanes.forEach((lane, ii) => {
         out += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
         lane.forEach(sat => {
             let checked = mainWindow.satellites[sat].locked ? '' : 'checked'
-            let side = mainWindow.satellites[sat].side
             out += `<div style="text-align: right">
                         <label style="cursor: pointer; padding: 5px" for="lock-${sat}">${mainWindow.satellites[sat].name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${sat}" id="lock-${sat}" type="checkbox"/>
                         <button onclick="changeOrigin(${sat})">Center</button>
                     </div>`
-
         })
     })
     out += `
+        </div>
         <div>
             # Lanes<input step="1" oninput="changeNumLanes(this)" style="width: 5ch;" type="number" value="${mainWindow.nLane}"/>
         </div>
@@ -3897,7 +3898,7 @@ function drawSatellite(satellite = {}) {
     ctx.textBaseline = 'middle';
     let letterY = pixelPosition[1] + shapeHeight / 2 + size * 2.5
     ctx.font = `${size * 5}px Courier`;
-    ctx.fillText(name ? name : '', pixelPosition[0], letterY);
+    ctx.fillText(name ? shortenString(name) : '', pixelPosition[0], letterY);
 }
 
 function getRelativeData(n_target, n_origin, intercept = true) {
@@ -6928,4 +6929,8 @@ function updateWhiteCellWindow() {
 window.onbeforeunload = () => {
     whiteCellWindow.close()
     instructionWindow.close()
+}
+
+function shortenString(str = 'teststring12345', n=8) {
+    return str.length > n ? str.slice(0,n-2) + '...' : str
 }
