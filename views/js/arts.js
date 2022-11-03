@@ -42,6 +42,7 @@ class windowCanvas {
     plotWidth = 200;
     plotHeight;
     plotCenter = 0;
+    stringLimit = [0,8];
     error = { // at right after manuever while generating J2000 states, halves every hour
         neutral: {p: 25.6, v: 36.158}, // Full Error
         friendly: {p: 25.6 / 3, v: 36.158 / 3}, // reduced error
@@ -2844,6 +2845,9 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     mainWindow.startDate = startDate
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     mainWindow.scenarioLength = Number(document.querySelector('#scen-length-input').value === '' ? document.querySelector('#scen-length-input').placeholder : document.querySelector('#scen-length-input').value)
+    let strStart = Number(document.querySelector('#str-start-input').value === ''? document.querySelector('#str-start-input').placeholder : document.querySelector('#str-start-input').value)
+    let strEnd = Number(document.querySelector('#str-end-input').value === ''? document.querySelector('#str-end-input').placeholder : document.querySelector('#str-end-input').value)
+    mainWindow.stringLimit = [strStart - 1, strEnd]
     document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
     closeAll();
 })
@@ -3007,6 +3011,8 @@ function openPanel(button) {
         changeOriginInput({id: 'coe-radio'})
         document.querySelector('#scen-length-input').value = ''
         document.querySelector('#scen-length-input').placeholder = mainWindow.scenarioLength
+        document.querySelector('#str-start-input').placeholder = mainWindow.stringLimit[0] + 1
+        document.querySelector('#str-end-input').placeholder = mainWindow.stringLimit[1]
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     // mainWindow.panelOpen = true;
@@ -6929,6 +6935,6 @@ window.onbeforeunload = () => {
     instructionWindow.close()
 }
 
-function shortenString(str = 'teststring12345', n=8) {
-    return str.length > n ? str.slice(0,n-2) + '...' : str
+function shortenString(str = 'teststring12345', n=mainWindow.stringLimit[1], start = mainWindow.stringLimit[0]) {
+    return str.length > n ? str.slice(start,n+start-1) + String.fromCharCode(8230) : str
 }
