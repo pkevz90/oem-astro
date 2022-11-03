@@ -5644,8 +5644,9 @@ function changeOrigin(satIn = 1, time = 0) {
         sun = math.dotDivide(sun, math.norm(sun))
         mainWindow.initSun = sun
         mainWindow.mm = (398600.4418 / newInert.a ** 3) ** (1/2)
+
+        let lanes = satClusterK(mainWindow.nClusters, mainWindow.satellites, mainWindow.originOrbit)
         mainWindow.originOrbit = newInert
-        let lanes = satClusterK()
         sats = sats.map((sat, ii) => {
             let relPos = Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sat.inertPos.slice(0,3), sat.inertPos.slice(3,6))
             relPos = math.squeeze([...relPos.rHcw, ...relPos.drHcw])
@@ -6207,16 +6208,17 @@ function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime)
     return depRicFinal
 }
 
-function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites) {
+function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites, origin = mainWindow.originOrbit) {
     nClusters = nClusters > sats.length ? sats.length : nClusters
     nClusters = math.floor(nClusters)
+    let originECI = Object.values(Coe2PosVelObject(origin))
     sats = sats.map(s => {
-        let a = mainWindow.originOrbit.a
-        let x = s.position.r + a
-        let y = s.position.i
-        return {long: Math.tan(y/x) * 180 / Math.PI, cluster: undefined}
+        let satRic = Object.values(s.position)
+        let satEci = Ric2Eci(satRic.slice(0,3), satRic.slice(3,6), originECI.slice(0,3), originECI.slice(3,6))
+        let y = satEci.rEcci[1]
+        let x = satEci.rEcci[0]
+        return {long: Math.atan2(y,x) * 180 / Math.PI, cluster: undefined}
     })
-
     let maxLong = math.max(sats.map(s => s.long))
     let minLong = math.min(sats.map(s => s.long))
     let clusters = math.range(maxLong, minLong, -(maxLong - minLong) / (nClusters - 1), true)._data
@@ -6460,7 +6462,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
     mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = math.concat(mFinal, mC);
     //tB1
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1 - 0.0001, tB2, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1 - tB1 * 0.01, tB2, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -6469,7 +6471,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m1.yd],
         [m1.zd]
     ];
-    m2 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1 + 0.0001, tB2, tF, a, n);
+    m2 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1 + tB1 * 0.01, tB2, tF, a, n);
     m2 = [
         [m2.x],
         [m2.y],
@@ -6478,7 +6480,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    mC = math.dotDivide(math.subtract(m2, m1), 2 * tB1 * 0.01);
     mFinal = math.concat(mFinal, mC);
     //alpha2
     m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2 - 0.0001, phi2, tB1, tB2, tF, a, n);
@@ -6523,7 +6525,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
     mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = math.concat(mFinal, mC);
     //tB2
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2 - 0.0001, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2 - tB2 * 0.01, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -6532,7 +6534,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m1.yd],
         [m1.zd]
     ];
-    m2 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2 + 0.0001, tF, a, n);
+    m2 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1, tB2 + tB2 * 0.01, tF, a, n);
     m2 = [
         [m2.x],
         [m2.y],
@@ -6541,7 +6543,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    mC = math.dotDivide(math.subtract(m2, m1), 2 * tB2 * 0.01);
     mFinal = math.concat(mFinal, mC);
     return mFinal;
 }
