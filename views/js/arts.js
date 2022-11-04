@@ -6011,12 +6011,13 @@ function handleTleFile(file) {
     file = file.split(/\n/)
     let tleState = []
     for (let index = 0; index < file.length; index++) {
-        if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
+        // if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
+        if (file[index].search(/1 \d{5}/) !== -1) {
             // Get tle data
-            let line1 = file[index].split(/\s+/)
             let line2 = file[index+1].split(/\s+/)
+            let epoch = file[index].match(/\d{5}.\d{8}/)[0]
             let sat = {
-                epoch: new Date(`20` + line1[3].slice(0,2),0,line1[3].slice(2,5),0,0,Number(line1[3].slice(5))*86400),
+                epoch: new Date(`20` + epoch.slice(0,2),0,epoch.slice(2,5),0,0,Number(epoch.slice(5))*86400),
                 name: line2[1],
                 orbit: {
                     a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3),
@@ -6033,22 +6034,12 @@ function handleTleFile(file) {
                 if (tleState[otherSat].epoch < sat.epoch) tleState.splice(otherSat,1,sat)
                 continue
             }
-            tleState.push({
-                epoch: new Date(`20` + line1[3].slice(0,2),0,line1[3].slice(2,5),0,0,Number(line1[3].slice(5))*86400),
-                name: line2[1],
-                orbit: {
-                    a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3),
-                    e: Number('0.' + line2[4]),
-                    i: Number(line2[2]) * Math.PI / 180,
-                    raan: Number(line2[3]) * Math.PI / 180,
-                    arg: Number(line2[5]) * Math.PI / 180,
-                    tA: Number(line2[6]) * Math.PI / 180
-                }
-            })
+            tleState.push(sat)
             index++
         }
         
     }
+    console.log(tleState);
     let baseEpoch = tleState[0].epoch
     mainWindow.originOrbit = tleState[0].orbit
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
