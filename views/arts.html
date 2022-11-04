@@ -75,7 +75,7 @@
                 <option value="10"></option>
                 <option value="1"></option>
             </datalist>
-            <div style="margin: 20px 5px">Color</sub> <input  list="sat-input-color-picker" class="sat-style-input" style="width: 7em;" value="#ff0000" type="color"></div>
+            <div style="margin: 20px 5px">Color</sub> <input  list="sat-input-color-picker2" class="sat-style-input" style="width: 7em;" value="#ff0000" type="color"></div>
             <datalist id="sat-input-color-picker">
                 <option value="#c86464"></option>
                 <option value="#64c864"></option>
@@ -120,6 +120,8 @@
             <div style="margin: 20px 5px">Scenario Length <input id="scen-length-input" type="Number" min="0" max="360" step="1"> hrs</div>
             <div style="margin: 20px 5px">String Limits <input id="str-start-input" type="Number" min="0" max="360" step="1"> to <input id="str-end-input" type="Number" min="0" max="360" step="1"></div>
             <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="openWhiteCellWindow()" class="close-button panel-button hoverable noselect">Open White Cell</div>
+            <div id="upload-scenario-button" style="font-size: 1.5em; padding: 14px 4px;"  onclick="uploadScenario(event)" class="close-button panel-button hoverable noselect">Import .SAS File<input oninput="uploadScenario(event)" style="display: none" type="file" id="upload-sas-input" accept="*.sas, *.sasm"/></div>
+            <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="exportScenario()" class="close-button panel-button hoverable noselect">Export .SAS File</div>
             <div style="font-size: 1.5em; padding: 14px 4px;"  id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
             <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
         </div>

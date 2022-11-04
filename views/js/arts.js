@@ -1,16 +1,10 @@
-var stopWaypoint = 0;
-
+let appAcr = 'ROTS'
+let appName = 'Relative Orbital Trajectory System'
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
 document.getElementsByClassName('panel-button')[0].remove();
 document.getElementsByTagName('input')[16].setAttribute('list','name-list');
-let addButton = document.getElementById('add-satellite-button');
-let newNode = addButton.cloneNode()
-newNode.onclick = uploadTles
-newNode.id = 'tle-upload';
-newNode.innerHTML = 'Add State File<input oninput="uploadTles()" style="display: none" type="file" id="tle-file"/>';
-addButton.parentNode.insertBefore(newNode, addButton);
 // Div to lock and unlock
 const lockDiv = document.createElement("div")
 lockDiv.style.position = 'fixed'
@@ -1478,14 +1472,10 @@ function startContextClick(event) {
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
                 <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
-                <input list="sat-color-picker" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
-                <datalist id="sat-color-picker">
-                    <option value="#c86464"></option>
-                    <option value="#64c864"></option>
-                    <option value="#6464c8"></option>
-                    <option value="#c864c8"></option>
-                    <option value="#969696"></option>
-                    <option value="#000000"></option>
+                <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+                <datalist id="sat-color-picker2">
+                    <option>#ff0000</option>
+                    <option>#0000ff</option>
                 </datalist>
                 <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
                     <option value=""></option>
@@ -1553,8 +1543,7 @@ function startContextClick(event) {
             ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
-            <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import Scenario</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadScenario(event)"></div>
-            <div class="context-item" onclick="generateJ2000File(event)">Export Scenario</div>
+            <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import States</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadTles(event)"></div>
             <div class="context-item" onclick="openInstructionWindow()" id="instructions">Instructions</div>
             `
 
@@ -1587,6 +1576,7 @@ function changeSide(sat, side="neutral") {
 }
 
 function updateLockScreen() {
+    if (mainWindow.satellites.length === 0) return
     let out = ''
     let lanes = satClusterK()
     console.log(lanes);
@@ -1651,6 +1641,7 @@ function handleContextClick(button) {
         let sat = button.parentElement.sat
         let out  = `
            <div class="context-item" onclick="handleContextClick(this)" id="display-data-2">Confirm</div>
+           <div class="no-scroll" style="max-height: 300px; overflow: scroll">
         `
        for (let index = 0; index < mainWindow.satellites.length; index++) {
           if (index === sat || mainWindow.satellites[index].locked) continue
@@ -1658,6 +1649,7 @@ function handleContextClick(button) {
           if (mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) === sat && Number(req.target) === index).length > 0) checked = 'checked'
           out += `<div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" ${checked} id="${index}-box"/><label style="cursor: pointer" for="${index}-box">${mainWindow.satellites[index].name}</label></div>`
        }
+       out += '/div>'
 
        button.parentElement.innerHTML = out
        let cm = document.getElementById('context-menu')
@@ -2852,10 +2844,12 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     closeAll();
 })
 
-function uploadScenario() {
-    let screenAlert = document.getElementsByClassName('screen-alert');
-    if (screenAlert.length > 0) screenAlert[0].remove();
+function uploadScenario(event) {
+    if (event.target.id === 'upload-scenario-button') return document.querySelector('#upload-sas-input').click()
+    if (event.path[0].files[0] === undefined) return
     loadFileAsText(event.path[0].files[0])
+    event.target.value = ''
+    closeAll()
 }
 
 function toStkFormat(time) {
@@ -2865,7 +2859,6 @@ function toStkFormat(time) {
 }
 
 function loadFileAsText(fileToLoad) {
-
     var fileReader = new FileReader();
     fileReader.onload = function (fileLoadedEvent) {
         var textFromFileLoaded = fileLoadedEvent.target.result;
@@ -2873,6 +2866,8 @@ function loadFileAsText(fileToLoad) {
         mainWindow.loadDate(textFromFileLoaded);
         mainWindow.setAxisWidth('set', mainWindow.plotWidth);
     };
+    
+    console.log(fileToLoad.type);
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
 
@@ -5877,25 +5872,23 @@ function showLogo() {
     ctx.textBaseline = 'alphabetic'
     ctx.textAlign = 'center'
     ctx.font = '190px sans-serif'
-    ctx.fillText('ROTS', cnvs.width / 2, cnvs.height / 2)
+    ctx.fillText(appAcr, cnvs.width / 2, cnvs.height / 2)
     ctx.textBaseline = 'top'
     ctx.font = '24px Courier New'
-    ctx.fillText('Relative Orbital Trajectory System', cnvs.width / 2, cnvs.height / 2+2)
+    ctx.fillText(appName, cnvs.width / 2, cnvs.height / 2+2)
     ctx.textBaseline = 'alphabetic'
     ctx.fillText('Click anywhere to begin...', cnvs.width / 2, cnvs.height -30)
 }
 showLogo()
 
-function uploadTles() {
-    if (event.target.id === 'tle-upload') return document.getElementById('tle-file').click()
-
+function uploadTles(event) {
+    console.log(event);
     if (event.path[0].files[0] === undefined) return
     loadFileTle(event.path[0].files[0])
-    document.getElementById('tle-file').value = ''
 }
 
 function tellInputStateFileType(file) {
-    // Tells if file comes straight from STK or the custom style
+    // Tells if file is J2000 or TLE file
     let testString = 'J2000 Position & Velocity'
     return file.search(testString) !== -1
 }
@@ -6014,74 +6007,86 @@ function handleStkJ200File(file) {
     }, 1000)
 }
 
+function handleTleFile(file) {
+    file = file.split(/\n/)
+    let tleState = []
+    for (let index = 0; index < file.length; index++) {
+        if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
+            // Get tle data
+            let line1 = file[index].split(/\s+/)
+            let line2 = file[index+1].split(/\s+/)
+            let sat = {
+                epoch: new Date(`20` + line1[3].slice(0,2),0,line1[3].slice(2,5),0,0,Number(line1[3].slice(5))*86400),
+                name: line2[1],
+                orbit: {
+                    a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3),
+                    e: Number('0.' + line2[4]),
+                    i: Number(line2[2]) * Math.PI / 180,
+                    raan: Number(line2[3]) * Math.PI / 180,
+                    arg: Number(line2[5]) * Math.PI / 180,
+                    tA: Number(line2[6]) * Math.PI / 180
+                }
+            }
+            // Check if tle already uploaded, if so see if tle from past
+            let otherSat = tleState.findIndex(el => el.name === sat.name)
+            if (otherSat !== -1) {
+                if (tleState[otherSat].epoch < sat.epoch) tleState.splice(otherSat,1,sat)
+                continue
+            }
+            tleState.push({
+                epoch: new Date(`20` + line1[3].slice(0,2),0,line1[3].slice(2,5),0,0,Number(line1[3].slice(5))*86400),
+                name: line2[1],
+                orbit: {
+                    a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3),
+                    e: Number('0.' + line2[4]),
+                    i: Number(line2[2]) * Math.PI / 180,
+                    raan: Number(line2[3]) * Math.PI / 180,
+                    arg: Number(line2[5]) * Math.PI / 180,
+                    tA: Number(line2[6]) * Math.PI / 180
+                }
+            })
+            index++
+        }
+        
+    }
+    let baseEpoch = tleState[0].epoch
+    mainWindow.originOrbit = tleState[0].orbit
+    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+    mainWindow.startDate = baseEpoch
+    tleState = tleState.map(s => {
+        return {
+            name: s.name,
+            orbit: propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
+        }
+
+    })
+    let sun = sunFromTime(baseEpoch)  
+    sun = math.squeeze(Eci2Ric(tleState[0].orbit.slice(0,3), tleState[0].orbit.slice(3,6), sun, [0,0,0]).rHcw)
+    sun = math.dotDivide(sun, math.norm(sun))
+    mainWindow.initSun = sun
+    mainWindow.satellites = []
+    tleState.forEach(st => {
+        let ricState = Eci2Ric(tleState[0].orbit.slice(0,3), tleState[0].orbit.slice(3,6), st.orbit.slice(0,3), st.orbit.slice(3,6))
+        ricState = {
+            r: ricState.rHcw[0][0],
+            i: ricState.rHcw[1][0],
+            c: ricState.rHcw[2][0],
+            rd: ricState.drHcw[0][0],
+            id: ricState.drHcw[1][0],
+            cd: ricState.drHcw[2][0]
+        }
+        mainWindow.satellites.push(new Satellite({
+            position: ricState,
+            name: st.name
+        }))
+    })
+}
+
 function loadFileTle(fileToLoad) {
     var fileReader = new FileReader();
     fileReader.onload = function (fileLoadedEvent) {
         if (tellInputStateFileType(fileLoadedEvent.target.result)) return handleStkJ200File(fileLoadedEvent.target.result)
-        
-        closeAll()
-        var text = fileLoadedEvent.target.result.split('\n');
-        let line = -1
-        let states = []
-        while (line < text.length-1) {
-            line++
-            let focusLine = text[line]
-            if (focusLine.search('properties') !== -1) {
-
-                let propLine = focusLine.split(',').map(s => s.split(':')).map(s => s.map(p => p.trim()))
-                propLine.shift()
-                let state = text[line + 1].split(/ {2,}/)
-                line++
-                let date = new Date(state.shift())
-                state = state.map(s => Number(s))
-                if (date == 'Invalid Date') continue
-                states.push({
-                    date,
-                    state,
-                    properties: propLine
-                })
-            }
-        }
-        let startTime = states[0].date
-        let chiefState = states[0].state
-
-        states = states.map(s => {
-            return {
-                state: propToTime(s.state, (startTime - s.date) / 1000, false),
-                properties: s.properties
-            }
-        }).map(s => {
-            let ricState = Eci2Ric(chiefState.slice(0,3), chiefState.slice(3,6), s.state.slice(0,3), s.state.slice(3,6))
-            return {
-                state: math.squeeze([...ricState.rHcw, ...ricState.drHcw]),
-                properties: s.properties
-            }
-        })
-
-        let sun = sunFromTime(startTime)
-        sun = math.squeeze(Eci2Ric(chiefState.slice(0,3), chiefState.slice(3,6), sun, [0,0,0]).rHcw)
-        sun = math.dotDivide(sun, math.norm(sun))
-        mainWindow.initSun = sun
-        mainWindow.satellites = []
-        mainWindow.startDate = startTime
-        mainWindow.originOrbit = PosVel2CoeNew(chiefState.slice(0,3), chiefState.slice(3,6))
-        mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
-        states.forEach(s => {
-            let options = {}
-            options.position = {
-                r: s.state[0],
-                i: s.state[1],
-                c: s.state[2],
-                rd: s.state[3],
-                id: s.state[4],
-                cd: s.state[5],
-            }
-            options.locked = math.norm(Object.values(options.position).slice(0,3)) > 2500 || math.norm(Object.values(options.position).slice(3,6)) > 0.075
-            s.properties.forEach(prop => {
-                options[prop[0]] = prop[1]
-            })
-            mainWindow.satellites.push(new Satellite(options))
-        })
+        else return handleTleFile(fileLoadedEvent.target.result)
     };
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
