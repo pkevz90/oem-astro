@@ -6318,7 +6318,7 @@ function draw3dScene(az = azD, el = elD) {
             color: sat.color,
             position: pos,
             size: 10,
-            text: sat.name,
+            text: shortenString(sat.name),
             shape: sat.shape
         })
     })
