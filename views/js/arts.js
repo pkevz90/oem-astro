@@ -4641,8 +4641,7 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     if (e[2] < 0 || (inc < 1e-8 && e[1] < 0)) {
         ar = 2 * Math.PI - ar;
     }
-    let ta;
-    let taDot = math.dot(r, e) / rn / en
+    let ta, taDot = math.dot(r, e) / rn / math.norm(e)
     if (taDot > 1) {
         ta = 0;
     } else if (taDot < -1) {
@@ -4650,17 +4649,9 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     } else {
         ta = Math.acos(taDot);
     }
-    if (math.dot(v, e) > 0 || math.dot(v, r) < 0) {
+    if (math.dot(v, e) > 0 || math.dot(v, r) < (-1e-8)) {
         ta = 2 * Math.PI - ta;
     }
-    // console.log({
-    //     a: a,
-    //     e: en,
-    //     i: inc,
-    //     raan: ra,
-    //     arg: ar,
-    //     tA: ta
-    // });
     return {
         a: a,
         e: en,
@@ -6050,13 +6041,15 @@ function importStates(states, tle = true) {
     
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
     let baseEpoch = states[0].epoch
+    let baseUTCDiff = baseEpoch.getUTCHours() - baseEpoch.getHours()
     mainWindow.originOrbit = states[0].orbit
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     mainWindow.startDate = baseEpoch
     states = states.map(s => {
+        let utcDiff = s.epoch.getUTCHours() - s.epoch.getHours()
         return {
             name: s.name,
-            orbit: propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
+            orbit: propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch + (utcDiff - baseUTCDiff)*3600000) / 1000, false)
         }
 
     })
