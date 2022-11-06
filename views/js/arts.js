@@ -5882,7 +5882,6 @@ function showLogo() {
 showLogo()
 
 function uploadTles(event) {
-    console.log(event);
     if (event.path[0].files[0] === undefined) return
     loadFileTle(event.path[0].files[0])
 }
@@ -6010,6 +6009,7 @@ function handleStkJ200File(file) {
 function handleTleFile(file) {
     file = file.split(/\n/)
     let tleState = []
+    let tleRawStates = []
     for (let index = 0; index < file.length; index++) {
         // if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
         if (file[index].search(/1 \d{5}/) !== -1) {
@@ -6028,6 +6028,7 @@ function handleTleFile(file) {
                     tA: Number(line2[6]) * Math.PI / 180
                 }
             }
+            tleRawStates.push(sat)
             // Check if tle already uploaded, if so see if tle from past
             let otherSat = tleState.findIndex(el => el.name === sat.name)
             if (otherSat !== -1) {
@@ -6039,12 +6040,19 @@ function handleTleFile(file) {
         }
         
     }
-    console.log(tleState);
-    let baseEpoch = tleState[0].epoch
-    mainWindow.originOrbit = tleState[0].orbit
+    openTleWindow(tleRawStates)
+    return
+    
+}
+
+function importStates(states, tle = true) {
+    
+    let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
+    let baseEpoch = states[0].epoch
+    mainWindow.originOrbit = states[0].orbit
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     mainWindow.startDate = baseEpoch
-    tleState = tleState.map(s => {
+    states = states.map(s => {
         return {
             name: s.name,
             orbit: propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
@@ -6052,12 +6060,21 @@ function handleTleFile(file) {
 
     })
     let sun = sunFromTime(baseEpoch)  
-    sun = math.squeeze(Eci2Ric(tleState[0].orbit.slice(0,3), tleState[0].orbit.slice(3,6), sun, [0,0,0]).rHcw)
+    sun = math.squeeze(Eci2Ric(states[0].orbit.slice(0,3), states[0].orbit.slice(3,6), sun, [0,0,0]).rHcw)
     sun = math.dotDivide(sun, math.norm(sun))
     mainWindow.initSun = sun
     mainWindow.satellites = []
-    tleState.forEach(st => {
-        let ricState = Eci2Ric(tleState[0].orbit.slice(0,3), tleState[0].orbit.slice(3,6), st.orbit.slice(0,3), st.orbit.slice(3,6))
+    states.forEach(st => {
+        let ricState = Eci2Ric(states[0].orbit.slice(0,3), states[0].orbit.slice(3,6), st.orbit.slice(0,3), st.orbit.slice(3,6))
+        let existingSat = satCopies.filter(sat => sat.name.match(st.name) !== null)
+        let color, shape, side, a, name
+        if (existingSat.length > 0) {
+            color = existingSat[0].color
+            shape = existingSat[0].shape
+            side = existingSat[0].side
+            a = existingSat[0].a,
+            name = existingSat[0].name
+        }
         ricState = {
             r: ricState.rHcw[0][0],
             i: ricState.rHcw[1][0],
@@ -6068,7 +6085,11 @@ function handleTleFile(file) {
         }
         mainWindow.satellites.push(new Satellite({
             position: ricState,
-            name: st.name
+            name: name === undefined ? st.name : name,
+            color,
+            a,
+            shape,
+            side
         }))
     })
 }
@@ -6758,10 +6779,16 @@ function openInstructionWindow() {
                             <ul>
                                 <li>Position and Vecocity Report from STK Report and Graph Manager</li>
                                 <li>Can contain any number of satellites</li>
+                                <li>Import with <em>Import State</em> button on right-click menu</li>
                             </ul>
                         </li>
-                        <li>Enter origin J2000 state manually under <em>Options</em>, then add satellites with <em>Satellite Menu</em></li>
-                        <li> Import .SAS file with <em>Import Scenario</em></li>
+                        <li>Import .tce TLE file with <em>Import State</em> button on right-click menu
+                            <ul>
+                                <li>If satellite name contains 5 digit TLE number sat characteristics will be maintained</li>
+                            </ul>
+                        </li>
+                        <li>Enter origin J2000 origin state manually under <em>Options</em>, then add satellites with <em>Satellite Menu</em></li>
+                        <li>Import .SAS file inside <em>Opttions</em> with <em>Import .SAS File</em></li>
                     </ul>
                 </li>
                 <li>By default, all burns are computed with finite accelerations, goto for impulsive burns in 1000 mm/s<sup>2</sup></li>
@@ -6794,7 +6821,21 @@ function openInstructionWindow() {
                 </li>
             </ul>
         </li>
+        <li>
+            White Cell
+            <ul>
+                <li>White Cell Details</li>
+            </ul>
+        </li>
         <li>Spacebar changes current view</li>
+        <li>
+            Hot Keys
+            <ul>
+                <li>Hot Key Option #1</li>
+                <li>Hot Key Option #2</li>
+                <li>Hot Key Option #3</li>
+            </ul>
+        </li>
     </ul>
     </div>`
     instructionWindow.document.write(instructions)
@@ -6935,4 +6976,74 @@ window.onbeforeunload = () => {
 
 function shortenString(str = 'teststring12345', n=mainWindow.stringLimit[1], start = mainWindow.stringLimit[0]) {
     return str.length > n ? str.slice(start,n+start-1) + String.fromCharCode(8230) : str
+}
+
+async function testFetch() {
+    fetch('./fetchTest.txt').then(response => response.text()).then(txt => console.log(txt))
+}
+
+let tleWindow
+function openTleWindow(tleSatellites) {
+    tleWindow = window.open('', 'instructions', "width=600px,height=600px")
+    tleWindow.importTleChoices = (el) => {
+        function True2Eccentric(e, ta) {
+            return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+        }
+        function Eccentric2True(e,E) {
+            return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
+        }
+        function solveKeplersEquation(M,e) {
+            let E = M;
+            let del = 1;
+            while (Math.abs(del) > 1e-6) {
+                del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+                E -= del;
+            }
+            return E;
+        }
+        let states = []
+        let els = el.parentElement.parentElement.querySelectorAll('.tle-sat-div')
+        for (let index = 0; index < els.length; index++) {
+            let name = els[index].querySelector('.import-name').innerText
+            let tleOptions = els[index].querySelectorAll('.tle-option-div')
+            tleOptions = [...tleOptions]
+            let option = tleOptions.find(opt => {
+                return opt.querySelector('input').checked
+            })
+            let state = option.getAttribute('orbit').split('x').map(s => Number(s))
+            let epoch = new Date(option.querySelector('.tle-epoch').innerText)
+            states.push({
+                name, 
+                orbit: {
+                    a: state[0],
+                    e: state[1],
+                    i: state[2],
+                    raan: state[3],
+                    arg: state[4],
+                    tA: Eccentric2True(state[1], solveKeplersEquation(state[5], state[1]))
+                }, 
+                epoch
+            })
+        }
+        importStates(states);
+    }
+    
+    setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
+    let uniqueSats = tleSatellites.filter((element, index, array) => array.findIndex(el => el.name === element.name) === index).map(sat => sat.name)
+    tleWindow.tleSatellites = tleSatellites
+    tleWindow.document.body.innerHTML = `
+        <div>ARTS TLE Import Tool</div>
+        <div class="no-scroll" style="max-height: 50%; overflow: scroll">
+        ${uniqueSats.map(satName => {
+            let outHt = `<div class="tle-sat-div"><div class="import-name">${satName}</div>`
+            tleSatellites.filter(sat => sat.name === satName).sort((a,b)=>a.epoch-b.epoch).forEach((matchSat, ii, arr) => {
+                // console.log(arr.length, ii, ii === (arr.length-1));
+                outHt += `<div class="tle-option-div" orbit="${Object.values(matchSat.orbit).join('x')}"style="margin-left: 20px"><input ${ii === (arr.length-1) ? 'checked' : ''} name="${matchSat.name}-tle-radio" type="radio"/><span class="tle-epoch">${toStkFormat(matchSat.epoch.toString())}</span></div>`
+            })
+            outHt += '</div>'
+            return outHt
+        }).join('')}
+        </div>
+        <div><button onclick="importTleChoices(this)">Import TLE States</button></div>
+    `
 }
