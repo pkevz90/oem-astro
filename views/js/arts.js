@@ -5294,7 +5294,7 @@ function generateJ2000File(event) {
         fileText += `\n\n${startEphem}`
         let oldState = {...sat.position}
         let oldBurns = [...sat.burns]
-        let lastBurnTime = [-18000, ...sat.burns.filter(s => s.time < dispTime).map(s => s.time)]
+        let lastBurnTime = [-86400, ...sat.burns.filter(s => s.time < dispTime).map(s => s.time)]
         lastBurnTime = lastBurnTime[lastBurnTime.length - 1]
         let error = errorFromTime(mainWindow.scenarioTime - lastBurnTime, mainWindow.error[sat.side])
         errors.push(error)
@@ -5901,6 +5901,7 @@ function setSun(time=mainWindow.startDate, origin = mainWindow.originOrbit) {
 }
 
 function handleStkJ200File(file) {
+    document.getElementById('context-menu')?.remove();
     let satNames = file.split('\n')[1].split('Satellite-')[1].split(':  J')[0].split(',').map(name => name.trim())
     file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2).filter(row => row !== '').map(row => row.split(/ {2,}/)).map(row => {
         return [
@@ -6984,6 +6985,7 @@ async function testFetch() {
 
 let tleWindow
 function openTleWindow(tleSatellites) {
+    document.getElementById('context-menu')?.remove();
     tleWindow = window.open('', 'instructions', "width=600px,height=600px")
     tleWindow.importTleChoices = (el) => {
         function True2Eccentric(e, ta) {
