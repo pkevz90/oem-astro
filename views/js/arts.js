@@ -6040,9 +6040,11 @@ function handleTleFile(file) {
 function importStates(states, tle = true) {
     
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
-    let baseEpoch = states[0].epoch
+    // Use epoch from last tle
+    let baseEpoch = states[states.length - 1].epoch
+    console.log(baseEpoch);
     let baseUTCDiff = baseEpoch.getUTCHours() - baseEpoch.getHours()
-    mainWindow.originOrbit = states[0].orbit
+    mainWindow.originOrbit = states[states.length - 1].orbit
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     mainWindow.startDate = baseEpoch
     states = states.map(s => {
@@ -6874,6 +6876,9 @@ function openWhiteCellWindow() {
         mainWindow.satellites[sat].genBurns();
         updateWhiteCellWindow()
     }
+    whiteCellWindow.genTles = () => {
+        generateTleHistory()
+    }
     closeAll()
     updateWhiteCellWindow()
 }
@@ -6956,6 +6961,9 @@ function updateWhiteCellWindow() {
         </div>
         <div style="width: 100%; margin-top: 30px">
             <button onclick="exportStates(this)" style="width: 100%">Export Current State</button>
+        </div>
+        <div style="width: 100%; margin-top: 30px">
+            <button onclick="genTles(this)" style="width: 100%">Export TLE History</button>
         </div>
     </div>
     `
@@ -7041,4 +7049,91 @@ function openTleWindow(tleSatellites) {
         </div>
         <div><button onclick="importTleChoices(this)">Import TLE States</button></div>
     `
+}
+
+function tleFromState(ricState = [0,0,0,0,0,0], time = mainWindow.scenarioTime, ssnNum = '00001') {
+    function pad(n = 10.135, p = 3, a = 4) {
+        n = Number(n.toFixed(5))
+        n = n.toString().split('.')
+        if (n.length === 1) {
+            n.push('0')
+        }
+        n[1] = n[1].slice(0,a)
+        while (n[0].length < p) {
+            n[0] = '0' + n[0]
+        }
+        while (n[1].length < a) {
+            n[1] += '0'
+        }
+        return a > 0 ? n.join('.') : n[0]
+    }
+    ssnNum = pad(ssnNum,5,0);
+    function True2Eccentric(e, ta) {
+        return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+    }
+    let epoch = new Date(mainWindow.startDate - (-time*1000))
+    let year = epoch.getFullYear()
+    let month = epoch.getMonth()
+    let leapYear = !((year % 4 !== 0) || ((year % 100 === 0) && (year % 400 !== 0)))
+    let dayCount = [31, (leapYear ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    let jd = dayCount.slice(0,month).reduce((a,b) => a + b) + epoch.getDate()
+    let fractionalDay = (epoch.getHours() * 3600 + epoch.getMinutes() * 60 +  epoch.getSeconds()) / 86400
+    jd += fractionalDay
+    jd = year.toFixed(0).slice(2) + jd.toFixed(8)
+    let originOrbit = JSON.parse(JSON.stringify(mainWindow.originOrbit))
+    originOrbit.tA = propTrueAnomaly(originOrbit.tA, originOrbit.a, originOrbit.e, time)
+    originOrbit = Object.values(Coe2PosVelObject(originOrbit))
+    let eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), originOrbit.slice(0,3), originOrbit.slice(3,6))
+    eciState = [...eciState.rEcci, ...eciState.drEci]
+    console.log(eciState);
+    eciState = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
+    console.log(eciState);
+    eciState.mA = True2Eccentric(eciState.e, eciState.tA)
+    eciState.mA = eciState.mA - eciState.e * Math.sin(eciState.mA)
+    eciState.mm = 86400 / (2 * Math.PI * (eciState.a ** 3 / 398600.4418) ** 0.5)
+    eciState.i *= 180 / Math.PI
+    eciState.raan *= 180 / Math.PI
+    eciState.raan = eciState.raan < 0 ? eciState.raan + 360 : eciState.raan
+    eciState.mA *= 180 / Math.PI
+    eciState.mA = eciState.mA < 0 ? eciState.mA + 360 : eciState.mA
+    eciState.arg *= 180 / Math.PI
+    eciState.arg = eciState.mA < 0 ? eciState.arg + 360 : eciState.arg
+    let coe = `1 ${ssnNum}           ${jd} -.00000000  00000-0  00000-0 0  9992\n2 ${ssnNum} ${pad(eciState.i)} ${pad(eciState.raan)} ${eciState.e.toFixed(7).slice(2)} ${pad(eciState.arg)} ${pad(eciState.mA)} ${pad(eciState.mm,2,13)}1`
+    // downloadFile('tle.tce', coe)
+    return coe
+}
+
+function tleFromTime(time = mainWindow.scenarioTime) {
+    let out = ``
+    mainWindow.satellites.forEach((sat, ii) => {
+        let ricState = sat.currentPosition({time})
+        ricState = math.squeeze(Object.values(ricState))
+        console.log(ricState);
+        out += tleFromState(ricState, time, ii+1) + '\n'
+    })
+    return out
+}
+
+function generateTleHistory() {
+    let out = ``
+    let satTleTimes = mainWindow.satellites.map(sat => [0, ...sat.burns.map(b => b.time+1800)])
+    console.log(satTleTimes);
+    let oldTime = mainWindow.scenarioTime + 0
+    mainWindow.desired.scenarioTime = mainWindow.scenarioLength*3600
+    mainWindow.scenarioTime = mainWindow.scenarioLength*3600
+    for (let index = 0; index < mainWindow.satellites.length; index++) mainWindow.satellites[index].calcTraj()
+    for (let index = 0; index < satTleTimes.length; index++) {
+        for (let ii = 0; ii < satTleTimes[index].length; ii++) {
+            let time = satTleTimes[index][ii]
+            let ricState = mainWindow.satellites[index].currentPosition({time})
+            ricState = math.squeeze(Object.values(ricState))
+            out += tleFromState(ricState, time, index+1) + '\n'
+            
+        }
+    }
+
+    mainWindow.desired.scenarioTime = oldTime
+    mainWindow.scenarioTime = oldTime
+    for (let index = 0; index < mainWindow.satellites.length; index++) mainWindow.satellites[index].calcTraj()
+    downloadFile('tle.tce', out)
 }
