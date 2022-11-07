@@ -4630,7 +4630,7 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
         ra = 2 * Math.PI - ra;
     }
     let ar
-    let arDot = math.dot(n, e) / (en < 1e-9 ? nn : en) / nn;
+    let arDot = math.dot(n, e) / (en < 1e-9 ? 1 : en) / nn;
     if (arDot > 1) {
         ar = 0;
     } else if (arDot < -1) {
@@ -4638,7 +4638,7 @@ function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639
     } else {
         ar = Math.acos(arDot);
     }
-    if (e[2] < 0 || (inc < 1e-8 && e[1] < 0)) {
+    if (e[2] < 0) {
         ar = 2 * Math.PI - ar;
     }
     let ta, taDot = math.dot(r, e) / rn / math.norm(e)
@@ -5916,6 +5916,8 @@ function handleStkJ200File(file) {
     satNames = satNames.filter((name, ii) => file[ii].length > 0)
     file = file.filter(t => t.length > 0)
     closeAll()
+    let baseUTCDiff = desiredTime.getUTCHours() - desiredTime.getHours()
+    
     let timeFile = file.map(sec => {
         let times = sec.map(row => Math.abs(row[0] - desiredTime))
         let minTime = math.min(times)
@@ -5924,7 +5926,10 @@ function handleStkJ200File(file) {
     }).map(sec => {
         let time = sec.shift()
         console.log(sec);
+        let utcDiff = time.getUTCHours() - time.getHours()
+        console.log((desiredTime - time) / 1000);
         sec = propToTime(sec, (desiredTime - time) / 1000, false)
+        console.log(sec);
         return sec
     })
     // See what satellite is focused on right now, if satellite is within new data, focus on it
