@@ -6511,7 +6511,6 @@ function hcwFiniteBurnTwoBurn(stateInit = {x: 00, y: 0, z: 0, xd: 0, yd: 0, zd: 
         
         F = twoBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[3][0], X[4][0], X[2][0], X[5][0], tf, a0, n);
         
-        console.log(math.squeeze(X), F);
         yErr = [
             [stateFinal[0][0] - F.x],
             [stateFinal[1][0] - F.y],
@@ -6523,6 +6522,7 @@ function hcwFiniteBurnTwoBurn(stateInit = {x: 00, y: 0, z: 0, xd: 0, yd: 0, zd: 
         S = proxOpsJacobianTwoBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], X[3][0], X[4][0], X[5][0], tf, n);
         invSSt = math.inv(math.multiply(S, math.transpose(S)));
         invS = math.multiply(math.transpose(S), invSSt);
+        console.log(S);
         // console.log(multiplyMatrix(math.transpose(S),invSSt))
         dX = math.multiply(invS, yErr);
         X = math.add(X, dX)
@@ -6555,6 +6555,7 @@ function hcwFiniteBurnTwoBurn(stateInit = {x: 00, y: 0, z: 0, xd: 0, yd: 0, zd: 
 
 function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, tF, n) {
     let m1, m2, mC, mFinal = [];
+    
     //alpha1
     m1 = twoBurnFiniteHcw(state, alpha1 - 0.0001, phi1, alpha2, phi2, tB1, tB2, tF, a, n);
     m1 = [
@@ -6577,7 +6578,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
     mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
     mFinal = mC;
     //phi1
-    m1 = twoBurnFiniteHcw(state, alpha1, phi1 - 0.0001, alpha2, phi2, tB1, tB2, tF, a, n);
+    m1 = twoBurnFiniteHcw(state, alpha1, phi1 - 0.01, alpha2, phi2, tB1, tB2, tF, a, n);
     m1 = [
         [m1.x],
         [m1.y],
@@ -6586,7 +6587,7 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m1.yd],
         [m1.zd]
     ];
-    m2 = twoBurnFiniteHcw(state, alpha1, phi1 + 0.0001, alpha2, phi2, tB1, tB2, tF, a, n);
+    m2 = twoBurnFiniteHcw(state, alpha1, phi1 + 0.01, alpha2, phi2, tB1, tB2, tF, a, n);
     m2 = [
         [m2.x],
         [m2.y],
@@ -6595,7 +6596,8 @@ function proxOpsJacobianTwoBurn(state, a, alpha1, phi1, tB1, alpha2, phi2, tB2, 
         [m2.yd],
         [m2.zd]
     ];
-    mC = math.dotDivide(math.subtract(m2, m1), 0.0002);
+    console.log(m1,m2);
+    mC = math.dotDivide(math.subtract(m2, m1), 0.02);
     mFinal = math.concat(mFinal, mC);
     //tB1
     m1 = twoBurnFiniteHcw(state, alpha1, phi1, alpha2, phi2, tB1 - tB1 * 0.01, tB2, tF, a, n);
@@ -7156,8 +7158,7 @@ function openTleWindow(tleSatellites) {
                 epoch
             })
         }
-        importStates(states);
-        tleWindow.close()
+        importStates(states)
     }
     
     setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
