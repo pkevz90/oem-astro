@@ -3207,8 +3207,6 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.000
         propTime += mainWindow.timeDelta
     }
     state = runge_kutta(twoBodyRpo, state, finalTime*tB - propTime, direction, time + propTime)
-    // console.log(state);
-    // let state0 = state.slice()
     propTime = finalTime * tB
     let propTwoBody = finalTime - propTime
     // console.log(propTwoBody);
@@ -3216,9 +3214,8 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.000
     //     state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime)
     //     propTime += mainWindow.timeDelta
     // }
-    // // state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
-    // console.log(math.norm(math.subtract(state, propRelMotionTwoBodyAnalytic(state0, propTwoBody))))
-    // console.log(state0);
+    // state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
+    // console.log(state);
     state = propRelMotionTwoBodyAnalytic(state, propTwoBody, time + propTime)
     // console.log(state);
     return {
@@ -4602,63 +4599,65 @@ function Ric2Eci(rHcw = [0,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindo
     }
 }
 
-function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
-    r = r.map(num => math.abs(num) < 1e-8 ? 0 : num)
-    v = v.map(num => math.abs(num) < 1e-8 ? 0 : num)
-    let mu = 398600.4418;
-    let rn = math.norm(r);
-    let vn = math.norm(v);
-    let h = math.cross(r, v);
-    let hn = math.norm(h);
-    let n = math.cross([0, 0, 1], h);
-    let nn = math.norm(n);
-    if (nn < 1e-9) {
-        n = [1, 0, 0];
-        nn = 1;
-    }
-    var epsilon = vn * vn / 2 - mu / rn;
-    let a = -mu / 2 / epsilon;
-    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r),  math.dotMultiply(math.dot(r, v), v)), mu)
-    let en = math.norm(e);
-    if (en < 1e-9) {
-        e = n.slice();
-        en = 0;
-    }
-    let inc = Math.acos(h[2] / hn);
-    let ra = Math.acos(n[0] / nn);
+// function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
+// function PosVel2CoeNew(r = [6524.834, 6862.875, 6448.296], v = [4.901327, 5.533756, -1.976341]) {
+function PosVel2CoeNew(r = [42164.14, 0, 0], v = [0, 3.0746611796284924, 0]) {
+    let mu = 398600.4418
+    let rn = math.norm(r)
+    let vn = math.norm(v)
+    let h = math.cross(r,v)
+    let hn = math.norm(h)
+    let n = math.cross([0,0,1], h)
+    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r), math.dotMultiply(math.dot(r, v), v)), mu)
+    let en = math.norm(e)
+    let specMechEn = vn ** 2 / 2 - mu / rn
+    let a = -mu / 2 / specMechEn
+    let i = math.acos(h[2] / hn)
+    let raan = math.acos(n[0] / math.norm(n))
     if (n[1] < 0) {
-        ra = 2 * Math.PI - ra;
+        raan = 2 * Math.PI - raan
     }
-    let ar
-    let arDot = math.dot(n, e) / (en < 1e-9 ? 1 : en) / nn;
-    if (arDot > 1) {
-        ar = 0;
-    } else if (arDot < -1) {
-        ar = Math.PI;
-    } else {
-        ar = Math.acos(arDot);
-    }
+    let arg = math.acos(math.dot(n, e) / math.norm(n) / en)
     if (e[2] < 0) {
-        ar = 2 * Math.PI - ar;
+        arg = 2 * Math.PI - arg
     }
-    let ta, taDot = math.dot(r, e) / rn / math.norm(e)
-    if (taDot > 1) {
-        ta = 0;
-    } else if (taDot < -1) {
-        ta = Math.PI;
-    } else {
-        ta = Math.acos(taDot);
+    let tA = math.acos(math.dot(e, r) / en / rn)
+    if (math.dot(r, v) < 0) {
+        tA = 2 * Math.PI - tA
     }
-    if (math.dot(v, e) > 0 || math.dot(v, r) < (-1e-8)) {
-        ta = 2 * Math.PI - ta;
+    let longOfPeri, argLat, trueLong
+    if (en < 1e-6 && i < 1e-6) {
+        trueLong = math.acos(r[0] / rn)
+        if (r[1] < 0) {
+            trueLong = 2 * Math.PI - trueLong
+        }
+        arg = 0
+        raan = 0
+        tA = trueLong 
+    }
+    else if (en < 1e-6) {
+        argLat = math.acos(math.dot(n, r) / math.norm(n) / rn)
+        if (r[2] < 0) {
+            argLat = 2 * Math.PI - argLat
+        }
+        arg = 0
+        tA = argLat
+    }
+    else if (i < 1e-6) {
+        longOfPeri = math.acos(e[0] / en)
+        if (e[1] < 0) {
+            longOfPeri = 2 * Math.PI - longOfPeri
+        }
+        raan = 0
+        arg = longOfPeri
     }
     return {
-        a: a,
+        a,
         e: en,
-        i: inc,
-        raan: ra,
-        arg: ar,
-        tA: ta
+        i,
+        raan,
+        arg,
+        tA
     };
 }
 
@@ -6126,7 +6125,132 @@ function sunFromTime(date = new Date()) {
     ]
 }
 
-function propToTime(state, dt, j2 = true) {
+// function elorb(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0]) {
+function elorb(state = [6524.834, 6862.875, 6448.296, 4.901327, 5.533756, -1.976341]) {
+    // From Vallado "Fudamentals of Astrodynamics and Applications" 2 ed. pg 120
+    let mu = 398600.4418
+    let r = state.slice(0,3) 
+    let rn = math.norm(r)
+    let v = state.slice(3,6)
+    let vn = math.norm(v)
+    let h = math.cross(r,v)
+    let hn = math.norm(h)
+    let n = math.cross([0,0,1], h)
+    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r), math.dotMultiply(math.dot(r, v), v)), mu)
+    let en = math.norm(e)
+    let specMechEn = vn ** 2 / 2 - mu / rn
+    let a = -mu / 2 / specMechEn
+    let i = math.acos(h[2] / hn)
+    let raan = math.acos(n[0] / math.norm(n))
+    if (n[1] < 0) {
+        raan = 2 * Math.PI - raan
+    }
+    let arg = math.acos(math.dot(n, e) / math.norm(n) / en)
+    if (e[2] < 0) {
+        arg = 2 * Math.PI - arg
+    }
+    let tA = math.acos(math.dot(e, r) / en / rn)
+    if (math.dot(r, v) < 0) {
+        tA = 2 * Math.PI - tA
+    }
+    let longOfPeri, argLat, trueLong
+    if (en < 1e-6 && i < 1e-6) {
+        trueLong = math.acos(r[0] / rn)
+        if (r[1] < 0) {
+            trueLong = 2 * Math.PI - trueLong
+        }
+    }
+    else if (en < 1e-6) {
+        argLat = math.acos(math.dot(n, r) / math.norm(n) / rn)
+        if (r[2] < 0) {
+            argLat = 2 * Math.PI - argLat
+        }
+    }
+    else if (i < 1e-6) {
+        longOfPeri = math.acos(e[0] / en)
+        if (e[1] < 0) {
+            longOfPeri = 2 * Math.PI - longOfPeri
+        }
+    }
+    return {
+        a,
+        e: en,
+        i,
+        raan,
+        arg,
+        tA,
+        longOfPeri,
+        argLat,
+        trueLong
+    }
+}
+
+function randv(coe) {
+    // From Vallado "Fudamentals of Astrodynamics and Applications" 2 ed. pg 125
+    if (coe.trueLong !== undefined) {
+        coe.arg = 0
+        coe.raan = 0
+        coe.tA = coe.trueLong
+    }
+    if (coe.argLat !== undefined) {
+        coe.arg = 0
+        coe.tA = coe.argLat
+    }
+    if (coe.longOfPeri !== undefined) {
+        coe.raan = 0
+        coe.arg = coe.longOfPeri
+    }
+    
+    let p = coe.a * (1 - coe.e * coe.e);
+    let cTa = Math.cos(coe.tA);
+    let sTa = Math.sin(coe.tA);
+    let r = [
+        [p * cTa / (1 + coe.e * cTa)],
+        [p * sTa / (1 + coe.e * cTa)],
+        [0]
+    ];
+    let constA = Math.sqrt(398600.4418 / p);
+    let v = [
+        [-constA * sTa],
+        [(coe.e + cTa) * constA],
+        [0]
+    ]
+    let cRa = Math.cos(coe.raan);
+    let sRa = Math.sin(coe.raan);
+    let cAr = Math.cos(coe.arg);
+    let sAr = Math.sin(coe.arg);
+    let cIn = Math.cos(coe.i);
+    let sin = Math.sin(coe.i);
+    let R = [
+        [cRa * cAr - sRa * sAr * cIn, -cRa * sAr - sRa * cAr * cIn, sRa * sin],
+        [sRa * cAr + cRa * sAr * cIn, -sRa * sAr + cRa * cAr * cIn, -cRa * sin],
+        [sAr * sin, cAr * sin, cIn]
+    ];
+    console.log(R, r, v);
+    r = math.multiply(R, r);
+    v = math.multiply(R, v);
+    let state = [...r, ...v];
+    return math.squeeze(state)
+}
+
+function propToTime(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, j2 = true) {
+    function twoBodyAcc(state) {
+        let mu = 398600.4418
+        let rn = math.norm(state.slice(0,3))
+        return [
+            state[3], state[4], state[5],
+            -mu * state[0] / rn ** 3,
+            -mu * state[1] / rn ** 3,
+            -mu * state[2] / rn ** 3
+        ]
+    }
+    // let dtProp = dt / 1000
+    // let stateCopy = state.slice()
+    // for (let index = 0; index < 1000; index++) {
+    //     stateCopy = runge_kutta(twoBodyAcc, stateCopy, dtProp)
+        
+    // }
+    // return stateCopy
     state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     if (j2) {
         state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
@@ -6211,14 +6335,11 @@ function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime)
     let initialInertState = {...mainWindow.originOrbit}
     initialInertState.tA = propTrueAnomaly(initialInertState.tA, initialInertState.a, initialInertState.e, scenTime)
     let initState = Object.values(Coe2PosVelObject(initialInertState))
-    // console.log(initState);
     initialInertState.tA = propTrueAnomaly(initialInertState.tA, initialInertState.a, initialInertState.e, dt)
     let depInitState = Ric2Eci(r1Ric.slice(0,3), r1Ric.slice(3,6), initState.slice(0,3), initState.slice(3,6))
     depInitState = [...depInitState.rEcci, ...depInitState.drEci]
-    // console.log(depInitState);
     // console.log(PosVel2CoeNew(depInitState.slice(0,3), depInitState.slice(3,6)));
     let depFinalState = propToTime(depInitState, dt, false)
-    // console.log(PosVel2CoeNew(depFinalState.slice(0,3), depFinalState.slice(3,6)));
     // console.log(depFinalState);
     let finalState = Object.values(Coe2PosVelObject(initialInertState))
     let depRicFinal = Eci2Ric(finalState.slice(0,3), finalState.slice(3,6), depFinalState.slice(0,3), depFinalState.slice(3,6))
