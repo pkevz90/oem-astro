@@ -1428,7 +1428,6 @@ function startContextClick(event) {
     if (mainWindow.panelOpen) {
         return false;
     }
-    console.log([event.clientX, event.clientY]);
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY])
     // Check if clicked on satellite
     let checkProxSats
@@ -4618,10 +4617,16 @@ function PosVel2CoeNew(r = [42164.14, 0, 0], v = [0, 3.0746611796284924, 0]) {
         raan = 2 * Math.PI - raan
     }
     let arg = math.acos(math.dot(n, e) / math.norm(n) / en)
+    if (arg.re !== undefined) {
+        arg = arg.re
+    }
     if (e[2] < 0) {
         arg = 2 * Math.PI - arg
     }
     let tA = math.acos(math.dot(e, r) / en / rn)
+    if (tA.re !== undefined) {
+        tA = tA.re
+    }
     if (math.dot(r, v) < 0) {
         tA = 2 * Math.PI - tA
     }
@@ -6008,7 +6013,7 @@ function handleTleFile(file) {
     let tleRawStates = []
     for (let index = 0; index < file.length; index++) {
         // if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
-        if (file[index].search(/1 \d{5}/) !== -1) {
+        if (file[index].search(/1 \d{5} /) !== -1) {
             // Get tle data
             let line2 = file[index+1].split(/\s+/)
             let epoch = file[index].match(/\d{5}.\d{8}/)[0]
@@ -6042,7 +6047,6 @@ function handleTleFile(file) {
 }
 
 function importStates(states, tle = true) {
-    
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
     // Use epoch from last tle
     let baseEpoch = states[states.length - 1].epoch
@@ -6244,13 +6248,6 @@ function propToTime(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 861
             -mu * state[2] / rn ** 3
         ]
     }
-    // let dtProp = dt / 1000
-    // let stateCopy = state.slice()
-    // for (let index = 0; index < 1000; index++) {
-    //     stateCopy = runge_kutta(twoBodyAcc, stateCopy, dtProp)
-        
-    // }
-    // return stateCopy
     state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     if (j2) {
         state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
@@ -7028,6 +7025,11 @@ function updateWhiteCellWindow() {
     if (whiteCellWindow === undefined) return
     whiteCellWindow.document.body.innerHTML = ``
     let curTime = new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))
+    mainWindow.satellites = mainWindow.satellites.sort((a,b) => {
+        if (a.name.toLowerCase() < b.name.toLowerCase()) return -1
+        if (a.name.toLowerCase() > b.name.toLowerCase()) return 1
+        return 0
+    })
     let satelliteList = mainWindow.satellites.map((sat, satii) => {
         return `<div>${sat.name} 
             <span style="margin-left: 20px">
@@ -7155,6 +7157,7 @@ function openTleWindow(tleSatellites) {
             })
         }
         importStates(states);
+        tleWindow.close()
     }
     
     setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
@@ -7166,7 +7169,6 @@ function openTleWindow(tleSatellites) {
         ${uniqueSats.map(satName => {
             let outHt = `<div class="tle-sat-div"><div class="import-name">${satName}</div>`
             tleSatellites.filter(sat => sat.name === satName).sort((a,b)=>a.epoch-b.epoch).forEach((matchSat, ii, arr) => {
-                // console.log(arr.length, ii, ii === (arr.length-1));
                 outHt += `<div class="tle-option-div" orbit="${Object.values(matchSat.orbit).join('x')}"style="margin-left: 20px"><input ${ii === (arr.length-1) ? 'checked' : ''} name="${matchSat.name}-tle-radio" type="radio"/><span class="tle-epoch">${toStkFormat(matchSat.epoch.toString())}</span></div>`
             })
             outHt += '</div>'
