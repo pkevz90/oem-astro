@@ -726,7 +726,9 @@ class windowCanvas {
                     shape: sat.shape,
                     a: sat.a,
                     name: sat.name,
-                    burns: sat.burns
+                    burns: sat.burns,
+                    point: sat.point,
+                    team: sat.team
                 })
             )
             this.satellites[this.satellites.length - 1].drawCurrentPosition();
@@ -780,9 +782,13 @@ class Satellite {
             name = 'Sat',
             burns = [],
             locked = false,
-            side = 'neutral'
+            side = 'neutral',
+            point = 'none',
+            team = 1
         } = options; 
         this.position = position;
+        this.team = team
+        this.point = point
         this.size = size;
         this.color = color;
         this.color = color;
@@ -964,7 +970,9 @@ class Satellite {
             color: this.color,
             burns: this.burns,
             name: this.name,
-            a: this.a
+            a: this.a,
+            point: this.point,
+            team: this.team
         }
     }
     propInitialState(dt) {
@@ -1313,6 +1321,7 @@ function keydownFunction(key) {
     else if (key.key === '<' && key.shiftKey) mainWindow.trajSize = mainWindow.trajSize > 0.5 ? mainWindow.trajSize - 0.1 : mainWindow.trajSize
     else if (key.key === '>' && key.shiftKey) mainWindow.trajSize += 0.1
     else if (key.key === 'E' && key.shiftKey && key.altKey) downloadFile('error_file.txt', errorList.map(e => e.stack).join('\n'))
+    else if (key.key === 'w' && key.altKey) openWhiteCellWindow()
 }
 function sliderFunction(slider) {
     let timeDelta = Number(slider.value) - mainWindow.desired.scenarioTime
@@ -3182,7 +3191,6 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         if (errCount > 30) return false;
         errCount++;
     }
-    console.log(errCount);
     if (X[2] > 1 || X[2] < 0) return false
     let cosEl = Math.cos(X[1][0])
     return {
@@ -3209,16 +3217,12 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.000
     let propState = state.slice()
     propTime = finalTime * tB
     let propTwoBodyTime = finalTime - propTime
-    // console.log(propTwoBody);
     // while((propTime + mainWindow.timeDelta) < finalTime) {
-    //     state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime)
-    //     propTime += mainWindow.timeDelta
+    //     state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime); propTime += mainWindow.timeDelta
     // }
     // state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
-    // console.log(state);
     propState = state.slice()
     propState = propRelMotionTwoBodyAnalytic(propState, propTwoBodyTime, time + propTime)
-    // console.log(state);
     return {
         x: propState[0],
         y: propState[1],
@@ -5331,7 +5335,7 @@ function generateJ2000File(event) {
     })
     // return
     let time = toStkFormat((new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))).toString()).replaceAll(' ','_')
-    downloadFile(`${mainWindow.satellites.map((sat,ii) => `${sat.name}_${errors[ii][0].toFixed(1)}_${(errors[ii][3]*1000).toFixed(1)}`).join('_')}_${time}.txt`, fileText)
+    downloadFile(`${time}_${mainWindow.satellites.map((sat,ii) => `${sat.name}_${errors[ii][0].toFixed(1)}_${(errors[ii][3]*1000).toFixed(1)}`).join('_')}.txt`, fileText)
 }
 
 function logAction(options = {}) {
@@ -6965,7 +6969,7 @@ function openInstructionWindow() {
 }
 let whiteCellWindow
 function openWhiteCellWindow() {
-    whiteCellWindow = window.open('', 'instructions', "width=600px,height=600px")
+    whiteCellWindow = window.open('', 'white', "width=600px,height=600px")
     setTimeout(() => whiteCellWindow.document.title = 'White Cell Tool', 1000)
     whiteCellWindow.changeSide = (el) => {
         mainWindow.satellites[el.getAttribute('sat')].side = el.id.split('-')[1]
@@ -6994,7 +6998,9 @@ function openWhiteCellWindow() {
         newDate = (newDate - mainWindow.startDate) / 1000
         if (newDate < 0 || (newDate / 3600) > mainWindow.scenarioLength) return
         mainWindow.desired.scenarioTime = newDate
-        updateWhiteCellTimeAndErrors()
+        mainWindow.scenarioTime = newDate
+        // Delay updating by 100ms to let app update information correctly
+        setTimeout(updateWhiteCellTimeAndErrors, 100)
     }
     whiteCellWindow.deleteBurn = (el) => {
         let sat = el.getAttribute('sat')
@@ -7006,6 +7012,18 @@ function openWhiteCellWindow() {
     whiteCellWindow.genTles = () => {
         generateTleHistory()
     }
+    whiteCellWindow.changeSatSelect = (el) => {
+        let index = mainWindow.satellites.findIndex(sat => sat.name === el.innerText)
+        whiteCellWindow.document.querySelector('select').value = index
+    }
+    whiteCellWindow.changePointing = (el) => {
+        mainWindow.satellites[el.getAttribute('sat')].point = el.value
+        updateWhiteCellTimeAndErrors()
+    }
+    whiteCellWindow.changeTeam = (el) => {
+        mainWindow.satellites[el.getAttribute('sat')].team = Number(el.value)
+        updateWhiteCellTimeAndErrors()
+    }
     closeAll()
     updateWhiteCellWindow()
 }
@@ -7015,12 +7033,18 @@ function updateWhiteCellTimeAndErrors() {
     let time = mainWindow.desired.scenarioTime
     let posErrors = whiteCellWindow.document.querySelectorAll('.pos-error')
     let velErrors = whiteCellWindow.document.querySelectorAll('.vel-error')
+    let pointingData = whiteCellWindow.document.querySelectorAll('.white-pointing-data')
     for (let index = 0; index < posErrors.length; index++) {
         let burns = mainWindow.satellites[index].burns.filter(b => b.time < time)
         let lastBurnTime = burns.length > 0 ? burns.pop().time : -42164 // If no burns exist assume been tracking 12 hours time
         let errors = errorFromTime(time - lastBurnTime, mainWindow.error[mainWindow.satellites[index].side])
-        posErrors[index].placeholder = errors[0].toFixed(2)
-        velErrors[index].placeholder = (errors[3]*1000).toFixed(2)
+        posErrors[index].innerText = errors[0].toFixed(2)
+        velErrors[index].innerText = (errors[3]*1000).toFixed(2)
+        if (mainWindow.satellites[index].point !== 'none'  && mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point) !== -1) {
+            let relData = getRelativeData(index, mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point))
+            let relDataString = `Range: ${relData.range.toFixed(1)} km CATS: ${relData.sunAngle.toFixed(1)}<sup>o</sup>`
+            pointingData[index].innerHTML = relDataString
+        }
     }
     whiteCellWindow.document.getElementById('main-time').value = convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-time * 1000)))
 }
@@ -7035,19 +7059,35 @@ function updateWhiteCellWindow() {
         return 0
     })
     let satelliteList = mainWindow.satellites.map((sat, satii) => {
-        return `<div>${sat.name} 
+        let relDataString = ''
+        if (sat.point !== 'none' && mainWindow.satellites.findIndex(satRel => satRel.name === sat.point) !== -1) {
+            let relData = getRelativeData(satii, mainWindow.satellites.findIndex(satRel => satRel.name === sat.point))
+            relDataString = `Range: ${relData.range.toFixed(1)} km CATS: ${relData.sunAngle.toFixed(1)}<sup>o</sup>`
+        }
+        return `<div><span style="cursor: pointer" onclick="changeSatSelect(this)">${sat.name}</span>
+            <select onchange="changeTeam(this)" sat="${satii}" title="Team Number">
+                <option ${sat.team === 1 ? 'selected' : ''} value="1">1</option>
+                <option ${sat.team === 2 ? 'selected' : ''} value="2">2</option>
+                <option ${sat.team === 3 ? 'selected' : ''} value="3">3</option>
+                <option ${sat.team === 4 ? 'selected' : ''} value="4">4</option>
+            </select> 
             <span style="margin-left: 20px">
-                <label for="${satii}-open">Open</label><input sat="${satii}" onchange="changeSide(this)" ${sat.side === 'neutral' ? 'checked' : ''} id="${satii}-open" type="radio" name="${sat.name}-type"/>
-                <label for="${satii}-closed">Closed</label><input sat="${satii}" onchange="changeSide(this)" ${sat.side === 'closed' ? 'checked' : ''} id="${satii}-closed" type="radio" name="${sat.name}-type"/>
-                <label for="${satii}-friendly">Self</label><input sat="${satii}" onchange="changeSide(this)" ${sat.side === 'friendly' ? 'checked' : ''} id="${satii}-friendly" type="radio" name="${sat.name}-type"/>
-                Error StD <input class="pos-error" style="width: 10ch"placeholder="0" type="Number"> km <input class="vel-error" style="width: 10ch" placeholder="0" type="Number"> m/s
+                Error StD <span class="pos-error"></span> km <span class="vel-error"></span> m/s
             </span>
+        </div>
+        <div style="margin-left: 30px">Pointing 
+            <select value="${sat.point}" sat="${satii}" onchange="changePointing(this)">
+                <option ${sat.point === 'none' ? 'selected' : ''} value="none">None</option>
+                ${mainWindow.satellites.map((optSat, optii) => {
+                    return optii !== satii ? `<option ${sat.point === optSat.name ? 'selected' : ''} value="${optSat.name}">${optSat.name}</option>` : ''
+                })}
+            </select> <span class="white-pointing-data">${relDataString}</span>
         </div>
         <div style="padding-left: 30px">
             ${sat.burns.map((b,burnii) => {
                 return `
-                    <div>
-                        <button sat="${satii}" burn="${burnii}" onclick="deleteBurn(this)">X</button> ${toStkFormat((new Date(mainWindow.startDate - (-b.time * 1000))).toString())} ${(1000*math.norm(Object.values(b.direction))).toFixed(2)} m/s
+                    <div style="font-size: 0.75em">
+                        <button style="font-size: 0.75em" sat="${satii}" burn="${burnii}" onclick="deleteBurn(this)">X</button> ${toStkFormat((new Date(mainWindow.startDate - (-b.time * 1000))).toString())} ${(1000*math.norm(Object.values(b.direction))).toFixed(2)} m/s
                     </div>
                 `
             }).join('')}
@@ -7060,7 +7100,7 @@ function updateWhiteCellWindow() {
             <div>
                 <div>
                     Add Burn 
-                    <select>
+                    <select style="font-size: 2em">
                         ${mainWindow.satellites.map((sat,ii) => `<option value="${ii}">${sat.name}</option>`).join('')}
                     </select>
                 </div>
@@ -7083,13 +7123,20 @@ function updateWhiteCellWindow() {
             </div>
         </div>
         <div style="width: 100%; display: flex; justify-content: space-around; flex-direction: column; align-items: center">
+            <div style="margin-bottom: 20px">Perspective: Team <select>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                </select>
+            </div>
             <div>
                 ${satelliteList.join('')}
             </div>
-            <div style="margin-top: 30px">
-                <input 
-                    type="datetime-local" id="main-time" value="${convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000)))}"/> <button onclick="setTime(this)">Set Time</button>
-            </div>
+        </div>
+        <div style="margin-top: 30px">
+            <input 
+                type="datetime-local" id="main-time" value="${convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000)))}"/> <button onclick="setTime(this)">Set Time</button>
         </div>
         <div style="width: 100%; margin-top: 30px">
             <button onclick="exportStates(this)" style="width: 100%">Export Current State</button>
@@ -7267,4 +7314,24 @@ function generateTleHistory() {
     mainWindow.scenarioTime = oldTime
     for (let index = 0; index < mainWindow.satellites.length; index++) mainWindow.satellites[index].calcTraj()
     downloadFile('tle.tce', out)
+}
+
+function calculateSatError(team = 1, time = mainWindow.scenarioTime) {
+    let errors = []
+    mainWindow.satellites.forEach((sat) => {
+        let trackType = sat.team === team ? 'friendly' : 'neutral'
+        let lastBurn = [-86400, ...sat.burns.filter(b => b.time < time).map(b => b.time)]
+        lastBurn = time - lastBurn[lastBurn.length - 1]
+        let error = errorFromTime(lastBurn, mainWindow.error[trackType])
+        errors.push(error)
+        // let trackers = mainWindow.satellites.filter(trackSat => trackSat.point === sat.name && trackSat.team === team)
+    })
+
+    // Account for satellites tracking other satellites onboard
+    mainWindow.satellites.filter(sat => sat.team === team && sat.point !== 'none').forEach(sat => {
+        let pointingTo = sat.point
+        let pointingToError = errors[mainWindow.satellites.findIndex(findSat => findSat.name === pointingTo)]
+        console.log(pointingToError);
+    })
+    return errors
 }
