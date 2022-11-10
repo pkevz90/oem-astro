@@ -3163,7 +3163,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
     }
     if (X[2] > 1) return false;
     let errCount = 0
-    while (math.norm(math.squeeze(yErr)) > 1e-6) {
+    while (math.norm(math.squeeze(yErr)) > 1e-3) {
         F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0);
         yErr = [
             [stateFinal[0][0] - F.x],
@@ -3179,9 +3179,10 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         X = math.add(X, dX)
         X[2][0] = X[2][0] < 0 ? 1e-9 : X[2][0]
         X[2][0] = X[2][0] > 1 ? 0.95 : X[2][0]
-        if (errCount > 20) return false;
+        if (errCount > 30) return false;
         errCount++;
     }
+    console.log(errCount);
     if (X[2] > 1 || X[2] < 0) return false
     let cosEl = Math.cos(X[1][0])
     return {
@@ -3196,7 +3197,6 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
 
 function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.00001) {
     state = Object.values(state)
-    // console.log( tB);
     let cosEl = Math.cos(phi)
     let direction = [a0 * Math.cos(alpha) * cosEl, a0 * Math.sin(alpha) * cosEl, a0 * Math.sin(phi)];
     
@@ -3206,8 +3206,9 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.000
         propTime += mainWindow.timeDelta
     }
     state = runge_kutta(twoBodyRpo, state, finalTime*tB - propTime, direction, time + propTime)
+    let propState = state.slice()
     propTime = finalTime * tB
-    let propTwoBody = finalTime - propTime
+    let propTwoBodyTime = finalTime - propTime
     // console.log(propTwoBody);
     // while((propTime + mainWindow.timeDelta) < finalTime) {
     //     state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime)
@@ -3215,15 +3216,16 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.000
     // }
     // state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
     // console.log(state);
-    state = propRelMotionTwoBodyAnalytic(state, propTwoBody, time + propTime)
+    propState = state.slice()
+    propState = propRelMotionTwoBodyAnalytic(propState, propTwoBodyTime, time + propTime)
     // console.log(state);
     return {
-        x: state[0],
-        y: state[1],
-        z: state[2],
-        xd: state[3],
-        yd: state[4],
-        zd: state[5]
+        x: propState[0],
+        y: propState[1],
+        z: propState[2],
+        xd: propState[3],
+        yd: propState[4],
+        zd: propState[5]
     };
 
 }
