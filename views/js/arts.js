@@ -7135,8 +7135,8 @@ function updateWhiteCellWindow() {
             </div>
         </div>
         <div style="margin-top: 30px">
-            <input 
-                type="datetime-local" id="main-time" value="${convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000)))}"/> <button onclick="setTime(this)">Set Time</button>
+            <input style="width: 100%; font-size: 2em; text-align: center"
+                type="datetime-local" id="main-time" value="${convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000)))}"/> <button style="width: 100%; margin-top: 10px"onclick="setTime(this)">Set Time</button>
         </div>
         <div style="width: 100%; margin-top: 30px">
             <button onclick="exportStates(this)" style="width: 100%">Export Current State</button>
@@ -7316,22 +7316,68 @@ function generateTleHistory() {
     downloadFile('tle.tce', out)
 }
 
-function calculateSatError(team = 1, time = mainWindow.scenarioTime) {
-    let errors = []
+function calculateSatErrorStates(team = 1, time = mainWindow.scenarioTime) {
+    let errors = [], currentOrigin = propToTime(Object.values(Coe2PosVelObject(mainWindow.originOrbit)), time, false)
     mainWindow.satellites.forEach((sat) => {
+        let currentState = math.squeeze(Object.values(sat.currentPosition({time})))
+        let currentEciState = Ric2Eci(currentState.slice(0,3), currentState.slice(3,6), currentOrigin.slice(0,3), currentOrigin.slice(3,6))
+        currentEciState = [...currentEciState.rEcci, ...currentEciState.drEci]
         let trackType = sat.team === team ? 'friendly' : 'neutral'
         let lastBurn = [-86400, ...sat.burns.filter(b => b.time < time).map(b => b.time)]
         lastBurn = time - lastBurn[lastBurn.length - 1]
         let error = errorFromTime(lastBurn, mainWindow.error[trackType])
-        errors.push(error)
-        // let trackers = mainWindow.satellites.filter(trackSat => trackSat.point === sat.name && trackSat.team === team)
+        let errorEciPosition = currentEciState.map((s,ii) => s + randn_bm() * error[ii])
+        errors.push({
+            name: sat.name,
+            lastBurn,
+            position: currentState,
+            eciPosition: currentEciState,
+            errorEciPosition,
+            error
+        })
+    })
+    // Account for satellites tracking other satellites onboard
+    mainWindow.satellites.forEach(sat => {
+        let currentSun = mainWindow.getCurrentSun(time)
+        let currentState = math.squeeze(Object.values(sat.currentPosition({time})))
+        let errorSat = errors.findIndex(s => s.name === sat.name)
+        let satellitesTracking = mainWindow.satellites.filter(filt => filt.team === team && filt.point === sat.name)
+        if (satellitesTracking.length > 0) {
+            // Get error information from sats tracking and filter out those without Sun
+            satellitesTracking = satellitesTracking.map(mSat => errors.find(findSat => findSat.name === mSat.name)).filter(filtSat => {
+                let originPos = filtSat.position
+                let targetPos = currentState
+                let relPos = math.subtract(originPos, targetPos).slice(0,3)
+                let sunAngle = math.acos(math.dot(currentSun, relPos) / math.norm(currentSun) / math.norm(relPos)) * 180 / Math.PI
+                return sunAngle < 90
+            })
+            let parallelRange = satellitesTracking.map(mSat => math.norm(math.subtract(mSat.position, currentState)))
+            console.log(parallelRange);
+            parallelRange = 1/parallelRange.reduce((a,b) => a + 1/b,0)
+            // StD from onboard is 2% of 1/(1/a + 1/b) from from satellites tracking
+            let std = parallelRange / 50
+            std = [std, std, std, std/1000, std/1000, std/1000]
+            let minErrorTracker = satellitesTracking.find(findSat => findSat.error[0] === Math.min(...satellitesTracking.map(s => s.error[0])))
+            let satOrigError = errors[errorSat].error.slice()
+            if (satellitesTracking.length > 0) {
+                if ((minErrorTracker.error[0] + std[0]) < errors[errorSat].error[0]) {
+                    errors[errorSat].error = math.add(minErrorTracker.error.slice(), std)
+                    let relState = math.subtract(errors[errorSat].eciPosition, minErrorTracker.eciPosition).map((s,ii) => s + randn_bm() * std[ii])
+                    errors[errorSat].errorEciPosition = math.add(minErrorTracker.errorEciPosition, relState)
+                }
+            }
+            // If error on tracked satellite is lower than current error on tracking satellite, can be used
+            // to buy down error on tracking satellite
+            satellitesTracking.forEach(trackSat => {
+                if ((satOrigError[0] + std[0]) < trackSat.error[0]) {
+                    // Buy down error from tracked satellite
+                    trackSat.error = math.add(satOrigError, std)
+                    let relState = math.subtract(trackSat.eciPosition, errors[errorSat].eciPosition).map((s,ii) => s + randn_bm() * std[ii])
+                    trackSat.errorEciPosition = math.add(errors[errorSat].errorEciPosition, relState)
+                }
+            })
+        }
     })
 
-    // Account for satellites tracking other satellites onboard
-    mainWindow.satellites.filter(sat => sat.team === team && sat.point !== 'none').forEach(sat => {
-        let pointingTo = sat.point
-        let pointingToError = errors[mainWindow.satellites.findIndex(findSat => findSat.name === pointingTo)]
-        console.log(pointingToError);
-    })
     return errors
 }
