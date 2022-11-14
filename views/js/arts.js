@@ -38,9 +38,9 @@ class windowCanvas {
     plotCenter = 0;
     stringLimit = [0,8];
     error = { // at right after manuever while generating J2000 states, halves every hour
-        neutral: {p: 25.6, v: 36.158}, // Full Error
-        friendly: {p: 25.6 / 3, v: 36.158 / 3}, // reduced error
-        closed: {p: 0, v: 0} // no error
+        neutral: {p: 25.6, v: 36.158, c: 1}, // Full Error
+        friendly: {p: 25.6 / 3, v: 36.158 / 3, c: 1}, // reduced error
+        closed: {p: 0, v: 0, c: 1} // no error
     }; 
     frameCenter= {
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
@@ -784,7 +784,8 @@ class Satellite {
             locked = false,
             side = 'neutral',
             point = 'none',
-            team = 1
+            team = 1,
+            cov = undefined
         } = options; 
         this.position = position;
         this.team = team
@@ -800,6 +801,7 @@ class Satellite {
         this.originDate = Date.now()
         this.locked = locked
         this.pixelPos = [0,0]
+        this.cov = cov
         setTimeout(() => this.calcTraj(), 250);
     }
     calcTraj = calcSatTwoBody;
@@ -1503,7 +1505,9 @@ function startContextClick(event) {
             <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
                 ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
             </div>
-            <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">Last State Update: ${((Date.now() - mainWindow.satellites[activeSat].originDate) / 60000).toFixed(0)} minutes ago</div> 
+            <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">
+                ${mainWindow.satellites[activeSat].cov !== undefined ? mainWindow.satellites[activeSat].cov : ''}
+            </div> 
             `
         //             <div class="context-item">Export Burns</div><div class="context-item" onclick="generateEphemFile(${activeSat})" id="state-options">Gen .e File</div>
             
@@ -5280,62 +5284,28 @@ function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
     }
 }
 
-function generateJ2000File(event) {
-    let dispTime = mainWindow.scenarioTime
-    if (!event.ctrlKey) return exportScenario()
-    let origOrbit = mainWindow.originOrbit
+function generateJ2000File(satellites, team=undefined, time = mainWindow.scenarioTime) {
     let startEphem = `Time (UTCG)              x (km)           y (km)         z (km)     vx (km/sec)    vy (km/sec)    vz (km/sec)
 -----------------------    -------------    -------------    ---------    -----------    -----------    -----------
 `
     let fileText = `\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t ${Date.now()}
-    Satellite-${mainWindow.satellites.map(s => s.name).join(', ')}:  J2000 Position & Velocity
+    Satellite-${satellites.map(s => s.name + `errarts${s.error[0].toFixed(2)}/${(1000*s.error[3]).toFixed(2)}`).join(', ')}:  J2000 Position & Velocity
     `
-    let errors = []
-    mainWindow.satellites.forEach(sat => {
+    satellites.forEach(sat => {
         fileText += `\n\n${startEphem}`
-        let oldState = {...sat.position}
-        let oldBurns = [...sat.burns]
-        let lastBurnTime = [-86400, ...sat.burns.filter(s => s.time < dispTime).map(s => s.time)]
-        lastBurnTime = lastBurnTime[lastBurnTime.length - 1]
-        let error = errorFromTime(mainWindow.scenarioTime - lastBurnTime, mainWindow.error[sat.side])
-        errors.push(error)
-        let currentPos = Object.values(sat.curPos).map((s,ii) => s + error[ii] * 0.57706 * randn_bm())
-        let propTime = dispTime + 0
-        console.log(currentPos);
-        while((propTime - mainWindow.timeDelta) > 0) {
-            currentPos = runge_kutta(twoBodyRpo, currentPos, -mainWindow.timeDelta, [0,0,0], propTime)
-            propTime -= mainWindow.timeDelta
-        }
-        currentPos = runge_kutta(twoBodyRpo, currentPos, -propTime, [0,0,0], propTime)
-        sat.position = {
-            r: currentPos[0], 
-            i: currentPos[1],
-            c: currentPos[2],
-            rd: currentPos[3],
-            id: currentPos[4],
-            cd: currentPos[5]
-        }
-        console.log(error);
-        sat.burns = []
-        sat.calcTraj()
-        sat.stateHistory.forEach(point => {
-            let state = [point.r, point.i, point.c, point.rd, point.id, point.cd]
-            let refState = {...origOrbit}
-            refState.tA = propTrueAnomaly(refState.tA, refState.a, refState.e, point.t)
-            refState = Object.values(Coe2PosVelObject(refState))
-            let eciState = Ric2Eci(state.slice(0,3), state.slice(3,6), refState.slice(0,3), refState.slice(3,6))
-            eciState = [...eciState.rEcci, ...eciState.drEci]
-            let pointTime = new Date(mainWindow.startDate - (-point.t*1000))
+        let currentPos = sat.errorEciPosition
+        currentPos = propToTime(currentPos, -time, false)
+        let propTime = 0
+        while (propTime < mainWindow.scenarioLength*3600) {
+            let eciState = propToTime(currentPos, propTime)
+            let pointTime = new Date(mainWindow.startDate - (-propTime*1000))
             pointTime = toStkFormat(pointTime.toString())
             fileText += `${pointTime}     ${eciState.map(n => n.toFixed(5)).join('     ')}\n`
-        })
-        sat.position = oldState
-        sat.burns = oldBurns
-        sat.calcTraj()
+            propTime += 3600
+        }
     })
-    // return
-    let time = toStkFormat((new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))).toString()).replaceAll(' ','_')
-    downloadFile(`${time}_${mainWindow.satellites.map((sat,ii) => `${sat.name}_${errors[ii][0].toFixed(1)}_${(errors[ii][3]*1000).toFixed(1)}`).join('_')}.txt`, fileText)
+    let fileTime = toStkFormat((new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))).toString()).replaceAll(' ','_')
+    downloadFile(`${fileTime}${team !== undefined ? `_Team${team}` : ''}_artsEphem.txt`, fileText)
 }
 
 function logAction(options = {}) {
@@ -5988,7 +5958,8 @@ function handleStkJ200File(file) {
                 }
             }).filter(a => a.time >= 0))
         }
-        options.name = satNames[ii]
+        options.name = satNames[ii].split('errarts')[0]
+        options.cov = satNames[ii].split('errarts').length > 1 ? satNames[ii].split('errarts')[1] : undefined
         options.position = {r: ricState.rHcw[0][0], 
             i: ricState.rHcw[1][0], 
             c: ricState.rHcw[2][0], 
@@ -5997,6 +5968,7 @@ function handleStkJ200File(file) {
             cd: ricState.drHcw[2][0]}
         options.a = 0.001
         options.locked = math.norm(math.squeeze(ricState.rHcw)) > 2500 || math.norm(math.squeeze(ricState.drHcw)) > 0.075
+        console.log(options);
         newSatellites.push(new Satellite(options))
 
     })
@@ -6976,7 +6948,11 @@ function openWhiteCellWindow() {
         updateWhiteCellTimeAndErrors()
     }
     whiteCellWindow.exportStates = (el) => {
-        generateJ2000File({ctrlKey: true})
+        let team = whiteCellWindow.document.querySelector('#white-cell-team').value
+        let states = calculateSatErrorStates(team)
+        console.log(states);
+        generateJ2000File(states)
+        return
     }
     whiteCellWindow.addBurn = (el) => {
         let inputs = el.parentElement.parentElement.querySelectorAll('input')
@@ -7024,6 +7000,9 @@ function openWhiteCellWindow() {
         mainWindow.satellites[el.getAttribute('sat')].team = Number(el.value)
         updateWhiteCellTimeAndErrors()
     }
+    whiteCellWindow.updateWhiteCellTimeAndErrorsWhite = () => [
+        updateWhiteCellTimeAndErrors()
+    ]
     closeAll()
     updateWhiteCellWindow()
 }
@@ -7031,15 +7010,14 @@ function openWhiteCellWindow() {
 function updateWhiteCellTimeAndErrors() {
     if (whiteCellWindow === undefined) return
     let time = mainWindow.desired.scenarioTime
+    let teamPerspective = Number(whiteCellWindow.document.querySelector('#white-cell-team').value)
+    let satErrors = calculateSatErrorStates(teamPerspective)
     let posErrors = whiteCellWindow.document.querySelectorAll('.pos-error')
     let velErrors = whiteCellWindow.document.querySelectorAll('.vel-error')
     let pointingData = whiteCellWindow.document.querySelectorAll('.white-pointing-data')
     for (let index = 0; index < posErrors.length; index++) {
-        let burns = mainWindow.satellites[index].burns.filter(b => b.time < time)
-        let lastBurnTime = burns.length > 0 ? burns.pop().time : -42164 // If no burns exist assume been tracking 12 hours time
-        let errors = errorFromTime(time - lastBurnTime, mainWindow.error[mainWindow.satellites[index].side])
-        posErrors[index].innerText = errors[0].toFixed(2)
-        velErrors[index].innerText = (errors[3]*1000).toFixed(2)
+        posErrors[index].innerText = satErrors[index].error[0].toFixed(2)
+        velErrors[index].innerText = (satErrors[index].error[0]).toFixed(2)
         if (mainWindow.satellites[index].point !== 'none'  && mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point) !== -1) {
             let relData = getRelativeData(index, mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point))
             let relDataString = `Range: ${relData.range.toFixed(1)} km CATS: ${relData.sunAngle.toFixed(1)}<sup>o</sup>`
@@ -7123,7 +7101,7 @@ function updateWhiteCellWindow() {
             </div>
         </div>
         <div style="width: 100%; display: flex; justify-content: space-around; flex-direction: column; align-items: center">
-            <div style="margin-bottom: 20px">Perspective: Team <select>
+            <div style="margin-bottom: 20px">Perspective: Team <select onchange="updateWhiteCellTimeAndErrorsWhite()" id="white-cell-team">
                 <option value="1">1</option>
                 <option value="2">2</option>
                 <option value="3">3</option>
@@ -7316,7 +7294,8 @@ function generateTleHistory() {
     downloadFile('tle.tce', out)
 }
 
-function calculateSatErrorStates(team = 1, time = mainWindow.scenarioTime) {
+function calculateSatErrorStates(team = 1, time = mainWindow.desired.scenarioTime) {
+    team = Number(team)
     let errors = [], currentOrigin = propToTime(Object.values(Coe2PosVelObject(mainWindow.originOrbit)), time, false)
     mainWindow.satellites.forEach((sat) => {
         let currentState = math.squeeze(Object.values(sat.currentPosition({time})))
