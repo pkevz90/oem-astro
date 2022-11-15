@@ -5991,7 +5991,7 @@ function handleTleFile(file) {
     let tleRawStates = []
     for (let index = 0; index < file.length; index++) {
         // if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
-        if (file[index].search(/1 \d{5} /) !== -1) {
+        if (file[index].search(/1\s\d{5}[\sU]/) !== -1) {
             // Get tle data
             let line2 = file[index+1].split(/\s+/)
             let epoch = file[index].match(/\d{5}.\d{8}/)[0]
@@ -6024,20 +6024,23 @@ function handleTleFile(file) {
     
 }
 
-function importStates(states, tle = true) {
+function importStates(states, time) {
+    console.log(time);
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
     // Use epoch from last tle
-    let baseEpoch = states[states.length - 1].epoch
-    console.log(baseEpoch);
+    let baseEpoch = time
     let baseUTCDiff = baseEpoch.getUTCHours() - baseEpoch.getHours()
-    mainWindow.originOrbit = states[states.length - 1].orbit
-    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     mainWindow.startDate = baseEpoch
-    states = states.map(s => {
+    states = states.map((s,ii) => {
         let utcDiff = s.epoch.getUTCHours() - s.epoch.getHours()
+        if (ii === 0) {
+            let originOrbit = propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
+            mainWindow.originOrbit = PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6))
+            mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+        }
         return {
             name: s.name,
-            orbit: propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch + (utcDiff - baseUTCDiff)*3600000) / 1000, false)
+            orbit: propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
         }
 
     })
@@ -6433,12 +6436,13 @@ function draw3dScene(az = azD, el = elD) {
     })
     points = points.sort((a,b) => a.position[2] - b.position[2])
     ctx.textAlign = 'center'
+    ctx.font = 'bold 15px serif'
     points.map(p => {
         pos = mainWindow.convertToPixels(p.position).ri
         ctx.fillStyle = p.color
         ctx.fillRect(pos.x - p.size / 2, pos.y - p.size / 2,p.size,p.size)
         if (p.text !== undefined) {
-            ctx.fillText(p.text, pos.x, pos.y)
+            ctx.fillText(p.text, pos.x, pos.y - 5)
         }
         // if (p.shape !== undefined) {
         //     drawSatellite({
@@ -7185,7 +7189,28 @@ function openTleWindow(tleSatellites) {
                 epoch
             })
         }
-        importStates(states)
+        let importTime = new Date(el.parentElement.parentElement.querySelector('#tle-import-time').value)
+        importStates(states, importTime)
+    }
+    tleWindow.changeImportTime = (el) => {
+        let importDate = new Date(el.value)
+        let els = [...el.parentElement.parentElement.querySelectorAll('.tle-sat-div')]
+        els = els.map(el => [...el.querySelectorAll('.tle-option-div')])
+        els.forEach(tleOpt => {
+            for (let index = 0; index < tleOpt.length; index++) {
+                tleOpt[index].querySelector('input').checked = false
+            }
+            let times = tleOpt.map(s => {
+                return new Date(s.querySelector('span').innerText)
+            })
+            if (times.length === 1) {
+                tleOpt[0].querySelector('input').checked = true
+            }
+            else {
+                let index = times.findIndex(s => s > importDate)
+                tleOpt[index !== -1 ? index - 1 : tleOpt.length - 1].querySelector('input').checked = true
+            }
+        })
     }
     
     setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
@@ -7193,11 +7218,13 @@ function openTleWindow(tleSatellites) {
     tleWindow.tleSatellites = tleSatellites
     tleWindow.document.body.innerHTML = `
         <div>ARTS TLE Import Tool</div>
-        <div class="no-scroll" style="max-height: 50%; overflow: scroll">
+        <div style="width: 100%; text-align: center;">Import Time <input onchange="changeImportTime(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000)))}></div>
+        
+        <div class="no-scroll" style="max-height: 90%; overflow: scroll">
         ${uniqueSats.map(satName => {
             let outHt = `<div class="tle-sat-div"><div class="import-name">${satName}</div>`
             tleSatellites.filter(sat => sat.name === satName).sort((a,b)=>a.epoch-b.epoch).forEach((matchSat, ii, arr) => {
-                outHt += `<div class="tle-option-div" orbit="${Object.values(matchSat.orbit).join('x')}"style="margin-left: 20px"><input ${ii === (arr.length-1) ? 'checked' : ''} name="${matchSat.name}-tle-radio" type="radio"/><span class="tle-epoch">${toStkFormat(matchSat.epoch.toString())}</span></div>`
+                outHt += `<div class="tle-option-div" orbit="${Object.values(matchSat.orbit).join('x')}"style="margin-left: 20px"><input ${ii === 0 ? 'checked' : ''} name="${matchSat.name}-tle-radio" type="radio"/><span class="tle-epoch">${toStkFormat(matchSat.epoch.toString())}</span></div>`
             })
             outHt += '</div>'
             return outHt
