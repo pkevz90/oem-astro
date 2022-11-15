@@ -2811,20 +2811,8 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let stateInputs = document.querySelectorAll('.origin-input')
     let coe = document.getElementById('coe-radio').checked
     let state = [...stateInputs].map(s => Number(s.value === '' ? s.placeholder : s.value))
-    let compState = coe ? Object.values(Coe2PosVelObject({
-        a: state[0],
-        e: state[1],
-        i: state[2] * Math.PI / 180,
-        raan: state[3] * Math.PI / 180,
-        arg: state[4] * Math.PI / 180,
-        tA: state[5] * Math.PI / 180
-    })) : state
-    // Check if satellites exist and if origin changed, if so wipe slate of satellites
-    if (mainWindow.satellites.length > 0 && math.norm(math.subtract(compState, Object.values(Coe2PosVelObject(mainWindow.originOrbit)))) > 1e-6) {
-        let confirmAns = confirm('Changing origin will delete current satellites, continue?') 
-        if (!confirmAns) return
-        mainWindow.satellites = []
-    }
+    console.log(state, [...stateInputs].map(s => s.value));
+    let startDate = new Date(document.getElementById('start-time').value)
     if (!coe) {
         state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     }
@@ -2839,8 +2827,8 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
         }
     }
     if (state.e > 0.01) return showScreenAlert('State has an eccentricity of over 0.01, rejected')
-    let startDate = new Date(document.getElementById('start-time').value)
     let eciState = Object.values(Coe2PosVelObject(state))
+    console.log(state);
     let sun = sunFromTime(startDate) 
     sun = math.squeeze(Eci2Ric(eciState.slice(0,3), eciState.slice(3,6), sun, [0,0,0]).rHcw)
     sun = math.dotDivide(sun, math.norm(sun))
