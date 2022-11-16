@@ -70,6 +70,9 @@ function exportFile() {
         console.info('Pulled state in table below')
         console.table(state)
         let t = state.shift()
+        let coe = PosVel2CoeNew(state.map(a => a/1000).slice(0,3), state.map(a => a/1000).slice(3,6))
+        let period = 2 * Math.PI * (coe.a**3/ 398600.4418) ** (1/2)
+        console.log(state, coe, period);
         //Prop initial state state back to desired time (to avoid any potential burn at desired epoch)
         for (let ii = 0; ii < 10; ii++) state = runge_kutta(-(t - timeDiff) / 10, [state])
         console.info('State after prop to desired time')
@@ -93,13 +96,18 @@ function exportFile() {
         let pEphemeris = []
         pEphemeris.push(`${t.toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
         stateEphemeris = [toExponentialDigits(t, 16, 2) + ' ' + state.map(s => toExponentialDigits(s, 16, 2)).join(' ')]
-        let timeDelta = 900
+        let timeDelta = Math.floor((600/86164 * period) / 10)*10 
+        let minDelta = 600
+        let lastTime = 0
         let propTime = (endTime - timeDiff) > 86400 ? 86400 : endTime - timeDiff
         console.info('Prop Time: ' + (propTime / 3600).toFixed(2) + ' hr')
         let points = generateSigmaPoints(P, [state])
         for (let ii = timeDelta; ii <= propTime; ii+=timeDelta) {
-            let pointsNew = points.map(s => propToTime(s.map(a => a / 1000), ii).map(a => a * 1000))
-            let {averagePoint, P} = calcSigmaProperties(pointsNew)
+            points = points.map(s => runge_kuttaj2(s.map(a => a / 1000), timeDelta).map(a => a * 1000))
+            if ((ii - lastTime) < minDelta) continue
+            let {averagePoint, P} = calcSigmaProperties(points)
+            lastTime = ii
+            console.log(lastTime);
             stateEphemeris.push(toExponentialDigits(t + ii, 16, 2) + ' ' + averagePoint.map(s => toExponentialDigits(s, 16, 2)).join(' '))
             pEphemeris.push(`${(t + ii).toExponential(16)} ${P[0][0].toExponential(16)} ${P[0][1].toExponential(16)} ${P[0][2].toExponential(16)} ${P[1][1].toExponential(16)} ${P[1][2].toExponential(16)} ${P[2][2].toExponential(16)}`)
             if (isNaN(state[0])) {
@@ -144,6 +152,7 @@ function exportFile() {
         window.localStorage.files = JSON.stringify(files)
         exportConsolidated(files[saveName], 'bsa_' + fileName + '_' + padNumbers(desDate.getHours()) +  padNumbers(desDate.getMinutes()) + '.e')
     } catch (error) {
+        console.log(error);
         alert(error + '\n\nContact Captain (or maybe Major depending on the time period) VanZandt')
     }
 }
@@ -240,6 +249,15 @@ function twoBodyRpo(state = [[-1.89733896, 399.98, 0, 0, 0, 0]]) {
         -mu * y / r ** 3,
         -mu * z / r ** 3
     ]];
+}
+
+function runge_kuttaj2(state = [42164, 0, 0, 0, -3.070, 0],dt) {
+    eom = twoBodyJ2
+    let k1 = eom(state);
+    let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)));
+    let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)));
+    let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)));
+    return math.squeeze(math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4)))));
 }
 
 function runge_kutta(dt = 10, state = [[42164000, 0, 0, 0, -3070, 0]] ) {
@@ -466,75 +484,137 @@ function propToTime(state, dt) {
     state = Object.values(Coe2PosVelObject(state))
     return state
 }
+function propToTimeJ2(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, j2 = true) {
+    state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
+    if (j2) {
+        state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
+        let j2 = 1.082626668e-3
+        let n = (398600.4418 / state.a / state.a / state.a) ** 0.5
+        let rEarth = 6378.1363
+        let p = state.a * (1 - state.e ** 2)
+        let raanJ2Rate = -3*n*rEarth*rEarth*j2*Math.cos(state.i) / 2 / p / p
+        let argJ2Rate = 3 * n * rEarth * rEarth * j2 * (4 - 5 * Math.sin(state.i) ** 2) / 4 / p / p 
+        state.raan += raanJ2Rate * dt
+        state.arg += argJ2Rate * dt
+    }
+    else {
+        state.tA = propTrueAnomaly(state.tA, state.a, state.e, dt)
+    }
+    state = Object.values(Coe2PosVelObject(state))
+    return state
+}
+function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2Eff = true) {
+    let mu = 398600.44189, j2 = 0.00108262668, re = 6378, x = position[0], y = position[1], z = position[2]
+    let r = math.norm(position.slice(0,3))
+    return j2Eff ? [
+        position[3], position[4], position[5],
+        -mu * x / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 1)),
+        -mu * y / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 1)),
+        -mu * z / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 3))
+    ] : 
+    [
+        position[3], position[4], position[5],
+        -mu * x / r ** 3 ,
+        -mu * y / r ** 3 ,
+        -mu * z / r ** 3 
+    ]
+}
 
-function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
-    let mu = 398600.4418;
-    let rn = math.norm(r);
-    let vn = math.norm(v);
-    let h = math.cross(r, v);
-    let hn = math.norm(h);
-    let n = math.cross([0, 0, 1], h);
-    let nn = math.norm(n);
-    if (nn < 1e-6) {
-        n = [1, 0, 0];
-        nn = 1;
+function propTrueAnomalyj2(tA = 0, a = 10000, e = 0.1, i, time = 3600) {
+    function True2Eccentric(e, ta) {
+        return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
     }
-    var epsilon = vn * vn / 2 - mu / rn;
-    let a = -mu / 2 / epsilon;
-    let e = math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn));
-    let en = math.norm(e);
-    if (en < 1e-6) {
-        e = n.slice();
-        en = 0;
+    function Eccentric2True(e,E) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
     }
-    let inc = Math.acos(math.dot(h, [0, 0, 1]) / hn);
-    let ra = Math.acos(math.dot(n, [1, 0, 0]) / nn);
+    
+    let j2 = 1.082626668e-3
+    let n = (398600.4418 / a / a / a) ** 0.5
+    let rEarth = 6378.1363
+    let p = a * (1 - e ** 2)
+    let mAj2rate = -3 * n * rEarth * rEarth * j2 * (1 - e * e) * (3 * Math.sin(i) ** 2 - 2) / 4 / p / p
+    function solveKeplersEquation(M,e) {
+        let E = M;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+            E -= del;
+        }
+        return E;
+    }
+
+    let eccA = True2Eccentric(e, tA)
+    let meanA = eccA - e * Math.sin(eccA)
+    meanA += Math.sqrt(398600.4418 / (a ** 3)) * time
+    meanA += mAj2rate * time
+    eccA = solveKeplersEquation(meanA, e)
+    return Eccentric2True(e, eccA)
+}
+
+
+function PosVel2CoeNew(r = [42164.14, 0, 0], v = [0, 3.0746611796284924, 0]) {
+    let mu = 398600.4418
+    let rn = math.norm(r)
+    let vn = math.norm(v)
+    let h = math.cross(r,v)
+    let hn = math.norm(h)
+    let n = math.cross([0,0,1], h)
+    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r), math.dotMultiply(math.dot(r, v), v)), mu)
+    let en = math.norm(e)
+    let specMechEn = vn ** 2 / 2 - mu / rn
+    let a = -mu / 2 / specMechEn
+    let i = math.acos(h[2] / hn)
+    let raan = math.acos(n[0] / math.norm(n))
     if (n[1] < 0) {
-        ra = 2 * Math.PI - ra;
+        raan = 2 * Math.PI - raan
     }
-
-    let ar, arDot;
-    if (en < 1e-6) {
-        arDot = math.dot(n, e) / nn;
-    } else {
-        arDot = math.dot(n, e) / en / nn;
-    }
-    if (arDot > 1) {
-        ar = 0;
-    } else if (arDot < -1) {
-        ar = Math.PI;
-    } else {
-        ar = Math.acos(arDot);
+    let arg = math.acos(math.dot(n, e) / math.norm(n) / en)
+    if (arg.re !== undefined) {
+        arg = arg.re
     }
     if (e[2] < 0) {
-        ar = 2 * Math.PI - ar;
-    } else if (inc < 1e-6 && e[1] < 0) {
-        ar = 2 * Math.PI - ar;
+        arg = 2 * Math.PI - arg
     }
-    let ta, taDot;
-    if (en < 1e-6) {
-        taDot = math.dot(r, e) / rn / nn;
-    } else {
-        taDot = math.dot(r, e) / rn / en;
+    let tA = math.acos(math.dot(e, r) / en / rn)
+    if (tA.re !== undefined) {
+        tA = tA.re
     }
-    if (taDot > 1) {
-        ta = 0;
-    } else if (taDot < -1) {
-        ta = Math.PI;
-    } else {
-        ta = Math.acos(taDot);
+    if (math.dot(r, v) < 0) {
+        tA = 2 * Math.PI - tA
     }
-    if (math.dot(v, e) > 1e-6) {
-        ta = 2 * Math.PI - ta;
+    let longOfPeri, argLat, trueLong
+    if (en < 1e-6 && i < 1e-6) {
+        trueLong = math.acos(r[0] / rn)
+        if (r[1] < 0) {
+            trueLong = 2 * Math.PI - trueLong
+        }
+        arg = 0
+        raan = 0
+        tA = trueLong 
     }
-    // console.log([a,en,inc,ra,ar,ta])
+    else if (en < 1e-6) {
+        argLat = math.acos(math.dot(n, r) / math.norm(n) / rn)
+        if (r[2] < 0) {
+            argLat = 2 * Math.PI - argLat
+        }
+        arg = 0
+        tA = argLat
+    }
+    else if (i < 1e-6) {
+        longOfPeri = math.acos(e[0] / en)
+        if (e[1] < 0) {
+            longOfPeri = 2 * Math.PI - longOfPeri
+        }
+        raan = 0
+        arg = longOfPeri
+    }
     return {
-        a: a,
+        a,
         e: en,
-        i: inc,
-        raan: ra,
-        arg: ar,
-        tA: ta
+        i,
+        raan,
+        arg,
+        tA
     };
 }
 
