@@ -6013,15 +6013,28 @@ function handleTleFile(file) {
 }
 
 function importStates(states, time) {
-    console.log(time);
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
+    let findOrigin = mainWindow.satellites.find(sat => math.norm(Object.values(sat.position)) < 1e-3)
+    let originII = 0
+    if (findOrigin !== undefined) {
+        let originIndex = states.findIndex(sat => findOrigin.name.match(sat.name))
+        originII = originIndex !== -1 ? originIndex : originII
+    }
+    let oldReqs = mainWindow.relativeData.dataReqs.map(req => {
+        return {
+            data: req.data,
+            target: mainWindow.satellites[req.target].name,
+            origin: mainWindow.satellites[req.origin].name
+        }
+    })
+    mainWindow.relativeData.dataReqs = []
     // Use epoch from last tle
     let baseEpoch = time
     let baseUTCDiff = baseEpoch.getUTCHours() - baseEpoch.getHours()
     mainWindow.startDate = baseEpoch
     states = states.map((s,ii) => {
         let utcDiff = s.epoch.getUTCHours() - s.epoch.getHours()
-        if (ii === 0) {
+        if (ii === originII) {
             let originOrbit = propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
             mainWindow.originOrbit = PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6))
             mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
@@ -6038,7 +6051,7 @@ function importStates(states, time) {
     mainWindow.initSun = sun
     mainWindow.satellites = []
     states.forEach(st => {
-        let ricState = Eci2Ric(states[0].orbit.slice(0,3), states[0].orbit.slice(3,6), st.orbit.slice(0,3), st.orbit.slice(3,6))
+        let ricState = Eci2Ric(states[originII].orbit.slice(0,3), states[originII].orbit.slice(3,6), st.orbit.slice(0,3), st.orbit.slice(3,6))
         let existingSat = satCopies.filter(sat => sat.name.match(st.name) !== null)
         let color, shape, side, a, name
         if (existingSat.length > 0) {
@@ -6065,6 +6078,20 @@ function importStates(states, time) {
             side
         }))
     })
+    // Restore data reqs that still exist
+    setTimeout(() => {
+        oldReqs.forEach(req => {
+            let target = mainWindow.satellites.findIndex(sat => sat.name === req.target)
+            let origin = mainWindow.satellites.findIndex(sat => sat.name === req.origin)
+            if (target !== -1 && origin !== -1) {
+                mainWindow.relativeData.dataReqs.push({
+                    target,
+                    origin,
+                    data: req.data
+                })
+            }
+        })
+    }, 500);
 }
 
 function loadFileTle(fileToLoad) {
