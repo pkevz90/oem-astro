@@ -2804,6 +2804,10 @@ function checkJ200StringValid(string) {
     if (date == 'Invalid Date') return false
     string = string.map(s => Number(s))
     if (string.filter(s => Number.isNaN(s)).length > 0) return false
+    if (math.norm(string.slice(0,3)) > 1e6) {
+        // If inputted strings position greater than 100000, assume units are in meters
+        string = string.map(s => s / 1000)
+    }
     return {date, state: string}
 }
 
@@ -3209,12 +3213,12 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.000
     let propState = state.slice()
     propTime = finalTime * tB
     let propTwoBodyTime = finalTime - propTime
-    // while((propTime + mainWindow.timeDelta) < finalTime) {
-    //     state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime); propTime += mainWindow.timeDelta
-    // }
-    // state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
+    while((propTime + mainWindow.timeDelta) < finalTime) {
+        state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime); propTime += mainWindow.timeDelta
+    }
+    state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
     propState = state.slice()
-    propState = propRelMotionTwoBodyAnalytic(propState, propTwoBodyTime, time + propTime)
+    // propState = propRelMotionTwoBodyAnalytic(propState, propTwoBodyTime, time + propTime)
     return {
         x: propState[0],
         y: propState[1],
@@ -5861,7 +5865,9 @@ function setSun(time=mainWindow.startDate, origin = mainWindow.originOrbit) {
 
 function handleStkJ200File(file) {
     document.getElementById('context-menu')?.remove();
-    let satNames = file.split('\n')[1].split('Satellite-')[1].split(':  J')[0].split(',').map(name => name.trim())
+    // Check if distance units are in km or meters
+    let km = file.search('(km)') !== -1
+    let satNames = file.split('\n').find(line => line.search('Satellite-') !== -1).split('Satellite-')[1].split(':  J')[0].split(',').map(name => name.trim())
     file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2).filter(row => row !== '').map(row => row.split(/ {2,}/)).map(row => {
         return [
             new Date(row[0]),
@@ -5896,7 +5902,7 @@ function handleStkJ200File(file) {
         console.log(sec);
         let utcDiff = time.getUTCHours() - time.getHours()
         console.log((desiredTime - time) / 1000);
-        sec = propToTime(sec, (desiredTime - time) / 1000, false)
+        sec = propToTime(sec.map(s => km ? s : s / 1000), (desiredTime - time) / 1000, false)
         console.log(sec);
         return sec
     })
