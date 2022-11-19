@@ -132,6 +132,7 @@ class windowCanvas {
         dataReqs: [],
         fontSize: 12.5
     };
+    relDataDivs = undefined
     makeGif = {
         start: false,
         stop: false,
@@ -561,41 +562,41 @@ class windowCanvas {
         let oldWidth = ctx.lineWidth;
         ctx.lineWidth = 1;
         ctx.fillStyle = this.colors.foregroundColor
-        let location = [this.cnvs.width * 0.02, this.cnvs.height * 0.12]
         this.relativeData.fontSize = this.relativeData.fontSize || 20
-        let textSize = this.relativeData.fontSize * this.cnvs.height / 550
-        let timeFontSize = this.cnvs.height * 0.05 + 10
         ctx.textAlign = 'left';
-        this.relativeData.dataReqs.forEach(req => {
-            ctx.font = "bold " + textSize + "pt Courier";
+        this.relativeData.dataReqs.forEach((req,ii) => {
+            // ctx.font = "bold " + textSize + "pt Courier";
             let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0);
-            ctx.fillText(shortenString(this.satellites[req.origin].name, 12) + String.fromCharCode(8594) + shortenString(this.satellites[req.target].name,12), location[0], location[1]);
-            ctx.font = textSize + 'px Courier';
-            location[1] += textSize*1.1
-
-
-            req.data.forEach(d => {
-                if (relDataIn[d] !== undefined) {
-                    let textOut
-                    if (d === 'range') {
-                        if (relDataIn.rangeStd !== undefined) textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} +/-${relDataIn.rangeStd.toFixed(2)} km`
-                        else textOut = `${this.relativeData.data[d].name} :  ${relDataIn[d].toFixed(1)} km`
-                    }
-                    else if (d === 'interceptData') {
-                        textOut = `1-hr Intercept: [${(1000*relDataIn.interceptData.dV).toFixed(1)}, ${(relDataIn.interceptData.sunAng).toFixed(1)}, ${(1000*relDataIn.interceptData.relVel).toFixed(1)}]`
-                    }
-                    else {
-                        textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} ${this.relativeData.data[d].units}`
-                    }
-                    ctx.fillText(textOut, location[0], location[1]);
-                    location[1] += textSize*1.1;
-                }
+            // ctx.fillText(shortenString(this.satellites[req.origin].name, 12) + String.fromCharCode(8594) + shortenString(this.satellites[req.target].name,12), location[0], location[1]);
+            // ctx.font = textSize + 'px Courier';
+            // location[1] += textSize*1.1
+            mainWindow.relDataDivs[ii].forEach(span => {
+                let type = span.getAttribute('type')
+                span.innerText = type === 'interceptData' ? relDataIn[span.getAttribute('type')] : relDataIn[span.getAttribute('type')].toFixed(2)
             })
-            location[1] += textSize*0.5;
-            if ((location[1] + 5 * textSize * 1.1 + (ctx.textAlign === 'left' ? timeFontSize : 0 ))> this.cnvs.height) {
-                ctx.textAlign = 'right'
-                location = [this.cnvs.width * 0.98, this.cnvs.height * 0.12]
-            }
+
+            // req.data.forEach(d => {
+            //     if (relDataIn[d] !== undefined) {
+            //         let textOut
+            //         if (d === 'range') {
+            //             if (relDataIn.rangeStd !== undefined) textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} +/-${relDataIn.rangeStd.toFixed(2)} km`
+            //             else textOut = `${this.relativeData.data[d].name} :  ${relDataIn[d].toFixed(1)} km`
+            //         }
+            //         else if (d === 'interceptData') {
+            //             textOut = `1-hr Intercept: [${(1000*relDataIn.interceptData.dV).toFixed(1)}, ${(relDataIn.interceptData.sunAng).toFixed(1)}, ${(1000*relDataIn.interceptData.relVel).toFixed(1)}]`
+            //         }
+            //         else {
+            //             textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} ${this.relativeData.data[d].units}`
+            //         }
+            //         ctx.fillText(textOut, location[0], location[1]);
+            //         location[1] += textSize*1.1;
+            //     }
+            // })
+            // location[1] += textSize*0.5;
+            // if ((location[1] + 5 * textSize * 1.1 + (ctx.textAlign === 'left' ? timeFontSize : 0 ))> this.cnvs.height) {
+            //     ctx.textAlign = 'right'
+            //     location = [this.cnvs.width * 0.98, this.cnvs.height * 0.12]
+            // }
         })
         ctx.textAlign = 'left'
         ctx.lineWidth = oldWidth;
@@ -1461,14 +1462,14 @@ function startContextClick(event) {
         ctxMenu = document.createElement('div');
         ctxMenu.style.position = 'fixed';
         ctxMenu.id = 'context-menu';
-        ctxMenu.style.zIndex = 10;
+        ctxMenu.style.zIndex = 101;
         ctxMenu.style.backgroundColor = 'black';
         ctxMenu.style.cursor = 'pointer';
         ctxMenu.style.borderRadius = '15px';
         ctxMenu.style.transform = 'scale(0)';
         ctxMenu.style.fontSize = '1.5em';
         ctxMenu.style.minWidth = '263px';
-        document.getElementsByTagName('body')[0].appendChild(ctxMenu);
+        document.body.appendChild(ctxMenu);
     }
     ctxMenu = document.getElementById('context-menu');
     ctxMenu.style.top = event.clientY +'px';
@@ -1703,14 +1704,43 @@ function handleContextClick(button) {
         for (let index = 0; index < oldCheckboxes.length; index++) {
             if (oldCheckboxes[index].checked) data.push(oldCheckboxes[index].id)
         }
+        console.log(data);
         if (data.length === 0) return
         mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) !== Number(button.parentElement.sat))
-        button.parentElement.targets.forEach(target => {
+        let existingDivs = [...document.querySelectorAll('.data-drag-div')]
+        button.parentElement.targets.forEach((target, ii) => {
             mainWindow.relativeData.dataReqs.push({
                 data,
                 target,
                 origin: button.parentElement.sat
             })
+            let existingDiv = existingDivs.find(div => {
+                return div.getAttribute('origin') == button.parentElement.sat && div.getAttribute('target') == target
+            })
+            let left, top
+            if (existingDiv !== undefined) {
+                left = existingDiv.style.left
+                top = existingDiv.style.top
+                existingDiv.remove()
+            }
+            top = top === undefined ? (30 + 20 * ii) + 'px' : top
+            openDataDiv({
+                title:  shortenString(mainWindow.satellites[button.parentElement.sat].name, 12) + String.fromCharCode(8594) + shortenString(mainWindow.satellites[target].name,12),
+                data,
+                target,
+                origin: button.parentElement.sat,
+                left, top
+            })
+        })
+        // Remove rel data divs that don't exist anymore
+        existingDivs.forEach(div => {
+            let divIndex = mainWindow.relativeData.dataReqs.findIndex(req => {
+                return req.origin == div.getAttribute('origin') && req.target == div.getAttribute('target')
+            })
+            if (divIndex === -1) div.remove()
+        })
+        mainWindow.relDataDivs = [...document.querySelectorAll('.data-drag-div')].map(div => {
+            return div.querySelectorAll('.data')
         })
         document.getElementById('context-menu')?.remove();
     }
@@ -3955,6 +3985,7 @@ function getRelativeData(n_target, n_origin, intercept = true) {
                     relVel: math.norm(math.subtract([burn.F.xd, burn.F.yd, burn.F.zd], [point2.rd[0], point2.id[0], point2.cd[0]])),
                     sunAng
                 }
+                interceptData = `[${(1000*interceptData.dV).toFixed(1)}, ${(interceptData.sunAng).toFixed(1)}, ${(1000*interceptData.relVel).toFixed(1)}]`
             }
             // console.log(interceptData);
         }
@@ -5868,6 +5899,7 @@ function handleStkJ200File(file) {
     // Check if distance units are in km or meters
     let km = file.search('(km)') !== -1
     let satNames = file.split('\n').find(line => line.search('Satellite-') !== -1).split('Satellite-')[1].split(':  J')[0].split(',').map(name => name.trim())
+    
     file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2).filter(row => row !== '').map(row => row.split(/ {2,}/)).map(row => {
         return [
             new Date(row[0]),
@@ -5878,6 +5910,9 @@ function handleStkJ200File(file) {
             Number(row[5]),
             Number(row[6]),
         ]
+    }))
+    openJ2000Window(file.map((s,ii) => {
+        return {name: satNames[ii], state: s}
     }))
     satNames.slice(0,file.length)
     let defaultTime = file[0][0][0]
@@ -5891,7 +5926,6 @@ function handleStkJ200File(file) {
     file = file.filter(t => t.length > 0)
     closeAll()
     let baseUTCDiff = desiredTime.getUTCHours() - desiredTime.getHours()
-    
     let timeFile = file.map(sec => {
         let times = sec.map(row => Math.abs(row[0] - desiredTime))
         let minTime = math.min(times)
@@ -7156,6 +7190,7 @@ function updateWhiteCellWindow() {
 window.onbeforeunload = () => {
     whiteCellWindow.close()
     instructionWindow.close()
+    tleWindow.close()
 }
 
 function shortenString(str = 'teststring12345', n=mainWindow.stringLimit[1], start = mainWindow.stringLimit[0]) {
@@ -7169,7 +7204,7 @@ async function testFetch() {
 let tleWindow
 function openTleWindow(tleSatellites) {
     document.getElementById('context-menu')?.remove();
-    tleWindow = window.open('', 'instructions', "width=600px,height=600px")
+    tleWindow = window.open('', 'tle', "width=600px,height=600px")
     tleWindow.importTleChoices = (el) => {
         function True2Eccentric(e, ta) {
             return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
@@ -7250,6 +7285,29 @@ function openTleWindow(tleSatellites) {
             outHt += '</div>'
             return outHt
         }).join('')}
+        </div>
+        <div><button onclick="importTleChoices(this)">Import TLE States</button></div>
+    `
+}
+let j2000Window
+function openJ2000Window(j2000Satellites = []) {
+    return
+    document.getElementById('context-menu')?.remove();
+    j2000Window = window.open('', 'j2000', "width=600px,height=600px")
+    let time = j2000Satellites[0].state[0][0]
+    console.log(time);
+    setTimeout(() => tleWindow.document.title = 'J2000 Import Tool', 1000)
+    j2000Window.j2000Satellites = j2000Satellites
+    j2000Window.document.body.innerHTML = `
+        <div>ARTS J2000 Import Tool</div>
+        <div style="width: 100%; text-align: center;">Import Time <input onchange="changeImportTime(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(time))}></div>
+        
+        <div class="no-scroll" style="max-height: 90%; overflow: scroll">
+            ${j2000Satellites.map(sat => {
+                return `<div>
+                    ${sat.name}
+                </div>`
+            }).join('')}
         </div>
         <div><button onclick="importTleChoices(this)">Import TLE States</button></div>
     `
@@ -7407,4 +7465,134 @@ function calculateSatErrorStates(team = 1, time = mainWindow.desired.scenarioTim
     })
 
     return errors
+}
+
+function dragElement(elmnt) {
+    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    if (document.getElementById(elmnt.id + "header")) {
+      // if present, the header is where you move the DIV from:
+      document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+    } else {
+      // otherwise, move the DIV from anywhere inside the DIV:
+      elmnt.onmousedown = dragMouseDown;
+    }
+  
+    function dragMouseDown(e) {
+      e = e || window.event;
+      e.preventDefault();
+      // get the mouse cursor position at startup:
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      // call a function whenever the cursor moves:
+      document.onmousemove = elementDrag;
+    }
+  
+    function elementDrag(e) {
+      e = e || window.event;
+      e.preventDefault();
+      // calculate the new cursor position:
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      // set the element's new position:
+      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+      if (Number(elmnt.style.left.slice(0, elmnt.style.left.length - 2)) < 0) {
+        elmnt.style.left = '0px'
+      }
+    }
+  
+    function closeDragElement() {
+      // stop moving when mouse button is released:
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
+  }
+
+function openDataDiv(options = {}) {
+    let {
+        title = 'Data Title',
+        data = [
+            'range', 'relativeVelocity', 'sunAngle'
+        ],
+        origin = 'sat1',
+        target = 'sat2',
+        left = '10px',
+        top = '50px'
+    } = options
+    let properTerms = {
+        range: {name: 'Range', units: 'km'},
+        relativeVelocity: {name: 'Rel Vel', units: 'm/s'},
+        sunAngle: {name: 'CATS', units: 'deg'},
+        poca: {name: 'POCA', units: 'km'},
+        rangeRate: {name: 'Range Rate', units: 'm/s'},
+        interceptData: {name: '1-hr Intercept', units:''}
+    }
+    let newDiv = document.createElement('div')
+    newDiv.style.position = 'fixed'
+    newDiv.style.padding = '20px 4px 4px 4px'
+    newDiv.style.cursor = 'move'
+    newDiv.style.display = 'flex'
+    newDiv.style.justifyContent = 'space-around'
+    newDiv.style.zIndex = 100
+    newDiv.style.top = top
+    newDiv.style.left = left
+    newDiv.style.width = 'auto'
+    newDiv.style.height = 'auto'
+    newDiv.style.fontFamily = 'Courier'
+    newDiv.style.fontSize = '20px'
+    newDiv.style.backgroundColor = 'white'
+    newDiv.style.border = '1px solid black'
+    newDiv.style.borderRadius = '10px'
+    newDiv.style.boxShadow = '5px 5px 7px #575757'
+    newDiv.setAttribute('origin', origin)
+    newDiv.setAttribute('target', target)
+    newDiv.innerHTML = `
+    <div style="text-align: center">
+        <div style="font-weight: 900">${title}</div>
+        ${data.map(d => {
+            return `
+                <div title="${d === 'interceptData' ? 'Delta-V, Sun Angle, Rel Vel' : ''}">${properTerms[d].name}: <span style="font-size: ${d === 'interceptData' ? '0.75em': '1em'}" class="data" type="${d}">0</span> ${properTerms[d].units}</div>
+            `
+        }).join('')}
+    </div>
+    `
+    newDiv.classList.add('data-drag-div')
+    let exitButton = document.createElement('div')
+    exitButton.innerText = 'X'
+    exitButton.style.position = 'absolute'
+    exitButton.style.top = '1px'
+    exitButton.style.right = '3px'
+    exitButton.style.cursor = 'pointer'
+    exitButton.onclick = el => {
+        let origin = el.target.parentElement.getAttribute('origin')
+        let target = el.target.parentElement.getAttribute('target')
+        mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => {
+            return !(origin == req.origin && target == req.target)
+        })
+        el.target.parentElement.remove()
+    }
+    let fontSizeButton = document.createElement('div')
+    fontSizeButton.innerHTML = '<span type="small" style="font-size: 0.5em; margin-right: 15px; cursor: pointer">A</span><span type="big" style="font-size: 1em; cursor: pointer">A</span>'
+    fontSizeButton.style.position = 'absolute'
+    fontSizeButton.style.top = '1px'
+    fontSizeButton.style.left = '3px'
+    fontSizeButton.classList.add('font-size-button')
+    // If exit button clicked remove data requirement
+    document.body.append(newDiv)
+    newDiv.append(exitButton)
+    newDiv.append(fontSizeButton)
+    let fontButtons = [...newDiv.querySelector('.font-size-button').querySelectorAll('span')].forEach(sp => {
+        sp.onclick = el => {
+            let relDiv = el.target.parentElement.parentElement
+            let fontSize = Number(relDiv.style.fontSize.slice(0, relDiv.style.fontSize.length - 2))
+            fontSize += el.target.getAttribute('type') === 'big' ? 1 : -1
+            fontSize = fontSize < 12 ? 12 : fontSize
+            relDiv.style.fontSize = fontSize + 'px'
+        }
+    })
+    console.log(fontButtons);
+    dragElement(newDiv)
 }
