@@ -1658,11 +1658,18 @@ function handleContextClick(button) {
            <div class="context-item" onclick="handleContextClick(this)" id="display-data-2">Confirm</div>
            <div class="no-scroll" style="max-height: 300px; overflow: scroll">
         `
-       for (let index = 0; index < mainWindow.satellites.length; index++) {
-          if (index === sat || mainWindow.satellites[index].locked) continue
+
+        // Order satellites by distance from selected satellite
+        let satList = mainWindow.satellites.filter((s,ii) => ii !== sat).map((s, ii) => {
+            return {index: ii, name: s.name, position: math.norm(math.subtract(Object.values(s.curPos), Object.values(mainWindow.satellites[sat].curPos)).slice(0,3))}
+        }).sort((a,b) => a.position - b.position)
+       for (let index = 0; index < satList.length; index++) {
+        //   if (index === sat || mainWindow.satellites[index].locked) continue
           let checked = ''
-          if (mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) === sat && Number(req.target) === index).length > 0) checked = 'checked'
-          out += `<div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" ${checked} id="${index}-box"/><label style="cursor: pointer" for="${index}-box">${mainWindow.satellites[index].name}</label></div>`
+          if (mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) === sat && Number(req.target) === satList[index].index).length > 0) checked = 'checked'
+          out += `<div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" ${checked} id="${satList[index].index}-box"/><label style="cursor: pointer" for="${satList[index].index}-box">${satList[index].name}</label>
+            <span style="font-size: 0.5em; color: #bbbbbb">${satList[index].position.toFixed(1)} km</span>
+          </div>`
        }
        out += '/div>'
 
