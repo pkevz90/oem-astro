@@ -377,7 +377,7 @@ class windowCanvas {
             ctx.strokeStyle = 'rgb(200,200,200)'
             ctx.strokeRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
             ctx.fillStyle = this.colors.foregroundColor;
-            ctx.strokeStyle = 'black'
+            ctx.strokeStyle = this.colors.foregroundColor
             ctx.font = 'bold ' + this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 40 + 'px serif';
             let drawX = math.abs(this.plotCenter) < this.plotWidth / 2* this.frameCenter.ci.w;
             let drawY = this.plotCenter + this.plotWidth / 2 * this.frameCenter.ci.w;
@@ -413,7 +413,7 @@ class windowCanvas {
             
             ctx.lineWidth = this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 200;
             ctx.font = 'bold ' + this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 40 + 'px serif';
-            ctx.strokeStyle = 'black'
+            ctx.strokeStyle = this.colors.foregroundColor
             ctx.beginPath()
             ctx.moveTo(origin.rc.x, origin.rc.y);
             ctx.lineTo(origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2);
@@ -606,7 +606,7 @@ class windowCanvas {
     showTime() {
         let ctx = this.getContext();
         ctx.textAlign = 'left';
-        ctx.fillStyle = 'black'
+        ctx.fillStyle = this.colors.foregroundColor
         // console.log(ctx.textBaseline);
         ctx.textBaseline = 'bottom'
         let fontSize = (this.cnvs.height < this.cnvs.width ? this.cnvs.height : this.cnvs.width) * 0.05
@@ -620,12 +620,21 @@ class windowCanvas {
             ctx.textAlign = 'end';
             ctx.textBaseline = 'bottom';
             ctx.font = 'bold ' + this.cnvs.height * 0.02 + 'px serif';
+            ctx.fillStyle = this.colors.foregroundColor;
+            // console.time()
+            // let originLoc = {...mainWindow.originOrbit}
+            // originLoc.tA = propTrueAnomaly(originLoc.tA, originLoc.a, originLoc.e, mainWindow.scenarioTime)
+            // originLoc = Object.values(Coe2PosVelObject(originLoc))
+            // originLoc = fk5ReductionTranspose(originLoc.slice(0,3), new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000)))
+            // originLoc = ecef2latlong(originLoc)
+            // ctx.fillText(`Lat ${originLoc.latSat.toFixed(1)}/Long ${originLoc.longSat.toFixed(1)}`, this.cnvs.width - 10, this.cnvs.height -  25)
+            // console.timeEnd()
             if (!this.mousePosition) return;
             let ricCoor = this.convertToRic(this.mousePosition);
             let frame = Object.keys(ricCoor)[0];
             ctx.fillStyle = this.colors.foregroundColor;
             ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km ${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km `, this.cnvs.width - 10, this.cnvs.height -  10)
-        }
+            }
         catch (e) {
 
         }
@@ -1126,20 +1135,7 @@ function keydownFunction(key) {
         }
     }
     else if ((key.key === 'z' || key.key === 'Z') && key.ctrlKey) reverseLastAction()
-    else if (key.key === 'o' && key.altKey) {
-        let a = Number(prompt('Enter reference SMA [km]', mainWindow.originOrbit.a))
-        let e = Number(prompt('Enter reference Eccentricity', mainWindow.originOrbit.e))
-        let i = Number(prompt('Enter reference Inclination [deg]', mainWindow.originOrbit.i * 180 / Math.PI)) * Math.PI / 180
-        let arg = Number(prompt('Enter reference Arg of Perigee [deg]', mainWindow.originOrbit.arg * 180 / Math.PI)) * Math.PI / 180
-        let raan = Number(prompt('Enter reference RAAN [deg]', mainWindow.originOrbit.raan * 180 / Math.PI)) * Math.PI / 180
-        let tA = Number(prompt('Enter reference True Anomaly [deg]', mainWindow.originOrbit.tA * 180 / Math.PI)) * Math.PI / 180
-        mainWindow.mm = (398600.4418 / a ** 3) ** (1/2)
-        mainWindow.scenarioLength = Math.abs(a - mainWindow.originOrbit.a) > 2000 ? 2 * Math.PI * (a ** 3 / 398600.4418) ** (1/2) / 3600: mainWindow.scenarioLength
-        mainWindow.timeDelta = mainWindow.scenarioLength / 0.09284620026925397
-        mainWindow.originOrbit = {
-            a, e, i, raan, arg, tA
-        }
-    }
+
     if (mainWindow.panelOpen) return;
     if (key.key === ' ') {
         if (threeD) {
@@ -1285,12 +1281,12 @@ function keydownFunction(key) {
         }
     }
     else if (key.key === 'd' || key.key === 'D') {
-        if (mainWindow.colors.backgroundColor === 'black') {
+        if (mainWindow.colors.backgroundColor === '#111122') {
             mainWindow.colors.backgroundColor = 'white'
             mainWindow.colors.foregroundColor = 'black'
         }
         else {
-            mainWindow.colors.backgroundColor = 'black'
+            mainWindow.colors.backgroundColor = '#111122'
             mainWindow.colors.foregroundColor = 'white'
         }
     }
@@ -1325,6 +1321,8 @@ function keydownFunction(key) {
     else if (key.key === '>' && key.shiftKey) mainWindow.trajSize += 0.1
     else if (key.key === 'E' && key.shiftKey && key.altKey) downloadFile('error_file.txt', errorList.map(e => e.stack).join('\n'))
     else if (key.key === 'w' && key.altKey) openWhiteCellWindow()
+    else if (key.key === 'w') moveTrueAnomaly(-0.1, false)
+    else if (key.key === 'e') moveTrueAnomaly(0.1, false)
 }
 function sliderFunction(slider) {
     let timeDelta = Number(slider.value) - mainWindow.desired.scenarioTime
@@ -1372,6 +1370,10 @@ window.addEventListener('keyup', key => {
             buttons[ii].innerText = 'Edit';
         }
     }
+    
+    if (document.getElementById('context-menu') !== null) return
+    if (key === 'w') moveTrueAnomaly(0)
+    else if (key === 'e') moveTrueAnomaly(0)
 })
 window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
@@ -2768,6 +2770,51 @@ document.getElementById('main-plot').addEventListener('mousemove', event => {
         mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
     }
 })
+
+function moveTrueAnomaly(delta = 0.1, recalcBurns = true) {
+    // Angle in degrees
+    delta *= Math.PI / 180
+    if (mainWindow.desired.plotWidth < math.abs(delta*2*mainWindow.originOrbit.a)) {
+        mainWindow.desired.plotWidth = math.abs(delta*2*mainWindow.originOrbit.a) * 4
+    }
+    let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+    let sats = mainWindow.satellites.map(sat => {
+        let pos = Object.values(sat.position)
+        let eciPos = Ric2Eci(pos.slice(0,3), pos.slice(3,6), originEci.slice(0,3), originEci.slice(3,6))
+        return [...eciPos.rEcci, ...eciPos.drEci]
+    })
+    let satWaypoints = mainWindow.satellites.map(sat => {
+        return sat.burns.map(b => {
+            let way = [...Object.values(b.waypoint.target),0,0,0]
+            way = Ric2Eci(way.slice(0,3), [0,0,0], originEci.slice(0,3), originEci.slice(3,6))
+            return [...way.rEcci, ...way.drEci]  
+        })
+    })
+    mainWindow.originOrbit.tA += delta
+    originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+    for (let index = 0; index < mainWindow.satellites.length; index++) {
+        let ricPos = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sats[index].slice(0,3), sats[index].slice(3,6))
+       mainWindow.satellites[index].position = {
+            r: ricPos.rHcw[0][0],
+            i: ricPos.rHcw[1][0],
+            c: ricPos.rHcw[2][0],
+            rd: ricPos.drHcw[0][0],
+            id: ricPos.drHcw[1][0],
+            cd: ricPos.drHcw[2][0]
+       }
+       for (let jj = 0; jj < mainWindow.satellites[index].burns.length; jj++) {
+        let way = satWaypoints[index][jj]
+        let ricWay = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), way.slice(0,3), way.slice(3,6))
+        mainWindow.satellites[index].burns[jj].waypoint.target = {
+            r: ricWay.rHcw[0][0],
+            i: ricWay.rHcw[1][0],
+            c: ricWay.rHcw[2][0]
+        }
+       }
+       if (recalcBurns) mainWindow.satellites[index].calcTraj(true)
+       mainWindow.satellites[index].calcTraj()
+    }
+}
 
 function exportScenario(name = mainWindow.satellites.map(sat => sat.name).join('_') + '.sas') {
     downloadFile(name, JSON.stringify(mainWindow.getData()));
@@ -6434,15 +6481,15 @@ function draw3dScene(az = azD, el = elD) {
     for (let index = 0; index <= linePoints; index++) {
 
         points.push({
-            color: '#000000',
+            color: mainWindow.colors.foregroundColor,
             position: math.multiply(r, [lineLength * index / linePoints, 0, 0]),
             size: 2
         },{
-            color: '#000000',
+            color: mainWindow.colors.foregroundColor,
             position: math.multiply(r, [0, lineLength * index / linePoints, 0]),
             size: 2
         },{
-            color: '#000000',
+            color: mainWindow.colors.foregroundColor,
             position: math.multiply(r, [0, 0, lineLength * index / linePoints]),
             size: 2
         },{
@@ -6452,17 +6499,17 @@ function draw3dScene(az = azD, el = elD) {
         })
     }
     points.push({
-        color: '#000000',
+        color: mainWindow.colors.foregroundColor,
         position: math.multiply(r, [lineLength, 0, 0]),
         size: 2,
         text: 'R'
     },{
-        color: '#000000',
+        color: mainWindow.colors.foregroundColor,
         position: math.multiply(r, [0,lineLength, 0]),
         size: 2,
         text: 'I'
     },{
-        color: '#000000',
+        color: mainWindow.colors.foregroundColor,
         position: math.multiply(r, [0,0,lineLength]),
         size: 2,
         text: 'C'
@@ -6989,9 +7036,13 @@ function openInstructionWindow() {
         <li>
             Hot Keys
             <ul>
-                <li>Hot Key Option #1</li>
-                <li>Hot Key Option #2</li>
-                <li>Hot Key Option #3</li>
+                <li>W - Move Origin to the West</li>
+                <li>E - Move Origin to the East</li>
+                <li>Shift + W - Open White Cell Window</li>
+                <li>D - Switch between dark and light mode</li>
+                <li>N - Add random satellite</li>
+                <li>Cntr + <> - Change satellite display size</li>
+                <li><> - Change trajectory dot size</li>
             </ul>
         </li>
     </ul>
@@ -7595,4 +7646,35 @@ function openDataDiv(options = {}) {
     })
     console.log(fontButtons);
     dragElement(newDiv)
+}
+
+function fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
+    // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
+    // ECI to ECEF
+    let jd_TT = julianDate(date.getFullYear(), date.getMonth(), date.getDate()) 
+    let t_TT = (jd_TT - 2451545) / 36525
+    let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
+    zeta /= 3600
+    let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
+    theta /= 3600
+    let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
+    z /= 3600
+    let p = math.multiply(rotationMatrices(-zeta, 3), rotationMatrices(theta, 2), rotationMatrices(-z, 3))
+    let thetaGmst = siderealTime(julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + date.getMilliseconds() / 1000))
+    let w = rotationMatrices(thetaGmst, 3)
+    r = math.multiply(math.transpose(w), math.transpose(p), math.transpose([r]))
+    return math.squeeze(r)
+}
+
+function siderealTime(jdUti=2448855.009722) {
+    let tUti = (jdUti - 2451545) / 36525
+    return ((67310.548 + (876600*3600 + 8640184.812866)*tUti + 0.093104*tUti*tUti - 6.2e-6*tUti*tUti*tUti) % 86400)/240
+}
+
+function ecef2latlong(satEcef = [-15147.609175480451, -39349.25471082444, 28.29050091982121]) {
+    let longSat = math.atan2(satEcef[1], satEcef[0]) * 180 / Math.PI
+    let latSat = math.atan2(satEcef[2], math.norm(satEcef.slice(0,2))) * 180 / Math.PI
+    return {
+        longSat, latSat
+    }
 }
