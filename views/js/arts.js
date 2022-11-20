@@ -1660,9 +1660,9 @@ function handleContextClick(button) {
         `
 
         // Order satellites by distance from selected satellite
-        let satList = mainWindow.satellites.filter((s,ii) => ii !== sat).map((s, ii) => {
+        let satList = mainWindow.satellites.map((s, ii) => {
             return {index: ii, name: s.name, position: math.norm(math.subtract(Object.values(s.curPos), Object.values(mainWindow.satellites[sat].curPos)).slice(0,3))}
-        }).sort((a,b) => a.position - b.position)
+        }).filter((s,ii) => ii !== sat).sort((a,b) => a.position - b.position)
        for (let index = 0; index < satList.length; index++) {
         //   if (index === sat || mainWindow.satellites[index].locked) continue
           let checked = ''
