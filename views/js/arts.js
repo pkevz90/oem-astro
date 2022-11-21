@@ -132,7 +132,7 @@ class windowCanvas {
         dataReqs: [],
         fontSize: 12.5
     };
-    relDataDivs = undefined
+    relDataDivs = []
     makeGif = {
         start: false,
         stop: false,
@@ -564,39 +564,13 @@ class windowCanvas {
         ctx.fillStyle = this.colors.foregroundColor
         this.relativeData.fontSize = this.relativeData.fontSize || 20
         ctx.textAlign = 'left';
+        if (this.relativeData.dataReqs.length > mainWindow.relDataDivs.length) resetDataDivs()
         this.relativeData.dataReqs.forEach((req,ii) => {
-            // ctx.font = "bold " + textSize + "pt Courier";
             let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0);
-            // ctx.fillText(shortenString(this.satellites[req.origin].name, 12) + String.fromCharCode(8594) + shortenString(this.satellites[req.target].name,12), location[0], location[1]);
-            // ctx.font = textSize + 'px Courier';
-            // location[1] += textSize*1.1
             mainWindow.relDataDivs[ii].forEach(span => {
                 let type = span.getAttribute('type')
                 span.innerText = type === 'interceptData' ? relDataIn[span.getAttribute('type')] : relDataIn[span.getAttribute('type')].toFixed(2)
             })
-
-            // req.data.forEach(d => {
-            //     if (relDataIn[d] !== undefined) {
-            //         let textOut
-            //         if (d === 'range') {
-            //             if (relDataIn.rangeStd !== undefined) textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} +/-${relDataIn.rangeStd.toFixed(2)} km`
-            //             else textOut = `${this.relativeData.data[d].name} :  ${relDataIn[d].toFixed(1)} km`
-            //         }
-            //         else if (d === 'interceptData') {
-            //             textOut = `1-hr Intercept: [${(1000*relDataIn.interceptData.dV).toFixed(1)}, ${(relDataIn.interceptData.sunAng).toFixed(1)}, ${(1000*relDataIn.interceptData.relVel).toFixed(1)}]`
-            //         }
-            //         else {
-            //             textOut = `${this.relativeData.data[d].name}: ${relDataIn[d].toFixed(1)} ${this.relativeData.data[d].units}`
-            //         }
-            //         ctx.fillText(textOut, location[0], location[1]);
-            //         location[1] += textSize*1.1;
-            //     }
-            // })
-            // location[1] += textSize*0.5;
-            // if ((location[1] + 5 * textSize * 1.1 + (ctx.textAlign === 'left' ? timeFontSize : 0 ))> this.cnvs.height) {
-            //     ctx.textAlign = 'right'
-            //     location = [this.cnvs.width * 0.98, this.cnvs.height * 0.12]
-            // }
         })
         ctx.textAlign = 'left'
         ctx.lineWidth = oldWidth;
@@ -1717,41 +1691,13 @@ function handleContextClick(button) {
         if (data.length === 0) return
         mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) !== Number(button.parentElement.sat))
         
-        let existingDivs = [...document.querySelectorAll('.data-drag-div')]
         button.parentElement.targets.forEach((target, ii) => {
             mainWindow.relativeData.dataReqs.push({
                 data,
                 target,
                 origin: button.parentElement.sat
             })
-            // let existingDiv = existingDivs.find(div => {
-            //     return div.getAttribute('origin') == button.parentElement.sat && div.getAttribute('target') == target
-            // })
-            // let left, top
-            // if (existingDiv !== undefined) {
-            //     left = existingDiv.style.left
-            //     top = existingDiv.style.top
-            //     existingDiv.remove()
-            // }
-            // top = top === undefined ? (30 + 20 * ii) + 'px' : top
-            // openDataDiv({
-            //     title:  shortenString(mainWindow.satellites[button.parentElement.sat].name, 12) + String.fromCharCode(8594) + shortenString(mainWindow.satellites[target].name,12),
-            //     data,
-            //     target,
-            //     origin: button.parentElement.sat,
-            //     left, top
-            // })
         })
-        // Remove rel data divs that don't exist anymore
-        // existingDivs.forEach(div => {
-        //     let divIndex = mainWindow.relativeData.dataReqs.findIndex(req => {
-        //         return req.origin == div.getAttribute('origin') && req.target == div.getAttribute('target')
-        //     })
-        //     if (divIndex === -1) div.remove()
-        // })
-        // mainWindow.relDataDivs = [...document.querySelectorAll('.data-drag-div')].map(div => {
-        //     return div.querySelectorAll('.data')
-        // })
         resetDataDivs()
         document.getElementById('context-menu')?.remove();
     }
@@ -3673,11 +3619,11 @@ function editSatellite(button) {
         let delSat = button.nextSibling.selectedIndex
         mainWindow.satellites.splice(delSat, 1);
         mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => Number(req.target) !== delSat && Number(req.origin) !== delSat )
-        console.log(JSON.parse(JSON.stringify(mainWindow.relativeData.dataReqs)));
         for (let index = 0; index < mainWindow.relativeData.dataReqs.length; index++) {
             mainWindow.relativeData.dataReqs[index].origin = Number(mainWindow.relativeData.dataReqs[index].origin) > delSat ? Number(mainWindow.relativeData.dataReqs[index].origin) - 1 : mainWindow.relativeData.dataReqs[index].origin
             mainWindow.relativeData.dataReqs[index].target = Number(mainWindow.relativeData.dataReqs[index].target) > delSat ? Number(mainWindow.relativeData.dataReqs[index].target) - 1 : mainWindow.relativeData.dataReqs[index].target
         }
+        resetDataDivs()
         updateLockScreen()
         updateWhiteCellWindow()
         document.title = mainWindow.satellites.map(s => s.name).join(' / ')
@@ -5724,6 +5670,7 @@ function changeOrigin(satIn = 1, time = 0) {
                 })
             })
             mainWindow.relativeData.dataReqs = dataReqs
+            resetDataDivs()
             updateLockScreen()
         }, 500)
     } catch (error) {
@@ -5970,6 +5917,14 @@ function handleStkJ200File(file) {
     openJ2000Window(file.map((s,ii) => {
         return {name: satNames[ii], state: s}
     }))
+    let oldReqs = mainWindow.relativeData.dataReqs.map(req => {
+        return {
+            data: req.data,
+            target: mainWindow.satellites[req.target].name,
+            origin: mainWindow.satellites[req.origin].name
+        }
+    })
+    mainWindow.relativeData.dataReqs = []
     satNames.slice(0,file.length)
     let defaultTime = file[0][0][0]
     let desiredTime = prompt('What time to pull states from?', toStkFormat(defaultTime.toString()))
@@ -6066,6 +6021,19 @@ function handleStkJ200File(file) {
                 insertDirectionBurn(ii, burn.time, burn.burnDir.map(s => s / 1000))
             })
         })
+        oldReqs.forEach(req => {
+            let target = mainWindow.satellites.findIndex(sat => sat.name === req.target)
+            let origin = mainWindow.satellites.findIndex(sat => sat.name === req.origin)
+            if (target !== -1 && origin !== -1) {
+                mainWindow.relativeData.dataReqs.push({
+                    target,
+                    origin,
+                    data: req.data
+                })
+            }
+        })
+        
+        resetDataDivs()
     }, 1000)
 }
 
@@ -6187,6 +6155,8 @@ function importStates(states, time) {
                 })
             }
         })
+        
+        resetDataDivs()
     }, 500);
 }
 
@@ -7307,7 +7277,6 @@ function openTleWindow(tleSatellites) {
         }
         let importTime = new Date(el.parentElement.parentElement.querySelector('#tle-import-time').value)
         importStates(states, importTime)
-        resetDataDivs()
     }
     tleWindow.changeImportTime = (el) => {
         let importDate = new Date(el.value)
