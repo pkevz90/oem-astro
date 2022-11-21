@@ -1716,6 +1716,7 @@ function handleContextClick(button) {
         console.log(data);
         if (data.length === 0) return
         mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(req => Number(req.origin) !== Number(button.parentElement.sat))
+        
         let existingDivs = [...document.querySelectorAll('.data-drag-div')]
         button.parentElement.targets.forEach((target, ii) => {
             mainWindow.relativeData.dataReqs.push({
@@ -1723,34 +1724,35 @@ function handleContextClick(button) {
                 target,
                 origin: button.parentElement.sat
             })
-            let existingDiv = existingDivs.find(div => {
-                return div.getAttribute('origin') == button.parentElement.sat && div.getAttribute('target') == target
-            })
-            let left, top
-            if (existingDiv !== undefined) {
-                left = existingDiv.style.left
-                top = existingDiv.style.top
-                existingDiv.remove()
-            }
-            top = top === undefined ? (30 + 20 * ii) + 'px' : top
-            openDataDiv({
-                title:  shortenString(mainWindow.satellites[button.parentElement.sat].name, 12) + String.fromCharCode(8594) + shortenString(mainWindow.satellites[target].name,12),
-                data,
-                target,
-                origin: button.parentElement.sat,
-                left, top
-            })
+            // let existingDiv = existingDivs.find(div => {
+            //     return div.getAttribute('origin') == button.parentElement.sat && div.getAttribute('target') == target
+            // })
+            // let left, top
+            // if (existingDiv !== undefined) {
+            //     left = existingDiv.style.left
+            //     top = existingDiv.style.top
+            //     existingDiv.remove()
+            // }
+            // top = top === undefined ? (30 + 20 * ii) + 'px' : top
+            // openDataDiv({
+            //     title:  shortenString(mainWindow.satellites[button.parentElement.sat].name, 12) + String.fromCharCode(8594) + shortenString(mainWindow.satellites[target].name,12),
+            //     data,
+            //     target,
+            //     origin: button.parentElement.sat,
+            //     left, top
+            // })
         })
         // Remove rel data divs that don't exist anymore
-        existingDivs.forEach(div => {
-            let divIndex = mainWindow.relativeData.dataReqs.findIndex(req => {
-                return req.origin == div.getAttribute('origin') && req.target == div.getAttribute('target')
-            })
-            if (divIndex === -1) div.remove()
-        })
-        mainWindow.relDataDivs = [...document.querySelectorAll('.data-drag-div')].map(div => {
-            return div.querySelectorAll('.data')
-        })
+        // existingDivs.forEach(div => {
+        //     let divIndex = mainWindow.relativeData.dataReqs.findIndex(req => {
+        //         return req.origin == div.getAttribute('origin') && req.target == div.getAttribute('target')
+        //     })
+        //     if (divIndex === -1) div.remove()
+        // })
+        // mainWindow.relDataDivs = [...document.querySelectorAll('.data-drag-div')].map(div => {
+        //     return div.querySelectorAll('.data')
+        // })
+        resetDataDivs()
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'poca-maneuver') {
@@ -7305,6 +7307,7 @@ function openTleWindow(tleSatellites) {
         }
         let importTime = new Date(el.parentElement.parentElement.querySelector('#tle-import-time').value)
         importStates(states, importTime)
+        resetDataDivs()
     }
     tleWindow.changeImportTime = (el) => {
         let importDate = new Date(el.value)
@@ -7569,6 +7572,51 @@ function dragElement(elmnt) {
     }
   }
 
+function resetDataDivs() {
+    let currentDivs = [...document.querySelectorAll('.data-drag-div')].map(div => {
+        return {
+            origin: div.getAttribute('origin'),
+            target: div.getAttribute('target'),
+            top: div.style.top.split('px')[0],
+            left: div.style.left.split('px')[0],
+            title: div.querySelector('.data-div-title').innerText
+        }
+    })
+    let divs = [...document.querySelectorAll('.data-drag-div')]
+    for (let index = 0; index < divs.length; index++) {
+        divs[index].remove()
+        
+    }
+    mainWindow.relativeData.dataReqs.forEach((req, ii) => {
+        let existingDiv = currentDivs.findIndex(div => {
+            return div.origin == req.origin && div.target == req.target
+        })
+        if (existingDiv !== -1) {
+            let div = currentDivs[existingDiv]
+            openDataDiv({
+                origin: div.origin,
+                target: div.target,
+                data: req.data,
+                top: div.top + 'px',
+                left: div.left + 'px',
+                title: div.title
+            })
+        }
+        else {
+            openDataDiv({
+                origin: req.origin,
+                target: req.target,
+                data: req.data,
+                top: (20 + ii * 20) + 'px',
+                title: shortenString(mainWindow.satellites[req.origin].name, 12) + String.fromCharCode(8594) + shortenString(mainWindow.satellites[req.target].name,12)
+            })
+        }
+    })
+    mainWindow.relDataDivs = [...document.querySelectorAll('.data-drag-div')].map(div => {
+        return div.querySelectorAll('.data')
+    })
+}
+
 function openDataDiv(options = {}) {
     let {
         title = 'Data Title',
@@ -7609,7 +7657,7 @@ function openDataDiv(options = {}) {
     newDiv.setAttribute('target', target)
     newDiv.innerHTML = `
     <div style="text-align: center">
-        <div style="font-weight: 900">${title}</div>
+        <div style="font-weight: 900" class="data-div-title">${title}</div>
         ${data.map(d => {
             return `
                 <div title="${d === 'interceptData' ? 'Delta-V, Sun Angle, Rel Vel' : ''}">${properTerms[d].name}: <span style="font-size: ${d === 'interceptData' ? '0.75em': '1em'}" class="data" type="${d}">0</span> ${properTerms[d].units}</div>
@@ -7651,7 +7699,6 @@ function openDataDiv(options = {}) {
             relDiv.style.fontSize = fontSize + 'px'
         }
     })
-    console.log(fontButtons);
     dragElement(newDiv)
 }
 
