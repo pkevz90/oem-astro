@@ -728,6 +728,7 @@ class windowCanvas {
                 cd: this.satellites[this.satellites.length - 1].curPos.cd[0]
             }
         })
+        resetDataDivs()
         document.title = this.satellites.map(sat => sat.name).join(' / ')
         document.getElementById('time-slider-range').max = scenarioLength * 3600
 
@@ -746,7 +747,6 @@ class windowCanvas {
         this.getContext().lineWidth = 6.049;
     }
 }
-
 class Satellite {
     position;
     curPos;
@@ -1017,6 +1017,8 @@ function testTimeDelta(dt = 500, time = 7200) {
 }
 
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
+let startDate = new Date()
+mainWindow.startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
 mainWindow.fillWindow();
 let lastSaveTime = Date.now() - 30000
 function sleep(milliseconds) {
