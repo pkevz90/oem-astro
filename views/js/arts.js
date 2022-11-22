@@ -1,5 +1,6 @@
 let appAcr = 'ROTS'
 let appName = 'Relative Orbital Trajectory System'
+let cao = '22 Nov 2022'
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
@@ -1481,6 +1482,7 @@ function startContextClick(event) {
             <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
             <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
+            ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
             <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
                 ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
             </div>
@@ -5875,6 +5877,7 @@ function showLogo() {
     ctx.textBaseline = 'top'
     ctx.font = '24px Courier New'
     ctx.fillText(appName, cnvs.width / 2, cnvs.height / 2+2)
+    ctx.fillText('CAO ' + cao, cnvs.width / 2, cnvs.height / 2+25)
     ctx.textBaseline = 'alphabetic'
     ctx.fillText('Click anywhere to begin...', cnvs.width / 2, cnvs.height -30)
 }
@@ -7232,7 +7235,46 @@ function shortenString(str = 'teststring12345', n=mainWindow.stringLimit[1], sta
 async function testFetch() {
     fetch('./fetchTest.txt').then(response => response.text()).then(txt => console.log(txt))
 }
-
+let burnWindows = []
+function openBurnsWindow(sat) {
+    sat = sat.getAttribute('sat')
+    document.getElementById('context-menu')?.remove();
+    burnWindows.push(window.open('', 'burns', "width=600px,height=600px"))
+    burnWindows[burnWindows.length - 1].updateBurnList = el => {
+        let sat = el.getAttribute('sat')
+        el.parentElement.querySelector('#burn-list-div').innerHTML = mainWindow.satellites[sat].burns.map(b => {
+            return `<div style="margin-bottom: 20px;">
+                <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
+                <div style="margin-left: 30px; cursor: pointer">Direction: 
+                    ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
+                </div>
+                <div style="margin-left: 30px;">
+                    Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
+                </div>
+            </div>
+            `
+        }).join('')
+    }
+    setTimeout(() => burnWindows[burnWindows.length - 1].document.title = mainWindow.satellites[sat].name + ' Burns', 250)
+    burnWindows[burnWindows.length - 1].document.body.innerHTML = `
+        <div>${mainWindow.satellites[sat].name} Burn List</div>
+        <div class="no-scroll" style="max-height: 90%; overflow: scroll; margin-top: 10px" id="burn-list-div">
+        ${mainWindow.satellites[sat].burns.map(b => {
+            return `<div style="margin-bottom: 20px;">
+                <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
+                <div style="margin-left: 30px;">Direction: 
+                    ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
+                </div>
+                <div style="margin-left: 30px;">
+                    Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
+                </div>
+            </div>
+            `
+        }).join('')}
+        </div>
+        <button onclick="updateBurnList(this)" sat="${sat}" style="width: 100%; font-size: 1.5em; margin-top: 20px;">Update List</button>
+    `
+}
 let tleWindow
 function openTleWindow(tleSatellites) {
     document.getElementById('context-menu')?.remove();
