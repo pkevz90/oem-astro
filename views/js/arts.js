@@ -2876,6 +2876,7 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     mainWindow.originOrbit = state
     mainWindow.startDate = startDate
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+    mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
     mainWindow.scenarioLength = Number(document.querySelector('#scen-length-input').value === '' ? document.querySelector('#scen-length-input').placeholder : document.querySelector('#scen-length-input').value)
     let strStart = Number(document.querySelector('#str-start-input').value === ''? document.querySelector('#str-start-input').placeholder : document.querySelector('#str-start-input').value)
     let strEnd = Number(document.querySelector('#str-end-input').value === ''? document.querySelector('#str-end-input').placeholder : document.querySelector('#str-end-input').value)
@@ -3976,7 +3977,6 @@ function getRelativeData(n_target, n_origin, intercept = true) {
         if (intercept !== false) {
             let point1 = mainWindow.satellites[n_target].currentPosition()
             let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + 3600})
-            // console.log(point1, point2);
             let burn = hcwFiniteBurnOneBurn({
                 x: point1.r[0],
                 y: point1.i[0],
@@ -4005,7 +4005,6 @@ function getRelativeData(n_target, n_origin, intercept = true) {
                 }
                 interceptData = `[${(1000*interceptData.dV).toFixed(1)}, ${(interceptData.sunAng).toFixed(1)}, ${(1000*interceptData.relVel).toFixed(1)}]`
             }
-            // console.log(interceptData);
         }
     }
     catch (err) {console.log(err)}
@@ -5976,6 +5975,7 @@ function handleStkJ200File(file) {
     oldOrigin = satNames.findIndex(sat => sat === oldOrigin)
     oldOrigin = oldOrigin === -1 ? 0 : oldOrigin
     let originState = timeFile[0]
+    let originCoe = PosVel2CoeNew(originState.slice(0,3), originState.slice(3,6))
     let newSatellites = []
     // mainWindow.satellites = []
     let sun = sunFromTime(desiredTime)  
@@ -5985,6 +5985,7 @@ function handleStkJ200File(file) {
     mainWindow.startDate = desiredTime
     mainWindow.originOrbit = PosVel2CoeNew(originState.slice(0,3), originState.slice(3,6))
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+    mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
     let oldBurns = []
     timeFile.forEach((state, ii) => {
         let ricState = Eci2Ric(originState.slice(0,3), originState.slice(3,6), state.slice(0,3), state.slice(3,6))
@@ -6119,6 +6120,7 @@ function importStates(states, time) {
             let originOrbit = propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
             mainWindow.originOrbit = PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6))
             mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+            mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
         }
         return {
             name: s.name,
