@@ -2731,6 +2731,7 @@ document.getElementById('main-plot').addEventListener('mousemove', event => {
 })
 
 function moveTrueAnomaly(delta = 0.1, recalcBurns = true) {
+    return
     // Angle in degrees
     delta *= Math.PI / 180
     if (mainWindow.desired.plotWidth < math.abs(delta*2*mainWindow.originOrbit.a)) {
@@ -5621,76 +5622,54 @@ function randn_bm() {
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
 }
 
-function changeOrigin(satIn = 1, time = 0) {
-    try {
-        let inertStart = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-        let sats = mainWindow.satellites.map((sat, ii) => {
-            let inertPos = Ric2Eci(Object.values(sat.position).slice(0,3), Object.values(sat.position).slice(3,6), inertStart.slice(0,3), inertStart.slice(3,6))
-            inertPos = [...inertPos.rEcci, ...inertPos.drEci]
-            let satOut = JSON.parse(JSON.stringify(sat))
-            satOut.inertPos = inertPos
-            return {
-                inertPos,
-                position: sat.position,
-                a: sat.a,
-                burns: sat.burns.map(burn => {
-                    let r = translateFrames(ii, {time: burn.time})
-                    let dir = math.squeeze(math.multiply(r, math.reshape(Object.values(burn.direction), [3,1])))
-                    let burnOut = JSON.parse(JSON.stringify(burn))
-                    burnOut.direction = {r: dir[0], i: dir[1], c: dir[2]}
-                    return burnOut
-                }),
-    
-    
-            }
+function changeOrigin(sat = 1) {
+    let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+    let sats = mainWindow.satellites.map(sat => {
+        let pos = Object.values(sat.position)
+        let eciPos = Ric2Eci(pos.slice(0,3), pos.slice(3,6), originEci.slice(0,3), originEci.slice(3,6))
+        return [...eciPos.rEcci, ...eciPos.drEci]
+    })
+    let satWaypoints = mainWindow.satellites.map(sat => {
+        return sat.burns.map(b => {
+            let wayEci = {...mainWindow.originOrbit}
+            wayEci.tA = propTrueAnomaly(wayEci.tA, wayEci.a, wayEci.e, b.time + b.waypoint.tranTime)
+            wayEci = Object.values(Coe2PosVelObject(wayEci))
+            let way = Ric2Eci(Object.values(b.waypoint.target), [0,0,0], wayEci.slice(0,3), wayEci.slice(3,6))
+            return [...way.rEcci, ...way.drEci]  
         })
-        let newInert = PosVel2CoeNew(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6))
-        let sun = Ric2Eci( math.dotMultiply(151609685.93989992 / math.norm(mainWindow.initSun), mainWindow.initSun), [0,0,0], inertStart.slice(0,3), inertStart.slice(3,6)).rEcci
-        sun = math.squeeze(Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sun.slice(0,3), [0,0,0]).rHcw)
-        sun = math.dotDivide(sun, math.norm(sun))
-        mainWindow.initSun = sun
-        mainWindow.mm = (398600.4418 / newInert.a ** 3) ** (1/2)
-
-        let lanes = satClusterK(mainWindow.nClusters, mainWindow.satellites, mainWindow.originOrbit)
-        mainWindow.originOrbit = newInert
-        sats = sats.map((sat, ii) => {
-            let relPos = Eci2Ric(sats[satIn].inertPos.slice(0,3), sats[satIn].inertPos.slice(3,6), sat.inertPos.slice(0,3), sat.inertPos.slice(3,6))
-            relPos = math.squeeze([...relPos.rHcw, ...relPos.drHcw])
-            let laneSatIn = lanes.find(s => s.find(n => n === satIn) !== undefined)
-            return {
-                position: {r: relPos[0], i: relPos[1], c: relPos[2], rd: relPos[3], id: relPos[4], cd: relPos[5]},
-                a: sat.a,
-                burns: sat.burns,
-                locked: laneSatIn.find(s => s === ii) === undefined
-            }
-        })
-        satellitesOut = []
-        let dataReqs = JSON.parse(JSON.stringify(mainWindow.relativeData.dataReqs))
-        mainWindow.relativeData.dataReqs = []
-        sats.forEach((sat, ii) => {
-            satellitesOut.push(new Satellite({
-                position: sat.position,
-                color: mainWindow.satellites[ii].color,
-                shape: mainWindow.satellites[ii].shape,
-                a: mainWindow.satellites[ii].a,
-                name: mainWindow.satellites[ii].name,
-                locked: sat.locked
-            }))
-        })
-        mainWindow.satellites = satellitesOut
-        setTimeout(() => {
-            mainWindow.satellites.forEach((sat, ii) => {
-                sats[ii].burns.forEach(burn => {
-                    insertDirectionBurn(ii, burn.time, Object.values(burn.direction), undefined, true)
-                })
-            })
-            mainWindow.relativeData.dataReqs = dataReqs
-            resetDataDivs()
-            updateLockScreen()
-        }, 500)
-    } catch (error) {
-        console.error(error);
-        showScreenAlert('Error in changing ref satellite')
+    })
+    let newOrigin = sats[sat]
+    // let newOrigin = Object.values(mainWindow.satellites[sat].curPos)
+    // newOrigin = propRelMotionTwoBodyAnalytic(newOrigin, -mainWindow.scenarioTime, mainWindow.scenarioTime)
+    // newOrigin = Ric2Eci(newOrigin.slice(0,3), newOrigin.slice(3,6), originEci.slice(0,3), originEci.slice(3,6))
+    // newOrigin = [...newOrigin.rEcci, ...newOrigin.drEci]
+    mainWindow.originOrbit = PosVel2CoeNew(newOrigin.slice(0,3), newOrigin.slice(3,6))
+    originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
+    for (let index = 0; index < mainWindow.satellites.length; index++) {
+        let ricPos = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sats[index].slice(0,3), sats[index].slice(3,6))
+       mainWindow.satellites[index].position = {
+            r: ricPos.rHcw[0][0],
+            i: ricPos.rHcw[1][0],
+            c: ricPos.rHcw[2][0],
+            rd: ricPos.drHcw[0][0],
+            id: ricPos.drHcw[1][0],
+            cd: ricPos.drHcw[2][0]
+       }
+       for (let jj = 0; jj < mainWindow.satellites[index].burns.length; jj++) {
+        let way = satWaypoints[index][jj]
+        let wayEci = {...mainWindow.originOrbit}
+        wayEci.tA = propTrueAnomaly(wayEci.tA, wayEci.a, wayEci.e, mainWindow.satellites[index].burns[jj].time + mainWindow.satellites[index].burns[jj].waypoint.tranTime)
+        wayEci = Object.values(Coe2PosVelObject(wayEci))
+        let ricWay = Eci2Ric(wayEci.slice(0,3), wayEci.slice(3,6), way.slice(0,3), way.slice(3,6))
+        mainWindow.satellites[index].burns[jj].waypoint.target = {
+            r: ricWay.rHcw[0][0],
+            i: ricWay.rHcw[1][0],
+            c: ricWay.rHcw[2][0]
+        }
+       }
+       mainWindow.satellites[index].calcTraj(true)
+       mainWindow.satellites[index].calcTraj()
     }
 }
 
