@@ -5623,6 +5623,8 @@ function randn_bm() {
 }
 
 function changeOrigin(sat = 1) {
+    let lanes = satClusterK(mainWindow.nClusters, mainWindow.satellites, mainWindow.originOrbit)
+    let laneSatIn = lanes.find(s => s.find(n => n === sat) !== undefined)
     let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
     let sats = mainWindow.satellites.map(sat => {
         let pos = Object.values(sat.position)
@@ -5675,6 +5677,11 @@ function changeOrigin(sat = 1) {
     sun = math.squeeze(Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sun, [0,0,0]).rHcw)
     sun = math.dotDivide(sun, math.norm(sun))
     mainWindow.initSun = sun
+    // Lock satellites not in lane
+    for (let index = 0; index < mainWindow.satellites.length; index++) {
+        mainWindow.satellites[index].locked = laneSatIn.find(s => s === index) === undefined
+    }
+    updateLockScreen()
 }
 
 function forcePlaneCrossing(sat = 0, dt = 4) {
