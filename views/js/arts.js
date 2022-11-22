@@ -3180,7 +3180,7 @@ function nonLinearBurnEstimator(posInit = [0,0,0], posFinal=[-30,1000,0], dt = 1
     return dV
 }
 
-function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainWindow.mm) {
+function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0) {
     let state = math.transpose([Object.values(stateInit)]);
     stateFinal = math.transpose([Object.values(stateFinal)]);
     let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
@@ -3203,15 +3203,15 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         }
     }
     if (X[2] > 1) return false;
-    let errCount = 0
+    let errCount = 0, numeric = false
     while (math.norm(math.squeeze(yErr)) > 1e-3) {
-        F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0);
+        F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0, numeric);
         yErr = [
             [stateFinal[0][0] - F.x],
             [stateFinal[1][0] - F.y],
             [stateFinal[2][0] - F.z]
         ];
-        S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, n);
+        S = proxOpsJacobianOneBurn(stateInit, a0, X[0][0], X[1][0], X[2][0], tf, numeric);
         try {
             dX = math.multiply(math.inv(S), yErr);
         } catch (error) {
@@ -3220,7 +3220,11 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
         X = math.add(X, dX)
         X[2][0] = X[2][0] < 0 ? 1e-9 : X[2][0]
         X[2][0] = X[2][0] > 1 ? 0.95 : X[2][0]
-        if (errCount > 30) return false;
+        if (errCount > 10) {
+            // Analytic estimate failed switch to numeric estimate
+            numeric = true
+        }
+        else if (errCount > 30) return false;
         errCount++;
     }
     if (X[2] > 1 || X[2] < 0) return false
@@ -3235,7 +3239,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0, n = mainW
     }
 }
 
-function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.00001) {
+function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.00001, num = true) {
     state = Object.values(state)
     let cosEl = Math.cos(phi)
     let direction = [a0 * Math.cos(alpha) * cosEl, a0 * Math.sin(alpha) * cosEl, a0 * Math.sin(phi)];
@@ -3246,37 +3250,45 @@ function oneBurnFiniteHcw(state, alpha, phi, tB, finalTime, time = 0, a0 = 0.000
         propTime += mainWindow.timeDelta
     }
     state = runge_kutta(twoBodyRpo, state, finalTime*tB - propTime, direction, time + propTime)
-    let propState = state.slice()
     propTime = finalTime * tB
-    let propTwoBodyTime = finalTime - propTime
-    while((propTime + mainWindow.timeDelta) < finalTime) {
-        state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime); propTime += mainWindow.timeDelta
+    if (num) {
+        while((propTime + mainWindow.timeDelta) < finalTime) {
+            state = runge_kutta(twoBodyRpo, state, mainWindow.timeDelta, [0,0,0], time + propTime); propTime += mainWindow.timeDelta
+        }
+        state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
+        return {
+            x: state[0],
+            y: state[1],
+            z: state[2],
+            xd: state[3],
+            yd: state[4],
+            zd: state[5]
+        };
     }
-    state = runge_kutta(twoBodyRpo, state, finalTime - propTime, [0,0,0], time + propTime);
-    propState = state.slice()
-    // propState = propRelMotionTwoBodyAnalytic(propState, propTwoBodyTime, time + propTime)
+    let propTwoBodyTime = finalTime - propTime
+    state = propRelMotionTwoBodyAnalytic(state, propTwoBodyTime, time + propTime)
     return {
-        x: propState[0],
-        y: propState[1],
-        z: propState[2],
-        xd: propState[3],
-        yd: propState[4],
-        zd: propState[5]
+        x: state[0],
+        y: state[1],
+        z: state[2],
+        xd: state[3],
+        yd: state[4],
+        zd: state[5]
     };
 
 }
 
-function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, time, n) {
+function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, time, numeric = true) {
     let m1, m2, m, mC
     // alpha; If phi is at 90 degrees, jacobian won't have full rank, set to 89 deg for az jacobian calculation
     let phi2 = math.abs(Math.cos(phi)) < 1e-6 ? 89 * Math.PI / 180 : phi;
-    m1 = oneBurnFiniteHcw(state, alpha, phi2, tB, tF, time, a);
+    m1 = oneBurnFiniteHcw(state, alpha, phi2, tB, tF, time, a, numeric);
     m1 = [
         [m1.x],
         [m1.y],
         [m1.z]
     ];
-    m2 = oneBurnFiniteHcw(state, alpha + 0.01, phi2, tB, tF, time, a);
+    m2 = oneBurnFiniteHcw(state, alpha + 0.01, phi2, tB, tF, time, a, numeric);
     m2 = [
         [m2.x],
         [m2.y],
@@ -3284,7 +3296,7 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, time, n) {
     ];
     mC = math.dotDivide(math.subtract(m2, m1), 0.01);
     //phi
-    m2 = oneBurnFiniteHcw(state, alpha, phi + 0.01, tB, tF, time, a);
+    m2 = oneBurnFiniteHcw(state, alpha, phi + 0.01, tB, tF, time, a, numeric);
     m2 = [
         [m2.x],
         [m2.y],
@@ -3293,7 +3305,7 @@ function proxOpsJacobianOneBurn(state, a, alpha, phi, tB, tF, time, n) {
     m = math.dotDivide(math.subtract(m2, m1), 0.01);
     mC = math.concat(mC, m);
     //tB
-    m2 = oneBurnFiniteHcw(state, alpha, phi, tB + tB * 0.1, tF, time, a);
+    m2 = oneBurnFiniteHcw(state, alpha, phi, tB + tB * 0.1, tF, time, a, numeric);
     m2 = [
         [m2.x],
         [m2.y],
@@ -7245,7 +7257,7 @@ function openBurnsWindow(sat) {
         el.parentElement.querySelector('#burn-list-div').innerHTML = mainWindow.satellites[sat].burns.map(b => {
             return `<div style="margin-bottom: 20px;">
                 <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
-                <div style="margin-left: 30px; cursor: pointer">Direction: 
+                <div style="margin-left: 30px;">Direction: 
                     ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
                 </div>
                 <div style="margin-left: 30px;">
