@@ -5671,6 +5671,10 @@ function changeOrigin(sat = 1) {
        mainWindow.satellites[index].calcTraj(true)
        mainWindow.satellites[index].calcTraj()
     }
+    let sun = sunFromTime(mainWindow.startDate)  
+    sun = math.squeeze(Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sun, [0,0,0]).rHcw)
+    sun = math.dotDivide(sun, math.norm(sun))
+    mainWindow.initSun = sun
 }
 
 function forcePlaneCrossing(sat = 0, dt = 4) {
