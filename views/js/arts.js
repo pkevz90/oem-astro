@@ -3182,10 +3182,27 @@ function nonLinearBurnEstimator(posInit = [0,0,0], posFinal=[-30,1000,0], dt = 1
     return dV
 }
 
+function curve2linear(state = [0, 1000, 0,0,0,0], origin = mainWindow.originOrbit) {
+    state[0] += origin.a
+    let r = math.norm(state)
+    let originState = [origin.a, 0, 0]
+    let long = math.dot(state.slice(0,3), originState) / r / origin.a
+    long = math.acos(long) * 180 / Math.PI
+    let rot = rotationMatrices(state[1] < 0 ? long : -long, 3)
+    let newPos = math.multiply(rot, state.slice(0,3))
+    newPos[0] -= origin.a
+    newPos[1] = origin.a * (state[1] < 0 ? -long : long) * Math.PI / 180
+    let newVel = math.multiply(rot, state.slice(3,6))
+    return [...newPos, ...newVel]
+}
+
 function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0) {
     let state = math.transpose([Object.values(stateInit)]);
+    let linState = math.transpose([curve2linear(math.squeeze(state))])
     stateFinal = math.transpose([Object.values(stateFinal)]);
-    let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
+    let linStateFinal = math.transpose([curve2linear(math.squeeze(stateFinal))])
+    let v = proxOpsTargeter(linState.slice(0, 3), linStateFinal.slice(0, 3), tf);
+    // let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
     let v1 = v[0],
         yErr= [100], S, dX = 1,
         F;
@@ -3206,6 +3223,10 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0) {
     }
     if (X[2] > 1) return false;
     let errCount = 0, numeric = false
+    // F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0, numeric);
+    // console.log(Object.values(F));
+    // console.log(math.squeeze(stateFinal));
+    // console.log(math.squeeze(X));
     while (math.norm(math.squeeze(yErr)) > 1e-3) {
         F = oneBurnFiniteHcw(stateInit, X[0][0], X[1][0], X[2][0], tf, time, a0, numeric);
         yErr = [
@@ -3229,6 +3250,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0) {
         else if (errCount > 30) return false;
         errCount++;
     }
+    // console.log(math.squeeze(X));
     if (X[2] > 1 || X[2] < 0) return false
     let cosEl = Math.cos(X[1][0])
     return {
