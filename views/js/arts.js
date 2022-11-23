@@ -2641,8 +2641,9 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                 return a.time - b.time;
             })
             mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
+            let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
             mainWindow.burnStatus = {
-                type: mainWindow.burnType,
+                type: burnType,
                 sat: mainWindow.currentTarget.sat,
                 burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
                 frame: Object.keys(check)[0]
@@ -2652,7 +2653,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
                 sat: mainWindow.currentTarget.sat,
                 type: 'addBurn'
             })
-            if (mainWindow.burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
+            if (burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
                 mainWindow.desired.scenarioTime += math.round(2 * Math.PI * 0.08356158 / mainWindow.mm / 10) * 10;
                 document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
             };
@@ -2676,13 +2677,14 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
             sat: mainWindow.currentTarget.sat,
             burn:  JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]))
         })
+        let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
         mainWindow.burnStatus = {
-            type: mainWindow.burnType,
+            type: burnType,
             sat: mainWindow.currentTarget.sat,
             burn: check[mainWindow.currentTarget.frame],
             frame: mainWindow.currentTarget.frame
         }
-        if (mainWindow.burnType === 'waypoint' && mainWindow.burnStatus.frame === 'ri') {
+        if (burnType === 'waypoint' && mainWindow.burnStatus.frame === 'ri') {
             mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
             document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         }
@@ -6010,6 +6012,12 @@ function handleStkJ200File(file) {
     mainWindow.originOrbit = PosVel2CoeNew(originState.slice(0,3), originState.slice(3,6))
     mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
+    if (mainWindow.originOrbit.a < 15000) {
+        mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 4)/3600
+    }
+    else {
+        mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 2)/3600
+    }
     let oldBurns = []
     timeFile.forEach((state, ii) => {
         let ricState = Eci2Ric(originState.slice(0,3), originState.slice(3,6), state.slice(0,3), state.slice(3,6))
@@ -6145,6 +6153,12 @@ function importStates(states, time) {
             mainWindow.originOrbit = PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6))
             mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
             mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
+            if (mainWindow.originOrbit.a < 15000) {
+                mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 4)/3600
+            }
+            else {
+                mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 2)/3600
+            }
         }
         return {
             name: s.name,
