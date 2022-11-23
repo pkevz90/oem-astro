@@ -6594,23 +6594,14 @@ function draw3dScene(az = azD, el = elD) {
 }
 
 function hcwFiniteBurnTwoBurn(stateInit = {x: 00, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, stateFinal = {x: 10, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, tf = 7200, a0 = 0.00001, n = mainWindow.mm) {
-    state = [
-        [stateInit.x],
-        [stateInit.y],
-        [stateInit.z],
-        [stateInit.xd],
-        [stateInit.yd],
-        [stateInit.zd]
-    ];
-    stateFinal = [
-        [stateFinal.x],
-        [stateFinal.y],
-        [stateFinal.z],
-        [stateFinal.xd],
-        [stateFinal.yd],
-        [stateFinal.zd]
-    ];
-    let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
+    
+    let state = math.transpose([Object.values(stateInit)]);
+    let linState = math.transpose([curve2linear(math.squeeze(state))])
+    stateFinal = math.transpose([Object.values(stateFinal)]);
+    let linStateFinal = math.transpose([curve2linear(math.squeeze(stateFinal))])
+    let v = proxOpsTargeter(linState.slice(0, 3), linStateFinal.slice(0, 3), tf);
+    v = [math.transpose([linear2curve([...math.squeeze(linState).slice(0,3), ...math.squeeze(v[0])]).slice(3,6)]), v[1]];
+    // let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
     let v1 = v[0],
         v2 = v[1],
         yErr, S, dX = 1,
