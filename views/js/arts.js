@@ -3196,13 +3196,25 @@ function curve2linear(state = [0, 1000, 0,0,0,0], origin = mainWindow.originOrbi
     return [...newPos, ...newVel]
 }
 
+function linear2curve(state, origin = mainWindow.originOrbit) {
+    state[0] += origin.a
+    let long = -state[1] / origin.a
+    state[1] = 0
+    let rot = rotationMatrices(-long * 180 / Math.PI, 3)
+    let newPos = math.multiply(rot, state.slice(0,3))
+    newPos[0] -= origin.a
+    let newVel = math.multiply(rot, state.slice(3,6))
+
+    return [...newPos, ...newVel]
+}
+
 function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0) {
     let state = math.transpose([Object.values(stateInit)]);
     let linState = math.transpose([curve2linear(math.squeeze(state))])
     stateFinal = math.transpose([Object.values(stateFinal)]);
     let linStateFinal = math.transpose([curve2linear(math.squeeze(stateFinal))])
     let v = proxOpsTargeter(linState.slice(0, 3), linStateFinal.slice(0, 3), tf);
-    // let v = proxOpsTargeter(state.slice(0, 3), stateFinal.slice(0, 3), tf);
+    v = [math.transpose([linear2curve([...math.squeeze(linState).slice(0,3), ...math.squeeze(v[0])]).slice(3,6)])];
     let v1 = v[0],
         yErr= [100], S, dX = 1,
         F;
@@ -3247,7 +3259,7 @@ function hcwFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, time = 0) {
             // Analytic estimate failed switch to numeric estimate
             numeric = true
         }
-        else if (errCount > 30) return false;
+        if (errCount > 30) return false;
         errCount++;
     }
     // console.log(math.squeeze(X));
