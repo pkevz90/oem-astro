@@ -6860,6 +6860,12 @@ function convertTimeToDateTimeInput(timeIn = mainWindow.startDate, seconds = tru
 function setTimeFromPrompt(el) {
     console.log(el.parentElement.parentElement.getElementsByTagName('input'));
     let newTime = new Date(el.parentElement.parentElement.getElementsByTagName('input')[0].value) - mainWindow.startDate
+    if (newTime < 0) {
+        newTime = 0
+    }
+    else if (newTime > mainWindow.scenarioLength*3600000)  {
+        newTime = mainWindow.scenarioLength * 3600000
+    }
     mainWindow.desired.scenarioTime = newTime / 1000
     mainWindow.scenarioTime = newTime / 1000
     document.getElementById('time-slider-range').value = newTime / 1000
