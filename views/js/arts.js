@@ -4664,7 +4664,7 @@ function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA:
     };
 }
 
-function Ric2Eci(rHcw = [0,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0]) {
+function Ric2Eci(rHcw = [10,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0]) {
     let h = math.cross(rC, drC);
     let rcN = math.norm(rC)
     let ricX = math.dotDivide(rC, rcN);
@@ -5958,133 +5958,8 @@ function handleStkJ200File(file) {
     }))
     openJ2000Window(file.map((s,ii) => {
         return {name: satNames[ii], state: s}
-    }))
-    let oldReqs = mainWindow.relativeData.dataReqs.map(req => {
-        return {
-            data: req.data,
-            target: mainWindow.satellites[req.target].name,
-            origin: mainWindow.satellites[req.origin].name
-        }
-    })
-    mainWindow.relativeData.dataReqs = []
-    satNames.slice(0,file.length)
-    let defaultTime = file[0][0][0]
-    let desiredTime = prompt('What time to pull states from?', toStkFormat(defaultTime.toString()))
-    if (desiredTime === null) return
-    desiredTime = new Date(desiredTime)
-    let timeDeltaFromCurrent = (desiredTime - mainWindow.startDate) / 1000
-    console.log(timeDeltaFromCurrent);
-    if (desiredTime == 'Invalid Date') return alert('Invalid Time')
-    satNames = satNames.filter((name, ii) => file[ii].length > 0)
-    file = file.filter(t => t.length > 0)
-    closeAll()
-    let baseUTCDiff = desiredTime.getUTCHours() - desiredTime.getHours()
-    let timeFile = file.map(sec => {
-        let times = sec.map(row => Math.abs(row[0] - desiredTime))
-        let minTime = math.min(times)
-        let index = times.findIndex(el => el=== minTime)
-        return sec[index]
-    }).map(sec => {
-        let time = sec.shift()
-        console.log(sec);
-        let utcDiff = time.getUTCHours() - time.getHours()
-        console.log((desiredTime - time) / 1000);
-        sec = propToTime(sec.map(s => km ? s : s / 1000), (desiredTime - time) / 1000, false)
-        console.log(sec);
-        return sec
-    })
-    // See what satellite is focused on right now, if satellite is within new data, focus on it
-    let oldOrigin = mainWindow.satellites.find(sat => {
-        return (sat.position.r ** 2 + sat.position.i ** 2 + sat.position.c ** 2) < 1e-6
-    })
-    oldOrigin = oldOrigin !== undefined ? oldOrigin.name : oldOrigin
-    oldOrigin = satNames.findIndex(sat => sat === oldOrigin)
-    oldOrigin = oldOrigin === -1 ? 0 : oldOrigin
-    let originState = timeFile[0]
-    let originCoe = PosVel2CoeNew(originState.slice(0,3), originState.slice(3,6))
-    let newSatellites = []
-    // mainWindow.satellites = []
-    let sun = sunFromTime(desiredTime)  
-    sun = math.squeeze(Eci2Ric(originState.slice(0,3), originState.slice(3,6), sun, [0,0,0]).rHcw)
-    sun = math.dotDivide(sun, math.norm(sun))
-    mainWindow.initSun = sun
-    mainWindow.startDate = desiredTime
-    mainWindow.originOrbit = PosVel2CoeNew(originState.slice(0,3), originState.slice(3,6))
-    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
-    mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
-    if (mainWindow.originOrbit.a < 15000) {
-        mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 4)/3600
-    }
-    else {
-        mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 2)/3600
-    }
-    let oldBurns = []
-    timeFile.forEach((state, ii) => {
-        let ricState = Eci2Ric(originState.slice(0,3), originState.slice(3,6), state.slice(0,3), state.slice(3,6))
-        // If satellite with name already exists, copy settings from it
-        let matchSat = mainWindow.satellites.find(sat => {
-            return sat.name === satNames[ii]
-        })
-        let matchSatIndex = mainWindow.satellites.findIndex(sat => {
-            return sat.name === satNames[ii]
-        })
-        let options = matchSat !== undefined ? {
-            shape: matchSat.shape,
-            color: matchSat.color,
-            a: matchSat.a
-        } : {
-            shape: 'delta',
-            color: '#5555ff',
-        }
-        // Record old burns
-        if (matchSat !== undefined) {
-            oldBurns.push(matchSat.burns.map(b => {
-                let rot = translateFrames(matchSatIndex, {time: b.time})
-                let burnDir = [1000*b.direction.r, 1000*b.direction.i, 1000*b.direction.c]
-                burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
-                return {
-                    time: b.time - timeDeltaFromCurrent, burnDir
-                }
-            }).filter(a => a.time >= 0))
-        }
-        options.name = satNames[ii].split('errarts')[0]
-        options.cov = satNames[ii].split('errarts').length > 1 ? satNames[ii].split('errarts')[1] : undefined
-        options.position = {r: ricState.rHcw[0][0], 
-            i: ricState.rHcw[1][0], 
-            c: ricState.rHcw[2][0], 
-            rd: ricState.drHcw[0][0], 
-            id: ricState.drHcw[1][0], 
-            cd: ricState.drHcw[2][0]}
-        options.a = 0.001
-        options.locked = math.norm(math.squeeze(ricState.rHcw)) > 2500 || math.norm(math.squeeze(ricState.drHcw)) > 0.075
-        console.log(options);
-        newSatellites.push(new Satellite(options))
-
-    })
-    mainWindow.satellites = newSatellites
-    changeOrigin(oldOrigin)
-    setTimeout(() => {
-        oldBurns.forEach((satBurns, ii) => {
-            satBurns.forEach(burn => {
-                let rot = translateFrames(ii, {time: burn.time})
-                burn.burnDir = math.squeeze(math.multiply(math.transpose(rot), math.transpose([burn.burnDir])))
-                insertDirectionBurn(ii, burn.time, burn.burnDir.map(s => s / 1000))
-            })
-        })
-        oldReqs.forEach(req => {
-            let target = mainWindow.satellites.findIndex(sat => sat.name === req.target)
-            let origin = mainWindow.satellites.findIndex(sat => sat.name === req.origin)
-            if (target !== -1 && origin !== -1) {
-                mainWindow.relativeData.dataReqs.push({
-                    target,
-                    origin,
-                    data: req.data
-                })
-            }
-        })
-        
-        resetDataDivs()
-    }, 1000)
+    }), km)
+    return
 }
 
 function handleTleFile(file) {
@@ -6130,6 +6005,27 @@ function importStates(states, time) {
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
     let findOrigin = mainWindow.satellites.find(sat => math.norm(Object.values(sat.position)) < 1e-3)
     let originII = 0
+    // Copy old burns to re-implement if satellite still exists
+    let timeDelta = (time - mainWindow.startDate) / 1000
+    console.log(timeDelta)
+    let oldBurns = mainWindow.satellites.map(s => s.burns.map(b => {
+        let currentOrigin = {...mainWindow.originOrbit}
+        let waypoint = Object.values(b.waypoint.target)
+        let tranTime = b.waypoint.tranTime
+        currentOrigin.tA = propTrueAnomaly(currentOrigin.tA, currentOrigin.a, currentOrigin.e, b.time + tranTime)
+        currentOrigin = Object.values(Coe2PosVelObject(currentOrigin))
+        waypoint = Ric2Eci(waypoint, [0,0,0], currentOrigin.slice(0,3), currentOrigin.slice(3,6)).rEcci
+        return {
+            time: b.time - timeDelta,
+            waypoint: {
+                tranTime,
+                target: waypoint
+            },
+            shown: b.shown,
+            location: b.location,
+            direction: b.direction
+        }
+    }).filter(b => b.time >= 0))
     if (findOrigin !== undefined) {
         let originIndex = states.findIndex(sat => findOrigin.name.match(sat.name))
         originII = originIndex !== -1 ? originIndex : originII
@@ -6159,6 +6055,7 @@ function importStates(states, time) {
             else {
                 mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 2)/3600
             }
+            document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
         }
         return {
             name: s.name,
@@ -6166,6 +6063,31 @@ function importStates(states, time) {
         }
 
     })
+    console.log('hey');
+    oldBurns = oldBurns.map(sat => sat.map(b => {
+        let currentOrigin = {...mainWindow.originOrbit}
+        let target = b.waypoint.target
+        let tranTime = b.waypoint.tranTime
+        currentOrigin.tA = propTrueAnomaly(currentOrigin.tA, currentOrigin.a, currentOrigin.e, b.time + tranTime)
+        currentOrigin = Object.values(Coe2PosVelObject(currentOrigin))
+        target = math.squeeze(Eci2Ric(currentOrigin.slice(0,3), currentOrigin.slice(3,6), target.slice(0,3), [0,0,0]).rHcw)
+        target = {
+            r: target[0],
+            i: target[1],
+            c: target[2]
+        }
+
+        return {
+            time: b.time,
+            direction: b.direction,
+            shown: b.shown,
+            location: b.location,
+            waypoint: {
+                target,
+                tranTime
+            }
+        }
+    }))
     let sun = sunFromTime(baseEpoch)  
     sun = math.squeeze(Eci2Ric(states[0].orbit.slice(0,3), states[0].orbit.slice(3,6), sun, [0,0,0]).rHcw)
     sun = math.dotDivide(sun, math.norm(sun))
@@ -6174,13 +6096,15 @@ function importStates(states, time) {
     states.forEach(st => {
         let ricState = Eci2Ric(states[originII].orbit.slice(0,3), states[originII].orbit.slice(3,6), st.orbit.slice(0,3), st.orbit.slice(3,6))
         let existingSat = satCopies.filter(sat => sat.name.match(st.name) !== null)
-        let color, shape, side, a, name
+        let color, shape, side, a, name, burns
         if (existingSat.length > 0) {
+            let existingSatIndex = satCopies.findIndex(sat => sat.name.match(st.name) !== null)
             color = existingSat[0].color
             shape = existingSat[0].shape
             side = existingSat[0].side
             a = existingSat[0].a,
             name = existingSat[0].name
+            burns = oldBurns[existingSatIndex]
         }
         ricState = {
             r: ricState.rHcw[0][0],
@@ -6196,7 +6120,8 @@ function importStates(states, time) {
             color,
             a,
             shape,
-            side
+            side,
+            burns
         }))
     })
     // Restore data reqs that still exist
@@ -6952,7 +6877,7 @@ function openTimePrompt() {
     
     let inner = `
         <div>
-            <input type="datetime-local" style="width: 100%; font-size: 2em" list="date-options" value="${convertTimeToDateTimeInput(curTime)}">
+            <input id="desired-set-time" type="datetime-local" style="width: 100%; font-size: 2em" list="date-options" value="${convertTimeToDateTimeInput(curTime)}">
             <datalist id="date-options">
                 ${dateOptions.map(opt => `<option value="${convertTimeToDateTimeInput(opt)}"></option>`)}
             </datalist>
@@ -6961,10 +6886,10 @@ function openTimePrompt() {
             <button onclick="setTimeFromPrompt(this)"style="width: 100%; margin-top: 10px">Set Time</button>
         </div>
     `
-    openQuickWindow(inner)
+    openQuickWindow(inner, 'desired-set-time')
 }
 
-function openQuickWindow(innerCode = 'Hey') {
+function openQuickWindow(innerCode = 'Hey', focusId) {
     let largerDiv = document.createElement('div')
     largerDiv.style.display = 'flex'
     largerDiv.style.justifyContent = 'space-around'
@@ -6982,10 +6907,6 @@ function openQuickWindow(innerCode = 'Hey') {
     }
     let newDiv = document.createElement('div')
     newDiv.innerHTML = innerCode
-    // newDiv.style.position = 'fixed'
-    // newDiv.style.top = '20px'
-    // newDiv.style.left = '20px'
-    // newDiv.style.zIndex = 100
     newDiv.style.width = 'auto'
     newDiv.style.height = 'auto'
     newDiv.style.background = '#ffffff'
@@ -6994,6 +6915,11 @@ function openQuickWindow(innerCode = 'Hey') {
     newDiv.style.padding = '30px'
     largerDiv.append(newDiv)
     document.body.append(largerDiv)
+    if (focusId !== undefined) {
+        setTimeout(() => {
+            document.getElementById(focusId).focus()
+        })
+    }    
 }
 let instructionWindow
 function openInstructionWindow() {
@@ -7407,27 +7333,75 @@ function openTleWindow(tleSatellites) {
     `
 }
 let j2000Window
-function openJ2000Window(j2000Satellites = []) {
-    return
+function openJ2000Window(j2000Satellites = [], km) {
     document.getElementById('context-menu')?.remove();
     j2000Window = window.open('', 'j2000', "width=600px,height=600px")
     let time = j2000Satellites[0].state[0][0]
     console.log(time);
-    setTimeout(() => tleWindow.document.title = 'J2000 Import Tool', 1000)
+    setTimeout(() => j2000Window.document.title = 'J2000 Import Tool', 1000)
     j2000Window.j2000Satellites = j2000Satellites
+    j2000Window.km = km
+    j2000Window.updateWindow = updateJ200Window
+    j2000Window.importJ2000Choices = (el) => {
+        let sats = j2000Window.j2000Satellites.map(s => s.name)
+        let time = new Date(j2000Window.document.querySelector('#tle-import-time').value)
+        let coes = [...j2000Window.document.querySelectorAll('.coe-state-div')].map((div, ii) => {
+            let innerText = div.innerText.split(', ').map(s => Number(s))
+            return {
+                epoch: time,
+                name: sats[ii],
+                orbit: {
+                    a: innerText[0],
+                    e: innerText[1],
+                    i: innerText[2] * Math.PI / 180,
+                    raan: innerText[3] * Math.PI / 180,
+                    arg: innerText[4] * Math.PI / 180,
+                    tA: innerText[5] * Math.PI / 180
+                }
+            }
+        })
+        importStates(coes, time)
+    }
     j2000Window.document.body.innerHTML = `
         <div>ARTS J2000 Import Tool</div>
-        <div style="width: 100%; text-align: center;">Import Time <input onchange="changeImportTime(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(time))}></div>
+        <div style="width: 100%; text-align: center;">Import Time <input onchange="updateWindow(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(time))}></div>
         
         <div class="no-scroll" style="max-height: 90%; overflow: scroll">
             ${j2000Satellites.map(sat => {
                 return `<div>
-                    ${sat.name}
+                    <div>${sat.name}</div>
+                    <div style="margin-left: 30px" class="eci-state-div"></div>
+                    <div style="margin-left: 30px" class="coe-state-div"></div>
                 </div>`
             }).join('')}
         </div>
-        <div><button onclick="importTleChoices(this)">Import TLE States</button></div>
+        <div><button onclick="importJ2000Choices(this)">Import J2000 States</button></div>
     `
+    updateJ200Window()
+}
+
+function updateJ200Window() {
+    // Find correct time step from J200 file
+    let time = new Date(j2000Window.document.querySelector('#tle-import-time').value)
+    let eciDivs = j2000Window.document.querySelectorAll('.eci-state-div')
+    let coeDivs = j2000Window.document.querySelectorAll('.coe-state-div')
+    j2000Window.j2000Satellites.forEach((sat, ii) => {
+        let closestTimeState = sat.state.find(stateIndex => {
+            return stateIndex[0] >= time
+        })
+        if (closestTimeState === undefined) {
+            closestTimeState = sat.state[sat.state.length - 1]
+        }
+        let stateTime = closestTimeState.shift()
+        closestTimeState = propToTime(closestTimeState.map(s => s / (j2000Window.km ? 1 : 1000)), (time - stateTime) / 1000, false)
+        let coes = PosVel2CoeNew(closestTimeState.slice(0,3), closestTimeState.slice(3,6))
+        coes.raan *= 180 / Math.PI
+        coes.i *= 180 / Math.PI
+        coes.arg *= 180 / Math.PI
+        coes.tA *= 180 / Math.PI
+        eciDivs[ii].innerText = closestTimeState.map(s => s.toFixed(6)).join(', ')
+        coeDivs[ii].innerText = Object.values(coes).map(s => s.toFixed(6)).join(', ')
+    });
 }
 
 function tleFromState(ricState = [0,0,0,0,0,0], time = mainWindow.scenarioTime, ssnNum = '00001') {
