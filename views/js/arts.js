@@ -7363,8 +7363,8 @@ function openJ2000Window(j2000Satellites = [], km) {
         importStates(coes, time)
     }
     j2000Window.document.body.innerHTML = `
-        <div>ARTS J2000 Import Tool</div>
-        <div style="width: 100%; text-align: center;">Import Time <input onchange="updateWindow(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(time))}></div>
+        <div style="font-size: 1.75em; font-weight: bolder; text-align: center;">ARTS J2000 Import Tool</div>
+        <div style="width: 100%; text-align: center; margin: 10px 0px;">Import Time <input onchange="updateWindow(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(time))}></div>
         
         <div class="no-scroll" style="max-height: 90%; overflow: scroll">
             ${j2000Satellites.map(sat => {
