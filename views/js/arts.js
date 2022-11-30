@@ -7208,11 +7208,12 @@ function updateWhiteCellWindow() {
     updateWhiteCellTimeAndErrors()
 }
 
-window.onbeforeunload = () => {
+window.addEventListener('beforeunload', () => {
     whiteCellWindow.close()
     instructionWindow.close()
     tleWindow.close()
-}
+    burnWindows.forEach(w => w.close())
+})
 
 function shortenString(str = 'teststring12345', n=mainWindow.stringLimit[1], start = mainWindow.stringLimit[0]) {
     return str.length > n ? str.slice(start,n+start-1) + String.fromCharCode(8230) : str
