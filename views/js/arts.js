@@ -1,6 +1,6 @@
 let appAcr = 'ROTS'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '22 Nov 2022'
+let cao = '29 Nov 2022'
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
@@ -759,11 +759,11 @@ class Satellite {
     stateHistory;
     constructor(options = {}) {
         let {
-            position = {r: 40 * Math.random() - 20, i: 40 * Math.random() - 20, c: 40 * Math.random() - 20, rd: 0.002 * Math.random() - 0.001, id: 0.002 * Math.random() - 0.001, cd: 0.002 * Math.random() - 0.001},
+            position,
             size = 4,
-            color = '#ff0000',
-            shape = 'pentagon',
-            a = 0.00001,
+            color = '#aa4444',
+            shape = 'delta',
+            a = 0.001,
             name = 'Sat',
             burns = [],
             locked = false,
@@ -772,6 +772,17 @@ class Satellite {
             team = 1,
             cov = undefined
         } = options; 
+        if (position === undefined) {
+            position = rmoeToRic({ae: math.random() * 100, x: 0, y: 0, z: math.random() * 0.05, b: Math.random() * 360, m: Math.random() * 360})
+            position = {
+                r: position.rHcw[0][0],
+                i: position.rHcw[1][0],
+                c: position.rHcw[2][0],
+                rd: position.drHcw[0][0],
+                id: position.drHcw[1][0],
+                cd: position.drHcw[2][0],
+            }
+        }
         this.position = position;
         this.team = team
         this.point = point
@@ -1276,7 +1287,6 @@ function keydownFunction(key) {
                 a: 0.001
             }) : 
             new Satellite({
-                position: {r: 0, i: -1500 + 3000 * Math.random(), c: 0, rd: 0, id: 0, cd: 0},
                 name: 'Sat-' + (mainWindow.satellites.length + 1),
                 a: 0.001
             })
@@ -2616,6 +2626,7 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     if (mainWindow.currentTarget.type === 'current') {
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
+            lastHiddenSatClicked = false
             let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime + 7200
             });
@@ -3473,7 +3484,7 @@ function addToolTip(element) {
     element.classList.toggle('tooltip')
 }
 
-function rmoeToRic(rmoes, time = mainWindow.scenarioTime, top = true) {
+function rmoeToRic(rmoes = {ae: 0, x: 0, y: 0, b: 0, z: 0, m: 0}, time = mainWindow.scenarioTime, top = true) {
     let origSemi = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
     let origPeriod = 2 * Math.PI / mainWindow.mm;
     let initMm = mainWindow.mm + (rmoes.x * Math.PI  / 180) / origPeriod;
@@ -3496,7 +3507,7 @@ function rmoeToRic(rmoes, time = mainWindow.scenarioTime, top = true) {
             let state1 = rmoeToRic(rmoes1, time, false)
             let state2 = rmoeToRic(rmoes2, time, false)
             let del = (state2.rHcw[2] - state1.rHcw[2]) / delta
-            console.log(state1, state2, m, del);
+            // console.log(state1, state2, m, del);
             m += (0 - state1.rHcw[2]) / del
         }
         let state1 = rmoeToRic(rmoes1, time, false)
@@ -7214,41 +7225,75 @@ let burnWindows = []
 function openBurnsWindow(sat) {
     sat = sat.getAttribute('sat')
     document.getElementById('context-menu')?.remove();
-    burnWindows.push(window.open('', 'burns', "width=600px,height=600px"))
+    burnWindows.push(window.open('', 'burns' + burnWindows.length, "width=600px,height=600px"))
     burnWindows[burnWindows.length - 1].updateBurnList = el => {
         let sat = el.getAttribute('sat')
-        el.parentElement.querySelector('#burn-list-div').innerHTML = mainWindow.satellites[sat].burns.map(b => {
+        el.parentElement.querySelector('#burn-list-div').innerHTML = mainWindow.satellites[sat].burns.map((b,bii) => {
             return `<div style="margin-bottom: 20px;">
                 <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
                 <div style="margin-left: 30px;">Direction: 
                     ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
                 </div>
-                <div style="margin-left: 30px;">
+                <div style="margin-left: 30px;"> Waypoint Origin <select sat=${sat} burn=${bii} onchange="updateBurnOrigin(this)">
+                    <option value="-1">RIC Origin</option>
+                    ${mainWindow.satellites.map((waySat, ii) => {
+                        if (ii == sat) return ''
+                        return `<option ${waySat.burns.length > 0 ? 'disabled title="Can only choose satellits with no burns"' : ''} value="${ii}">${waySat.name}</option>`
+                    }).join('')}
+                </select></div>
+                <div class="burn-waypoint-disp-div" style="margin-left: 30px;">
                     Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
                 </div>
             </div>
             `
         }).join('')
     }
+    burnWindows[burnWindows.length - 1].updateBurnOrigin = el => {
+        let originChoice = el.value
+        let sat = el.getAttribute('sat');
+        let burn = el.getAttribute('burn');
+        let burnTime = mainWindow.satellites[sat].burns[burn].time + mainWindow.satellites[sat].burns[burn].waypoint.tranTime
+        let burnWaypoint = Object.values(mainWindow.satellites[sat].burns[burn].waypoint.target)
+        let refOrbit = {...mainWindow.originOrbit}
+        refOrbit.tA = propTrueAnomaly(refOrbit.tA, refOrbit.a, refOrbit.e, burnTime)
+        refOrbit = Object.values(Coe2PosVelObject(refOrbit))
+        let originRefOrbit = originChoice == -1 ? [0,0,0,0,0,0] : math.squeeze(Object.values(mainWindow.satellites[originChoice].currentPosition({time: burnTime})))
+        
+        originRefOrbit = Ric2Eci(originRefOrbit.slice(0,3), originRefOrbit.slice(3,6), refOrbit.slice(0,3), refOrbit.slice(3,6))
+        originRefOrbit = [...originRefOrbit.rEcci, ...originRefOrbit.drEci]
+        burnWaypoint = Ric2Eci(burnWaypoint.slice(0,3), [0,0,0], refOrbit.slice(0,3), refOrbit.slice(3,6))
+        burnWaypoint = [...burnWaypoint.rEcci, ...burnWaypoint.drEci]
+        let newOriginWaypoint = math.squeeze(Eci2Ric(originRefOrbit.slice(0,3), originRefOrbit.slice(3,6), burnWaypoint.slice(0,3), burnWaypoint.slice(3,6)).rHcw)
+        el.parentElement.parentElement.querySelector('.burn-waypoint-disp-div').innerHTML = `Waypoint: ${newOriginWaypoint.map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(mainWindow.satellites[sat].burns[burn].waypoint.tranTime / 3600).toFixed(1)} hrs`
+    }
     setTimeout(() => burnWindows[burnWindows.length - 1].document.title = mainWindow.satellites[sat].name + ' Burns', 250)
     burnWindows[burnWindows.length - 1].document.body.innerHTML = `
         <div>${mainWindow.satellites[sat].name} Burn List</div>
         <div class="no-scroll" style="max-height: 90%; overflow: scroll; margin-top: 10px" id="burn-list-div">
-        ${mainWindow.satellites[sat].burns.map(b => {
-            return `<div style="margin-bottom: 20px;">
-                <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
-                <div style="margin-left: 30px;">Direction: 
-                    ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
+            ${mainWindow.satellites[sat].burns.map((b,bii) => {
+                return `<div style="margin-bottom: 20px;">
+                    <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
+                    <div style="margin-left: 30px;">Direction: 
+                        ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
+                    </div>
+                    <div style="margin-left: 30px;"> Waypoint Origin <select sat=${sat} burn=${bii} onchange="updateBurnOrigin(this)">
+                        <option value="-1">RIC Origin</option>
+                        ${mainWindow.satellites.map((waySat, ii) => {
+                            console.log(ii, sat)
+                            if (ii == sat) return ''
+                            return `<option ${waySat.burns.length > 0 ? 'disabled title="Can only choose satellits with no burns"' : ''} value="${ii}">${waySat.name}</option>`
+                        }).join('')}
+                    </select></div>
+                    <div class="burn-waypoint-disp-div" style="margin-left: 30px;">
+                        Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
+                    </div>
                 </div>
-                <div style="margin-left: 30px;">
-                    Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
-                </div>
-            </div>
-            `
-        }).join('')}
+                `
+            }).join('')}
         </div>
         <button onclick="updateBurnList(this)" sat="${sat}" style="width: 100%; font-size: 1.5em; margin-top: 20px;">Update List</button>
     `
+
 }
 let tleWindow
 function openTleWindow(tleSatellites) {
