@@ -7208,10 +7208,10 @@ function updateWhiteCellWindow() {
     updateWhiteCellTimeAndErrors()
 }
 
-window.addEventListener('beforeunload', () => {
-    whiteCellWindow.close()
-    instructionWindow.close()
-    tleWindow.close()
+window.addEventListener('beforeunload', function() {
+    if (whiteCellWindow !== undefined) whiteCellWindow.close()
+    if (instructionWindow !== undefined) instructionWindow.close()
+    if (tleWindow !== undefined) tleWindow.close()
     burnWindows.forEach(w => w.close())
 })
 
@@ -7367,9 +7367,11 @@ function openTleWindow(tleSatellites) {
     setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
     let uniqueSats = tleSatellites.filter((element, index, array) => array.findIndex(el => el.name === element.name) === index).map(sat => sat.name)
     tleWindow.tleSatellites = tleSatellites
+    let defaultEpoch = convertTimeToDateTimeInput(tleSatellites[0].epoch)
+    console.log(defaultEpoch);
     tleWindow.document.body.innerHTML = `
         <div>ARTS TLE Import Tool</div>
-        <div style="width: 100%; text-align: center;">Import Time <input onchange="changeImportTime(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000)))}></div>
+        <div style="width: 100%; text-align: center;">Import Time <input onchange="changeImportTime(this)" id="tle-import-time" type="datetime-local" value=${defaultEpoch}></div>
         
         <div class="no-scroll" style="max-height: 90%; overflow: scroll">
         ${uniqueSats.map(satName => {
