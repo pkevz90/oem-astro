@@ -32,6 +32,25 @@ listDiv.innerHTML = `
 `
 document.getElementsByTagName('body')[0].append(listDiv);
 */
+
+// If on touch screen, set and add required assets
+if (checkTouchScreen()) {
+    let screenViewChange = document.createElement('div')
+    screenViewChange.style.position = 'fixed'
+    screenViewChange.style.left = '2%'
+    screenViewChange.style.top = '15%'
+    screenViewChange.style.padding = '1.25vh'
+    screenViewChange.innerText = 'View'
+    screenViewChange.style.backgroundColor = '#cccccc'
+    screenViewChange.style.border = '1px solid black'
+    screenViewChange.style.borderRadius = '10px'
+    screenViewChange.style.cursor = 'pointer'
+    screenViewChange.onclick = () => {
+        keydownFunction({key: ' '})
+    }
+    document.body.append(screenViewChange)
+}
+
 class windowCanvas {
     cnvs;
     plotWidth = 200;
@@ -165,7 +184,8 @@ class windowCanvas {
     precise = false;
     curvilinear = true;
     panelOpen = false;
-    plotSize = 1
+    plotSize = 1;
+    aciveTouches = []
     constructor(cnvs) {
         this.cnvs = cnvs;
     }
@@ -1425,7 +1445,12 @@ function alterEditableSatChar(action) {
 }
 
 function startContextClick(event) {
-    // console.log(event);
+    // console.log(event.pointerType, mainWindow.aciveTouches)
+    if (event.pointerType === 'touch' && mainWindow.aciveTouches.length > 1) return event.preventDefault()
+    if (event.clientX === undefined) {
+        event.clientX = event.touches[0].clientX
+        event.clientY = event.touches[0].clientY
+    }
     if (mainWindow.panelOpen) {
         return false;
     }
@@ -1463,7 +1488,6 @@ function startContextClick(event) {
     ctxMenu = document.getElementById('context-menu');
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
-    
     if (activeSat !== false) {
         // User clicked on satellite, generate satellite option menu
         ctxMenu.sat = activeSat;
@@ -2588,20 +2612,35 @@ function showScreenAlert(message = 'test alert') {
 
 changePlanType = (box) => mainWindow.burnType = box.checked ? 'waypoint' : 'manual';
 let lastHiddenSatClicked = false
-document.getElementById('main-plot').addEventListener('mousedown', event => {
+document.getElementById('main-plot').addEventListener('pointerdown', event => {
     event.preventDefault()
-    let subList = document.getElementsByClassName('sub-menu');
-    for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
     if (event.button === 0) {
         // Close context and lock menu if open
-        document.getElementById('context-menu')?.remove()
         lockDiv.style.right = '-25%'
     }
-    else if (event.button === 1) return startContextClick(event)
-    else return;
+    else return startContextClick(event)
+    if (event.pointerType === 'touch') {
+        mainWindow.aciveTouches.push({
+            location: [event.clientX, event.clientY],
+            id: event.pointerId
+        })
+        if (document.querySelectorAll('#context-menu').length > 0) return document.getElementById('context-menu')?.remove()
+        if (mainWindow.aciveTouches.length === 1) {
+            setTimeout(() => {
+                if (mainWindow.aciveTouches.length === 1) startContextClick(event)
+            }, 50)
+            return
+        }
+        else if (mainWindow.aciveTouches.length > 2) return
+    }
+    let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
+    // event.preventDefault()
+    let subList = document.getElementsByClassName('sub-menu');
+    for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
+    if (document.querySelectorAll('#context-menu').length > 0) return document.getElementById('context-menu')?.remove()
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) return openTimePrompt()
-    let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
+    
     let sat = 0, check;
     if (ricCoor === undefined) return;
     while (sat < mainWindow.satellites.length) {
@@ -2703,27 +2742,31 @@ document.getElementById('main-plot').addEventListener('mousedown', event => {
     else if (ricCoor.ri || ricCoor.ci) {
         try {
             mainWindow.frameMove = {
-                x: mainWindow.mousePosition[0],
-                y: mainWindow.mousePosition[1],
+                x: event.clientX,
+                y: event.clientY,
                 origin: mainWindow.plotCenter,
                 el: elD + 0,
-                az: azD + 0
+                az: azD + 0,
+                pointId: event.pointerId
             };
         } catch (error) {errorList.push(error.stack)}
         return;
     }
 })
 
-document.getElementById('main-plot').addEventListener('mouseup', () => {
+document.getElementById('main-plot').addEventListener('pointerup', event => {
+    setTimeout(() => {
+        mainWindow.aciveTouches = mainWindow.aciveTouches.filter(s => s.id !== event.pointerId)
+    },250)
     mainWindow.currentTarget = false;
     mainWindow.satellites.forEach(sat => sat.calcTraj());
     mainWindow.burnStatus.type = false;
     mainWindow.frameMove = undefined;
 })
 
-document.getElementById('main-plot').addEventListener('mouseleave', () => mainWindow.mousePosition = undefined)
+document.getElementById('main-plot').addEventListener('pointerleave', () => mainWindow.mousePosition = undefined)
 
-document.getElementById('main-plot').addEventListener('mousemove', event => {
+document.getElementById('main-plot').addEventListener('pointermove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) {
         mainWindow.cnvs.style.cursor = 'pointer'
@@ -2731,15 +2774,25 @@ document.getElementById('main-plot').addEventListener('mousemove', event => {
     }
     else mainWindow.cnvs.style.cursor = ''
     if (mainWindow.frameMove) {
-        let delX = event.clientX - mainWindow.frameMove.x;
-        let delY = event.clientY - mainWindow.frameMove.y;
-        if (threeD) {
-            elD = mainWindow.frameMove.el + delY * 0.4
-            azD = mainWindow.frameMove.az + delX * 0.4
-            return
-
+        if (event.pointerId === mainWindow.frameMove.pointId) {
+            let delX = event.clientX - mainWindow.frameMove.x;
+            let delY = event.clientY - mainWindow.frameMove.y;
+            if (threeD) {
+                elD = mainWindow.frameMove.el + delY * 0.4
+                azD = mainWindow.frameMove.az + delX * 0.4
+                return
+            }
+            mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
+            mainWindow.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
         }
-        mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
+        if (mainWindow.aciveTouches.length > 1) {
+            let oldDist = math.norm(mainWindow.aciveTouches.slice(0,2).map(s => s.location).reduce((c,d) => math.subtract(c,d),math.dotMultiply(2, mainWindow.aciveTouches[0].location)))
+            let pointerIdIndex = mainWindow.aciveTouches.findIndex(s => s.id === event.pointerId)
+            mainWindow.aciveTouches[pointerIdIndex].location = [event.clientX, event.clientY]
+            let newDist = math.norm(mainWindow.aciveTouches.slice(0,2).map(s => s.location).reduce((c,d) => math.subtract(c,d),math.dotMultiply(2, mainWindow.aciveTouches[0].location)))  
+            mainWindow.desired.plotWidth *= oldDist / newDist
+            mainWindow.plotWidth = mainWindow.desired.plotWidth
+        }
     }
 })
 
@@ -7616,10 +7669,10 @@ function dragElement(elmnt) {
     var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     if (document.getElementById(elmnt.id + "header")) {
       // if present, the header is where you move the DIV from:
-      document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+      document.getElementById(elmnt.id + "header").onpointerdown = dragMouseDown;
     } else {
       // otherwise, move the DIV from anywhere inside the DIV:
-      elmnt.onmousedown = dragMouseDown;
+      elmnt.onpointerdown = dragMouseDown;
     }
   
     function dragMouseDown(e) {
@@ -7628,9 +7681,9 @@ function dragElement(elmnt) {
       // get the mouse cursor position at startup:
       pos3 = e.clientX;
       pos4 = e.clientY;
-      document.onmouseup = closeDragElement;
+      document.onpointerup = closeDragElement;
       // call a function whenever the cursor moves:
-      document.onmousemove = elementDrag;
+      document.onpointermove = elementDrag;
     }
   
     function elementDrag(e) {
@@ -7651,8 +7704,9 @@ function dragElement(elmnt) {
   
     function closeDragElement() {
       // stop moving when mouse button is released:
-      document.onmouseup = null;
-      document.onmousemove = null;
+      console.log('released');
+      document.onpointerup = null;
+      document.onpointermove = null;
     }
   }
 
@@ -7737,6 +7791,7 @@ function openDataDiv(options = {}) {
     newDiv.style.border = '1px solid black'
     newDiv.style.borderRadius = '10px'
     newDiv.style.boxShadow = '5px 5px 7px #575757'
+    newDiv.style.touchAction = 'none'
     newDiv.setAttribute('origin', origin)
     newDiv.setAttribute('target', target)
     newDiv.innerHTML = `
@@ -7815,4 +7870,8 @@ function ecef2latlong(satEcef = [-15147.609175480451, -39349.25471082444, 28.290
     return {
         longSat, latSat
     }
+}
+
+function checkTouchScreen() {
+    return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)
 }
