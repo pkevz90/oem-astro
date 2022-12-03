@@ -37,8 +37,8 @@ document.getElementsByTagName('body')[0].append(listDiv);
 if (checkTouchScreen()) {
     let screenViewChange = document.createElement('div')
     screenViewChange.style.position = 'fixed'
-    screenViewChange.style.left = '2%'
-    screenViewChange.style.top = '15%'
+    screenViewChange.style.left = '1%'
+    screenViewChange.style.top = '12%'
     screenViewChange.style.padding = '1.25vh'
     screenViewChange.innerText = 'View'
     screenViewChange.style.backgroundColor = '#cccccc'
@@ -895,6 +895,8 @@ class Satellite {
     checkClickProximity(position, burns = false) {
         // Check if clicked on current position of object, if burns flag is true, check click to current object burns
         let out = {};
+        let pixelLimit = 20
+        let distLimit = mainWindow.getPlotWidth() * pixelLimit / mainWindow.cnvs.width
         if (position.ri) {
             if (burns) {
                 let burnsCheck = false
@@ -904,7 +906,7 @@ class Satellite {
                 out = burnsCheck
             }
             else {
-                out.ri = math.norm([this.curPos.r - position.ri.r, this.curPos.i - position.ri.i]) < (mainWindow.getPlotWidth() / 80);
+                out.ri = math.norm([this.curPos.r - position.ri.r, this.curPos.i - position.ri.i]) < distLimit
             }
         }
         if (position.ci) {
@@ -916,7 +918,7 @@ class Satellite {
                 out = burnsCheck
             }
             else {
-                out.ci = math.norm([this.curPos.c - position.ci.c, this.curPos.i - position.ci.i]) < (mainWindow.getPlotWidth() / 80);
+                out.ci = math.norm([this.curPos.c - position.ci.c, this.curPos.i - position.ci.i]) < distLimit
             }
         }
         if (position.rc) {
@@ -928,7 +930,7 @@ class Satellite {
                 out = burnsCheck
             }
             else {
-                out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < (mainWindow.getPlotWidth() / 80);
+                out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < distLimit
             }
         }
         if (out.ri || out.ci || out.rc) {
@@ -947,10 +949,12 @@ class Satellite {
     }
     checkBurnProximity(position) {
         let out = {};
+        let pixelLimit = 20
+        let distLimit = mainWindow.getPlotWidth() * pixelLimit / mainWindow.cnvs.width
         for (let ii = 0; ii < this.burns.length; ii++) {
-            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < (mainWindow.getPlotWidth() / 40) ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
-            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < (mainWindow.getPlotWidth() / 40) ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
-            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < (mainWindow.getPlotWidth() / 40) ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
+            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < distLimit ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
+            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < distLimit ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
+            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < distLimit ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
         }
         return out;
     }
@@ -2619,6 +2623,9 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         lockDiv.style.right = '-25%'
     }
     else return startContextClick(event)
+    // Check if clicked on time
+    if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) return openTimePrompt()
+    
     if (event.pointerType === 'touch') {
         mainWindow.aciveTouches.push({
             location: [event.clientX, event.clientY],
@@ -2638,8 +2645,6 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
     let subList = document.getElementsByClassName('sub-menu');
     for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
     if (document.querySelectorAll('#context-menu').length > 0) return document.getElementById('context-menu')?.remove()
-    // Check if clicked on time
-    if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) return openTimePrompt()
     
     let sat = 0, check;
     if (ricCoor === undefined) return;
@@ -5973,14 +5978,14 @@ function showLogo() {
     ctx.fillStyle = 'black'
     ctx.textBaseline = 'alphabetic'
     ctx.textAlign = 'center'
-    ctx.font = '190px sans-serif'
+    ctx.font = (190/1490)*window.innerWidth + 'px sans-serif'
     ctx.fillText(appAcr, cnvs.width / 2, cnvs.height / 2)
     ctx.textBaseline = 'top'
-    ctx.font = '24px Courier New'
+    ctx.font = (24/1490)*window.innerWidth + 'px Courier New'
     ctx.fillText(appName, cnvs.width / 2, cnvs.height / 2+2)
-    ctx.fillText('CAO ' + cao, cnvs.width / 2, cnvs.height / 2+25)
+    ctx.fillText('CAO ' + cao, cnvs.width / 2, cnvs.height / 2+(24/1490)*window.innerWidth * 25/24)
     ctx.textBaseline = 'alphabetic'
-    ctx.fillText('Click anywhere to begin...', cnvs.width / 2, cnvs.height -30)
+    ctx.fillText('Click anywhere to begin...', cnvs.width / 2, cnvs.height -(24/1490)*window.innerWidth * 30/24)
 }
 showLogo()
 
@@ -6880,7 +6885,7 @@ function findMinDistanceRedux(sat1 = 0, sat2 = 1) {
     },0);
 }
 
-function fitPolynomial(x = [0, 1, 2], y = [[1],[-2],[4]], d=2) {
+function fitPolynomial(x = [0, 1, 3], y = [[1],[-2],[4]], d=2) {
     if (x.length !== y.length) return console.error('X & Y values need to be the same length')
     d = (x.length-1) < d ? x.length - 1 : d
     let jac = []
@@ -7874,4 +7879,43 @@ function ecef2latlong(satEcef = [-15147.609175480451, -39349.25471082444, 28.290
 
 function checkTouchScreen() {
     return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)
+}
+
+function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
+    let answerLength = x.length
+    let answer = math.zeros([answerLength])
+    for (let ii = 0; ii < x.length; ii++) {
+        let subAnswer = [], subAnswerDen = 1
+        for (let jj = 0; jj < x.length; jj++) {
+            if (ii === jj) continue
+            subAnswer.push([1, -x[jj]])
+            subAnswerDen *= x[ii] - x[jj]
+        }
+        subAnswer = subAnswer.slice(1).reduce((a,b) => {
+            return multiplyPolynomial(a,b)
+        }, subAnswer[0])
+        answer = math.add(answer, math.dotMultiply(y[ii] / subAnswerDen, subAnswer))
+    }
+    console.log(answer);
+}
+
+function multiplyPolynomial(a = [1,3,1], b = [0,2,1]) {
+    let aL = a.length, bL = b.length
+    let minLength = aL < bL ? bL : aL
+    while (a.length < minLength) a.unshift(0)
+    while (b.length < minLength) b.unshift(0)
+    let answerLength = (minLength - 1) * 2 + 1
+    let answer = math.zeros([answerLength])
+    for (let index = 0; index < minLength; index++) {
+        let subAnswer = math.zeros([answerLength])
+        let indexAnswer = math.dotMultiply(a[index], b)
+        subAnswer.splice(index, minLength, ...indexAnswer)
+        answer = math.add(answer, subAnswer)
+    }
+    while (answer[0] === 0) answer.shift()
+    return answer
+}
+
+function answerPolynomial(poly = [1,1,1], x = 4) {
+    return poly.reverse().reduce((a,b,ii) => a + b * x ** ii,0)
 }
