@@ -1449,7 +1449,6 @@ function alterEditableSatChar(action) {
 }
 
 function startContextClick(event) {
-    // console.log(event.pointerType, mainWindow.aciveTouches)
     if (event.pointerType === 'touch' && mainWindow.aciveTouches.length > 1) return event.preventDefault()
     if (event.clientX === undefined) {
         event.clientX = event.touches[0].clientX
@@ -2625,7 +2624,6 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
     else return startContextClick(event)
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) return openTimePrompt()
-    
     if (event.pointerType === 'touch') {
         mainWindow.aciveTouches.push({
             location: [event.clientX, event.clientY],
@@ -6977,6 +6975,9 @@ function openQuickWindow(innerCode = 'Hey', focusId) {
     largerDiv.style.zIndex = '90'
     largerDiv.id = 'larger-time-div'
     largerDiv.onclick = (el) => {
+        if (el.clientX < 450 && (mainWindow.getHeight() - el.clientY) < (mainWindow.getHeight() * 0.06)) return 
+    
+        if (mainWindow.aciveTouches.findIndex(s => s.id = el.pointerId) !== -1) return
         if (el.target.id !== 'larger-time-div') return
         document.getElementById('larger-time-div').remove()
     }
