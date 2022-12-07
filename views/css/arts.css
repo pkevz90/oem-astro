@@ -68,7 +68,7 @@ html, body {
 #time-slider input {
     -webkit-appearance: none;
     width: 98%;
-    height: 7.5vh;
+    height: 4vh;
     background: #d3d3d3;
     outline: none;
     opacity: 0.7;
@@ -82,8 +82,8 @@ html, body {
 #time-slider input::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 7.5vh;
+    width: 15px;
+    height: 5vh;
     background: black;
     cursor: pointer;
   }

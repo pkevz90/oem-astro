@@ -427,127 +427,69 @@ function propToTime(state, dt, j2 = true) {
     return state
 }
 
-function PosVel2CoeNewOld(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
-    let mu = 398600.4418;
-    let rn = math.norm(r);
-    let vn = math.norm(v);
-    let h = math.cross(r, v);
-    let hn = math.norm(h);
-    let n = math.cross([0, 0, 1], h);
-    let nn = math.norm(n);
-    if (nn < 1e-9) {
-        n = [1, 0, 0];
-        nn = 1;
-    }
-    var epsilon = vn * vn / 2 - mu / rn;
-    let a = -mu / 2 / epsilon;
-    // console.log(math.subtract(math.dotDivide(math.cross(v, h), mu), math.dotDivide(r, rn)))
-    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r),  math.dotMultiply(math.dot(r, v), v)), mu)
-    let en = math.norm(e);
-    if (en < 1e-9) {
-        e = n.slice();
-        en = 0;
-    }
-    let inc = Math.acos(h[2] / hn);
-    let ra = Math.acos(n[0] / nn);
+function PosVel2CoeNew(r = [42164.14, 0, 0], v = [0, 3.0746611796284924, 0]) {
+    let mu = 398600.4418
+    let rn = math.norm(r)
+    let vn = math.norm(v)
+    let h = math.cross(r,v)
+    let hn = math.norm(h)
+    let n = math.cross([0,0,1], h)
+    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r), math.dotMultiply(math.dot(r, v), v)), mu)
+    let en = math.norm(e)
+    let specMechEn = vn ** 2 / 2 - mu / rn
+    let a = -mu / 2 / specMechEn
+    let i = math.acos(h[2] / hn)
+    let raan = math.acos(n[0] / math.norm(n))
     if (n[1] < 0) {
-        ra = 2 * Math.PI - ra;
+        raan = 2 * Math.PI - raan
     }
-    // console.log({
-    //     n,e
-    // });
-    let ar
-    let arDot = math.dot(n, e) / en / nn;
-    if (arDot > 1) {
-        ar = 0;
-    } else if (arDot < -1) {
-        ar = Math.PI;
-    } else {
-        ar = Math.acos(arDot);
+    let arg = math.acos(math.dot(n, e) / math.norm(n) / en)
+    if (arg.re !== undefined) {
+        arg = arg.re
     }
-    if (e[2] < 0 || (inc < 1e-8 && e[1] < 0)) {
-        ar = 2 * Math.PI - ar;
+    if (e[2] < 0) {
+        arg = 2 * Math.PI - arg
     }
-    let ta;
-    let taDot = math.dot(r, e) / rn / en
-    if (taDot > 1) {
-        ta = 0;
-    } else if (taDot < -1) {
-        ta = Math.PI;
-    } else {
-        ta = Math.acos(taDot);
+    let tA = math.acos(math.dot(e, r) / en / rn)
+    if (tA.re !== undefined) {
+        tA = tA.re
     }
-    if (math.dot(v, e) > 0 || math.dot(v, r) < 0) {
-        ta = 2 * Math.PI - ta;
+    if (math.dot(r, v) < 0) {
+        tA = 2 * Math.PI - tA
     }
-    // // console.log([a,en,inc,ra,ar,ta])
-    return {
-        a: a,
-        e: en,
-        i: inc,
-        raan: ra,
-        arg: ar,
-        tA: ta
-    };
-}
-
-function PosVel2CoeNew(r = [42157.71810012396, 735.866, 0], v = [-0.053652257639536446, 3.07372487580565, 0.05366]) {
-    r = r.map(num => math.abs(num) < 1e-8 ? 0 : num)
-    v = v.map(num => math.abs(num) < 1e-8 ? 0 : num)
-    let mu = 398600.4418;
-    let rn = math.norm(r);
-    let vn = math.norm(v);
-    let h = math.cross(r, v);
-    let hn = math.norm(h);
-    let n = math.cross([0, 0, 1], h);
-    let nn = math.norm(n);
-    if (nn < 1e-9) {
-        n = [1, 0, 0];
-        nn = 1;
+    let longOfPeri, argLat, trueLong
+    if (en < 1e-6 && i < 1e-6) {
+        trueLong = math.acos(r[0] / rn)
+        if (r[1] < 0) {
+            trueLong = 2 * Math.PI - trueLong
+        }
+        arg = 0
+        raan = 0
+        tA = trueLong 
     }
-    var epsilon = vn * vn / 2 - mu / rn;
-    let a = -mu / 2 / epsilon;
-    let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r),  math.dotMultiply(math.dot(r, v), v)), mu)
-    let en = math.norm(e);
-    if (en < 1e-9) {
-        e = n.slice();
-        en = 0;
+    else if (en < 1e-6) {
+        argLat = math.acos(math.dot(n, r) / math.norm(n) / rn)
+        if (r[2] < 0) {
+            argLat = 2 * Math.PI - argLat
+        }
+        arg = 0
+        tA = argLat
     }
-    let inc = Math.acos(h[2] / hn);
-    let ra = Math.acos(n[0] / nn);
-    if (n[1] < 0) {
-        ra = 2 * Math.PI - ra;
-    }
-    let ar
-    let arDot = math.dot(n, e) / (en < 1e-9 ? nn : en) / nn;
-    if (arDot > 1) {
-        ar = 0;
-    } else if (arDot < -1) {
-        ar = Math.PI;
-    } else {
-        ar = Math.acos(arDot);
-    }
-    if (e[2] < 0 || (inc < 1e-8 && e[1] < 0)) {
-        ar = 2 * Math.PI - ar;
-    }
-    let ta, taDot = math.dot(r, e) / rn / math.norm(e)
-    if (taDot > 1) {
-        ta = 0;
-    } else if (taDot < -1) {
-        ta = Math.PI;
-    } else {
-        ta = Math.acos(taDot);
-    }
-    if (math.dot(v, e) > 0 || math.dot(v, r) < (-1e-8)) {
-        ta = 2 * Math.PI - ta;
+    else if (i < 1e-6) {
+        longOfPeri = math.acos(e[0] / en)
+        if (e[1] < 0) {
+            longOfPeri = 2 * Math.PI - longOfPeri
+        }
+        raan = 0
+        arg = longOfPeri
     }
     return {
-        a: a,
+        a,
         e: en,
-        i: inc,
-        raan: ra,
-        arg: ar,
-        tA: ta
+        i,
+        raan,
+        arg,
+        tA
     };
 }
 
