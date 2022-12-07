@@ -2044,27 +2044,8 @@ function handleContextClick(button) {
     }
     else if (button.id === 'prop-poca-execute') {
         let sat1 = button.getAttribute('sat'), sat2 = document.getElementById('context-menu').sat;
-        let data = getRelativeData(button.getAttribute('sat'),document.getElementById('context-menu').sat);
-        let tGuess = data.toca + 600;
-        data = data.toca;
-        for (let ii = 0; ii < 200; ii++) {
-            let pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess})
-            let pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess})
-            let dr = [pos1.r[0] - pos2.r[0], pos1.i[0] - pos2.i[0], pos1.c[0] - pos2.c[0]]
-            let dv = [pos1.rd[0] - pos2.rd[0], pos1.id[0] - pos2.id[0], pos1.cd[0] - pos2.cd[0]]
-            let rr1 = math.dot(dr,dv) / math.norm(dr)
-            pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess + 0.001})
-            pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess + 0.001})
-            dr = [pos1.r[0] - pos2.r[0], pos1.i[0] - pos2.i[0], pos1.c[0] - pos2.c[0]]
-            dv = [pos1.rd[0] - pos2.rd[0], pos1.id[0] - pos2.id[0], pos1.cd[0] - pos2.cd[0]]
-            let rr2 = math.dot(dr,dv) / math.norm(dr)
-            dr = (rr2 - rr1) / 0.001
-            tGuess -= 0.05 * rr1 / dr
-            tGuess = tGuess < 0 ? 0 : tGuess
-            if (math.abs(rr1) < 1e-8) break
-
-        }
-        mainWindow.desired.scenarioTime = tGuess
+        let dataGuess = findMinDistanceRedux(sat1, sat2)
+        mainWindow.desired.scenarioTime = dataGuess.tMin
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         document.getElementById('context-menu')?.remove();
     }
@@ -6867,27 +6848,26 @@ function findMinDistanceRedux(sat1 = 0, sat2 = 1) {
     let minVal = math.min(dist)
     let minIndex = dist.findIndex(s => s === minVal)
     let index = -1
-    index = minIndex <1 ? -minIndex : minIndex > (dist.length - 2) ? dist.length - 3 : index
-    console.log(minIndex, index);
+    index = minIndex < 1 ? -minIndex : minIndex > (dist.length - 2) ? dist.length - 3 : index
     let x = [], y = []
     for (let ii = 0; ii < 3; ii++) {
         x.push(hist1[minIndex + index].t)
         y.push(dist[minIndex + index])
         index++   
     }
-    let c = fitPolynomial(x,math.transpose([y]), 2)
-    let dC = c[1]
-    let minTime = -dC[0] / dC[1]
-    return c[0].reduce((a,b,ii) => {
-        return a + b * minTime ** ii
-    },0);
+    let c = lagrangePolyCalc(x,y)
+    let dc = derivateOfPolynomial(c)
+    let ddc = derivateOfPolynomial(dc)
+    let tGuess = hist1[minIndex].t
+    tGuess = tGuess - answerPolynomial(dc, tGuess) / answerPolynomial(ddc, tGuess)
+    let minDist = math.norm(math.squeeze(math.subtract(Object.values(mainWindow.satellites[sat1].currentPosition({time: tGuess})), Object.values(mainWindow.satellites[sat2].currentPosition({time: tGuess})))))
+    return {tMin: tGuess, dMin: minDist}
 }
 
 function fitPolynomial(x = [0, 1, 3], y = [[1],[-2],[4]], d=2) {
     if (x.length !== y.length) return console.error('X & Y values need to be the same length')
     d = (x.length-1) < d ? x.length - 1 : d
     let jac = []
-    console.log(x,y);
     for (let ii = 0; ii < x.length; ii++) {
         let line = []
         for (let jj = 0; jj <= d; jj++) {
@@ -6895,15 +6875,8 @@ function fitPolynomial(x = [0, 1, 3], y = [[1],[-2],[4]], d=2) {
         }
         jac.push(line)
     }
-    console.log(jac);
     let consts = math.squeeze(math.multiply(math.inv(jac), y))
-    // console.log(x,math.squeeze(y));
-    // console.log(x.map(val => {
-    //     return consts.reduce((a,b,ii) => {
-    //         return a + b * val ** ii
-    //     },0);
-    // }));
-    return [consts,consts.map((val,ii) => val * ii).slice(1)]
+    return consts.reverse()
 }
 
 function errorFromTime(t = mainWindow.scenarioTime, error = mainWindow.error.neutral) {
@@ -7897,7 +7870,7 @@ function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
         }, subAnswer[0])
         answer = math.add(answer, math.dotMultiply(y[ii] / subAnswerDen, subAnswer))
     }
-    console.log(answer);
+    return answer
 }
 
 function multiplyPolynomial(a = [1,3,1], b = [0,2,1]) {
@@ -7917,6 +7890,18 @@ function multiplyPolynomial(a = [1,3,1], b = [0,2,1]) {
     return answer
 }
 
-function answerPolynomial(poly = [1,1,1], x = 4) {
-    return poly.reverse().reduce((a,b,ii) => a + b * x ** ii,0)
+function answerPolynomial(poly = [1,-1,2], x = 4) {
+    let p = poly.slice()
+    return p.reverse().reduce((a,b,ii) => {
+        return a + b * x ** ii
+    },0)
+}
+
+function derivateOfPolynomial(poly = [3,2,1]) {
+    let ddp = poly.slice()
+    ddp.pop()
+    ddp = ddp.map((p, ii) => {
+        return p * (ddp.length - ii)
+    })
+    return ddp
 }
