@@ -868,7 +868,7 @@ class Satellite {
             let dispDist = timeDelta > (mag / this.a) ? dist : dist * timeDelta * this.a / mag;
             if (mainWindow.burnStatus.type) return;
             let point1 = mainWindow.convertToPixels(burn.location), mag2;
-            let point2 = math.add(Object.values(burn.location).map(s => s[0]).slice(0,3), math.dotMultiply(dispDist / mag, Object.values(burn.direction)))
+            let point2 = math.add(burn.location, math.dotMultiply(dispDist / mag, burn.direction))
             point2 = mainWindow.convertToPixels(point2);
             let textWidth = ctx.measureText((1000*mag).toFixed(1)).width;
             if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
@@ -983,12 +983,12 @@ class Satellite {
         let pixelLimit = 20
         let distLimit = mainWindow.getPlotWidth() * pixelLimit / mainWindow.cnvs.width
         for (let ii = 0; ii < this.burns.length; ii++) {
-            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < distLimit ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
-            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < distLimit ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
-            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < distLimit ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
+            if (position.ri) out.ri = math.norm([this.burns[ii].location[0] - position.ri.r, this.burns[ii].location[1] - position.ri.i]) < distLimit ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
+            if (position.ci) out.ci = math.norm([this.burns[ii].location[2] - position.ci.c, this.burns[ii].location[1] - position.ci.i]) < distLimit ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
+            if (position.rc) out.rc = math.norm([this.burns[ii].location[2] - position.rc.c, this.burns[ii].location[0] - position.rc.r]) < distLimit ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
         }
         return out;
-    }n
+    }
     checkInBurn() {
         return
         if (mainWindow.burnStatus.type) return;
@@ -1100,8 +1100,7 @@ function sleep(milliseconds) {
 let threeD = false
 let timeFunction = false;
 (function animationLoop() {
-    try {
-        mainWindow.cnvs.getContext('2d').globalAlpha = 1 
+    mainWindow.cnvs.getContext('2d').globalAlpha = 1 
         if (timeFunction) console.time()
         mainWindow.clear();
         mainWindow.updateSettings();
@@ -1143,18 +1142,21 @@ let timeFunction = false;
             lastSaveTime = Date.now()
         }
         return window.requestAnimationFrame(animationLoop)
-    } catch (error) {
-        console.log(error);
-        errorList.push(error)
-        let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
-        mainWindow = new windowCanvas(document.getElementById('main-plot'));
-        mainWindow.loadDate(autosavedScen);
-        mainWindow.setAxisWidth('set', mainWindow.plotWidth);
-        animationLoop()
-        mainWindow.desired.scenarioTime = Number(document.getElementById('time-slider-range').value)
-        mainWindow.scenarioTime = Number(document.getElementById('time-slider-range').value)
-        showScreenAlert('System crash recovering to last autosave');
-    }
+    // try {
+        
+    // } catch (error) {
+    //     console.log(mainWindow.satellites[0].burns[0]);
+    //     console.log(error.stack);
+    //     errorList.push(error)
+    //     let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
+    //     mainWindow = new windowCanvas(document.getElementById('main-plot'));
+    //     mainWindow.loadDate(autosavedScen);
+    //     mainWindow.setAxisWidth('set', mainWindow.plotWidth);
+    //     animationLoop()
+    //     mainWindow.desired.scenarioTime = Number(document.getElementById('time-slider-range').value)
+    //     mainWindow.scenarioTime = Number(document.getElementById('time-slider-range').value)
+    //     showScreenAlert('System crash recovering to last autosave');
+    // }
 })()
 //------------------------------------------------------------------
 // Adding event listeners for window objects
@@ -1572,10 +1574,8 @@ function startContextClick(event) {
     else if (activeBurn !== false) {
         // User clicked on burn, generate burn option menu
         let burn = mainWindow.satellites[activeBurn.sat].burns[activeBurn.burn]
-        let burnDir = [1000*burn.direction.r, 1000*burn.direction.i, 1000*burn.direction.c]
-        let rot = translateFrames(activeBurn.sat, {time: burn.time})
-        burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
-        let burnWay = [burn.waypoint.target.r, burn.waypoint.target.i, burn.waypoint.target.c, burn.waypoint.tranTime]
+        let burnDir = burn.direction.map(s => s*1000)
+        let burnWay = [0,0,0,0]
         let burnDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000)
         let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
         let uploadDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000 - 900000)
@@ -3499,51 +3499,18 @@ function calcBurns() {
             c: sat.burns[this.burnStatus.burn].waypoint.target.c
         }
     } else {
-        sat.burns[this.burnStatus.burn].direction = {
-            r: cross ? sat.burns[this.burnStatus.burn].direction.r : (mousePosition[this.burnStatus.frame].r - sat.burns[this.burnStatus.burn].location.r[0]) * mainWindow.burnSensitivity / 1000,
-            i: cross ? sat.burns[this.burnStatus.burn].direction.i : (mousePosition[this.burnStatus.frame].i - sat.burns[this.burnStatus.burn].location.i[0]) * mainWindow.burnSensitivity / 1000,
-            c: cross ? (mousePosition[this.burnStatus.frame].c - sat.burns[this.burnStatus.burn].location.c[0]) *
-                mainWindow.burnSensitivity / 1000 : sat.burns[this.burnStatus.burn].direction.c
-        }
-        let tranTime = 1.5*math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c]) / sat.a;
-        tranTime = tranTime < (2 * Math.PI / mainWindow.mm) * 0.12534 ? (2 * Math.PI / mainWindow.mm) * 0.12534 : tranTime;
-        tranTime = cross ? sat.burns[this.burnStatus.burn].waypoint.tranTime : tranTime; 
-        // If burn time is longer than about an eighth of the orbit (times 1.5), limit burn
-        if (tranTime > (2 * Math.PI / mainWindow.mm) * 0.3 && sat.a > 0.000001 && !cross) {
-            tranTime = (2 * Math.PI / mainWindow.mm) * 0.3;
-            let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
-            dir = math.dotDivide(dir, math.norm(dir));
-            dir = math.dotMultiply(dir, (tranTime/1.5) * sat.a);
-            sat.burns[this.burnStatus.burn].direction = {
-                r: dir[0],
-                i: dir[1],
-                c: dir[2],
-            }
-        }
-        sat.burns[this.burnStatus.burn].waypoint.tranTime = tranTime;
-        let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
-        let targetState = sat.currentPosition({
-            time: sat.burns[this.burnStatus.burn].time
-        });
-        targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / tranTime, tranTime, sat.burns[this.burnStatus.burn].time, sat.a);
-        sat.burns[this.burnStatus.burn].waypoint.target = {
-            r: cross ? sat.burns[this.burnStatus.burn].waypoint.target.r : targetState.x,
-            i: cross ? sat.burns[this.burnStatus.burn].waypoint.target.i : targetState.y,
-            c: targetState.z
-        }
-        // Reset cross-track waypoint values in future to natural motion
+        sat.burns[this.burnStatus.burn].direction = [
+            cross ? sat.burns[this.burnStatus.burn].direction[0] : (mousePosition[this.burnStatus.frame].r - sat.burns[this.burnStatus.burn].location[0]) * mainWindow.burnSensitivity / 1000,
+            cross ? sat.burns[this.burnStatus.burn].direction[1] : (mousePosition[this.burnStatus.frame].i - sat.burns[this.burnStatus.burn].location[1]) * mainWindow.burnSensitivity / 1000,
+            cross ? (mousePosition[this.burnStatus.frame].c - sat.burns[this.burnStatus.burn].location[2]) *
+                mainWindow.burnSensitivity / 1000 : sat.burns[this.burnStatus.burn].direction[2]
+        ]
+        // Reset cross-track directiom burns in future to 0
         for (let hh = this.burnStatus.burn + 1; hh < sat.burns.length; hh++) {
-            targetState = sat.currentPosition({
-                time: sat.burns[hh].time
-            });
-            dir = [sat.burns[hh].direction.r, sat.burns[hh].direction.i, 0];
-            sat.burns[hh].direction.c = 0;
-            targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / sat.burns[hh].waypoint.tranTime, sat.burns[hh].waypoint.tranTime, sat.burns[hh].time, sat.a);
-            sat.burns[hh].waypoint.target.c = targetState.z;
-            // sat.burns[hh].waypoint.target.c = targetState.c[0];
+            sat.burns[hh].direction[2] = 0
         }
     }
-    let mag = math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c])
+    let mag = math.norm([sat.burns[this.burnStatus.burn].direction[0], sat.burns[this.burnStatus.burn].direction[1], sat.burns[this.burnStatus.burn].direction[2]])
     let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location)[this.burnStatus.frame];
     let ctx = this.getContext();
     ctx.strokeStyle = sat.color;
@@ -3551,7 +3518,7 @@ function calcBurns() {
     ctx.beginPath();
     ctx.moveTo(initPos.x, initPos.y);
     let dist = mag * 1000 / this.burnSensitivity;
-    let point2 = {r: sat.burns[this.burnStatus.burn].location.r[0] + dist * sat.burns[this.burnStatus.burn].direction.r / mag, i: sat.burns[this.burnStatus.burn].location.i[0] + dist * sat.burns[this.burnStatus.burn].direction.i / mag, c: sat.burns[this.burnStatus.burn].location.c[0] + dist * sat.burns[this.burnStatus.burn].direction.c / mag}
+    let point2 = {r: sat.burns[this.burnStatus.burn].location[0] + dist * sat.burns[this.burnStatus.burn].direction[0] / mag, i: sat.burns[this.burnStatus.burn].location[1] + dist * sat.burns[this.burnStatus.burn].direction[1]/ mag, c: sat.burns[this.burnStatus.burn].location[2] + dist * sat.burns[this.burnStatus.burn].direction[2] / mag}
     let finalPos = this.convertToPixels(point2)[this.burnStatus.frame];
     ctx.lineTo(finalPos.x, finalPos.y);
     ctx.stroke();
@@ -3559,7 +3526,7 @@ function calcBurns() {
     ctx.textBaseline = "middle"
     ctx.textAlign = 'center'
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
-    sat.genBurns(true, mainWindow.burnStatus.burn);
+    sat.calcTraj()
 }
 
 function addToolTip(element) {
@@ -7917,10 +7884,12 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
         if ((tProp + timeDelta) > burns[burnIndex].time) {
             let mag = math.norm(burns[burnIndex].direction)
             let burnDuration = mag / a
-            propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
-            propPosition = runge_kutta4(inertialEom, propPosition, burnDuration, burns[burnIndex].direction.map(s => s * a / mag))
-            epochPosition = PosVel2CoeNew(propPosition.slice(0,3), propPosition.slice(3,6))
-            epochTime = burns[burnIndex].time + burnDuration
+            if (burnDuration > 0) {
+                propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
+                propPosition = runge_kutta4(inertialEom, propPosition, burnDuration, burns[burnIndex].direction.map(s => s * a / mag))
+                epochPosition = PosVel2CoeNew(propPosition.slice(0,3), propPosition.slice(3,6))
+                epochTime = burns[burnIndex].time + burnDuration    
+            }
             burnIndex++
         }
         tProp += timeDelta
