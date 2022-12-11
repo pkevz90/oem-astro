@@ -182,7 +182,7 @@ class windowCanvas {
         this.cnvs = cnvs;
         this.originOrbit = {
             a: 42164.14,
-            e: 0,
+            e: 0.01,
             i: 0,
             raan: 0,
             arg: 0,
@@ -2709,12 +2709,15 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             if (!mainWindow.currentTarget) return;
             lastHiddenSatClicked = false
             let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
+                time: mainWindow.desired.scenarioTime + 7200
+            });
+            let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime
             });
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.desired.scenarioTime,
                 shown: 'during',
-                location: Object.values(targetState).slice(0,3),
+                location: Object.values(satLocation).slice(0,3),
                 direction: [0,0,0]
             })
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.sort((a, b) => {
@@ -4659,7 +4662,7 @@ function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA:
     let sAr = Math.sin(coe.arg);
     let cIn = Math.cos(coe.i);
     let sin = Math.sin(coe.i);
-    R = [
+    let R = [
         [cRa * cAr - sRa * sAr * cIn, -cRa * sAr - sRa * cAr * cIn, sRa * sin],
         [sRa * cAr + cRa * sAr * cIn, -sRa * sAr + cRa * cAr * cIn, -cRa * sin],
         [sAr * sin, cAr * sin, cIn]
@@ -7868,7 +7871,7 @@ function propToTimeAnalytic(state = mainWindow.originOrbit, dt = 86164, j2 = tru
     state = Object.values(Coe2PosVelObject(state))
     return state
 }
-// [{t: 3600, dir: [0.005,0,0]}]
+
 function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], options = {}) {
     // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
     let {timeDelta = mainWindow.timeDelta, recalcBurns = false, tFinal = mainWindow.scenarioLength*3600, a = 0.001} = options
