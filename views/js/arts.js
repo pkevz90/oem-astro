@@ -94,14 +94,7 @@ class windowCanvas {
         burn: null,
         frame: null
     };
-    originOrbit = {
-        a: (398600.4418 / (2 * Math.PI / 86164) ** 2) ** (1/3),
-        e: 0,
-        i: 0,
-        raan: 0,
-        arg: 0,
-        tA: 0
-    }
+    originOrbit = [42164.14,0,0,0,3.074661,0]
     trajSize = 1.5;
     encoder;
     mm = 2 * Math.PI / 86164;
@@ -4683,6 +4676,26 @@ function Eci2Ric(rC, drC, rD, drD, c = false) {
     }
 }
 
+function ConvEciToRic(chief_eci, deputy_eci, c = false) {
+    let rC = chief_eci.slice(0,3), drC = chief_eci.slice(3,6), rD = deputy_eci.slice(0,3), drD = deputy_eci.slice(3,6)
+    let h = math.cross(rC, drC);
+    let ricX = math.dotDivide(rC, math.norm(rC));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+
+    let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+    let ricYd = math.cross(ricZ, ricXd);
+    let ricZd = [0,0,0];
+
+    let C = [ricX, ricY, ricZ];
+    if (c) return C
+    let Cd = [ricXd, ricYd, ricZd];
+    return [
+        ...math.squeeze(math.multiply(C, math.transpose([math.subtract(rD, rC)]))),
+        ...math.squeeze(math.add(math.multiply(Cd, math.transpose([math.subtract(rD, rC)])), math.multiply(C, math.transpose([math.subtract(drD, drC)]))))
+    ]
+}
+
 function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, peri = false) {
     let p = coe.a * (1 - coe.e * coe.e);
     let cTa = Math.cos(coe.tA);
@@ -7278,9 +7291,6 @@ function shortenString(str = 'teststring12345', n=mainWindow.stringLimit[1], sta
     return str.length > n ? str.slice(start,n+start-1) + String.fromCharCode(8230) : str
 }
 
-async function testFetch() {
-    fetch('./fetchTest.txt').then(response => response.text()).then(txt => console.log(txt))
-}
 let burnWindows = []
 function openBurnsWindow(sat) {
     sat = sat.getAttribute('sat')
@@ -7919,4 +7929,100 @@ function multiplyPolynomial(a = [1,3,1], b = [0,2,1]) {
 
 function answerPolynomial(poly = [1,1,1], x = 4) {
     return poly.reverse().reduce((a,b,ii) => a + b * x ** ii,0)
+}
+
+function calcSatTrajectory(position, burns = [], recalcBurns = false, burns = 0) {
+    // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
+    let t_calc = 0, currentState = Object.values(this.position), satBurn = this.burns.length > 0 ? 0 : undefined;
+    this.stateHistory = [];
+    while (t_calc <= mainWindow.scenarioLength * 3600) {
+        this.stateHistory.push({
+            t: t_calc, 
+            r: currentState[0],
+            i: currentState[1],
+            c: currentState[2],
+            rd: currentState[3],
+            id: currentState[4],
+            cd: currentState[5]
+        });
+        if (satBurn !== undefined) {
+            if ((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
+                (mainWindow.scenarioTime + 0.5) || recalcBurns)) {
+                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc, [0,0,0], t_calc);
+                let remainder = mainWindow.timeDelta - (this.burns[satBurn].time - t_calc)
+                t_calc = this.burns[satBurn].time
+                // Recalculate Burns if needed
+                if (recalcBurns && satBurn >= burns) {
+                    this.burns[satBurn].location  = {
+                        r: [currentState[0]],
+                        i: [currentState[1]],
+                        c: [currentState[2]],
+                        rd: [currentState[3]],
+                        id: [currentState[4]],
+                        cd: [currentState[5]],
+                    }  
+                    if (this.a > 0.000001){
+                        let dir = hcwFiniteBurnOneBurn({
+                            x: currentState[0],
+                            y: currentState[1],
+                            z: currentState[2],
+                            xd: currentState[3],
+                            yd: currentState[4],
+                            zd: currentState[5]
+                        }, {
+                            x: this.burns[satBurn].waypoint.target.r,
+                            y: this.burns[satBurn].waypoint.target.i,
+                            z: this.burns[satBurn].waypoint.target.c,
+                            xd: 0,
+                            yd: 0,
+                            zd: 0
+                        }, this.burns[satBurn].waypoint.tranTime, this.a, t_calc)
+                        if (dir && dir.t > 0 && dir.t < 1) {
+                            this.burns[satBurn].direction.r = dir.r;
+                            this.burns[satBurn].direction.i = dir.i;
+                            this.burns[satBurn].direction.c = dir.c;
+                        }
+                    }
+                } 
+                // Burn duration
+                let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
+                    .direction.i, this.burns[satBurn].direction.c
+                ]) / this.a;
+                
+                if (satBurn !== this.burns.length - 1) {
+                    t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
+                } 
+                t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !recalcBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
+                
+                let direction = Object.values(this.burns[satBurn].direction)
+                direction = math.dotMultiply(this.a / math.norm(direction), direction)
+
+                if (t_burn > remainder) {
+                    currentState = runge_kutta(twoBodyRpo, currentState, remainder, direction, t_calc);
+                    t_calc += remainder
+                    this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
+                    remainder = 0
+                }
+                while ((this.burns[satBurn].time + t_burn - t_calc) > mainWindow.timeDelta) {
+                    currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, direction, t_calc);
+                    t_calc += mainWindow.timeDelta
+                    this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
+                }
+                // console.log(this.burns[satBurn].time + t_burn - t_calc);
+                if (t_burn > 1e-3) {
+                    currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time + t_burn - t_calc, direction, t_calc);
+                    remainder = remainder > 0 ? remainder - (this.burns[satBurn].time + t_burn - t_calc) : mainWindow.timeDelta - (this.burns[satBurn].time + t_burn - t_calc)
+                    t_calc = t_burn + this.burns[satBurn].time
+                }
+                t_calc += remainder
+                currentState = runge_kutta(twoBodyRpo, currentState, remainder, [0,0,0], t_calc)
+                // this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
+                satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
+                continue;
+            }
+        }
+        // console.log(currentState.slice());
+        currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, [0,0,0], t_calc);
+        t_calc += mainWindow.timeDelta;
+    }
 }
