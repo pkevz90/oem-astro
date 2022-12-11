@@ -2709,7 +2709,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             if (!mainWindow.currentTarget) return;
             lastHiddenSatClicked = false
             let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
-                time: mainWindow.desired.scenarioTime + 7200
+                time: mainWindow.desired.scenarioTime
             });
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.desired.scenarioTime,
