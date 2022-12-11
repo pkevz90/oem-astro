@@ -1,0 +1,3 @@
+function multiVarPoly(x, y) {
+    
+}
