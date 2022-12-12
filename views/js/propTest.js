@@ -19,12 +19,13 @@ let s = [
     [0, 0.21164664354382E-07, -0.46503948132217E-07,0.18431336880625E-09,-0.17844913348882E-08,-0.43291816989540E-09,-0.55277122205966E-10]
 ]
 // let state1 = '2000-01-01T11:59:28.000   4.216400000000000e+04   0.000000000000000e+00   0.000000000000000e+00   0.000000000000000e+00   3.074666282970636e+00   0.000000000000000e+00'.split(/ +/)
-let state1 = '2000-01-01T11:59:28.000   6.899999999999998e+03   0.000000000000000e+00   0.000000000000000e+00   0.000000000000000e+00  -1.057790461084520e+00   7.526570219427628e+00'.split(/ +/)
+// let state1 = '2000-01-01T11:59:28.000   6.899999999999998e+03   0.000000000000000e+00   0.000000000000000e+00   0.000000000000000e+00  -1.057790461084520e+00   7.526570219427628e+00'.split(/ +/)
+let state1 = '1996-12-07T23:58:57.816  -2.703635550000000e+03   1.965968884000000e+03  -6.954830225000000e+03  -5.779958666000000e+00  -4.125847273000000e+00   1.079893238000000e+00'.split(/ +/)
 let state1Epoch = new Date(state1.shift())
 state1 = state1.map(s => Number(s))
 // let state2 = '2000-01-07T06:52:48.000   1.386716617429256e+04  -3.981746171834848e+04  -2.820708825375649e-03   2.903714914245297e+00   1.011159107015714e+00   1.165843815096509e-08'.split(/ +/)
-// let state2 = '2000-01-02T11:59:28.000   4.215742207079439e+04   7.462398964675152e+02  -2.699404004486305e-04  -5.441892521812076e-02   3.074183715447266e+00   1.788172555132985e-08'.split(/ +/)
-let state2 = '2000-01-02T11:59:28.000   3.779791107132051e+03  -7.356672460036997e+02   5.721440326077074e+03  -6.356547421960440e+00  -6.937474159781969e-01   4.102307469853048e+00'.split(/ +/)
+// let state2 = '2000-01-02T11:59:28.000   3.779791107132051e+03  -7.356672460036997e+02   5.721440326077074e+03  -6.356547421960440e+00  -6.937474159781969e-01   4.102307469853048e+00'.split(/ +/)
+let state2 = '1996-12-08T08:10:45.507  -2.563645554833509e+03  -4.500617704468622e+03   5.718212215934684e+03   5.877514032900292e+00   1.534779439741611e+00   3.839528123603526e+00'.split(/ +/)
 let state2Epoch = new Date(state2.shift())
 state2 = state2.map(s => Number(s))
 let state12 = '2000-01-01T11:59:28.000   4.215757821857408e+04   7.357511894821255e+02   1.284258478342382e+01  -5.366032562941529e-02   3.073729781158194e+00   5.365215290191231e-02'.split(/ +/)
@@ -355,10 +356,11 @@ function fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], dat
     let p = math.multiply(rotationMatrices(-zeta, 3), rotationMatrices(theta, 2), rotationMatrices(-z, 3))
     let thetaGmst = siderealTime(julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + date.getMilliseconds() / 1000))
     let w = rotationMatrices(thetaGmst, 3)
-    r = math.squeeze(math.multiply(math.transpose(w), math.transpose(p), math.transpose([r])))
+    let overallR = math.multiply(math.transpose(w), math.transpose(p))
+    r = math.squeeze(math.multiply(overallR, math.transpose([r])))
     let long = math.atan2(r[1], r[0])
     let lat = math.atan2(r[2], math.norm(r.slice(0,2)))
-    return {lat, long}
+    return {lat, long, rot: overallR, r_ecef: r}
 }
 function siderealTime(jdUti=2448855.009722) {
     let tUti = (jdUti - 2451545) / 36525
@@ -396,8 +398,6 @@ function julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
 function highPrecisionProp(position = [42164, 0, 0, 0, 3.074, 0], date = new Date()) {
     let mu = 398600.44189, j2 = 0.00108262668, j3 = -0.0000025323, j4=-0.0000016204, re = 6378.1363, x = position[0], y = position[1], z = position[2]
     let r = math.norm(position.slice(0,3))
-    // let {lat, long} = fk5ReductionTranspose(position.slice(0,3), date)
-    // console.log(date, long*180/Math.PI);
     let a = [
         -mu* x / r ** 3,
         -mu* y / r ** 3,
@@ -529,8 +529,9 @@ function timeRecursive() {
 }
 
 function recursiveGeoPotential(state = state1, k = 3, date = state1Epoch) {
-    let {lat, long} = fk5ReductionTranspose(state.slice(0,3), date)
-    let re = 6378.1363, r = math.norm(state.slice()), x = state[0], y=state[1], z=state[2]
+    let {lat, long, rot, r_ecef} = fk5ReductionTranspose(state.slice(0,3), date)
+    rot = math.transpose(rot)
+    let re = 6378.1363, r = math.norm(state.slice()), x = r_ecef[0], y=r_ecef[1], z=r_ecef[2]
     let p = [[1],[Math.sin(lat), Math.cos(lat)]]
     for (let order = 2; order <= k; order++) {
         let row = []
@@ -545,16 +546,6 @@ function recursiveGeoPotential(state = state1, k = 3, date = state1Epoch) {
         p.push(row)
     }
     let du_dr = 0, du_dlat = 0, du_dlong = 0
-    // let sinN_long = [0, Math.sin(long)]
-    // let cosN_long = [1, Math.cos(long)]
-    // for (let index = 2; index <= k; index++) {
-    //     sinN_long.push(2*cosN_long[1]*sinN_long[index-1] - sinN_long[index-2])
-    //     cosN_long.push(2*cosN_long[1]*cosN_long[index-1] - cosN_long[index-2])
-    // }
-    // console.log(lat, long);
-    // console.log(sinN_long);
-    // console.log(cosN_long);
-    let mTan_lat = 0
     for (let order = k; order <= k; order++) {
         for (let m = 0; m <= order; m++) {
             du_dr += (re/r)**order*(order+1)*p[order][m]*(c[order][m]*Math.cos(m*long)+s[order][m]*Math.sin(m*long))
@@ -574,12 +565,6 @@ function recursiveGeoPotential(state = state1, k = 3, date = state1Epoch) {
     let a_j = (1/r * du_dr - z/r/r/Math.sqrt(x*x+y*y)*du_dlat)*y + (1/(x*x+y*y)*du_dlong)*x
     let a_k = 1/r * du_dr * z + Math.sqrt(x*x+y*y)/r/r * du_dlat
 
-    return {p, a: [a_i, a_j, a_k]}  
-}
-
-function lagrangeCalc(n,x) {
-    if (n === 0) return 1
-    if (n === 1) return x
-    return (2 * n - 1) / n * x * lagrangeCalc(n - 1, x) - (n - 1) / n * lagrangeCalc(n - 2, x)
+    return {p, a: math.squeeze(math.multiply(rot, math.transpose([[a_i, a_j, a_k]])))}  
 }
 
