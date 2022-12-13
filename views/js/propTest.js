@@ -18,41 +18,61 @@ let s = [
     [0,-0.80663463828530E-07, -0.52326723987632E-07, -0.71008771406986E-08, 0.38730050770804E-09, -0.16482039468636E-08],
     [0, 0.21164664354382E-07, -0.46503948132217E-07,0.18431336880625E-09,-0.17844913348882E-08,-0.43291816989540E-09,-0.55277122205966E-10]
 ]
-// let state1 = '2000-01-01T11:59:28.000   4.216400000000000e+04   0.000000000000000e+00   0.000000000000000e+00   0.000000000000000e+00   3.074666282970636e+00   0.000000000000000e+00'.split(/ +/)
-// let state1 = '2000-01-01T11:59:28.000   6.899999999999998e+03   0.000000000000000e+00   0.000000000000000e+00   0.000000000000000e+00  -1.057790461084520e+00   7.526570219427628e+00'.split(/ +/)
-let state1 = '1996-12-07T23:58:57.816  -2.703635550000000e+03   1.965968884000000e+03  -6.954830225000000e+03  -5.779958666000000e+00  -4.125847273000000e+00   1.079893238000000e+00'.split(/ +/)
-let state1Epoch = new Date(state1.shift())
-state1 = state1.map(s => Number(s))
-// let state2 = '2000-01-07T06:52:48.000   1.386716617429256e+04  -3.981746171834848e+04  -2.820708825375649e-03   2.903714914245297e+00   1.011159107015714e+00   1.165843815096509e-08'.split(/ +/)
-// let state2 = '2000-01-02T11:59:28.000   3.779791107132051e+03  -7.356672460036997e+02   5.721440326077074e+03  -6.356547421960440e+00  -6.937474159781969e-01   4.102307469853048e+00'.split(/ +/)
-let state2 = '1996-12-08T08:10:45.507  -2.563645554833509e+03  -4.500617704468622e+03   5.718212215934684e+03   5.877514032900292e+00   1.534779439741611e+00   3.839528123603526e+00'.split(/ +/)
-let state2Epoch = new Date(state2.shift())
-state2 = state2.map(s => Number(s))
-let state12 = '2000-01-01T11:59:28.000   4.215757821857408e+04   7.357511894821255e+02   1.284258478342382e+01  -5.366032562941529e-02   3.073729781158194e+00   5.365215290191231e-02'.split(/ +/)
-let state12Epoch = new Date(state12.shift())
-state1 = state1.map(s => Number(s))
 
-let state22 = '2000-01-02T00:02:02.581  -4.213310779477455e+04  -1.576648710505523e+03  -2.675392085400830e+01   1.151366324507145e-01  -3.072136676092156e+00  -5.364103705281234e-02'.split(/ +/)
-let state22Epoch = new Date(state22.shift())
-state2 = state2.map(s => Number(s))
+let timeStepScale = 0.0025
 
+let state1_init = '1996-12-07T23:58:57.816   4.216400000000000e+04   0.000000000000000e+00   0.000000000000000e+00   0.000000000000000e+00   3.074666282970636e+00   0.000000000000000e+00'.split(/ +/)
+let state1_init_Epoch = new Date(state1_init.shift())
+state1_init = state1_init.map(s => Number(s))
+let state2_init = '1996-12-07T23:58:57.816   6.900000000000000e+03   0.000000000000000e+00   0.000000000000000e+00   0.000000000000000e+00  -1.057790461084519e+00   7.526570219427627e+00'.split(/ +/)
+let state2_init_Epoch = new Date(state2_init.shift())
+state2_init = state2_init.map(s => Number(s))
+let state3_init = '2020-12-07T23:58:50.816  -3.343285761672277e-12  -3.541125897968468e+03  -6.949850888669273e+03   9.320646715690811e+00  -1.386967034608292e-15  -2.722076072911560e-15'.split(/ +/)
+let state3_init_Epoch = new Date(state3_init.shift())
+state3_init = state3_init.map(s => Number(s))
 
+let state1_final = '1996-12-08T23:58:57.816   4.215817571029071e+04   7.391368678480095e+02  -2.239795385142918e+00  -5.391790349508940e-02   3.074133905209943e+00   1.014159397402828e-04'.split(/ +/)
+let state1_final_Epoch = new Date(state1_final.shift())
+state1_final = state1_final.map(s => Number(s))
+let timeStep1 = 2*Math.PI*((PosVel2CoeNew(state1_init.slice(0,3), state1_init.slice(3,6)).a*(1-PosVel2CoeNew(state1_init.slice(0,3), state1_init.slice(3,6)).e))**3 / 398600.4418)**0.5 * timeStepScale
+let state2_final = '1996-12-08T23:58:57.816   3.760446076611940e+03  -7.378282112147349e+02   5.733538571699236e+03  -6.370663086267017e+00  -6.909950399488288e-01   4.081147791506453e+00'.split(/ +/)
+let state2_final_Epoch = new Date(state2_final.shift())
+let timeStep2 = 2*Math.PI*((PosVel2CoeNew(state2_init.slice(0,3), state2_init.slice(3,6)).a*(1-PosVel2CoeNew(state2_init.slice(0,3), state2_init.slice(3,6)).e))**3 / 398600.4418)**0.5 * timeStepScale
+state2_final = state2_final.map(s => Number(s))
+let state3_final = '2020-12-08T23:58:50.816   1.513499775049770e+04   1.369395594445585e+03   2.767564221298383e+03   2.746265353077890e+00   2.429357014711821e+00   4.784447483432596e+00'.split(/ +/)
+let state3_final_Epoch = new Date(state3_final.shift())
+state3_final = state3_final.map(s => Number(s))
+let timeStep3 = 2*Math.PI*((PosVel2CoeNew(state3_init.slice(0,3), state3_init.slice(3,6)).a*(1-PosVel2CoeNew(state3_init.slice(0,3), state3_init.slice(3,6)).e))**3 / 398600.4418)**0.5 * timeStepScale
 
-let timeDelta = (state2Epoch - state1Epoch) / 1000
-console.log('Time: ' + (timeDelta / 3600).toFixed(2) + ' hrs');
+console.log('Test Orbits');
+console.log(`Orbit 1 ${state1_init.map(s => s.toFixed(4)).join('  ')}, Time Step: ${timeStep1.toFixed(1)} seeconds`);
+console.log(`Orbit 2 ${state2_init.map(s => s.toFixed(4)).join('  ')}, Time Step: ${timeStep2.toFixed(1)} seeconds`);
+console.log(`Orbit 3 ${state3_init.map(s => s.toFixed(4)).join('  ')}, Time Step: ${timeStep3.toFixed(1)} seeconds`);
+
 console.log('Two Body');
-let tbstate1 = propToTimeJ2(state1, timeDelta, false)
-// let tbstate12 = propToTimeJ2(state12, timeDelta, false)
-console.log(math.norm(math.subtract(state2, propToTimeJ2(state1, timeDelta, false))));
-console.log('J2 Analytic');
-console.log(math.norm(math.subtract(state2, propToTimeJ2(state1, timeDelta))));
-console.log('Higher Analytic');
-console.log(math.norm(math.subtract(state2, higherAnalytic(state1, timeDelta))));
+let tbstate1 = propToTimeJ2(state1_init, (state1_final_Epoch - state1_init_Epoch) / 1000, false)
+let tbstate2 = propToTimeJ2(state2_init, (state2_final_Epoch - state2_init_Epoch) / 1000, false)
+let tbstate3 = propToTimeJ2(state3_init, (state3_final_Epoch - state3_init_Epoch) / 1000, false)
+console.log(`Prop Time ${((state1_final_Epoch - state1_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state1_final, tbstate1)).toFixed(6)} km`)
+console.log(`Prop Time ${((state2_final_Epoch - state2_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state2_final, tbstate2)).toFixed(6)} km`)
+console.log(`Prop Time ${((state3_final_Epoch - state3_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state3_final, tbstate3)).toFixed(6)} km`)
+
+
 console.log('J2 Numeric');
-console.log(math.norm(math.subtract(state2, propToTimeJ2Numeric(state1, timeDelta))));
+let J2AnState1 = propToTimeJ2Numeric(state1_init, (state1_final_Epoch - state1_init_Epoch) / 1000, timeStep1)
+let J2AnState2 = propToTimeJ2Numeric(state2_init, (state2_final_Epoch - state2_init_Epoch) / 1000, timeStep2)
+let J2AnState3 = propToTimeJ2Numeric(state3_init, (state3_final_Epoch - state3_init_Epoch) / 1000, timeStep3)
+console.log(`Prop Time ${((state1_final_Epoch - state1_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state1_final, J2AnState1)).toFixed(6)} km`)
+console.log(`Prop Time ${((state2_final_Epoch - state2_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state2_final, J2AnState2)).toFixed(6)} km`)
+console.log(`Prop Time ${((state3_final_Epoch - state3_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state3_final, J2AnState3)).toFixed(6)} km`)
+
 console.log('HP Numeric');
-let j4state1 = propToTimeHPNumeric(state1, timeDelta, state1Epoch)
-console.log(math.norm(math.subtract(state2, j4state1)));
+let HpAnState1 = propToTimeHPNumeric(state1_init, (state1_final_Epoch - state1_init_Epoch) / 1000, state1_init_Epoch, timeStep1)
+let HpAnState2 = propToTimeHPNumeric(state2_init, (state2_final_Epoch - state2_init_Epoch) / 1000, state2_init_Epoch, timeStep2)
+let HpAnState3 = propToTimeHPNumeric(state3_init, (state3_final_Epoch - state3_init_Epoch) / 1000, state3_init_Epoch, timeStep3)
+console.log(`Prop Time ${((state1_final_Epoch - state1_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state1_final, HpAnState1)).toFixed(6)} km`)
+console.log(`Prop Time ${((state2_final_Epoch - state2_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state2_final, HpAnState2)).toFixed(6)} km`)
+console.log(`Prop Time ${((state3_final_Epoch - state3_init_Epoch) / 1000 / 3600).toFixed(2)} hrs, Error: ${math.norm(math.subtract(state3_final, HpAnState3)).toFixed(6)} km`)
 
 
 function propToTimeJ2(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, j2 = true) {
@@ -74,26 +94,16 @@ function propToTimeJ2(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 8
     state = Object.values(Coe2PosVelObject(state))
     return state
 }
-function propToTimeJ2Numeric(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, startEpoch = new Date()) {
-    let t = 0, step = 10
-
+function propToTimeJ2Numeric(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, step = 10) {
+    let t = 0
     while (t < (dt-step)) {
-        state = runge_kuttaj2(state, step, new Date(startEpoch - (-t * 1000)))
+        state = runge_kuttaj2(state, step)
         t += step
     }
     state = runge_kuttaj2(state, dt - t)
     return state
 }
-function propToTimeHPNumeric(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, startEpoch) {
-    let t = 0, step = 10
 
-    while (t < (dt-step)) {
-        state = runge_kuttaHP(state, step, new Date(startEpoch - (-t * 1000)))
-        t += step
-    }
-    state = runge_kuttaHP(state, dt - t, new Date(startEpoch - (-t * 1000)))
-    return state
-}
 function propTrueAnomalyj2(tA = 0, a = 10000, e = 0.1, i, time = 3600) {
     function True2Eccentric(e, ta) {
         return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
@@ -334,14 +344,7 @@ function twoBodyJ3(position = [42164, 0, 0, 0, 3.074, 0]) {
     return [
         position[3], position[4], position[5],...dVec]
 }
-function runge_kuttaHP(state = [42164, 0, 0, 0, -3.070, 0], dt, date = new Date()) {
-    eom = highPrecisionProp
-    let k1 = eom(state, date);
-    let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), new Date(date - (-dt / 2 * 1000)));
-    let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)), new Date(date - (-dt / 2 * 1000)));
-    let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), new Date(date - (-dt * 1000)));
-    return math.squeeze(math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4)))));
-}
+
 function fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
     // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
     // ECI to ECEF
@@ -395,21 +398,7 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
 function julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
     return 367 * yr - Math.floor(7*(yr+Math.floor((mo+9)/12)) / 4) + Math.floor(275*mo/9) + d + 1721013.5 + ((s/60+min)/60+h)/24
 }
-function highPrecisionProp(position = [42164, 0, 0, 0, 3.074, 0], date = new Date()) {
-    let mu = 398600.44189, j2 = 0.00108262668, j3 = -0.0000025323, j4=-0.0000016204, re = 6378.1363, x = position[0], y = position[1], z = position[2]
-    let r = math.norm(position.slice(0,3))
-    let a = [
-        -mu* x / r ** 3,
-        -mu* y / r ** 3,
-        -mu* z / r ** 3
-    ]
-    for (let index = 2; index <= 6; index++) {
-        let a_pert = recursiveGeoPotential(position, index, date)
-        a = math.add(a_pert.a,a)
-    }
-    return [
-        position[3], position[4], position[5],...a]
-}
+
 function c21vector(lat, long, r, re,x,y,z) {
     let c = -0.241400052222093e-9, s = 0.1543099973784379e-8
     du_dr = -9*Math.sin(lat)*Math.cos(lat)*(c*Math.cos(long) + s*Math.sin(long)) * re**2 / r
@@ -527,8 +516,40 @@ function timeRecursive() {
     recursiveGeoPotential()
     console.timeEnd()
 }
+function highPrecisionProp(position = [42164, 0, 0, 0, 3.074, 0], date = new Date()) {
+    let mu = 398600.44189, x = position[0], y = position[1], z = position[2]
+    let r = math.norm(position.slice(0,3))
+    let a = [
+        -mu* x / r ** 3,
+        -mu* y / r ** 3,
+        -mu* z / r ** 3
+    ]
+    let a_pert = recursiveGeoPotential(position, 6, date)
+    a = math.add(a_pert.a,a)
+    a_pert = thirdBodyEffects(position, date)
+    a = math.add(a_pert,a)
+    return [
+        position[3], position[4], position[5],...a]
+}
+function propToTimeHPNumeric(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, startEpoch, step = 10) {
+    let t = 0
 
-function recursiveGeoPotential(state = state1, k = 3, date = state1Epoch) {
+    while (t < (dt-step)) {
+        state = runge_kuttaHP(state, step, new Date(startEpoch - (-t * 1000)))
+        t += step
+    }
+    state = runge_kuttaHP(state, dt - t, new Date(startEpoch - (-t * 1000)))
+    return state
+}
+function runge_kuttaHP(state = [42164, 0, 0, 0, -3.070, 0], dt, date = new Date()) {
+    eom = highPrecisionProp
+    let k1 = eom(state, date);
+    let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), new Date(date - (-dt / 2 * 1000)));
+    let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)), new Date(date - (-dt / 2 * 1000)));
+    let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), new Date(date - (-dt * 1000)));
+    return math.squeeze(math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4)))));
+}
+function recursiveGeoPotential(state = state1_init, k = 3, date = state1_init_Epoch) {
     let {lat, long, rot, r_ecef} = fk5ReductionTranspose(state.slice(0,3), date)
     rot = math.transpose(rot)
     let re = 6378.1363, r = math.norm(state.slice()), x = r_ecef[0], y=r_ecef[1], z=r_ecef[2]
@@ -546,7 +567,7 @@ function recursiveGeoPotential(state = state1, k = 3, date = state1Epoch) {
         p.push(row)
     }
     let du_dr = 0, du_dlat = 0, du_dlong = 0
-    for (let order = k; order <= k; order++) {
+    for (let order = 2; order <= k; order++) {
         for (let m = 0; m <= order; m++) {
             du_dr += (re/r)**order*(order+1)*p[order][m]*(c[order][m]*Math.cos(m*long)+s[order][m]*Math.sin(m*long))
 
@@ -568,3 +589,88 @@ function recursiveGeoPotential(state = state1, k = 3, date = state1Epoch) {
     return {p, a: math.squeeze(math.multiply(rot, math.transpose([[a_i, a_j, a_k]])))}  
 }
 
+function thirdBodyEffects(eciState = state1_init, date = state1_init_Epoch) {
+    //Moon
+    let moonVector = moonEciFromTime(date)
+    let muMoon = 4902.799
+    let moonSatVec = math.subtract(moonVector, eciState.slice(0,3))
+    let rEarthMoon = math.norm(moonVector)
+    let rSatMoon = math.norm(moonSatVec)
+    let aMoon = [
+        muMoon*(moonSatVec[0] / rSatMoon**3 - moonVector[0]/rEarthMoon**3),
+        muMoon*(moonSatVec[1] / rSatMoon**3 - moonVector[1]/rEarthMoon**3),
+        muMoon*(moonSatVec[2] / rSatMoon**3 - moonVector[2]/rEarthMoon**3),
+    ]
+    //Sun
+    let sunVector = sunEciFromTime(date)
+    let muSun = 1.32712428e11
+    let sunSatVec = math.subtract(sunVector, eciState.slice(0,3))
+    let rEarthSun = math.norm(sunVector)
+    let rSatSun = math.norm(sunSatVec)
+    let aSun = [
+        muSun*(sunSatVec[0] / rSatSun**3 - sunVector[0]/rEarthSun**3),
+        muSun*(sunSatVec[1] / rSatSun**3 - sunVector[1]/rEarthSun**3),
+        muSun*(sunSatVec[2] / rSatSun**3 - sunVector[2]/rEarthSun**3),
+    ]
+    return math.add(aMoon, aSun)
+}
+
+function julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
+    return 367 * yr - Math.floor(7*(yr+Math.floor((mo+9)/12)) / 4) + Math.floor(275*mo/9) + d + 1721013.5 + ((s/60+min)/60+h)/24
+}
+
+function moonEciFromTime(startDate = new Date()) {
+    let sind = ang => Math.sin(ang*Math.PI / 180)
+    let cosd = ang => Math.cos(ang*Math.PI / 180)
+    let jd = julianDate(startDate.getFullYear(), startDate.getMonth() + 1, startDate.getDate(), startDate.getHours(), startDate.getMinutes(), startDate.getSeconds())
+    let tdb = (jd - 2451545) / 36525
+    let lambda_ell = 218.32 + 481267.8813 * tdb + 6.29 * sind(134.9 + 477198.85 * tdb)-
+        1.27*sind(259.2-413335.38*tdb) +
+        0.66*sind(235.7+890534.23*tdb) +
+        0.21*sind(269.9+954397.7*tdb) -
+        0.19*sind(357.5+35999.05*tdb) -
+        0.11*sind(186.6+966404.05*tdb)
+    lambda_ell = lambda_ell % 360
+    lambda_ell = lambda_ell < 0 ? lambda_ell + 360 : lambda_ell
+    
+    let phi_ell = 5.13*sind(93.3+483202.03*tdb) + 
+        0.28*sind(228.2+960400.87*tdb) - 
+        0.28*sind(318.3+6003.18*tdb) - 
+        0.17*sind(217.6-407332.2*tdb)
+    phi_ell = phi_ell % 360
+    phi_ell = phi_ell < 0 ? phi_ell + 360 : phi_ell
+   
+    let para = 0.9508 + 
+        0.0518*cosd(134.9+477_198.85*tdb) + 
+        0.0095*cosd(259.2-413_335.38*tdb) +  
+        0.0078*cosd(235.7+890_534.23*tdb) +  
+        0.0028*cosd(269.9+954_397.7*tdb)
+    para = para % 360
+    para = para < 0 ? para + 360 : para
+
+    let epsilon = 23.439291 - 0.0130042 * tdb-(1.64e-7)*tdb*tdb+(5.04e-7)*tdb*tdb*tdb
+
+    let rC = 1 / sind(para) * 6378.1363
+    
+    return math.dotMultiply(rC, [cosd(phi_ell) * cosd(lambda_ell), 
+            cosd(epsilon) * cosd(phi_ell) * sind(lambda_ell) - sind(epsilon) * sind(phi_ell), 
+            sind(epsilon) * cosd(phi_ell) * sind(lambda_ell) + cosd(epsilon) * sind(phi_ell)])
+}
+
+function sunEciFromTime(date = new Date()) {
+    let jdUti = julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds())
+    let tUti = (jdUti - 2451545) / 36525
+    let lamba = 280.4606184 + 36000.770005361 * tUti
+    let m = 357.5277233 + 35999.05034 * tUti
+    let lambaEll = lamba + 1.914666471 * Math.sin(m* Math.PI / 180) + 0.019994643 * Math.sin(2 * m* Math.PI / 180)
+    let phi = 0
+    let epsilon = 23.439291-0.0130042 * tUti
+    let rSun = 1.000140612-0.016708617 * Math.cos(m * Math.PI / 180)-0.000139589*Math.cos(2*m* Math.PI / 180)
+    let au = 149597870.7 //km
+    rSun *= au
+    return [
+       rSun * Math.cos(lambaEll* Math.PI / 180),
+       rSun * Math.cos(epsilon* Math.PI / 180) * Math.sin(lambaEll* Math.PI / 180),
+       rSun * Math.sin(epsilon* Math.PI / 180) * Math.sin(lambaEll* Math.PI / 180)
+    ]
+}
