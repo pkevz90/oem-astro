@@ -1,12 +1,19 @@
-
 class Propagator {
     constructor(options = {}) {
         let {
             order = 8,
             atmDrag = true,
             solarRad = true,
-            thirdBody = true
+            thirdBody = true,
+            mass = 850,
+            cd = 2.2,
+            cr = 1.8,
+            area = 15
         } = options
+        this.mass = mass,
+        this.cd = cd
+        this.cr = cr
+        this.area = area
         this.order = order
         this.atmDrag = atmDrag
         this.solarRad = solarRad
@@ -129,7 +136,7 @@ class Propagator {
     julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
         return 367 * yr - Math.floor(7*(yr+Math.floor((mo+9)/12)) / 4) + Math.floor(275*mo/9) + d + 1721013.5 + ((s/60+min)/60+h)/24
     }
-    prop(state = [42164, 0, 0, 0, -3.070, 0], dt = 10, date = new Date()) {
+    rk4(state = [42164, 0, 0, 0, -3.070, 0], dt = 10, date = new Date()) {
         let k1 = this.highPrecisionProp(state, date);
         let k2 = this.highPrecisionProp(math.add(state, math.dotMultiply(dt/2, k1)), new Date(date - (-dt / 2 * 1000)));
         let k3 = this.highPrecisionProp(math.add(state, math.dotMultiply(dt/2, k2)), new Date(date - (-dt / 2 * 1000)));
@@ -216,7 +223,7 @@ class Propagator {
         ]
     }
     atmosphericDragEffect(eciState = state2_init, options = {}) {
-        let {cd = 2.2, m = 850, area = 15} = options
+        let {cd = this.cd, m = this.mass, area = this.area} = options
         let re = 6378.137
         let r = math.norm(eciState.slice(0,3))
         let h = r - re
@@ -275,6 +282,43 @@ class Propagator {
         let a = -p_srp * cr * area / mass / math.norm(rSunSat) / 1000
     
         return math.dotMultiply(a, rSunSat)
+    }
+    propToTime(state, date, tf = 86400, maxError = 1e-9) {
+        let h = 1000
+        let dt_total = 0
+        let steps_total = 0
+        let t = 0
+        while (t < tf) {
+            let rkResult = rkf45(state, new Date(date - (-1000*t)), h, maxError)
+            state = rkResult.y
+            h = rkResult.hnew
+            t += rkResult.dt
+            if (rkResult.dt > 0) {
+                dt_total += rkResult.dt
+                steps_total++
+            }
+        }
+        let rkResult = rkf45(state, new Date(date - (-1000*t)), tf - t, 1)
+        state = rkResult.y
+        return state
+    }
+    rkf45(state, time, h = 2000, epsilon = 1e-12) {
+        let k1 = math.dotMultiply(h, hpop.highPrecisionProp(state, time))
+        let k2 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(2/9,k1)), new Date(time - (-1000*h*2/9))))
+        let k3 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(1/12,k1),math.dotMultiply(1/4,k2)), new Date(time - (-1000*h/3))))
+        let k4 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(69/128,k1),math.dotMultiply(-243/128,k2),math.dotMultiply(135/64,k3)), new Date(time - (-1000*h*3/4))))
+        let k5 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(-17/12,k1),math.dotMultiply(27/4,k2),math.dotMultiply(-27/5,k3),math.dotMultiply(16/15,k4)), new Date(time - (-1000*h))))
+        let k6 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(65/432,k1),math.dotMultiply(-5/16,k2),math.dotMultiply(13/16,k3),math.dotMultiply(4/27,k4),math.dotMultiply(5/144,k5)), new Date(time - (-1000*h*5/6))))
+        let y = math.add(state, math.dotMultiply(47/450, k1), math.dotMultiply(12/25, k3), math.dotMultiply(32/225, k4), math.dotMultiply(1/30, k5), math.dotMultiply(6/25, k6))
+        
+        let te = math.norm(math.add(math.dotMultiply(-1/150, k1), math.dotMultiply(3/100, k3), math.dotMultiply(-16/75, k4), math.dotMultiply(-1/20, k5), math.dotMultiply(6/25, k6)))
+        
+        let hnew = 0.9*h*(epsilon/te)**0.2
+        if (te > epsilon) {
+            y = state
+            h = 0
+        }
+        return {y, hnew, dt: h, te}
     }
     c = [
         null,
