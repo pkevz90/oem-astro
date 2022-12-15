@@ -1585,7 +1585,7 @@ function startContextClick(event) {
             <div style="background-color: white; cursor: default; width: 100%; height: 2px; margin: 2.5px 0px"></div>
             <div style="font-size: 0.9em; padding: 2.5px 15px; color: white; cursor: default;">${burnTime}</div>
             <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" type="direction" onclick="handleContextClick(this)" class="context-item" title="Direction" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnDir[0].toFixed(2)} I: ${burnDir[1].toFixed(2)} C: ${burnDir[2].toFixed(2)} m/s</div>
-            <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnWay[0].toFixed(2)} I: ${burnWay[1].toFixed(2)} C: ${burnWay[2].toFixed(2)} km TT: ${(burnWay[3]/3600).toFixed(2)} hrs</div>
+            ${burn.waypoint !== false ? `<div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnWay[0].toFixed(2)} I: ${burnWay[1].toFixed(2)} C: ${burnWay[2].toFixed(2)} km TT: ${(burnWay[3]/3600).toFixed(2)} hrs</div>`: ''}
             <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="angle" class="context-item" title="Az,El,Mag" style="font-size: 0.9em; margin-bottom: 10px; padding: 2.5px 15px; color: white;">Az: ${(math.atan2(burnDir[1], burnDir[0])*180 / Math.PI).toFixed(2)}<sup>o</sup>, El: ${(math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))*180/Math.PI).toFixed(2)}<sup>o</sup>, M: ${math.norm(burnDir).toFixed(2)} m/s</div>
             `
         let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
@@ -1851,39 +1851,6 @@ function handleContextClick(button) {
     else if (button.id === 'circ-maneuver') { 
         let sat = button.parentElement.sat;
         circSatellite(sat)
-        document.getElementById('context-menu')?.remove();
-    }
-    else if (button.id === 'burn-time-change') {
-        let sat = button.getAttribute('sat')
-        let burn = button.getAttribute('burn')
-        button.parentElement.innerHTML = `
-            <div class="context-item" >Time Diff: <input type="Number" style="width: 3em; font-size: 1em"> mins</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="burn-time-execute" sat="${sat}" burn="${burn}">Execute</div>
-        `
-    }
-    else if (button.id === 'burn-time-execute') {
-        let sat = button.getAttribute('sat')
-        let burn = button.getAttribute('burn')
-        console.log();
-        let timeDiff = button.parentElement.getElementsByTagName('input')[0].value
-        if (timeDiff === '') {
-            button.parentElement.getElementsByTagName('input')[0].style.backgroundColor = 'rgb(255,150,150)';
-            return
-        }
-        let newTime = mainWindow.satellites[sat].burns[burn].time + Number(timeDiff) * 60
-        if (newTime < 0 || (newTime > mainWindow.scenarioLength * 3600)) {
-            button.parentElement.getElementsByTagName('input')[0].style.backgroundColor = 'rgb(255,150,150)';
-            return
-        }
-        // mainWindow.satellites[sat].burns[burn].time = newTime
-        let pos = mainWindow.satellites[sat].currentPosition({time: newTime})
-        position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
-        let direction = mainWindow.satellites[sat].burns[burn].direction
-        direction = [direction.r, direction.i, direction.c]
-        let tof = mainWindow.satellites[sat].burns[burn].waypoint.tranTime
-        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, newTime, mainWindow.satellites[sat].a)
-        
-        // mainWindow.satellites[sat].genBurns()
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-options') {
@@ -2248,7 +2215,6 @@ function handleContextClick(button) {
         let sat = button.getAttribute('sat')
         let burn = button.getAttribute('burn')
         let burnDirection = button.getAttribute('dir').split('_').map(s => Number(s))
-        let burnWaypoint = Object.values(mainWindow.satellites[sat].burns[burn].waypoint.target)
         let burnTT = mainWindow.satellites[sat].burns[burn].waypoint.tranTime / 3600
         let burnAngles = [math.atan2(burnDirection[1], burnDirection[0]) * 180 / Math.PI, math.atan2(burnDirection[2], math.norm(burnDirection.slice(0,2))) * 180 / Math.PI, math.norm(burnDirection)]
         let type = button.getAttribute('type')
@@ -2261,6 +2227,7 @@ function handleContextClick(button) {
             `
         }
         else if (button.getAttribute('type') === 'waypoint') {
+            let burnWaypoint = Object.values(mainWindow.satellites[sat].burns[burn].waypoint.target)
             button.parentElement.innerHTML = `
                 <div class="context-item" >R: <input placeholder="${burnWaypoint[0].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
                 <div class="context-item" >I: <input placeholder="${burnWaypoint[1].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
@@ -2306,9 +2273,9 @@ function handleContextClick(button) {
         switch (type) {
             case 'direction':
                 dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
-                rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
-                dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
-                insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
+                mainWindow.satellites[sat].burns[burn].direction = dir
+                mainWindow.satellites[sat].burns[burn].waypoint = false
+                mainWindow.satellites[sat].calcTraj(true)
                 break
             case 'waypoint':
                 let way = [Number(inputs[0].value), Number(inputs[1].value), Number(inputs[2].value)];
@@ -2415,7 +2382,6 @@ function handleContextClick(button) {
         let sat = button.parentElement.sat;
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
         insertDirectionBurn(sat, mainWindow.scenarioTime, dir)
-        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-dsk') {
@@ -2429,25 +2395,8 @@ function handleContextClick(button) {
             return burn.time < mainWindow.scenarioTime;
         })
         let curPos = mainWindow.satellites[sat].curPos;
-        mainWindow.satellites[sat].burns.push({
-            time: mainWindow.desired.scenarioTime,
-            direction: {
-                r: 0,
-                i: 0,
-                c: 0
-            },
-            waypoint: {
-                tranTime: Number(inputs[0].value) * 3600,
-                target: {
-                    r: curPos.r,
-                    i: curPos.i,
-                    c: curPos.c,
-                }
-            }
-        })
-        mainWindow.satellites[sat].genBurns();
-        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
-        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
+        insertWaypointBurn(sat, mainWindow.desired.scenarioTime, [curPos.r, curPos.i, curPos.c], Number(inputs[0].value) * 3600)
+        
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'sun-maneuver') {
@@ -2770,6 +2719,12 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             frame: mainWindow.currentTarget.frame
         }
         if (burnType === 'waypoint' && mainWindow.burnStatus.frame === 'ri') {
+            if (mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint === false) {
+                mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint = {
+                    tranTime: 7200,
+                    target: [0,0,0]
+                }
+            }
             mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
             document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         }
@@ -3513,6 +3468,7 @@ function calcBurns() {
             cross ? (mousePosition[this.burnStatus.frame].c - sat.burns[this.burnStatus.burn].location[2]) *
                 mainWindow.burnSensitivity / 1000 : sat.burns[this.burnStatus.burn].direction[2]
         ]
+        sat.burns[this.burnStatus.burn].waypoint = false
         // Reset cross-track directiom burns in future to 0
         for (let hh = this.burnStatus.burn + 1; hh < sat.burns.length; hh++) {
             sat.burns[hh].direction[2] = 0
@@ -5131,9 +5087,10 @@ function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
     mainWindow.satellites[sat].burns.push({
         time,
         direction: dir,
-        location: position.slice(0,3)
+        location: position.slice(0,3),
+        waypoint: false
     })
-    mainWindow.satellites[sat].calcTraj()
+    mainWindow.satellites[sat].calcTraj(true)
     mainWindow.desired.scenarioTime = time + 3600;
     document.querySelector('#time-slider-range').value = mainWindow.desired.scenarioTime
     updateWhiteCellWindow()
@@ -5157,7 +5114,7 @@ function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, ori
     })
     mainWindow.satellites[sat].calcTraj(true);
     let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
-    mainWindow.desired.scenarioTime = time + 3600;
+    mainWindow.desired.scenarioTime = time + tof;
     document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
     if (math.norm(Object.values(checkBurn.direction)) < 1e-8) {
         mainWindow.satellites[sat].burns.pop();
@@ -5538,11 +5495,9 @@ function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
     if ((burnOld.time + dt) < timeLimits[0]) return showScreenAlert('Burn too early')
     if ((burnOld.time + dt) > timeLimits[1]) return showScreenAlert('Burn too late')
     mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(b => b.time < burnOld.time)
-    mainWindow.satellites[sat].calcTraj()
     insertDirectionBurn(sat, burnOld.time + dt, Object.values(burnOld.direction))
     mainWindow.satellites[sat].burns.push(...futureBurns)
-    mainWindow.satellites[sat].genBurns()
-    mainWindow.satellites[sat].calcTraj()
+    mainWindow.satellites[sat].calcTraj(true)
 }
 
 function startMonteCarlo(sat = 0, burn = 0, options= {}) {
