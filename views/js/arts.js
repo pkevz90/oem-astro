@@ -2412,12 +2412,10 @@ function handleContextClick(button) {
                 inputs[ii].value = inputs[ii].placeholder;
             }
         }
-        let sat = button.parentElement.sat;
+        let sat = b1utton.parentElement.sat;
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
-        let rot = translateFrames(sat)
-        dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
         insertDirectionBurn(sat, mainWindow.scenarioTime, dir)
-        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
+        document.getElementById('time-slider-range').value = mainWisndow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-dsk') {
@@ -5142,29 +5140,28 @@ function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
 }
 
 function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, origin = [0,0,0]) {
+    let ricWaypoint = [
+        way[0] + origin[0],
+        way[1] + origin[1],
+        way[2] + origin[2],
+    ]
+    let targetEci = propToTimeAnalytic(mainWindow.originOrbit, time + tof)
+    let target = Ric2Eci(ricWaypoint, [0,0,0],targetEci.slice(0,3), targetEci.slice(3,6)).rEcci
     mainWindow.satellites[sat].burns.push({
         time,
-        direction: {
-            r: 0,
-            i: 0,
-            c: 0
-        },
+        direction: [0,0,0],
         waypoint: {
             tranTime: tof,
-            target: {
-                r: way[0] + origin[0],
-                i: way[1] + origin[1],
-                c: way[2] + origin[2],
-            }
+            target
         }
     })
-    mainWindow.satellites[sat].genBurns();
+    mainWindow.satellites[sat].calcTraj(true);
     let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
     mainWindow.desired.scenarioTime = time + 3600;
     document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
     if (math.norm(Object.values(checkBurn.direction)) < 1e-8) {
         mainWindow.satellites[sat].burns.pop();
-        mainWindow.satellites[sat].genBurns();
+        mainWindow.satellites[sat].calcTraj(true);
         showScreenAlert('Waypoint outside kinematic reach or error in calculating burn');
         return false;
     }
@@ -7897,6 +7894,7 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
                 let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, tProp)
                 let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, tProp + burns[burnIndex].waypoint.tranTime)
                 let ricOrigin = ConvEciToRic(eciOriginStart, propPosition)
+                burns[burnIndex].location = ricOrigin.slice(0,3)
                 let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
                 let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, 0.001, tProp)
                 if (newBurn !== false) {
