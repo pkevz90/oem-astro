@@ -181,14 +181,14 @@ class windowCanvas {
     constructor(cnvs) {
         this.cnvs = cnvs;
         this.originOrbit = {
-            a: 42164.14,
+            a: 42164,
             e: 0.0,
             i: 0,
             raan: 0,
             arg: 0,
             tA: 0
         }
-        this.scenarioLength = 48
+        this.scenarioLength = 24
         this.timeDelta = 900
         let results = this.generateOriginHistory()
         this.originHistory = results.stateHistory
@@ -2412,10 +2412,10 @@ function handleContextClick(button) {
                 inputs[ii].value = inputs[ii].placeholder;
             }
         }
-        let sat = b1utton.parentElement.sat;
+        let sat = button.parentElement.sat;
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
         insertDirectionBurn(sat, mainWindow.scenarioTime, dir)
-        document.getElementById('time-slider-range').value = mainWisndow.desired.scenarioTime + 3600;
+        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-dsk') {
@@ -7890,16 +7890,19 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
         })
         if ((tProp + timeDelta) > burns[burnIndex].time) {
             propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
+            
             if (recalcBurns && burns[burnIndex].waypoint !== false) {
-                let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, tProp)
-                let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, tProp + burns[burnIndex].waypoint.tranTime)
+                let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time)
+                let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time + burns[burnIndex].waypoint.tranTime)
                 let ricOrigin = ConvEciToRic(eciOriginStart, propPosition)
                 burns[burnIndex].location = ricOrigin.slice(0,3)
-                let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
-                let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, 0.001, tProp)
-                if (newBurn !== false) {
-                    newBurn = [newBurn.r, newBurn.i, newBurn.c]
-                    burns[burnIndex].direction = newBurn
+                if (burns[burnIndex].waypoint !== false) {
+                    let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
+                    let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, 0.001, tProp)
+                    if (newBurn !== false) {
+                        newBurn = [newBurn.r, newBurn.i, newBurn.c]
+                        burns[burnIndex].direction = newBurn
+                    }
                 }
             }
             let mag = math.norm(burns[burnIndex].direction)
