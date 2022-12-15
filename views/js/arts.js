@@ -103,7 +103,7 @@ class windowCanvas {
     scenarioTime = 0.1; // Dont know why but this prevents bugs with burning immediately
     startDate = new Date(document.getElementById('start-time').value);
     state = 'ri';
-    burnType = 'direction';
+    burnType = 'waypoint';
     showFinite = true;
     currentTarget = false;
     satellites = [];
@@ -181,14 +181,14 @@ class windowCanvas {
     constructor(cnvs) {
         this.cnvs = cnvs;
         this.originOrbit = {
-            a: 42164,
+            a: 42164.14,
             e: 0.0,
             i: 0,
             raan: 0,
             arg: 0,
             tA: 0
         }
-        this.scenarioLength = 24
+        this.scenarioLength = 48
         this.timeDelta = 900
         let results = this.generateOriginHistory()
         this.originHistory = results.stateHistory
@@ -871,7 +871,7 @@ class Satellite {
             let point2 = math.add(burn.location, math.dotMultiply(dispDist / mag, burn.direction))
             point2 = mainWindow.convertToPixels(point2);
             let textWidth = ctx.measureText((1000*mag).toFixed(1)).width;
-            if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
+            if (state.search('ri') !== -1 && (Math.abs(burn.location[0]) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location[1] - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
                 ctx.beginPath();
                 ctx.moveTo(point1.ri.x, point1.ri.y);
                 ctx.lineTo(point2.ri.x, point2.ri.y);
@@ -881,7 +881,7 @@ class Satellite {
                     ctx.stroke();
                 }
             }
-            if (state.search('ci') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location.i - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
+            if (state.search('ci') !== -1 && (Math.abs(burn.location[2]) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location[2] - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
             
                 ctx.beginPath();
                 ctx.moveTo(point1.ci.x, point1.ci.y);
@@ -893,7 +893,7 @@ class Satellite {
                     ctx.stroke();
                 }
             }
-            if (state.search('rc') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.rc.h / 2)) && (Math.abs(burn.location.r) < (mainWindow.getPlotWidth() * fC.rc.w / 2))) {
+            if (state.search('rc') !== -1 && (Math.abs(burn.location[2]) < (mainWindow.getPlotHeight() * fC.rc.h / 2)) && (Math.abs(burn.location[1]) < (mainWindow.getPlotWidth() * fC.rc.w / 2))) {
                 ctx.beginPath();
                 ctx.moveTo(point1.rc.x, point1.rc.y);
                 ctx.lineTo(point2.rc.x, point2.rc.y);
