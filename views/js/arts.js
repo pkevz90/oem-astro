@@ -182,7 +182,7 @@ class windowCanvas {
         this.cnvs = cnvs;
         this.originOrbit = {
             a: 42164.14,
-            e: 0.01,
+            e: 0.0,
             i: 0,
             raan: 0,
             arg: 0,
@@ -841,8 +841,8 @@ class Satellite {
         this.cov = cov
         setTimeout(() => this.calcTraj(), 250);
     }
-    calcTraj () {
-        this.stateHistory = calcSatTrajectory(this.position, this.burns)
+    calcTraj (recalcBurns = false) {
+        this.stateHistory = calcSatTrajectory(this.position, this.burns, {recalcBurns})
     }
     genBurns = generateBurns;
     drawTrajectory() {
@@ -2708,23 +2708,27 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
             lastHiddenSatClicked = false
+            let defaultTranTime = 7200/86164 * (2 * Math.PI / mainWindow.mm)
             let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
-                time: mainWindow.desired.scenarioTime + 7200
+                time: mainWindow.desired.scenarioTime + defaultTranTime
             });
             let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime
             });
+            let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.desired.scenarioTime,
                 shown: 'during',
                 location: Object.values(satLocation).slice(0,3),
-                direction: [0,0,0]
+                direction: [0,0,0],
+                waypoint: burnType === 'direction' ? false : {
+                    target: targetState,
+                    tranTime: defaultTranTime
+                }
             })
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.sort((a, b) => {
                 return a.time - b.time;
             })
-            mainWindow.satellites[mainWindow.currentTarget.sat].calcTraj();
-            let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
             mainWindow.burnStatus = {
                 type: burnType,
                 sat: mainWindow.currentTarget.sat,
@@ -2737,7 +2741,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
                 type: 'addBurn'
             })
             if (burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
-                mainWindow.desired.scenarioTime += math.round(2 * Math.PI * 0.08356158 / mainWindow.mm / 10) * 10;
+                mainWindow.desired.scenarioTime += defaultTranTime;
                 document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
             };
         }, 250)
@@ -3496,11 +3500,14 @@ function calcBurns() {
     let mousePosition = this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
     if (mainWindow.burnStatus.type === 'waypoint' && !cross && sat.a > 0.000001) {
-        sat.burns[this.burnStatus.burn].waypoint.target = {
-            r: mousePosition[this.burnStatus.frame].r,
-            i: mousePosition[this.burnStatus.frame].i,
-            c: sat.burns[this.burnStatus.burn].waypoint.target.c
-        }
+        let originAtTime = propToTimeAnalytic(mainWindow.originOrbit, sat.burns[this.burnStatus.burn].time+sat.burns[this.burnStatus.burn].waypoint.tranTime)
+        let target = [
+            mousePosition[this.burnStatus.frame].r,
+            mousePosition[this.burnStatus.frame].i,
+            sat.burns[this.burnStatus.burn].waypoint.target[2]
+        ]
+        target = Ric2Eci(target, [0,0,0], originAtTime.slice(0,3), originAtTime.slice(3,6)).rEcci
+        sat.burns[this.burnStatus.burn].waypoint.target = target
     } else {
         sat.burns[this.burnStatus.burn].direction = [
             cross ? sat.burns[this.burnStatus.burn].direction[0] : (mousePosition[this.burnStatus.frame].r - sat.burns[this.burnStatus.burn].location[0]) * mainWindow.burnSensitivity / 1000,
@@ -3529,7 +3536,7 @@ function calcBurns() {
     ctx.textBaseline = "middle"
     ctx.textAlign = 'center'
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
-    sat.calcTraj()
+    sat.calcTraj(true)
 }
 
 function addToolTip(element) {
@@ -7885,15 +7892,26 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
             t: tProp, position: Eci2RicWithC(mainWindow.originHistory[histIndex].position, propPosition, mainWindow.originRot[histIndex])
         })
         if ((tProp + timeDelta) > burns[burnIndex].time) {
-            let mag = math.norm(burns[burnIndex].direction)
-            let burnDuration = mag / a
-            if (burnDuration > 0) {
-                propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
-                propPosition = runge_kutta4(inertialEom, propPosition, burnDuration, burns[burnIndex].direction.map(s => s * a / mag))
-                epochPosition = PosVel2CoeNew(propPosition.slice(0,3), propPosition.slice(3,6))
-                epochTime = burns[burnIndex].time + burnDuration    
+            propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
+            if (recalcBurns && burns[burnIndex].waypoint !== false) {
+                let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, tProp)
+                let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, tProp + burns[burnIndex].waypoint.tranTime)
+                let ricOrigin = ConvEciToRic(eciOriginStart, propPosition)
+                let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
+                let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, 0.001, tProp)
+                if (newBurn !== false) {
+                    newBurn = [newBurn.r, newBurn.i, newBurn.c]
+                    burns[burnIndex].direction = newBurn
+                }
             }
+            let mag = math.norm(burns[burnIndex].direction)
             burnIndex++
+            if (mag > 0) {
+                let burnDuration = mag / a
+                propPosition = runge_kutta4(inertialEom, propPosition, burnDuration, burns[burnIndex-1].direction.map(s => s * a / mag))
+                epochPosition = PosVel2CoeNew(propPosition.slice(0,3), propPosition.slice(3,6))
+                epochTime = burns[burnIndex-1].time + burnDuration
+            }
         }
         tProp += timeDelta
         histIndex++
