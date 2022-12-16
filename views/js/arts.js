@@ -3177,9 +3177,7 @@ function estimateWaypointBurn(sat = 0, burn = 0) {
     long = long % 2 === 0
     let lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, option)
     let burnEst = math.subtract(lamResults1.v1, r1.slice(3,6))
-    console.time();
     let result = eciFiniteBurnOneBurn(r1,r2,dt,mainWindow.satellites[0].a,burnEst)
-    console.timeEnd();
 }
 
 function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
@@ -3602,7 +3600,7 @@ function initStateFunction(el) {
     else if (el.id === 'add-satellite-button') {
         let inputs = document.querySelectorAll('.sat-input')
         let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-        let ricState
+        let eciState, ricState, eciOrigin
         switch (radioId) {
             case 'ric-sat-input':
                 ricState = [
@@ -3612,11 +3610,14 @@ function initStateFunction(el) {
                     inputs[3].value,
                     inputs[4].value,
                     inputs[5].value,
-                ].map((s, ii) => Number(s) / (ii > 2 ? 1000 : 1))
+                ]
+                eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+                eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
+                eciState = [...eciState.rEcci, ...eciState.drEci]
                 break
             case 'eci-sat-input':
                 let date = new Date(inputs[0].value)
-                let eciState = [
+                eciState = [
                     inputs[1].value,
                     inputs[2].value,
                     inputs[3].value,
@@ -3625,10 +3626,7 @@ function initStateFunction(el) {
                     inputs[6].value,
                 ].map(s => Number(s))
                 let dt = (mainWindow.startDate - date) / 1000
-                eciState = propToTime(eciState, dt, false)
-                let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-                ricState = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), eciState.slice(0,3), eciState.slice(3,6))
-                ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+                eciState = propToTime(eciState, dt)
                 break
             case 'rmoe-sat-input':
                 let rmoes = [
@@ -3639,14 +3637,6 @@ function initStateFunction(el) {
                     inputs[4].value,
                     inputs[5].value,
                 ].map((s,ii) => Number(s))
-                console.log({
-                    ae: rmoes[0],
-                    x: rmoes[1],
-                    y: rmoes[2],
-                    b: rmoes[3],
-                    z: rmoes[4],
-                    m: rmoes[5]
-                });
                 ricState = rmoeToRic({
                     ae: rmoes[0],
                     x: rmoes[1],
@@ -3656,16 +3646,12 @@ function initStateFunction(el) {
                     m: rmoes[5]
                 })
                 ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+                eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+                eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
+                eciState = [...eciState.rEcci, ...eciState.drEci]
                 break
         }
-        position = {
-            r: ricState[0],
-            i: ricState[1],
-            c: ricState[2],
-            rd: ricState[3],
-            id: ricState[4],
-            cd: ricState[5]
-        }
+        let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
         let styleInputs = document.querySelectorAll('.sat-style-input')
         mainWindow.satellites.push(new Satellite({
             position,
@@ -3674,10 +3660,6 @@ function initStateFunction(el) {
             color: styleInputs[2].value,
             name: styleInputs[3].value === '' ? 'Sat' + (mainWindow.satellites.length + 1) : styleInputs[3].value
         }))
-        let newWidth = (Math.abs(position.i) * 2.2) > (Math.abs(position.r) * 2.4 / mainWindow.getRatio()) ? Math.abs(position.i) * 2.2 : Math.abs(position.r) * 2.4 / mainWindow.getRatio()
-        if (newWidth > mainWindow.desired.plotWidth) {
-            mainWindow.desired.plotWidth = newWidth
-        }
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ');
         updateWhiteCellWindow()
         updateLockScreen()
