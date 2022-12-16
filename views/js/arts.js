@@ -856,7 +856,7 @@ class Satellite {
         setTimeout(() => this.calcTraj(), 250);
     }
     calcTraj (recalcBurns = false) {
-        this.stateHistory = calcSatTrajectory(this.position, this.burns, {recalcBurns})
+        this.stateHistory = calcSatTrajectory(this.position, this.burns, {recalcBurns, a: this.a})
     }
     genBurns = generateBurns;
     drawTrajectory() {
@@ -1450,7 +1450,7 @@ window.addEventListener('wheel', event => {
         let curCrossState = mainWindow.satellites[mainWindow.burnStatus.sat].currentPosition({
             time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
         })
-        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target.c = curCrossState.c[0]
+        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target[2] = curCrossState[2]
         mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime += tranTimeDelta 
         mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
         
@@ -3166,19 +3166,109 @@ function phiMatrixWhole(t = 0, n = mainWindow.mm) {
         [0, 0, -n * snt, 0, 0, cnt]
     ];
 }
-let aa,bb
+let aa,bb,cc
 function estimateWaypointBurn(sat = 0, burn = 0) {
     let r1 = Object.values(getCurrentInertial(sat, mainWindow.satellites[sat].burns[burn].time))
     let r2 = mainWindow.satellites[sat].burns[burn].waypoint.target
     let dt = mainWindow.satellites[sat].burns[burn].waypoint.tranTime
     let long = Math.floor(dt / (Math.PI / mainWindow.mm))
     let n = Math.floor(long / 2) 
-    aa = r1.slice(0,3)
-    bb = r2
-    long = long < 1
-    console.log(dt,n, r1.slice(0,3), r2, long);
-    let lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, !long)
-    console.log(lamResults1);
+    let option = long >= 2 && (long % 2 === 0) ? -1 : 1
+    long = long % 2 === 0
+    let lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, option)
+    let burnEst = math.subtract(lamResults1.v1, r1.slice(3,6))
+    console.time();
+    let result = eciFiniteBurnOneBurn(r1,r2,dt,mainWindow.satellites[0].a,burnEst)
+    console.timeEnd();
+}
+
+function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
+    let yErr= [100], S, dX = 1,
+        F;
+    let dv1 = guess
+    let X = [
+        Math.atan2(dv1[1], dv1[0]),
+        Math.atan2(dv1[2], math.norm([dv1[0], dv1[1]])),
+        math.norm(math.squeeze(dv1)) / a0 / tf
+    ];
+    if (X[2] < 1e-11) {
+        return {
+            data: false,
+            reason: 'no burn mag'
+        }
+    }
+    if (X[2] > 1) return {
+        data: false,
+        reason: 'no kinematic reach'
+    }
+    let errCount = 0
+    console.log(stateInit, stateFinal, tf, X);
+    while (math.norm(math.squeeze(yErr)) > 1e-4) {
+        F = eciOneBurnFiniteCalc(stateInit, X[0], X[1], X[2], tf, a0).slice(0,3)
+        console.log(F);
+        yErr = math.subtract(stateFinal, F)
+        S = eciJacobianOneBurn(stateInit, a0, X[0], X[1], X[2], tf);
+        try {
+            dX = math.multiply(math.inv(S), math.transpose([yErr]));
+        } catch (error) {
+            dX = math.zeros([3,1])
+        }
+        X = math.squeeze(math.add(math.transpose([X]), dX))
+        X[2] = X[2] < 0 ? 1e-9 : X[2]
+        X[2] = X[2] > 1 ? 0.95 : X[2]
+        if (errCount > 30) return {
+            data: false,
+            reason: 'upper errcount'
+        };
+        errCount++;
+    }
+    // console.log(math.squeeze(X));
+    if (X[2] > 1 || X[2] < 0) return {
+        data: false,
+        reason: 'no kinematic reach'
+    }
+    let cosEl = Math.cos(X[1])
+    return {
+        data: {
+            r: a0 * X[2] * tf * Math.cos(X[0]) * cosEl,
+            i: a0 * X[2] * tf * Math.sin(X[0]) * cosEl,
+            c: a0 * X[2] * tf * Math.sin(X[1]),
+            t: X[2] *tf,
+            position: F,
+            final: X
+        }
+    }
+}
+
+function eciOneBurnFiniteCalc(state=[42164.14, 0, 0, 0, 3.0746611, 0], alpha=0, phi=0, tB=0.1, finalTime=60, a = 0.00001) {
+    let cosEl = Math.cos(phi)
+    let direction = [a * Math.cos(alpha) * cosEl, a * Math.sin(alpha) * cosEl, a * Math.sin(phi)];
+    let burnDuration = tB * finalTime
+    propPosition = runge_kutta4(inertialEom, state, burnDuration, direction)
+    propPosition = propToTime(propPosition, finalTime - tB*finalTime)
+    return propPosition
+}
+
+function eciJacobianOneBurn(state, a, alpha, phi, tB, tF) {
+    let m1, m2, m, mC
+    // alpha; If phi is at 90 degrees, jacobian won't have full rank, set to 89 deg for az jacobian calculation
+    let phi2 = math.abs(Math.cos(phi)) < 1e-6 ? 89 * Math.PI / 180 : phi;
+    m1 = math.transpose([eciOneBurnFiniteCalc(state, alpha, phi2, tB, tF, a).slice(0,3)])
+    
+    m2 = math.transpose([eciOneBurnFiniteCalc(state, alpha + 0.01, phi2, tB, tF, a).slice(0,3)])
+    mC = math.dotDivide(math.subtract(m2, m1), 0.01);
+
+    //phi
+    m2 =  math.transpose([eciOneBurnFiniteCalc(state, alpha, phi + 0.01, tB, tF, a).slice(0,3)])
+    m = math.dotDivide(math.subtract(m2, m1), 0.01);
+    mC = math.concat(mC, m);
+
+    //tB
+    m2 = math.transpose([eciOneBurnFiniteCalc(state, alpha, phi, tB + tB * 0.1, tF, a).slice(0,3)])
+    m = math.dotDivide(math.subtract(m2, m1), tB * 0.1);
+    mC = math.concat(mC, m);
+
+    return mC;
 }
 
 function runLambertSolution(r1 = [42164, 0, 0, 0, 3.0147, 0], r2, dt = 18*3600, start = mainWindow.desired.scenarioTime) {
@@ -4210,23 +4300,6 @@ function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
     ];
 }
 
-function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2Eff = true) {
-    let mu = 398600.44189, j2 = 0.00108262668, re = 6378, x = position[0], y = position[1], z = position[2]
-    let r = math.norm(position.slice(0,3))
-    return j2Eff ? [
-        position[3], position[4], position[5],
-        -mu * x / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 1)),
-        -mu * y / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 1)),
-        -mu * z / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 3))
-    ] : 
-    [
-        position[3], position[4], position[5],
-        -mu * x / r ** 3 ,
-        -mu * y / r ** 3 ,
-        -mu * z / r ** 3 
-    ]
-}
-
 function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
     if (mainWindow.prop === 4) {
         let k1 = eom(state, {a, time});
@@ -4303,7 +4376,7 @@ function addLaunch() {
     closeAll();
 }
 
-function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
+function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long, option = 1) {
     let r1 = math.norm(r1_vec);
     let r2 = math.norm(r2_vec);
     let cosNu = math.dot(r1_vec, r2_vec) / r1 / r2;
@@ -4314,8 +4387,8 @@ function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
     k = r1 * r2 * (1 - cosNu);
     el = r1 + r2;
     m = r1 * r2 * (1 + cosNu);
-    let p_i  = k / (el + Math.sqrt(2 * m));
-    let p_ii  = k / (el - Math.sqrt(2 * m));
+    let p_i  = k / (el + option*Math.sqrt(2 * m));
+    let p_ii  = k / (el - option*Math.sqrt(2 * m));
     let p;
     let del = 0.0001;
     if (long) p = p_i + del;
@@ -6129,12 +6202,12 @@ function draw3dScene(az = azD, el = elD) {
     mainWindow.satellites.forEach(sat => {
         if (sat.stateHistory === undefined) sat.calcTraj()
         let cur = sat.currentPosition(mainWindow.scenarioTime);
-        cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
+        cur = {r: cur[0], i: cur[1], c: cur[2], rd: cur[3], id: cur[4], cd: cur[5]};
         sat.curPos = cur;
         if (!sat.locked) sat.stateHistory.forEach(point => {
             points.push({
                 color: sat.color,
-                position: math.multiply(r, [point.r, point.i, point.c]),
+                position: math.multiply(r, [point.position[0], point.position[1], point.position[2]]),
                 size: 2
             })
         })
@@ -7579,7 +7652,7 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
                 burns[burnIndex].location = ricOrigin.slice(0,3)
                 if (burns[burnIndex].waypoint !== false) {
                     let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
-                    let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, 0.001, tProp)
+                    let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, a, tProp)
                     if (newBurn !== false) {
                         newBurn = [newBurn.r, newBurn.i, newBurn.c]
                         burns[burnIndex].direction = newBurn
