@@ -3166,29 +3166,23 @@ function phiMatrixWhole(t = 0, n = mainWindow.mm) {
         [0, 0, -n * snt, 0, 0, cnt]
     ];
 }
+let aa,bb
+function estimateWaypointBurn(sat = 0, burn = 0) {
+    let r1 = Object.values(getCurrentInertial(sat, mainWindow.satellites[sat].burns[burn].time))
+    let r2 = mainWindow.satellites[sat].burns[burn].waypoint.target
+    let dt = mainWindow.satellites[sat].burns[burn].waypoint.tranTime
+    let long = Math.floor(dt / (Math.PI / mainWindow.mm))
+    let n = Math.floor(long / 2) 
+    aa = r1.slice(0,3)
+    bb = r2
+    long = long < 1
+    console.log(dt,n, r1.slice(0,3), r2, long);
+    let lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, !long)
+    console.log(lamResults1);
+}
 
-function nonLinearBurnEstimator(posInit = [0,0,0], posFinal=[-30,1000,0], dt = 18*3600, start = mainWindow.desired.scenarioTime) {
-    posInit = math.squeeze(posInit)
-    posFinal = math.squeeze(posFinal)
-    console.log(proxOpsTargeter(posInit, posFinal, dt)[0]);
+function runLambertSolution(r1 = [42164, 0, 0, 0, 3.0147, 0], r2, dt = 18*3600, start = mainWindow.desired.scenarioTime) {
 
-    let chiefInit = {...mainWindow.originOrbit}
-    chiefInit.tA = propTrueAnomaly(chiefInit.tA, chiefInit.a, chiefInit.e, start)
-    chiefInit = Object.values(Coe2PosVelObject(chiefInit))
-    
-    let chiefFinal = {...mainWindow.originOrbit}
-    chiefFinal.tA = propTrueAnomaly(chiefFinal.tA, chiefFinal.a, chiefFinal.e, dt + start)
-    chiefFinal = Object.values(Coe2PosVelObject(chiefFinal))
-    console.log(posInit, [0,0,0], chiefInit.slice(0,3), chiefInit.slice(3,6));
-    posInit = Ric2Eci(posInit, [0,0,0], chiefInit.slice(0,3), chiefInit.slice(3,6))
-    posFinal = Ric2Eci(posFinal, [0,0,0], chiefFinal.slice(0,3), chiefFinal.slice(3,6))
-    let nRevs = math.floor(dt / (2 * Math.PI / mainWindow.mm))
-    let long = (dt - nRevs * (2 * Math.PI / mainWindow.mm)) < (Math.PI / mainWindow.mm)
-    let lamResults1 = solveLambertsProblem(posInit.rEcci, posFinal.rEcci, dt, nRevs, long)
-    let hcw1 = Eci2Ric(chiefInit.slice(0,3), chiefInit.slice(3,6), posInit.rEcci, posInit.drEci)
-    let hcw2 = Eci2Ric(chiefInit.slice(0,3), chiefInit.slice(3,6), posInit.rEcci, math.squeeze(lamResults1.v1))
-    let dV = math.subtract(hcw2.drHcw, hcw1.drHcw)
-    return dV
 }
 
 function curve2linear(state = [0, 1000, 0,0,0,0], origin = mainWindow.originOrbit) {
@@ -4311,7 +4305,6 @@ function addLaunch() {
 
 function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
     let r1 = math.norm(r1_vec);
-    console.log(r1_vec);
     let r2 = math.norm(r2_vec);
     let cosNu = math.dot(r1_vec, r2_vec) / r1 / r2;
     if (Math.abs(cosNu + 1) < 1e-3) return 'collinear'
