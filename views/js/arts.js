@@ -2075,13 +2075,13 @@ function handleContextClick(button) {
         for (let ii = 0; ii < 200; ii++) {
             let pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess})
             let pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess})
-            let dr = [pos1.r[0] - pos2.r[0], pos1.i[0] - pos2.i[0], pos1.c[0] - pos2.c[0]]
-            let dv = [pos1.rd[0] - pos2.rd[0], pos1.id[0] - pos2.id[0], pos1.cd[0] - pos2.cd[0]]
+            let dr = math.subtract(pos1.slice(0,3), pos2.slice(0,3))
+            let dv = math.subtract(pos1.slice(3,6), pos2.slice(3,6))
             let rr1 = math.dot(dr,dv) / math.norm(dr)
             pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess + 0.001})
             pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess + 0.001})
-            dr = [pos1.r[0] - pos2.r[0], pos1.i[0] - pos2.i[0], pos1.c[0] - pos2.c[0]]
-            dv = [pos1.rd[0] - pos2.rd[0], pos1.id[0] - pos2.id[0], pos1.cd[0] - pos2.cd[0]]
+            dr = math.subtract(pos1.slice(0,3), pos2.slice(0,3))
+            dv = math.subtract(pos1.slice(3,6), pos2.slice(3,6))
             let rr2 = math.dot(dr,dv) / math.norm(dr)
             dr = (rr2 - rr1) / 0.001
             tGuess -= 0.05 * rr1 / dr
@@ -2192,9 +2192,8 @@ function handleContextClick(button) {
         let newVel = math.dotMultiply(vel, math.dotDivide(eciPos.drEci, math.norm(eciPos.drEci)))
         let newRic = Eci2Ric([(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0], eciPos.rEcci, newVel)
         let direction = math.subtract(math.squeeze(newRic.drHcw), [currentPos.rd, currentPos.id, currentPos.cd])
-        let tof = 0.125 * 2 * Math.PI / mainWindow.mm
+        
         position = {x: currentPos.r, y: currentPos.i, z: currentPos.c, xd: currentPos.rd, yd: currentPos.id, zd: currentPos.cd};
-        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.scenarioTime, mainWindow.satellites[sat].a)
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
@@ -4962,8 +4961,8 @@ function circSatellite(sat = 0, time = mainWindow.scenarioTime) {
     let dt = 7200
     let curPos = mainWindow.satellites[sat].currentPosition({time})
     let curPos2 = mainWindow.satellites[sat].currentPosition({time: time + dt})
-    let curR = math.norm([curPos.r[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3), curPos.i[0], curPos.c[0]])
-    let curTh = math.atan2( curPos.i[0], curPos.r[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3))
+    let curR = math.norm([curPos[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3), curPos[1], curPos[2]])
+    let curTh = math.atan2( curPos[1], curPos[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3))
     let dTh = (398600.4418 / curR ** 3) ** (1/2) - (398600.4418 / (398600.4418 / mainWindow.mm ** 2)) ** (1/2)
     let newTh = curTh + dt * dTh
     let newPos = [curR * Math.cos(newTh) - (398600.4418 / mainWindow.mm ** 2) ** (1/3), curR * Math.sin(newTh), curPos2.c[0]]
@@ -5414,7 +5413,7 @@ function randn_bm() {
 }
 
 function changeOrigin(sat = 1, currentState = false) {
-    if (currentState = true) {
+    if (currentState === true) {
         let curPos = Object.values(getCurrentInertial(sat))
         console.log(curPos);
         curPos = propToTime(curPos, -mainWindow.desired.scenarioTime, true)
@@ -7540,8 +7539,8 @@ function inertialEom(state = [42164, 0, 0, 0, 3.074, 0], options = {}) {
 
 function Eci2RicWithC(chief, deputy, c) {
     return [
-        ...math.squeeze(math.multiply(c[0], math.transpose([math.subtract(deputy.slice(0,3), chief.slice(0,3))]))),
-        ...math.squeeze(math.add(math.multiply(c[1], math.transpose([math.subtract(deputy.slice(0,3), chief.slice(0,3))])), math.multiply(c[0], math.transpose([math.subtract(deputy.slice(3,6), chief.slice(3,6))]))))
+        ...math.multiply(c[0],math.subtract(deputy.slice(0,3), chief.slice(0,3))),
+        ...math.add(math.multiply(c[1], math.subtract(deputy.slice(0,3), chief.slice(0,3))), math.multiply(c[0], math.subtract(deputy.slice(3,6), chief.slice(3,6))))
     ]
 }
 
