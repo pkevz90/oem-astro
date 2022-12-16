@@ -829,14 +829,8 @@ class Satellite {
             cov = undefined
         } = options; 
         if (position === undefined) {
-            position = {
-                a: 42154,
-                e: 0,
-                i: 0,
-                raan: 0,
-                arg: 0,
-                tA: 0
-            }
+            position = {...mainWindow.originOrbit}
+            position.tA += Math.PI / 180*(-1 + 2*Math.random())
         }
         this.position = position;
         this.team = team
@@ -1353,14 +1347,7 @@ function keydownFunction(key) {
     else if (key.key === 'n' || key.key === 'N') {
         let newSat = mainWindow.satellites.length === 0 ?  new Satellite({
                 name: 'Chief',
-                position: {
-                    a: 42164.14,
-                    e: 0,
-                    i: 0,
-                    raan: 0,
-                    arg: 0,
-                    tA: 0
-                },
+                position: {...mainWindow.originOrbit},
                 shape: 'diamond',
                 color: '#bb00bb',
                 a: 0.001
@@ -2861,7 +2848,6 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let stateInputs = document.querySelectorAll('.origin-input')
     let coe = document.getElementById('coe-radio').checked
     let state = [...stateInputs].map(s => Number(s.value === '' ? s.placeholder : s.value))
-    console.log(state, [...stateInputs].map(s => s.value));
     let startDate = new Date(document.getElementById('start-time').value)
     if (!coe) {
         state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
@@ -2876,18 +2862,11 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
             tA: state[5] * Math.PI / 180
         }
     }
-    if (state.e > 0.01) return showScreenAlert('State has an eccentricity of over 0.01, rejected')
-    let eciState = Object.values(Coe2PosVelObject(state))
-    console.log(state);
-    let sun = sunFromTime(startDate) 
-    sun = math.squeeze(Eci2Ric(eciState.slice(0,3), eciState.slice(3,6), sun, [0,0,0]).rHcw)
-    sun = math.dotDivide(sun, math.norm(sun))
-    mainWindow.initSun = sun
-    mainWindow.originOrbit = state
     mainWindow.startDate = startDate
-    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
     mainWindow.scenarioLength = Number(document.querySelector('#scen-length-input').value === '' ? document.querySelector('#scen-length-input').placeholder : document.querySelector('#scen-length-input').value)
+    
+    mainWindow.updateOrigin(state)
     let strStart = Number(document.querySelector('#str-start-input').value === ''? document.querySelector('#str-start-input').placeholder : document.querySelector('#str-start-input').value)
     let strEnd = Number(document.querySelector('#str-end-input').value === ''? document.querySelector('#str-end-input').placeholder : document.querySelector('#str-end-input').value)
     mainWindow.stringLimit = [strStart - 1, strEnd]
@@ -4032,10 +4011,9 @@ function drawSatellite(satellite = {}) {
 
 function getRelativeData(n_target, n_origin, intercept = true) {
     let sunAngle, rangeRate, range, poca, toca, tanRate, rangeStd;
-    let relPos = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getPositionArray(), mainWindow.satellites[n_target]
-        .getPositionArray()));
-    let relVel = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getVelocityArray(), mainWindow.satellites[n_target]
-        .getVelocityArray()));
+    let relState = math.subtract(Object.values(mainWindow.satellites[n_origin].curPos), Object.values(mainWindow.satellites[n_target].curPos))
+    let relPos = relState.slice(0,3)
+    let relVel = relState.slice(3,6)
     range = math.norm(relPos);
     if (monteCarloData !== null) {
         if (n_target == monteCarloData.sat) {
@@ -4106,8 +4084,8 @@ function getRelativeData(n_target, n_origin, intercept = true) {
 function findMinDistance(vector1, vector2) {
     let outVec = [];
     for (let jj = 0; jj < Math.min(vector1.length, vector2.length); jj++) {
-        outVec.push(math.norm([vector1[jj].r - vector2[jj].r, vector1[jj].i - vector2[jj].i, vector1[jj].c -
-            vector2[jj].c
+        outVec.push(math.norm([vector1[jj].position[0] - vector2[jj].position[0], vector1[jj].position[1] - vector2[jj].position[1], vector1[jj].position[2] -
+            vector2[jj].position[2]
         ]));
     }
     return outVec
