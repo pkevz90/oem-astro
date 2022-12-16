@@ -5738,10 +5738,10 @@ function importStates(states, time) {
         let satEci = Object.values(Coe2PosVelObject(sat.position))
         return math.norm(math.subtract(originEci, satEci)) < 1e-3
     })
-    let originII = findOrigin !== -1 ? originIndex : 0
+    let originII = findOrigin !== -1 ? findOrigin : 0
+    
     // Copy old burns to re-implement if satellite still exists
     let timeDelta = (time - mainWindow.startDate) / 1000
-    console.log(timeDelta)
     let oldBurns = mainWindow.satellites.map(s => s.burns.map(b => {
         return {
             time: b.time - timeDelta,
@@ -5749,8 +5749,8 @@ function importStates(states, time) {
             waypoint: b.waypoint
         }
     }).filter(b => b.time >= 0))
-    if (findOrigin !== undefined) {
-        let originIndex = states.findIndex(sat => findOrigin.name.match(sat.name))
+    if (findOrigin !== -1) {
+        let originIndex = states.findIndex(sat => states[findOrigin].name.match(sat.name))
         originII = originIndex !== -1 ? originIndex : originII
     }
     let oldReqs = mainWindow.relativeData.dataReqs.map(req => {
