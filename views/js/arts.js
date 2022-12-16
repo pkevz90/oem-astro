@@ -1581,7 +1581,6 @@ function startContextClick(event) {
             let targetOriginEci = propToTimeAnalytic(mainWindow.originOrbit, burn.time + burn.waypoint.tranTime)
             targetRic = ConvEciToRic(targetOriginEci, [...burn.waypoint.target,0,0,0]).slice(0,3)
         }
-        let burnWay = [0,0,0,0]
         let burnDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000)
         let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
         let uploadDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000 - 900000)
@@ -1591,7 +1590,7 @@ function startContextClick(event) {
             <div style="background-color: white; cursor: default; width: 100%; height: 2px; margin: 2.5px 0px"></div>
             <div style="font-size: 0.9em; padding: 2.5px 15px; color: white; cursor: default;">${burnTime}</div>
             <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" type="direction" onclick="handleContextClick(this)" class="context-item" title="Direction" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnDir[0].toFixed(2)} I: ${burnDir[1].toFixed(2)} C: ${burnDir[2].toFixed(2)} m/s</div>
-            ${burn.waypoint !== false ? `<div dir="${burnDir.join('_')}" way="${targetRic.join('_')}"id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${targetRic[0].toFixed(2)} I: ${targetRic[1].toFixed(2)} C: ${targetRic[2].toFixed(2)} km TT: ${(burnWay[3]/3600).toFixed(2)} hrs</div>`: ''}
+            ${burn.waypoint !== false ? `<div dir="${burnDir.join('_')}" way="${targetRic.join('_')}"id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${targetRic[0].toFixed(2)} I: ${targetRic[1].toFixed(2)} C: ${targetRic[2].toFixed(2)} km TT: ${(burn.waypoint.tranTime/3600).toFixed(2)} hrs</div>`: ''}
             <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="angle" class="context-item" title="Az,El,Mag" style="font-size: 0.9em; margin-bottom: 10px; padding: 2.5px 15px; color: white;">Az: ${(math.atan2(burnDir[1], burnDir[0])*180 / Math.PI).toFixed(2)}<sup>o</sup>, El: ${(math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))*180/Math.PI).toFixed(2)}<sup>o</sup>, M: ${math.norm(burnDir).toFixed(2)} m/s</div>
             `
         let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
@@ -2271,9 +2270,9 @@ function handleContextClick(button) {
             case 'angle':
                 dir = [Number(inputs[0].value) * Math.PI / 180, Number(inputs[1].value) * Math.PI / 180, Number(inputs[2].value) / 1000];
                 dir = [dir[2] * math.cos(dir[0]) * Math.cos(dir[1]), dir[2] * math.sin(dir[0]) * Math.cos(dir[1]), dir[2] * math.sin(dir[1])]
-                rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
-                dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
-                insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
+                mainWindow.satellites[sat].burns[burn].direction = dir
+                mainWindow.satellites[sat].burns[burn].waypoint = false
+                mainWindow.satellites[sat].calcTraj(true)
                 break
         }
         document.getElementById('context-menu')?.remove();
