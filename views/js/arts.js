@@ -2308,23 +2308,17 @@ function handleContextClick(button) {
             waypoint = {r: Number(inputs[1].value), i: Number(inputs[2].value), c: Number(inputs[3].value)}
         }
         else {
-            let rot = translateFrames(target, {
-                time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
-            })
-            waypoint = math.reshape([Number(inputs[1].value), Number(inputs[2].value), Number(inputs[3].value)], [3,1])
-            waypoint = math.multiply(math.transpose(rot), waypoint)
-            waypoint = {r: waypoint[0][0], i: waypoint[1][0], c: waypoint[2][0]}
-
+            let targetEci = Object.values(getCurrentInertial(target, mainWindow.scenarioTime + 3600*Number(inputs[0].value)))
+            let eciWaypoint = Ric2Eci(Object.values({r: Number(inputs[1].value), i: Number(inputs[2].value), c: Number(inputs[3].value)}), [0,0,0],targetEci.slice(0,3), targetEci.slice(3,6)).rEcci
+            let originEci = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime + 3600*Number(inputs[0].value))
+            waypoint = ConvEciToRic(originEci, [...eciWaypoint,0,0,0]).slice(0,3)
         }
         logAction({
             type: 'addBurn',
             index: mainWindow.satellites[sat].burns.length,
             sat
         })
-        let origin = target === 'origin' ? {r: [0], i: [0], c: [0]} : mainWindow.satellites[target].currentPosition({
-            time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
-        })
-        insertWaypointBurn(sat, mainWindow.desired.scenarioTime, Object.values(waypoint), 3600*Number(inputs[0].value),math.squeeze(Object.values(origin)) )
+        insertWaypointBurn(sat, mainWindow.desired.scenarioTime, Object.values(waypoint), 3600*Number(inputs[0].value))
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-rmoes') {
