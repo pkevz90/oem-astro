@@ -2266,6 +2266,9 @@ function handleContextClick(button) {
                     tranTime
                 }
                 mainWindow.satellites[sat].calcTraj(true)
+                mainWindow.desired.scenarioTime = tranTime + mainWindow.satellites[sat].burns[burn].time
+                mainWindow.scenarioTime = tranTime + mainWindow.satellites[sat].burns[burn].time
+                document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;   
                 break
             case 'angle':
                 dir = [Number(inputs[0].value) * Math.PI / 180, Number(inputs[1].value) * Math.PI / 180, Number(inputs[2].value) / 1000];
@@ -3144,18 +3147,30 @@ function phiMatrixWhole(t = 0, n = mainWindow.mm) {
         [0, 0, -n * snt, 0, 0, cnt]
     ];
 }
-let aa,bb,cc
-function estimateWaypointBurn(sat = 0, burn = 0) {
-    let r1 = Object.values(getCurrentInertial(sat, mainWindow.satellites[sat].burns[burn].time))
-    let r2 = mainWindow.satellites[sat].burns[burn].waypoint.target
-    let dt = mainWindow.satellites[sat].burns[burn].waypoint.tranTime
-    let long = Math.floor(dt / (Math.PI / mainWindow.mm))
-    let n = Math.floor(long / 2) 
-    let option = long >= 2 && (long % 2 === 0) ? -1 : 1
-    long = long % 2 === 0
-    let lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, option)
-    let burnEst = math.subtract(lamResults1.v1, r1.slice(3,6))
-    let result = eciFiniteBurnOneBurn(r1,r2,dt,mainWindow.satellites[0].a,burnEst)
+
+function estimateWaypointBurn(r1, r2, dt, a) {
+    try {
+        let long = Math.floor(dt / (Math.PI / mainWindow.mm))
+        let n = Math.floor(long / 2) 
+        let option = long >= 2 && (long % 2 === 0) ? -1 : 1
+        long = long % 2 === 0
+        let lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, option)
+        if (lamResults1 === 'collinear') return {
+            data: false,
+            reason: 'collinear'
+        }
+        let burnEst = math.subtract(lamResults1.v1, r1.slice(3,6))
+        let r = ConvEciToRic(r1, [...burnEst,0,0,0], true)
+        // convert ECI burn direction into satellites RIC direction
+        burnEst = math.multiply(r[0], burnEst)
+        // console.log(lamResults.v1);
+        return result = eciFiniteBurnOneBurn(r1,r2,dt,a,burnEst)
+    } catch (error) {
+        return {
+            data: false,
+            reason: 'unknown'
+        }
+    }
 }
 
 function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
@@ -3178,10 +3193,8 @@ function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
         reason: 'no kinematic reach'
     }
     let errCount = 0
-    console.log(stateInit, stateFinal, tf, X);
     while (math.norm(math.squeeze(yErr)) > 1e-4) {
         F = eciOneBurnFiniteCalc(stateInit, X[0], X[1], X[2], tf, a0).slice(0,3)
-        console.log(F);
         yErr = math.subtract(stateFinal, F)
         S = eciJacobianOneBurn(stateInit, a0, X[0], X[1], X[2], tf);
         try {
@@ -3194,7 +3207,9 @@ function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
         X[2] = X[2] > 1 ? 0.95 : X[2]
         if (errCount > 30) return {
             data: false,
-            reason: 'upper errcount'
+            reason: 'upper errcount',
+            goal: stateFinal,
+            acheived: F
         };
         errCount++;
     }
@@ -7604,19 +7619,24 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
         if ((tProp + timeDelta) > burns[burnIndex].time) {
             propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
             
-            if (recalcBurns && burns[burnIndex].waypoint !== false) {
+            if (recalcBurns) {
+                // console.time()
                 let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time)
-                let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time + burns[burnIndex].waypoint.tranTime)
+                // let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time + burns[burnIndex].waypoint.tranTime)
                 let ricOrigin = ConvEciToRic(eciOriginStart, propPosition)
                 burns[burnIndex].location = ricOrigin.slice(0,3)
                 if (burns[burnIndex].waypoint !== false) {
-                    let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
-                    let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, a, tProp)
-                    if (newBurn !== false) {
-                        newBurn = [newBurn.r, newBurn.i, newBurn.c]
-                        burns[burnIndex].direction = newBurn
+                    // let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
+                    // let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, a, tProp)
+                    let newBurn = estimateWaypointBurn(propPosition, burns[burnIndex].waypoint.target,  burns[burnIndex].waypoint.tranTime, a)
+                    if (newBurn.data !== false) {
+                    // if (newBurn !== false) {
+                        burns[burnIndex].direction = [newBurn.data.r, newBurn.data.i, newBurn.data.c]
+                        // burns[burnIndex].direction = [newBurn.r, newBurn.i, newBurn.c]
                     }
+                    else console.log(newBurn, newBurn.reason, propPosition);
                 }
+                // console.timeEnd()
             }
             let mag = math.norm(burns[burnIndex].direction)
             burnIndex++
