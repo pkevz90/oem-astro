@@ -3147,7 +3147,10 @@ function estimateWaypointBurn(r1, r2, dt, a) {
         let long = Math.floor(dt / (Math.PI / mainWindow.mm))
         let n = Math.floor(long / 2) 
         let option = long >= 2 && (long % 2 === 0) ? -1 : 1
-        long = long % 2 === 0
+        let crossVector = math.cross(r1.slice(0,3),r2.slice(0,3))
+        let h1 = math.cross(r1.slice(0,3), r1.slice(3,6))
+        long = crossVector[2] * h1[2] > 0
+        option = n < 1 ? 1 : long ? -1 : 1
         let lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, option)
         if (lamResults1 === 'collinear') return {
             data: false,
