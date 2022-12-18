@@ -21,7 +21,7 @@ class Propagator {
         this.thirdBody = thirdBody
     }
     highPrecisionProp(position = [42164, 0, 0, 0, 3.074, 0], date = new Date()) {
-        let mu = 398600.44189, x = position[0], y = position[1], z = position[2]
+        let mu = 398600.4415, x = position[0], y = position[1], z = position[2]
         let r = math.norm(position.slice(0,3))
         let a = [
             -mu* x / r ** 3,
@@ -87,7 +87,7 @@ class Propagator {
     fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
         // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
         // ECI to ECEF
-        let jd_TT = this.julianDate(date.getFullYear(), date.getMonth(), date.getDate()) 
+        let jd_TT = this.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()) 
         let t_TT = (jd_TT - 2451545) / 36525
         let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
         zeta /= 3600
@@ -95,20 +95,39 @@ class Propagator {
         theta /= 3600
         let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
         z /= 3600
-        let p = math.multiply(this.rotationMatrices(-zeta, 3), this.rotationMatrices(theta, 2), this.rotationMatrices(-z, 3))
+        let p = math.multiply(this.rot(zeta, 3), this.rot(-theta, 2), this.rot(z, 3))
+
         let thetaGmst = this.siderealTime(this.julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + date.getMilliseconds() / 1000))
-        let w = this.rotationMatrices(thetaGmst, 3)
+        let w = this.rot(-thetaGmst, 3)
         let overallR = math.multiply(math.transpose(w), math.transpose(p))
         r = math.squeeze(math.multiply(overallR, math.transpose([r])))
         let long = math.atan2(r[1], r[0])
         let lat = math.atan2(r[2], math.norm(r.slice(0,2)))
         return {lat, long, rot: overallR, r_ecef: r}
     }
+    fk5Reduction(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28)) {
+        // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
+        // ECI to ECEF
+        let jd_TT = this.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()) 
+        let t_TT = (jd_TT - 2451545) / 36525
+        let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
+        zeta /= 3600
+        let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
+        theta /= 3600
+        let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
+        z /= 3600
+        let p = math.multiply(this.rot(zeta, 3), this.rot(-theta, 2), this.rot(z, 3))
+        let thetaGmst = this.siderealTime(this.julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + 328 / 1000))
+        let w = this.rot(-thetaGmst, 3)
+        r = math.multiply(w,r) 
+        r = math.multiply(p, r)
+        return r
+    }
     siderealTime(jdUti=2448855.009722) {
         let tUti = (jdUti - 2451545) / 36525
         return ((67310.548 + (876600*3600 + 8640184.812866)*tUti + 0.093104*tUti*tUti - 6.2e-6*tUti*tUti*tUti) % 86400)/240
     }
-    rotationMatrices(angle = 0, axis = 1, type = 'deg') {
+    rot(angle = 0, axis = 1, type = 'deg') {
         if (type === 'deg') {
             angle *= Math.PI / 180;
         }
@@ -116,19 +135,19 @@ class Propagator {
         if (axis === 1) {
             rotMat = [
                 [1, 0, 0],
-                [0, Math.cos(angle), -Math.sin(angle)],
-                [0, Math.sin(angle), Math.cos(angle)]
+                [0, Math.cos(angle), Math.sin(angle)],
+                [0, -Math.sin(angle), Math.cos(angle)]
             ];
         } else if (axis === 2) {
             rotMat = [
-                [Math.cos(angle), 0, Math.sin(angle)],
+                [Math.cos(angle), 0, -Math.sin(angle)],
                 [0, 1, 0],
-                [-Math.sin(angle), 0, Math.cos(angle)]
+                [Math.sin(angle), 0, Math.cos(angle)]
             ];
         } else {
             rotMat = [
-                [Math.cos(angle), -Math.sin(angle), 0],
-                [Math.sin(angle), Math.cos(angle), 0],
+                [Math.cos(angle), Math.sin(angle), 0],
+                [-Math.sin(angle), Math.cos(angle), 0],
                 [0, 0, 1]
             ]
         }
