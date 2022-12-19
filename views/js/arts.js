@@ -7619,19 +7619,29 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
             if (recalcBurns) {
                 // console.time()
                 let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time)
-                // let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time + burns[burnIndex].waypoint.tranTime)
                 let ricOrigin = ConvEciToRic(eciOriginStart, propPosition)
                 burns[burnIndex].location = ricOrigin.slice(0,3)
                 if (burns[burnIndex].waypoint !== false) {
-                    // let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
-                    // let newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, a, tProp)
                     let newBurn = estimateWaypointBurn(propPosition, burns[burnIndex].waypoint.target,  burns[burnIndex].waypoint.tranTime, a)
                     if (newBurn.data !== false) {
-                    // if (newBurn !== false) {
                         burns[burnIndex].direction = [newBurn.data.r, newBurn.data.i, newBurn.data.c]
-                        // burns[burnIndex].direction = [newBurn.r, newBurn.i, newBurn.c]
                     }
-                    else console.log(newBurn, newBurn.reason, propPosition);
+                    else {
+                        // If lambert solution fails, go to less precise non-linear rel equation estimate
+                        console.log(newBurn, newBurn.reason, propPosition);
+                        let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time + burns[burnIndex].waypoint.tranTime)
+                        let eciOriginBegin = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time)
+                        let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
+                        newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, a, tProp)
+                        if (newBurn !== false) {
+                            console.log('saved');
+                            let burnDir = [newBurn.r, newBurn.i, newBurn.c]
+                            let cOrigin = ConvEciToRic(eciOriginBegin, [0,0,0,0,0,0], true)[0]
+                            let cSat = ConvEciToRic(propPosition, [0,0,0,0,0,0], true)[0]
+                            burnDir = math.multiply(cSat, math.transpose(cOrigin), burnDir)
+                            burns[burnIndex].direction = [newBurn.r, newBurn.i, newBurn.c]
+                        } else console.log('not saved');
+                    }
                 }
                 // console.timeEnd()
             }
