@@ -208,6 +208,13 @@ class windowCanvas {
         if (!updateSats) return
         this.satellites.forEach(sat => sat.calcTraj(true))
     }
+    changeTime(newTime = 3600, immediate = false) {
+        this.desired.scenarioTime = newTime
+        document.querySelector('#time-slider-range').value = newTime
+        if (immediate) {
+            this.scenarioTime = newTime
+        }
+    }
     generateOriginHistory() {
         let position = this.originOrbit
         let calcPosition
@@ -1433,13 +1440,13 @@ window.addEventListener('wheel', event => {
     if (mainWindow.panelOpen || event.target.id !== 'main-plot') return;
     if (mainWindow.burnStatus.type === 'waypoint') {
         let tranTimeDelta = event.deltaY > 0 ? -300 : 1800
-        document.querySelector('#time-slider-range').value = Number(document.querySelector('#time-slider-range').value) + tranTimeDelta
+        let currentTranTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
         let curCrossState = mainWindow.satellites[mainWindow.burnStatus.sat].currentPosition({
-            time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
+            time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + currentTranTime
         })
         mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target[2] = curCrossState[2]
-        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime += tranTimeDelta 
-        mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
+        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime = currentTranTime 
+        mainWindow.changeTime(mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime,true);
         
         updateWhiteCellTimeAndErrors()
         return;
@@ -3141,17 +3148,17 @@ function phiMatrixWhole(t = 0, n = mainWindow.mm) {
         [0, 0, -n * snt, 0, 0, cnt]
     ];
 }
-
+let lastLambertError
 function estimateWaypointBurn(r1, r2, dt, a) {
+    let lamResults1, long, option
     try {
-        let long = Math.floor(dt / (Math.PI / mainWindow.mm))
+        long = Math.floor(dt / (Math.PI / mainWindow.mm))
         let n = Math.floor(long / 2) 
-        let option = long >= 2 && (long % 2 === 0) ? -1 : 1
         let crossVector = math.cross(r1.slice(0,3),r2.slice(0,3))
         let h1 = math.cross(r1.slice(0,3), r1.slice(3,6))
         long = crossVector[2] * h1[2] > 0
         option = n < 1 ? 1 : long ? -1 : 1
-        let lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, option)
+        lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, option)
         if (lamResults1 === 'collinear') return {
             data: false,
             reason: 'collinear'
@@ -3163,9 +3170,21 @@ function estimateWaypointBurn(r1, r2, dt, a) {
         // console.log(lamResults.v1);
         return result = eciFiniteBurnOneBurn(r1,r2,dt,a,burnEst)
     } catch (error) {
+        lastLambertError = {
+            data: false,
+            reason: 'unknown lambert error',
+            results: lamResults1,
+            long,
+            option,
+            r1,r2,dt
+        }
         return {
             data: false,
-            reason: 'unknown'
+            reason: 'unknown lambert error',
+            results: lamResults1,
+            long,
+            option,
+            r1,r2,dt
         }
     }
 }
@@ -3189,9 +3208,10 @@ function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
         data: false,
         reason: 'no kinematic reach'
     }
-    let errCount = 0
-    while (math.norm(math.squeeze(yErr)) > 1e-4) {
+    let errCount = 0, fHistory = []
+    while (math.norm(math.squeeze(yErr)) > 1e-3) {
         F = eciOneBurnFiniteCalc(stateInit, X[0], X[1], X[2], tf, a0).slice(0,3)
+        fHistory.push(F.slice(0,3))
         yErr = math.subtract(stateFinal, F)
         S = eciJacobianOneBurn(stateInit, a0, X[0], X[1], X[2], tf);
         try {
@@ -3206,7 +3226,9 @@ function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
             data: false,
             reason: 'upper errcount',
             goal: stateFinal,
-            acheived: F
+            acheived: F,
+            history: fHistory,
+            guess
         };
         errCount++;
     }
@@ -7631,7 +7653,10 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
                         burns[burnIndex].direction = [newBurn.data.r, newBurn.data.i, newBurn.data.c]
                         // burns[burnIndex].direction = [newBurn.r, newBurn.i, newBurn.c]
                     }
-                    else console.log(newBurn, newBurn.reason, propPosition);
+                    else {
+                        burns[burnIndex].waypoint.tranTime += (Math.PI / mainWindow.mm) * 0.005
+                        mainWindow.desired.scenarioTime += (Math.PI / mainWindow.mm) * 0.005
+                    }
                 }
                 // console.timeEnd()
             }
