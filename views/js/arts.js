@@ -7646,7 +7646,7 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
                 if (burns[burnIndex].waypoint !== false) {
                     let newBurn = estimateWaypointBurn(propPosition, burns[burnIndex].waypoint.target,  burns[burnIndex].waypoint.tranTime, a)
                     if (newBurn.data !== false) {
-                        if (isNaN(newBurn.data.r) ||isNaN(newBurn.data.i)||isNaN(newBurn.data.c)) {
+                        if (isNaN(newBurn.data.r) || isNaN(newBurn.data.i) || isNaN(newBurn.data.c)) {
                             newBurn.data = false
                         }
                     }
