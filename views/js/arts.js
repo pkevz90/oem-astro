@@ -56,6 +56,7 @@ class windowCanvas {
     plotWidth = 200;
     plotHeight;
     plotCenter = 0;
+    j2 = false;
     stringLimit = [0,8];
     error = { // at right after manuever while generating J2000 states, halves every hour
         neutral: {p: 25.6, v: 36.158, c: 1}, // Full Error
@@ -220,7 +221,7 @@ class windowCanvas {
         let calcPosition
         let tProp = 0, tFinal = this.scenarioLength*3600, stateHistory = [], rotHistory = []
         while ((tProp+this.timeDelta) < tFinal) {
-            calcPosition = propToTimeAnalytic(position, tProp)
+            calcPosition = propToTimeAnalytic(position, tProp, this.j2)
             stateHistory.push({
                 t: tProp,
                 position: calcPosition.slice()
@@ -1357,11 +1358,11 @@ function keydownFunction(key) {
                 position: {...mainWindow.originOrbit},
                 shape: 'diamond',
                 color: '#bb00bb',
-                a: 0.001
+                a: 0.00001
             }) : 
             new Satellite({
                 name: 'Sat-' + (mainWindow.satellites.length + 1),
-                a: 0.001
+                a: 0.00001
             })
 
         newSat.calcTraj();
@@ -1439,7 +1440,7 @@ window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
     if (mainWindow.panelOpen || event.target.id !== 'main-plot') return;
     if (mainWindow.burnStatus.type === 'waypoint') {
-        let tranTimeDelta = event.deltaY > 0 ? -300 : 1800
+        let tranTimeDelta = event.deltaY > 0 ? -300 / 86164 * (2*Math.PI / mainWindow.mm) : 1800  / 86164 * (2*Math.PI / mainWindow.mm)
         let currentTranTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
         let curCrossState = mainWindow.satellites[mainWindow.burnStatus.sat].currentPosition({
             time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + currentTranTime
@@ -2644,7 +2645,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime
             });
-            let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
+            let burnType = mainWindow.originOrbit.a < 5000 ? 'manual' : mainWindow.burnType
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.desired.scenarioTime,
                 shown: 'during',
@@ -2693,7 +2694,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             sat: mainWindow.currentTarget.sat,
             burn:  JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]))
         })
-        let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
+        let burnType = mainWindow.originOrbit.a < 5000 ? 'manual' : mainWindow.burnType
         mainWindow.burnStatus = {
             type: burnType,
             sat: mainWindow.currentTarget.sat,
@@ -6008,7 +6009,7 @@ function randv(coe) {
     return math.squeeze(state)
 }
 
-function propToTime(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, j2 = true) {
+function propToTime(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, j2 = mainWindow.j2) {
     state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     if (j2) {
         state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
@@ -7603,7 +7604,7 @@ function Eci2RicWithC(chief, deputy, c) {
     ]
 }
 
-function propToTimeAnalytic(state = mainWindow.originOrbit, dt = 86164, j2 = true) {
+function propToTimeAnalytic(state = mainWindow.originOrbit, dt = 86164, j2 = mainWindow.j2) {
     state = {...state}
     if (j2) {
         state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
@@ -7677,7 +7678,17 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
             burnIndex++
             if (mag > 0) {
                 let burnDuration = mag / a
-                propPosition = runge_kutta4(inertialEom, propPosition, burnDuration, burns[burnIndex-1].direction.map(s => s * a / mag))
+                let burnedTime = 0
+                while ((burnedTime + timeDelta) < burnDuration) {
+                    propPosition = runge_kutta4(inertialEom, propPosition, timeDelta, burns[burnIndex-1].direction.map(s => s * a / mag))
+                    histIndex++
+                    tProp += timeDelta
+                    stateHist.push({
+                        t: tProp, position: Eci2RicWithC(mainWindow.originHistory[histIndex].position, propPosition, mainWindow.originRot[histIndex])
+                    })
+                    burnedTime += timeDelta
+                }
+                propPosition = runge_kutta4(inertialEom, propPosition, burnDuration-burnedTime, burns[burnIndex-1].direction.map(s => s * a / mag))
                 epochPosition = PosVel2CoeNew(propPosition.slice(0,3), propPosition.slice(3,6))
                 epochTime = burns[burnIndex-1].time + burnDuration
             }
