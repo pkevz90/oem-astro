@@ -7638,7 +7638,8 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
         })
         if ((tProp + timeDelta) > burns[burnIndex].time) {
             propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
-            
+            // Time propagated before burn start to keep synced with time step
+            let propToBurnTime = burns[burnIndex].time - tProp
             if (recalcBurns) {
                 // console.time()
                 let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time)
@@ -7679,6 +7680,17 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
             if (mag > 0) {
                 let burnDuration = mag / a
                 let burnedTime = 0
+                // Catch up to time delta step if smaller than burn duration
+                if (burnDuration > (timeDelta - propToBurnTime)) {
+                    propPosition = runge_kutta4(inertialEom, propPosition, timeDelta - propToBurnTime, burns[burnIndex-1].direction.map(s => s * a / mag))
+                    tProp += timeDelta
+                    histIndex++
+                    stateHist.push({
+                        t: tProp, position: Eci2RicWithC(mainWindow.originHistory[histIndex].position, propPosition, mainWindow.originRot[histIndex])
+                    })
+                    burnedTime += timeDelta - propToBurnTime
+                }
+                // Finish rest of time step if longer than time delta
                 while ((burnedTime + timeDelta) < burnDuration) {
                     propPosition = runge_kutta4(inertialEom, propPosition, timeDelta, burns[burnIndex-1].direction.map(s => s * a / mag))
                     histIndex++
