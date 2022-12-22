@@ -781,16 +781,15 @@ class windowCanvas {
                 })
             )
             this.satellites[this.satellites.length - 1].drawCurrentPosition();
-            this.satellites[this.satellites.length - 1].calcTraj();
-            this.satellites[this.satellites.length - 1].genBurns(true);
-            this.satellites[this.satellites.length - 1].curPos = this.satellites[this.satellites.length - 1].currentPosition();
+            this.satellites[this.satellites.length - 1].calcTraj(true)
+            let curPos = this.satellites[this.satellites.length - 1].currentPosition();
             this.satellites[this.satellites.length - 1].curPos = {
-                r: this.satellites[this.satellites.length - 1].curPos.r[0],
-                i: this.satellites[this.satellites.length - 1].curPos.i[0],
-                c: this.satellites[this.satellites.length - 1].curPos.c[0],
-                rd: this.satellites[this.satellites.length - 1].curPos.rd[0],
-                id: this.satellites[this.satellites.length - 1].curPos.id[0],
-                cd: this.satellites[this.satellites.length - 1].curPos.cd[0]
+                r: curPos[0],
+                i: curPos[1],
+                c: curPos[2],
+                rd: curPos[3],
+                id: curPos[4],
+                cd: curPos[5]
             }
         })
         resetDataDivs()
@@ -2638,14 +2637,14 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
             lastHiddenSatClicked = false
-            let defaultTranTime = 7200/86164 * (2 * Math.PI / mainWindow.mm)
+            let defaultTranTime = 7200
             let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime + defaultTranTime
             });
             let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime
             });
-            let burnType = mainWindow.originOrbit.a < 5000 ? 'manual' : mainWindow.burnType
+            let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.desired.scenarioTime,
                 shown: 'during',
@@ -2694,7 +2693,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             sat: mainWindow.currentTarget.sat,
             burn:  JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]))
         })
-        let burnType = mainWindow.originOrbit.a < 5000 ? 'manual' : mainWindow.burnType
+        let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
         mainWindow.burnStatus = {
             type: burnType,
             sat: mainWindow.currentTarget.sat,
