@@ -1005,16 +1005,11 @@ class Satellite {
         return out;
     }
     checkInBurn() {
-        return
         if (mainWindow.burnStatus.type) return;
         let time = mainWindow.scenarioTime
         this.burns.forEach(burn => {
-            let burnDuration = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a;
-            if (time > burn.time && time < (burn.time + burnDuration)) {
-                this.calcTraj();
-                burn.shown = 'during';
-            }
-            else if (burn.shown !== 'pre' && time < burn.time) {
+            // let burnDuration = math.norm(burn.direction) / this.a;
+            if (burn.shown !== 'pre' && time < burn.time) {
                 this.calcTraj();
                 burn.shown = 'pre';
             }
@@ -4308,15 +4303,18 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
 
 function getCurrentPosition(options = {}) {
     let {time = mainWindow.scenarioTime, burn} = options;
-    let index = this.stateHistory.find(s => s.t >= time)
-    if (index === undefined) {
-        index = {
-            position: this.stateHistory[this.stateHistory.length - 1].position,
-            t: this.stateHistory[this.stateHistory.length - 1].t
-        }
+    let index = this.stateHistory.findIndex(s => s.t >= time)
+    index = index < 2 ? 2 : index
+    if (index === -1) {
+        index = this.stateHistory.length - 1
     }
-    let position = index.position, indexTime = index.t
-    position = runge_kutta(twoBodyRpo, position, time - indexTime)
+    let indexVector = [index-1,index,index+1].map(s => [this.stateHistory[s].t, this.stateHistory[s].position])
+    indexVector = [[indexVector[0][0],indexVector[1][0],indexVector[2][0]],[indexVector[0][1],indexVector[1][1],indexVector[2][1]]]
+    let elements = []
+    for (let index = 0; index < 6; index++) {
+        elements.push(fitPolynomialRedux(indexVector[0], indexVector[1].map(s => s[index]))) 
+    }
+    let position = elements.map(s => answerPolynomial(s, time))
     return position
 }
 
@@ -6537,7 +6535,6 @@ function fitPolynomial(x = [0, 1, 3], y = [[1],[-2],[4]], d=2) {
     if (x.length !== y.length) return console.error('X & Y values need to be the same length')
     d = (x.length-1) < d ? x.length - 1 : d
     let jac = []
-    console.log(x,y);
     for (let ii = 0; ii < x.length; ii++) {
         let line = []
         for (let jj = 0; jj <= d; jj++) {
@@ -6545,7 +6542,6 @@ function fitPolynomial(x = [0, 1, 3], y = [[1],[-2],[4]], d=2) {
         }
         jac.push(line)
     }
-    console.log(jac);
     let consts = math.squeeze(math.multiply(math.inv(jac), y))
     // console.log(x,math.squeeze(y));
     // console.log(x.map(val => {
@@ -6554,6 +6550,22 @@ function fitPolynomial(x = [0, 1, 3], y = [[1],[-2],[4]], d=2) {
     //     },0);
     // }));
     return [consts,consts.map((val,ii) => val * ii).slice(1)]
+}
+
+function fitPolynomialRedux(x = [0, 1, 3], y = [1,-2,4]) {
+    y = math.transpose([y])
+    if (x.length !== y.length) return console.error('X & Y values need to be the same length')
+    let d = x.length - 1
+    let jac = []
+    for (let ii = 0; ii < x.length; ii++) {
+        let line = []
+        for (let jj = 0; jj <= d; jj++) {
+            line.push(x[ii] ** jj)
+        }
+        jac.push(line)
+    }
+    let consts = math.squeeze(math.multiply(math.inv(jac), y))
+    return consts.reverse()
 }
 
 function errorFromTime(t = mainWindow.scenarioTime, error = mainWindow.error.neutral) {
@@ -7544,7 +7556,7 @@ function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
         }, subAnswer[0])
         answer = math.add(answer, math.dotMultiply(y[ii] / subAnswerDen, subAnswer))
     }
-    console.log(answer);
+    return answer
 }
 
 function multiplyPolynomial(a = [1,3,1], b = [0,2,1]) {
@@ -7625,10 +7637,11 @@ function propToTimeAnalytic(state = mainWindow.originOrbit, dt = 86164, j2 = mai
 
 function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], options = {}) {
     // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
-    let {timeDelta = mainWindow.timeDelta, recalcBurns = false, tFinal = mainWindow.scenarioLength*3600, a = 0.001} = options
+    let {timeDelta = mainWindow.timeDelta, recalcBurns = false, tFinal = mainWindow.scenarioLength*3600, a = 0.001, time = mainWindow.scenarioTime} = options
+    let cutTime = recalcBurns ? mainWindow.scenarioLength*3600 : time
     let epochPosition = {...position}, epochTime = 0
     let propPosition, tProp = 0, stateHist = [], histIndex = 0, burnIndex = 0
-    burns = burns.slice()
+    burns = burns.slice().filter(b => b.time < cutTime)
     burns.push({time: tFinal*2})
     while ((tProp+timeDelta) < tFinal) {
         propPosition = propToTimeAnalytic(epochPosition, tProp - epochTime)
