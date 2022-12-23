@@ -922,7 +922,7 @@ class Satellite {
             }
         })
     }
-    currentPosition = getCurrentPosition;
+    currentPosition = getCurrentPosition
     drawCurrentPosition() {
         if (!this.stateHistory) return;
         let cur = this.currentPosition(mainWindow.scenarioTime);
@@ -4302,6 +4302,38 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
 }
 
 function getCurrentPosition(options = {}) {
+    let {time = mainWindow.scenarioTime} = options;
+    let index = this.stateHistory.findIndex(s => s.t > time) - 1
+    index = index < 0 ? this.stateHist.length - 1 : index
+    let indexTime = this.stateHistory[index].t
+    let position = this.stateHistory[index].position
+    // Find all burns that have any duration inside the timeDelta period
+    let burnsWithin = this.burns.map(b => {
+        let mag_a = math.norm(b.direction) / this.a
+        let endTime = time
+        let burnEnd = b.time + mag_a
+        let burnStart = b.time < indexTime ? indexTime : b.time
+        burnEnd = burnEnd > endTime ? endTime : burnEnd
+        if (burnEnd < indexTime) return false
+        if (burnStart > endTime) return false
+        return {
+            burnStart,
+            burnEnd,
+            direction: b.direction.map(s => s * 1/mag_a)
+        }
+    }).filter(b => b !== false)
+    let tProp = indexTime
+    for (let b = 0; b < burnsWithin.length; b++) {
+        position = propRelMotionTwoBodyAnalytic(position, burnsWithin[b].burnStart - tProp, tProp)
+        position = runge_kutta(twoBodyRpo, position, burnsWithin[b].burnEnd-burnsWithin[b].burnStart, burnsWithin[b].direction, burnsWithin[b].burnStart)
+        tProp = burnsWithin[b].burnEnd
+    }
+    // position = propRelMotionTwoBodyAnalytic(position, time-tProp, tProp)
+    position = runge_kutta(twoBodyRpo, position, time-tProp, [0,0,0], tProp)
+    return position
+}
+
+function getCurrentPositionOld(options = {}) {
     let {time = mainWindow.scenarioTime, burn} = options;
     let index = this.stateHistory.findIndex(s => s.t >= time)
     index = index < 2 ? 2 : index
@@ -7547,6 +7579,7 @@ function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
     for (let ii = 0; ii < x.length; ii++) {
         let subAnswer = [], subAnswerDen = 1
         for (let jj = 0; jj < x.length; jj++) {
+            console.log(jj);
             if (ii === jj) continue
             subAnswer.push([1, -x[jj]])
             subAnswerDen *= x[ii] - x[jj]
@@ -7555,6 +7588,7 @@ function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
             return multiplyPolynomial(a,b)
         }, subAnswer[0])
         answer = math.add(answer, math.dotMultiply(y[ii] / subAnswerDen, subAnswer))
+        console.log(ii);
     }
     return answer
 }
