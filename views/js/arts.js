@@ -16,6 +16,7 @@ lockDiv.style.transition = 'right 0.5s'
 document.getElementsByTagName('body')[0].append(lockDiv)
 let currentAction
 let pastActions = []
+let futureActions = []
 let lastSaveName = ''
 let errorList = []
 let ellipses = []
@@ -1191,6 +1192,7 @@ function keydownFunction(key) {
         }
     }
     else if ((key.key === 'z' || key.key === 'Z') && key.ctrlKey) reverseLastAction()
+    else if ((key.key === 'y' || key.key === 'Y') && key.ctrlKey) redoLastAction()
 
     if (mainWindow.panelOpen) return;
     if (key.key === ' ') {
@@ -2164,6 +2166,11 @@ function handleContextClick(button) {
     else if (button.id === 'execute-drift') {
         let sat = button.parentElement.sat;
         
+        pastActions.push({
+            sat,
+            oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns)),
+            time: mainWindow.desired.scenarioTime
+        })
         let inputs = button.parentElement.getElementsByTagName('input');
         inputs[0].value = inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value
         let currentPos = mainWindow.satellites[sat].curPos
@@ -2184,9 +2191,6 @@ function handleContextClick(button) {
         position = {x: currentPos.r, y: currentPos.i, z: currentPos.c, xd: currentPos.rd, yd: currentPos.id, zd: currentPos.cd};
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
-        })
-        logAction({
-            type: 'addBurn', sat, index: mainWindow.satellites[sat].burns.length
         })
         insertDirectionBurn(sat, mainWindow.desired.scenarioTime, direction)
         mainWindow.satellites[sat].calcTraj(true);
@@ -2240,11 +2244,10 @@ function handleContextClick(button) {
         let sat = button.getAttribute('sat')
         let burn = button.getAttribute('burn')
         let type = button.getAttribute('type')
-        logAction({
-            type: 'alterBurn',
-            index: burn,
+        
+        pastActions.push({
             sat,
-            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
+            oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns))
         })
         let inputs = button.parentElement.getElementsByTagName('input');
         for (let ii = 0; ii < inputs.length; ii++) {
@@ -2315,11 +2318,6 @@ function handleContextClick(button) {
             let originEci = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime + 3600*Number(inputs[0].value))
             waypoint = ConvEciToRic(originEci, [...eciWaypoint,0,0,0]).slice(0,3)
         }
-        logAction({
-            type: 'addBurn',
-            index: mainWindow.satellites[sat].burns.length,
-            sat
-        })
         insertWaypointBurn(sat, mainWindow.desired.scenarioTime, Object.values(waypoint), 3600*Number(inputs[0].value))
         document.getElementById('context-menu')?.remove();
     }
@@ -2640,6 +2638,29 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
                 time: mainWindow.desired.scenarioTime
             });
             let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
+            pastActions.push({
+                sat: mainWindow.currentTarget.sat,
+                oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns)),
+                time: mainWindow.desired.scenarioTime
+            })
+            // Ensure previous burn has finished, otherwise cut previous burn short
+            let lastBurn = mainWindow.satellites[mainWindow.currentTarget.sat].burns.filter(b => b.time < mainWindow.desired.scenarioTime)
+            let lastBurnIndex = lastBurn.length - 1 
+            lastBurn = lastBurn.length > 0 ? lastBurn[lastBurnIndex] : undefined
+            if (lastBurn !== undefined) {
+                let burnDuration = math.norm(lastBurn.direction) / mainWindow.satellites[mainWindow.currentTarget.sat].a
+                let lastBurnEndTime = lastBurn.time + burnDuration
+                if (lastBurnEndTime > mainWindow.desired.scenarioTime) {
+                    burnDuration = mainWindow.desired.scenarioTime - lastBurn.time - 900
+                    let newBurnMag = burnDuration * mainWindow.satellites[mainWindow.currentTarget.sat].a
+                    let newBurnDirection = lastBurn.direction.map(s => s *newBurnMag / math.norm(lastBurn.direction))
+                    mainWindow.satellites[mainWindow.currentTarget.sat].burns[lastBurnIndex].direction = newBurnDirection
+                    mainWindow.satellites[mainWindow.currentTarget.sat].burns[lastBurnIndex].waypoint = false
+                    
+                    mainWindow.satellites[mainWindow.currentTarget.sat].calcTraj()
+                    showScreenAlert('Previous finite burn duration curtailed to ' + (1000*newBurnMag).toFixed(2) + ' m/s')
+                }
+            }
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.desired.scenarioTime,
                 shown: 'during',
@@ -2659,11 +2680,6 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
                 burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
                 frame: Object.keys(check)[0]
             }
-            logAction({
-                index: mainWindow.burnStatus.burn,
-                sat: mainWindow.currentTarget.sat,
-                type: 'addBurn'
-            })
             if (burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
                 mainWindow.desired.scenarioTime += defaultTranTime;
                 document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
@@ -2671,23 +2687,15 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         }, 250)
     }
     else if (mainWindow.currentTarget.type === 'burn') {
+        pastActions.push({
+            sat: mainWindow.currentTarget.sat,
+            oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns))
+        })
         if (event.ctrlKey) {
-            logAction({
-                type: 'deleteBurn',
-                index: check[mainWindow.currentTarget.frame],
-                sat: mainWindow.currentTarget.sat,
-                burn:  mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]
-            })
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.splice(check[mainWindow.currentTarget.frame], 1);
             mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
             return;
         }
-        logAction({
-            type: 'alterBurn',
-            index: check[mainWindow.currentTarget.frame],
-            sat: mainWindow.currentTarget.sat,
-            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]))
-        })
         let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
         mainWindow.burnStatus = {
             type: burnType,
@@ -4990,10 +4998,10 @@ function perchSatelliteSolver(state = [1, 10, 0, -0.005, 0, 0], a = 0.00001, sta
 
 function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
     let position = mainWindow.satellites[sat].currentPosition({time});
-    logAction({
-        type: 'addBurn',
-        index: mainWindow.satellites[sat].burns.length,
-        sat
+    pastActions.push({
+        sat,
+        oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns)),
+        time: mainWindow.desired.scenarioTime
     })
     mainWindow.satellites[sat].burns.push({
         time,
@@ -5008,6 +5016,12 @@ function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
 }
 
 function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, origin = [0,0,0]) {
+    
+    pastActions.push({
+        sat,
+        oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns)),
+        time: mainWindow.desired.scenarioTime
+    })
     let ricWaypoint = [
         way[0] + origin[0],
         way[1] + origin[1],
@@ -5241,31 +5255,37 @@ function logAction(options = {}) {
         type
     })
 }
+function redoLastAction() {
+    if (futureActions.length === 0) return
+    let action = futureActions.pop()
+    console.log(action);
+    pastActions.push({
+        sat: action.sat,
+        oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[action.sat].burns)),
+        time: action.time
+    })
+    if (action.time !== undefined) {
+        mainWindow.changeTime(action.time, true)
+    }
+    mainWindow.satellites[action.sat].burns = action.oldBurns
+    mainWindow.satellites[action.sat].calcTraj(true)
+    mainWindow.satellites[action.sat].calcTraj()
+}
 
 function reverseLastAction() {
     if (pastActions.length === 0) return
     let action = pastActions.pop()
-    switch (action.type) {
-        case 'addBurn':
-            mainWindow.satellites[action.sat].burns.splice(action.index, 1)
-            mainWindow.satellites[action.sat].burns = mainWindow.satellites[action.sat].burns.filter(burn => burn !== undefined)
-            mainWindow.satellites[action.sat].genBurns()
-            mainWindow.satellites[action.sat].calcTraj()
-            mainWindow.desired.scenarioTime = action.time
-            break
-        case 'deleteBurn':
-            mainWindow.satellites[action.sat].burns.splice(action.index, 0, action.burn)
-            mainWindow.satellites[action.sat].genBurns()
-            mainWindow.satellites[action.sat].calcTraj()
-            mainWindow.desired.scenarioTime = action.time
-            break
-        case 'alterBurn':
-            mainWindow.satellites[action.sat].burns.splice(action.index, 1, action.burn)
-            mainWindow.satellites[action.sat].genBurns()
-            mainWindow.satellites[action.sat].calcTraj()
-            break
+    futureActions.push({
+        sat: action.sat,
+        oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[action.sat].burns)),
+        time: mainWindow.desired.scenarioTime
+    })
+    if (action.time !== undefined) {
+        mainWindow.changeTime(action.time, true)
     }
-
+    mainWindow.satellites[action.sat].burns = action.oldBurns
+    mainWindow.satellites[action.sat].calcTraj(true)
+    mainWindow.satellites[action.sat].calcTraj()
 }
 
 function impulsiveHcwProp(p1 = [[1],[0],[0]], v1 =[[0],[0],[0]], dt = 3600) {
@@ -6138,12 +6158,10 @@ function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime)
 function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites, origin = mainWindow.originOrbit) {
     nClusters = nClusters > sats.length ? sats.length : nClusters
     nClusters = math.floor(nClusters)
-    let originECI = Object.values(Coe2PosVelObject(origin))
     sats = sats.map(s => {
-        let satRic = Object.values(s.position)
-        let satEci = Ric2Eci(satRic.slice(0,3), satRic.slice(3,6), originECI.slice(0,3), originECI.slice(3,6))
-        let y = satEci.rEcci[1]
-        let x = satEci.rEcci[0]
+        let satEci = Object.values(Coe2PosVelObject(s.position))
+        let y = satEci[1]
+        let x = satEci[0]
         return {long: Math.atan2(y,x) * 180 / Math.PI, cluster: undefined}
     })
     let maxLong = math.max(sats.map(s => s.long))
