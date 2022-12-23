@@ -758,15 +758,13 @@ class windowCanvas {
             startDate = this.startDate,
             originOrbit = this.originOrbit
         } = data
+        this.updateOrigin(originOrbit)
         this.plotWidth = plotWidth;
         this.relativeData = relativeData;
         this.satellites = [];
-        this.mm = mm;
         this.timeDelta = timeDelta;
         this.scenarioLength = scenarioLength;
-        this.initSun = initSun;
         this.startDate = new Date(startDate);
-        this.originOrbit = originOrbit
         satellites.forEach(sat =>{
             this.satellites.push(
                 new Satellite({
@@ -4312,7 +4310,7 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
 function getCurrentPosition(options = {}) {
     let {time = mainWindow.scenarioTime} = options;
     let index = this.stateHistory.findIndex(s => s.t > time) - 1
-    index = index < 0 ? this.stateHist.length - 1 : index
+    index = index < 0 ? this.stateHistory.length - 1 : index
     let indexTime = this.stateHistory[index].t
     let position = this.stateHistory[index].position
     // Find all burns that have any duration inside the timeDelta period
