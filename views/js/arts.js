@@ -60,8 +60,8 @@ class windowCanvas {
     j2 = false;
     stringLimit = [0,8];
     error = { // at right after manuever while generating J2000 states, halves every hour
-        neutral: {p: 25.6, v: 36.158, c: 1}, // Full Error
-        friendly: {p: 25.6 / 3, v: 36.158 / 3, c: 1}, // reduced error
+        neutral: {p: 25.6, v: 36.158, cp: 1.5, cv: 3.5}, // Full Error
+        friendly: {p: 25.6 / 3, v: 36.158 / 3, cp: 1.5, cv: 3.5}, // reduced error
         closed: {p: 0, v: 0, c: 1} // no error
     }; 
     frameCenter= {
@@ -6617,8 +6617,8 @@ function fitPolynomialRedux(x = [0, 1, 3], y = [1,-2,4]) {
 }
 
 function errorFromTime(t = mainWindow.scenarioTime, error = mainWindow.error.neutral) {
-    let p = error.p / (1.6 ** (t / 3600))
-    let v = error.v / (4.51977 ** (t / 3600)) / 1000
+    let p = error.p / (error.cp ** (t / 3600))
+    let v = error.v / (error.cv ** (t / 3600)) / 1000
     return [p,p,p,v,v,v]
 }
 
@@ -6865,8 +6865,8 @@ function updateWhiteCellTimeAndErrors() {
     let velErrors = whiteCellWindow.document.querySelectorAll('.vel-error')
     let pointingData = whiteCellWindow.document.querySelectorAll('.white-pointing-data')
     for (let index = 0; index < posErrors.length; index++) {
-        posErrors[index].innerText = satErrors[index].error[0].toFixed(2)
-        velErrors[index].innerText = (satErrors[index].error[0]).toFixed(2)
+        posErrors[index].innerText = satErrors[index].p.toFixed(2)
+        velErrors[index].innerText = (satErrors[index].v * 1000).toFixed(2)
         if (mainWindow.satellites[index].point !== 'none'  && mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point) !== -1) {
             let relData = getRelativeData(index, mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point))
             let relDataString = `Range: ${relData.range.toFixed(1)} km CATS: ${relData.sunAngle.toFixed(1)}<sup>o</sup>`
@@ -7313,67 +7313,120 @@ function generateTleHistory() {
 
 function calculateSatErrorStates(team = 1, time = mainWindow.desired.scenarioTime) {
     team = Number(team)
-    let errors = [], currentOrigin = propToTime(Object.values(Coe2PosVelObject(mainWindow.originOrbit)), time, false)
-    mainWindow.satellites.forEach((sat) => {
-        let currentState = math.squeeze(Object.values(sat.currentPosition({time})))
-        let currentEciState = Ric2Eci(currentState.slice(0,3), currentState.slice(3,6), currentOrigin.slice(0,3), currentOrigin.slice(3,6))
-        currentEciState = [...currentEciState.rEcci, ...currentEciState.drEci]
+    // Calculate expected open loop errors
+    let errors = mainWindow.satellites.map((sat,iiSat) => {
+        let lastBurn = [{t: -86400, mag: 0}, ...sat.burns.filter(b => b.time < time).map(b => {
+            return {t: b.time, mag: math.norm(b.direction)}
+        })]
+        lastBurn = lastBurn[lastBurn.length - 1]
         let trackType = sat.team === team ? 'friendly' : 'neutral'
-        let lastBurn = [-86400, ...sat.burns.filter(b => b.time < time).map(b => b.time)]
-        lastBurn = time - lastBurn[lastBurn.length - 1]
-        let error = errorFromTime(lastBurn, mainWindow.error[trackType])
-        let errorEciPosition = currentEciState.map((s,ii) => s + randn_bm() * error[ii])
-        errors.push({
-            name: sat.name,
-            lastBurn,
-            position: currentState,
-            eciPosition: currentEciState,
-            errorEciPosition,
-            error
-        })
+        let err = errorFromTime(time - lastBurn.t, mainWindow.error[trackType])
+        return {p: err[0], v: err[3], truth: Object.values(getCurrentInertial(iiSat, time)), selfIndex: iiSat}
     })
-    // Account for satellites tracking other satellites onboard
-    mainWindow.satellites.forEach(sat => {
-        let currentSun = mainWindow.getCurrentSun(time)
-        let currentState = math.squeeze(Object.values(sat.currentPosition({time})))
-        let errorSat = errors.findIndex(s => s.name === sat.name)
-        let satellitesTracking = mainWindow.satellites.filter(filt => filt.team === team && filt.point === sat.name)
-        if (satellitesTracking.length > 0) {
-            // Get error information from sats tracking and filter out those without Sun
-            satellitesTracking = satellitesTracking.map(mSat => errors.find(findSat => findSat.name === mSat.name)).filter(filtSat => {
-                let originPos = filtSat.position
-                let targetPos = currentState
-                let relPos = math.subtract(originPos, targetPos).slice(0,3)
-                let sunAngle = math.acos(math.dot(currentSun, relPos) / math.norm(currentSun) / math.norm(relPos)) * 180 / Math.PI
-                return sunAngle < 90
-            })
-            let parallelRange = satellitesTracking.map(mSat => math.norm(math.subtract(mSat.position, currentState)))
-            console.log(parallelRange);
-            parallelRange = 1/parallelRange.reduce((a,b) => a + 1/b,0)
-            // StD from onboard is 2% of 1/(1/a + 1/b) from from satellites tracking
-            let std = parallelRange / 50
-            std = [std, std, std, std/1000, std/1000, std/1000]
-            let minErrorTracker = satellitesTracking.find(findSat => findSat.error[0] === Math.min(...satellitesTracking.map(s => s.error[0])))
-            let satOrigError = errors[errorSat].error.slice()
-            if (satellitesTracking.length > 0) {
-                if ((minErrorTracker.error[0] + std[0]) < errors[errorSat].error[0]) {
-                    errors[errorSat].error = math.add(minErrorTracker.error.slice(), std)
-                    let relState = math.subtract(errors[errorSat].eciPosition, minErrorTracker.eciPosition).map((s,ii) => s + randn_bm() * std[ii])
-                    errors[errorSat].errorEciPosition = math.add(minErrorTracker.errorEciPosition, relState)
-                }
-            }
-            // If error on tracked satellite is lower than current error on tracking satellite, can be used
-            // to buy down error on tracking satellite
-            satellitesTracking.forEach(trackSat => {
-                if ((satOrigError[0] + std[0]) < trackSat.error[0]) {
-                    // Buy down error from tracked satellite
-                    trackSat.error = math.add(satOrigError, std)
-                    let relState = math.subtract(trackSat.eciPosition, errors[errorSat].eciPosition).map((s,ii) => s + randn_bm() * std[ii])
-                    trackSat.errorEciPosition = math.add(errors[errorSat].errorEciPosition, relState)
-                }
-            })
+    
+    // Find all team satellites that are looking at another satellite and have Sun
+    let teamSats = mainWindow.satellites.filter((sat,iiSat) => {
+        if (sat.team !== team) return false
+        if (sat.point === 'none') return false
+        // Get index of satellite pointing to
+        let pointIndex = mainWindow.satellites.findIndex(satPoint => satPoint.name === sat.point)
+        let relData = getRelativeData(iiSat, pointIndex, false)
+        if (relData.sunAngle > 90) return false
+        return true
+    }).map((sat, iiSat) => {
+        let selfIndex = mainWindow.satellites.findIndex(satSelf => satSelf.name === sat.name)
+        let pointIndex = mainWindow.satellites.findIndex(satPoint => satPoint.name === sat.point)
+        let relData = getRelativeData(selfIndex, pointIndex, false)
+        return {
+            position: sat.currentPosition({time}),
+            selfIndex,
+            target: pointIndex,
+            range: relData.range
         }
     })
+
+    // Calculate combined covariance of all "groupings" (satellites looking at the same target)
+    // Get unique targets
+    let targets = [...new Set(teamSats.map(t => t.target))]
+    // Sort by the targets with most pointed at it (so that it's covariance is figured first)
+    targets = targets.sort((a,b) => {
+        return teamSats.filter(t => t.target === a).length - teamSats.filter(t => t.target === b).length
+    }).reverse()
+    for (let index = 0; index < targets.length; index++) {
+        let pointedToTarget = teamSats.filter(s => s.target === targets[index])
+        // get sat with lowest covariance, that will be base for everything
+        let combinedIndexes = [targets[index], ...pointedToTarget.map(s => s.selfIndex)]
+        let covCombined = combinedIndexes.map(s => errors[s].p)
+        let minCov = math.min(covCombined)
+        let minIndex = combinedIndexes[covCombined.findIndex(s => minCov === s)]
+        let targetIndex = targets[index]
+        combinedIndexes.forEach((ii,jj) => {
+            if (errors[ii].ref !== undefined) return
+            let curError = errors[ii]
+            let lastBurn = [{t: -86400, mag: 0}, ...mainWindow.satellites[ii].burns.filter(b => b.time < time).map(b => {
+                return {t: b.time, mag: math.norm(b.direction)}
+            })]
+            lastBurn = lastBurn[lastBurn.length - 1]
+            let timeSinceLastBurn = time - lastBurn.t
+            if (ii === minIndex) return
+            else if (ii === targetIndex) {
+                // More trackers will result in better std
+                let dataAll = teamSats.filter(s => s.target === targetIndex).map(s => s.range)
+                let combinedRange = 1/dataAll.reduce((a,b) => a + 1/b, 0)
+                
+                let trackError = {
+                    p: 0.06 * combinedRange,
+                    v: 0.06 * combinedRange,
+                    cp: 6,
+                    cv: 6
+                }
+                errors[ii].ref = minIndex
+                errors[ii].error = errorFromTime(timeSinceLastBurn, trackError)[0] + 0.005*combinedRange
+            }
+            else {
+                let data = teamSats.find(s => s.selfIndex === ii)
+                let trackError = {
+                    p: 0.06 * data.range,
+                    v: 0.06 * data.range,
+                    cp: 6,
+                    cv: 6
+                }
+                errors[ii].ref = targetIndex
+                errors[ii].error = errorFromTime(timeSinceLastBurn, trackError)[0] + 0.005*data.range
+            }
+        })
+    }
+
+    //  Calc states of open-loop satellits
+    for (let index = 0; index < errors.length; index++) {
+        if (errors[index].ref === undefined) {
+            let std = [errors[index].p,errors[index].p,errors[index].p,errors[index].v,errors[index].v,errors[index].v].map(s => s * randn_bm())
+            errors[index].trackedState = math.add(errors[index].truth, std)
+        }
+    }
+    // Iterate until all satellites have a tracked state, start by getting list of satellites that are referenced by others
+    let referencedSatellites = errors.filter(e => errors.filter(s => e.selfIndex === s.ref).length > 0 && e.trackedState === undefined).map(s => s.selfIndex)
+    while (referencedSatellites.length > 0) {
+        for (let index = 0; index < referencedSatellites.length; index++) {
+            let ref = errors[referencedSatellites[index]].ref;
+            let error = errors[referencedSatellites[index]].error
+            error = [error, error, error, error/1000, error/1000, error/1000].map(s => s * randn_bm())
+            let relState = math.subtract(errors[referencedSatellites[index]].truth, errors[ref].truth)
+            relState = math.add(relState, error)
+            errors[referencedSatellites[index]].trackedState = math.add(relState, errors[ref].trackedState)
+        }
+        referencedSatellites = errors.filter(e => errors.filter(s => e.selfIndex === s.ref).length > 0 && e.trackedState === undefined).map(s => s.selfIndex)
+    }
+    // Calc tracked state for the rest of the satellites
+    for (let index = 0; index < errors.length; index++) {
+        if (errors[index].trackedState !== undefined) continue
+        let ref = errors[index].ref
+        let error = errors[index].error
+        error = [error, error, error, error/1000, error/1000, error/1000].map(s => s * randn_bm())
+        let relState = math.subtract(errors[index].truth, errors[ref].truth)
+        relState = math.add(relState, error)
+        errors[index].trackedState = math.add(relState, errors[ref].trackedState)
+    }
 
     return errors
 }
