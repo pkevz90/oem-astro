@@ -6861,16 +6861,23 @@ function updateWhiteCellTimeAndErrors() {
     let time = mainWindow.desired.scenarioTime
     let teamPerspective = Number(whiteCellWindow.document.querySelector('#white-cell-team').value)
     let satErrors = calculateSatErrorStates(teamPerspective)
-    let posErrors = whiteCellWindow.document.querySelectorAll('.pos-error')
-    let velErrors = whiteCellWindow.document.querySelectorAll('.vel-error')
+    let errorSpans = whiteCellWindow.document.querySelectorAll('.sat-error-span')
     let pointingData = whiteCellWindow.document.querySelectorAll('.white-pointing-data')
-    for (let index = 0; index < posErrors.length; index++) {
-        posErrors[index].innerText = satErrors[index].p.toFixed(2)
-        velErrors[index].innerText = (satErrors[index].v * 1000).toFixed(2)
-        if (mainWindow.satellites[index].point !== 'none'  && mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point) !== -1) {
+    for (let index = 0; index < errorSpans.length; index++) {
+        if (satErrors[index].ref !== undefined) {
+            errorSpans[index].innerHTML = 'CL StD ' + mainWindow.satellites[satErrors[index].ref].name + '&#8594 ' + satErrors[index].error.toFixed(2) + ' km'
+        }
+        else {
+            errorSpans[index].innerText = 'OL StD ' + satErrors[index].p.toFixed(2) + ' km/' + (1000*satErrors[index].v).toFixed(2) + ' m/s'
+        }
+        if (mainWindow.satellites[index].point !== 'none' && mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point) !== -1) {
             let relData = getRelativeData(index, mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point))
             let relDataString = `Range: ${relData.range.toFixed(1)} km CATS: ${relData.sunAngle.toFixed(1)}<sup>o</sup>`
             pointingData[index].innerHTML = relDataString
+        }
+        else {
+            pointingData[index].innerHTML = ''
+
         }
     }
     whiteCellWindow.document.getElementById('main-time').value = convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-time * 1000)))
@@ -6898,8 +6905,7 @@ function updateWhiteCellWindow() {
                 <option ${sat.team === 3 ? 'selected' : ''} value="3">3</option>
                 <option ${sat.team === 4 ? 'selected' : ''} value="4">4</option>
             </select> 
-            <span style="margin-left: 20px">
-                Error StD <span class="pos-error"></span> km <span class="vel-error"></span> m/s
+            <span style="margin-left: 20px" class="sat-error-span">
             </span>
         </div>
         <div style="margin-left: 30px">Pointing 
@@ -7344,6 +7350,7 @@ function calculateSatErrorStates(team = 1, time = mainWindow.desired.scenarioTim
             range: relData.range
         }
     })
+    console.log(teamSats);
 
     // Calculate combined covariance of all "groupings" (satellites looking at the same target)
     // Get unique targets
@@ -7377,11 +7384,11 @@ function calculateSatErrorStates(team = 1, time = mainWindow.desired.scenarioTim
                 let trackError = {
                     p: 0.06 * combinedRange,
                     v: 0.06 * combinedRange,
-                    cp: 6,
-                    cv: 6
+                    cp: 200,
+                    cv: 200
                 }
                 errors[ii].ref = minIndex
-                errors[ii].error = errorFromTime(timeSinceLastBurn, trackError)[0] + 0.005*combinedRange
+                errors[ii].error = errorFromTime(timeSinceLastBurn, trackError)[0] + 0.001*combinedRange
             }
             else {
                 let data = teamSats.find(s => s.selfIndex === ii)
