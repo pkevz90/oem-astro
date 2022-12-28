@@ -305,22 +305,30 @@ class Propagator {
     }
     propToTime(state, date, tf = 86400, maxError = 1e-9) {
         let h = 1000
-        let dt_total = 0
-        let steps_total = 0
         let t = 0
-        while (t < tf) {
+        let stateReturn = [{
+            date: new Date(date - (-t*1000)),
+            state: state.slice()
+        }]
+        while ((t+h) < tf) {
             let rkResult = rkf45(state, new Date(date - (-1000*t)), h, maxError)
             state = rkResult.y
             h = rkResult.hnew
             t += rkResult.dt
             if (rkResult.dt > 0) {
-                dt_total += rkResult.dt
-                steps_total++
+                stateReturn.push({
+                    date: new Date(date - (-t*1000)),
+                    state: state.slice()
+                })
             }
         }
         let rkResult = rkf45(state, new Date(date - (-1000*t)), tf - t, 1)
         state = rkResult.y
-        return state
+        stateReturn.push({
+            date: new Date(date - (-tf*1000)),
+            state: state.slice()
+        })
+        return stateReturn
     }
     rkf45(state, time, h = 2000, epsilon = 1e-12) {
         let k1 = math.dotMultiply(h, hpop.highPrecisionProp(state, time))
