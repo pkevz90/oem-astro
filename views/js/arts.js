@@ -5049,42 +5049,24 @@ function circSatellite(sat = 0, time = mainWindow.scenarioTime) {
     let curTh = math.atan2( curPos[1], curPos[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3))
     let dTh = (398600.4418 / curR ** 3) ** (1/2) - (398600.4418 / (398600.4418 / mainWindow.mm ** 2)) ** (1/2)
     let newTh = curTh + dt * dTh
-    let newPos = [curR * Math.cos(newTh) - (398600.4418 / mainWindow.mm ** 2) ** (1/3), curR * Math.sin(newTh), curPos2.c[0]]
+    let newPos = [curR * Math.cos(newTh) - (398600.4418 / mainWindow.mm ** 2) ** (1/3), curR * Math.sin(newTh), curPos2[2]]
     
     mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
         return burn.time < mainWindow.scenarioTime;
     })
-    mainWindow.satellites[sat].burns.push({
-        time: mainWindow.desired.scenarioTime,
-        direction: {
-            r: 0,
-            i: 0,
-            c: 0
-        },
-        waypoint: {
-            tranTime: dt,
-            target: {
-                r: newPos[0],
-                i: newPos[1],
-                c: newPos[2],
-            }
-        }
-    })
-    mainWindow.satellites[sat].genBurns();
-    let dV = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].direction
-    dV = math.norm([dV.r, dV.i, dV.c]) / mainWindow.satellites[sat].a
-    mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].time -= dV / 2
-    mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].waypoint.tranTime += dV / 2
-    mainWindow.satellites[sat].genBurns();
-    let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
-    if (math.norm([checkBurn.direction.r, checkBurn.direction.i, checkBurn.direction.c]) < 1e-8) {
-        mainWindow.satellites[sat].burns.pop();
-        mainWindow.satellites[sat].genBurns();
-        showScreenAlert('Waypoint outside kinematic reach of satellite with given time of flight');
-        return;
-    }
-    mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + dt;
-    document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + dt;
+    insertWaypointBurn(sat, mainWindow.desired.scenarioTime, newPos,dt)
+    // let dV = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].direction
+    // dV = math.norm(dV) / mainWindow.satellites[sat].a
+    // mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].time -= dV / 2
+    // mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].waypoint.tranTime += dV / 2
+    // mainWindow.satellites[sat].calcTraj(true);
+    // let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
+    // if (math.norm(checkBurn.direction) < 1e-8) {
+    //     mainWindow.satellites[sat].burns.pop();
+    //     mainWindow.satellites[sat].genBurns();
+    //     showScreenAlert('Waypoint outside kinematic reach of satellite with given time of flight');
+    //     return;
+    // }
     
 }
 

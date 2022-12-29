@@ -1,3 +1,144 @@
+class astro {
+    static dot(a=[1,3,4],b=[3,4,5]) {
+        return a.map((el,ii) => el * b[ii]).reduce((a,b) => a + b, 0)
+    }
+    static cross(a=[1,3,4],b=[3,4,5]) {
+        // tbd
+    }
+    static rot (angle = 45, axis = 1, useDegree = true) {
+        angle = useDegree ? angle*Math.PI / 180 : angle
+        let rotMat;
+        if (axis === 1) {
+            rotMat = [
+                [1, 0, 0],
+                [0, Math.cos(angle), Math.sin(angle)],
+                [0, -Math.sin(angle), Math.cos(angle)]
+            ];
+        } else if (axis === 2) {
+            rotMat = [
+                [Math.cos(angle), 0, -Math.sin(angle)],
+                [0, 1, 0],
+                [Math.sin(angle), 0, Math.cos(angle)]
+            ];
+        } else {
+            rotMat = [
+                [Math.cos(angle), Math.sin(angle), 0],
+                [-Math.sin(angle), Math.cos(angle), 0],
+                [0, 0, 1]
+            ]
+        }
+        return rotMat;
+    }
+    static siderealTime(jdUti=2448855.009722) {
+        let tUti = (jdUti - 2451545.0) / 36525
+        return ((67310.54841 + (876600*3600 + 8640184.812866)*tUti + 0.093104*tUti*tUti - 6.2e-6*tUti*tUti*tUti) % 86400)/240
+    }
+    static julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
+        return 367 * yr - Math.floor(7*(yr+Math.floor((mo+9)/12)) / 4) + Math.floor(275*mo/9) + d + 1721013.5 + ((s/60+min)/60+h)/24
+    }
+    static moonEciFromTime(startDate = new Date()) {
+        let sind = ang => Math.sin(ang*Math.PI / 180)
+        let cosd = ang => Math.cos(ang*Math.PI / 180)
+        let jd = astro.julianDate(startDate.getFullYear(), startDate.getMonth() + 1, startDate.getDate(), startDate.getHours(), startDate.getMinutes(), startDate.getSeconds()+startDate.getMilliseconds())
+        let tdb = (jd - 2451545) / 36525
+        let lambda_ell = 218.32 + 481267.8813 * tdb + 6.29 * sind(134.9 + 477198.85 * tdb)-
+            1.27*sind(259.2-413335.38*tdb) +
+            0.66*sind(235.7+890534.23*tdb) +
+            0.21*sind(269.9+954397.7*tdb) -
+            0.19*sind(357.5+35999.05*tdb) -
+            0.11*sind(186.6+966404.05*tdb)
+        lambda_ell = lambda_ell % 360
+        lambda_ell = lambda_ell < 0 ? lambda_ell + 360 : lambda_ell
+        
+        let phi_ell = 5.13*sind(93.3+483202.03*tdb) + 
+            0.28*sind(228.2+960400.87*tdb) - 
+            0.28*sind(318.3+6003.18*tdb) - 
+            0.17*sind(217.6-407332.2*tdb)
+        phi_ell = phi_ell % 360
+        phi_ell = phi_ell < 0 ? phi_ell + 360 : phi_ell
+       
+        let para = 0.9508 + 
+            0.0518*cosd(134.9+477_198.85*tdb) + 
+            0.0095*cosd(259.2-413_335.38*tdb) +  
+            0.0078*cosd(235.7+890_534.23*tdb) +  
+            0.0028*cosd(269.9+954_397.7*tdb)
+        para = para % 360
+        para = para < 0 ? para + 360 : para
+    
+        let epsilon = 23.439291 - 0.0130042 * tdb-(1.64e-7)*tdb*tdb+(5.04e-7)*tdb*tdb*tdb
+    
+        let rC = 1 / sind(para) * 6378.1363
+        
+        return math.dotMultiply(rC, [cosd(phi_ell) * cosd(lambda_ell), 
+                cosd(epsilon) * cosd(phi_ell) * sind(lambda_ell) - sind(epsilon) * sind(phi_ell), 
+                sind(epsilon) * cosd(phi_ell) * sind(lambda_ell) + cosd(epsilon) * sind(phi_ell)])
+    } 
+    static sunEciFromTime(date = new Date()) {
+        let jdUti = astro.julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + date.getMilliseconds())
+        let tUti = (jdUti - 2451545) / 36525
+        let lamba = 280.4606184 + 36000.770005361 * tUti
+        let m = 357.5277233 + 35999.05034 * tUti
+        let lambaEll = lamba + 1.914666471 * Math.sin(m* Math.PI / 180) + 0.019994643 * Math.sin(2 * m* Math.PI / 180)
+        let phi = 0
+        let epsilon = 23.439291-0.0130042 * tUti
+        let rSun = 1.000140612-0.016708617 * Math.cos(m * Math.PI / 180)-0.000139589*Math.cos(2*m* Math.PI / 180)
+        let au = 149597870.7 //km
+        rSun *= au
+        return [
+           rSun * Math.cos(lambaEll* Math.PI / 180),
+           rSun * Math.cos(epsilon* Math.PI / 180) * Math.sin(lambaEll* Math.PI / 180),
+           rSun * Math.sin(epsilon* Math.PI / 180) * Math.sin(lambaEll* Math.PI / 180)
+        ]
+    }
+    static meanObliquityOfTheEcliptic(T_tt=0.0426236319) {
+        return 23.439291 - 0.0130042*T_tt - (1.64e-7) * T_tt*T_tt+(5.04e-7)*T_tt*T_tt*T_tt
+    }
+    static trueObliquityOfTheEcliptic(T_tt=0.0426236319) {
+        // tbd
+    }
+    static eci2latlong(r=[5102.508958, 6123.011401, 6378.136928], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
+        // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
+        // ECI to ECEF
+        let jd_TT = astro.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()+date.getMilliseconds()/1000) 
+        let t_TT = (jd_TT - 2451545) / 36525
+        let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
+        zeta /= 3600
+        let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
+        theta /= 3600
+        let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
+        z /= 3600
+        let p = math.multiply(astro.rot(zeta, 3), astro.rot(-theta, 2), astro.rot(z, 3))
+
+        let thetaGmst = astro.siderealTime(jd_TT)
+        let w = astro.rot(-thetaGmst, 3)
+        let overallR = math.multiply(math.transpose(w), math.transpose(p))
+        r = math.squeeze(math.multiply(overallR, math.transpose([r])))
+        let long = math.atan2(r[1], r[0])
+        let lat = math.atan2(r[2], math.norm(r.slice(0,2)))
+        return {lat, long, rot: overallR, r_ecef: r}
+    }
+    static ecef2eci(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28,328)) {
+        // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
+        // ECI to ECEF
+        let jd_UTI = astro.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()+date.getMilliseconds()/1000) 
+        let t_TT = (jd_UTI - 2451545) / 36525
+        let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
+        zeta /= 3600
+        let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
+        theta /= 3600
+        let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
+        z /= 3600
+        let p = math.multiply(astro.rot(zeta, 3), astro.rot(-theta, 2), astro.rot(z, 3))
+        let thetaGmst = astro.siderealTime(jd_UTI)
+        // Figure out why theta doesn't match
+        thetaGmst = 312.8067654
+        let w = astro.rot(-thetaGmst, 3)
+        r = math.multiply(w, r) 
+        r = math.multiply(p, r)
+        return r
+    }
+}
+
 class Propagator {
     constructor(options = {}) {
         let {
@@ -46,7 +187,7 @@ class Propagator {
             position[3], position[4], position[5],...a]
     }
     recursiveGeoPotential(state, date) {
-        let {lat, long, rot, r_ecef} = this.eci2latlong(state.slice(0,3), date)
+        let {lat, long, rot, r_ecef} = astro.eci2latlong(state.slice(0,3), date)
         rot = math.transpose(rot)
         let re = 6378.1363, r = math.norm(state.slice()), x = r_ecef[0], y=r_ecef[1], z=r_ecef[2]
         let p = [[1],[Math.sin(lat), Math.cos(lat)]]
@@ -84,91 +225,6 @@ class Propagator {
     
         return {p, a: math.squeeze(math.multiply(rot, math.transpose([[a_i, a_j, a_k]])))}  
     }
-    eci2latlong(r=[5102.508958, 6123.011401, 6378.136928], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
-        // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
-        // ECI to ECEF
-        let jd_TT = this.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()+date.getMilliseconds()/1000) 
-        let t_TT = (jd_TT - 2451545) / 36525
-        let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
-        zeta /= 3600
-        let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
-        theta /= 3600
-        let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
-        z /= 3600
-        let p = math.multiply(this.rot(zeta, 3), this.rot(-theta, 2), this.rot(z, 3))
-
-        let thetaGmst = this.siderealTime(jd_TT)
-        let w = this.rot(-thetaGmst, 3)
-        let overallR = math.multiply(math.transpose(w), math.transpose(p))
-        r = math.squeeze(math.multiply(overallR, math.transpose([r])))
-        // console.log(r);
-        let long = math.atan2(r[1], r[0])
-        let lat = math.atan2(r[2], math.norm(r.slice(0,2)))
-        return {lat, long, rot: overallR, r_ecef: r}
-    }
-    ecef2eci(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28,328)) {
-        // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
-        // ECI to ECEF
-        let jd_UTI = this.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()+date.getMilliseconds()/1000) 
-        let jd_TT = this.julianDate(2004, 4, 6, 7, 52, 32.570009) 
-        let t_TT = (jd_UTI - 2451545) / 36525
-        let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
-        zeta /= 3600
-        let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
-        theta /= 3600
-        let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
-        z /= 3600
-        let p = math.multiply(this.rot(zeta, 3), this.rot(-theta, 2), this.rot(z, 3))
-        let thetaGmst = this.siderealTime(jd_UTI)
-        // Figure out why theta doesn't match
-        thetaGmst = 312.8067654
-        let w = this.rot(-thetaGmst, 3)
-        r = math.multiply(w, r) 
-        // console.log(r);
-        // how to calculate epsilon
-        // let epsilon1980 = 23.4407685
-        // let epsilon1980bat = 23.4387368
-        // let psi1980 = -0.0034108
-        // let nRot = math.multiply(this.rot(-epsilon1980bat,1), this.rot(psi1980, 3), this.rot(epsilon1980))
-        // r = math.multiply(nRot,r) 
-        r = math.multiply(p, r)
-        // let expected = [5102.508958, 6123.011401, 6378.136928]
-        // console.log(math.subtract(r, expected));
-        return r
-    }
-    siderealTime(jdUti=2448855.009722) {
-        let tUti = (jdUti - 2451545) / 36525
-        return ((67310.548 + (876600*3600 + 8640184.812866)*tUti + 0.093104*tUti*tUti - 6.2e-6*tUti*tUti*tUti) % 86400)/240
-    }
-    rot(angle = 0, axis = 1, type = 'deg') {
-        if (type === 'deg') {
-            angle *= Math.PI / 180;
-        }
-        let rotMat;
-        if (axis === 1) {
-            rotMat = [
-                [1, 0, 0],
-                [0, Math.cos(angle), Math.sin(angle)],
-                [0, -Math.sin(angle), Math.cos(angle)]
-            ];
-        } else if (axis === 2) {
-            rotMat = [
-                [Math.cos(angle), 0, -Math.sin(angle)],
-                [0, 1, 0],
-                [Math.sin(angle), 0, Math.cos(angle)]
-            ];
-        } else {
-            rotMat = [
-                [Math.cos(angle), Math.sin(angle), 0],
-                [-Math.sin(angle), Math.cos(angle), 0],
-                [0, 0, 1]
-            ]
-        }
-        return rotMat;
-    }
-    julianDate(yr=1996, mo=10, d=26, h=14, min=20, s=0) {
-        return 367 * yr - Math.floor(7*(yr+Math.floor((mo+9)/12)) / 4) + Math.floor(275*mo/9) + d + 1721013.5 + ((s/60+min)/60+h)/24
-    }
     rk4(state = [42164, 0, 0, 0, -3.070, 0], dt = 10, date = new Date()) {
         let k1 = this.highPrecisionProp(state, date);
         let k2 = this.highPrecisionProp(math.add(state, math.dotMultiply(dt/2, k1)), new Date(date - (-dt / 2 * 1000)));
@@ -178,7 +234,7 @@ class Propagator {
     }
     thirdBodyEffects(eciState = state1_init, date = state1_init_Epoch) {
         //Moon
-        let moonVector = this.moonEciFromTime(date)
+        let moonVector = astro.moonEciFromTime(date)
         let muMoon = 4902.799
         let moonSatVec = math.subtract(moonVector, eciState.slice(0,3))
         let rEarthMoon = math.norm(moonVector)
@@ -189,7 +245,7 @@ class Propagator {
             muMoon*(moonSatVec[2] / rSatMoon**3 - moonVector[2]/rEarthMoon**3),
         ]
         //Sun
-        let sunVector = this.sunEciFromTime(date)
+        let sunVector = astro.sunEciFromTime(date)
         let muSun = 1.32712428e11
         let sunSatVec = math.subtract(sunVector, eciState.slice(0,3))
         let rEarthSun = math.norm(sunVector)
@@ -200,60 +256,6 @@ class Propagator {
             muSun*(sunSatVec[2] / rSatSun**3 - sunVector[2]/rEarthSun**3),
         ]
         return math.add(aMoon, aSun)
-    }
-    moonEciFromTime(startDate = new Date()) {
-        let sind = ang => Math.sin(ang*Math.PI / 180)
-        let cosd = ang => Math.cos(ang*Math.PI / 180)
-        let jd = this.julianDate(startDate.getFullYear(), startDate.getMonth() + 1, startDate.getDate(), startDate.getHours(), startDate.getMinutes(), startDate.getSeconds())
-        let tdb = (jd - 2451545) / 36525
-        let lambda_ell = 218.32 + 481267.8813 * tdb + 6.29 * sind(134.9 + 477198.85 * tdb)-
-            1.27*sind(259.2-413335.38*tdb) +
-            0.66*sind(235.7+890534.23*tdb) +
-            0.21*sind(269.9+954397.7*tdb) -
-            0.19*sind(357.5+35999.05*tdb) -
-            0.11*sind(186.6+966404.05*tdb)
-        lambda_ell = lambda_ell % 360
-        lambda_ell = lambda_ell < 0 ? lambda_ell + 360 : lambda_ell
-        
-        let phi_ell = 5.13*sind(93.3+483202.03*tdb) + 
-            0.28*sind(228.2+960400.87*tdb) - 
-            0.28*sind(318.3+6003.18*tdb) - 
-            0.17*sind(217.6-407332.2*tdb)
-        phi_ell = phi_ell % 360
-        phi_ell = phi_ell < 0 ? phi_ell + 360 : phi_ell
-       
-        let para = 0.9508 + 
-            0.0518*cosd(134.9+477_198.85*tdb) + 
-            0.0095*cosd(259.2-413_335.38*tdb) +  
-            0.0078*cosd(235.7+890_534.23*tdb) +  
-            0.0028*cosd(269.9+954_397.7*tdb)
-        para = para % 360
-        para = para < 0 ? para + 360 : para
-    
-        let epsilon = 23.439291 - 0.0130042 * tdb-(1.64e-7)*tdb*tdb+(5.04e-7)*tdb*tdb*tdb
-    
-        let rC = 1 / sind(para) * 6378.1363
-        
-        return math.dotMultiply(rC, [cosd(phi_ell) * cosd(lambda_ell), 
-                cosd(epsilon) * cosd(phi_ell) * sind(lambda_ell) - sind(epsilon) * sind(phi_ell), 
-                sind(epsilon) * cosd(phi_ell) * sind(lambda_ell) + cosd(epsilon) * sind(phi_ell)])
-    } 
-    sunEciFromTime(date = new Date()) {
-        let jdUti = this.julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds())
-        let tUti = (jdUti - 2451545) / 36525
-        let lamba = 280.4606184 + 36000.770005361 * tUti
-        let m = 357.5277233 + 35999.05034 * tUti
-        let lambaEll = lamba + 1.914666471 * Math.sin(m* Math.PI / 180) + 0.019994643 * Math.sin(2 * m* Math.PI / 180)
-        let phi = 0
-        let epsilon = 23.439291-0.0130042 * tUti
-        let rSun = 1.000140612-0.016708617 * Math.cos(m * Math.PI / 180)-0.000139589*Math.cos(2*m* Math.PI / 180)
-        let au = 149597870.7 //km
-        rSun *= au
-        return [
-           rSun * Math.cos(lambaEll* Math.PI / 180),
-           rSun * Math.cos(epsilon* Math.PI / 180) * Math.sin(lambaEll* Math.PI / 180),
-           rSun * Math.sin(epsilon* Math.PI / 180) * Math.sin(lambaEll* Math.PI / 180)
-        ]
     }
     atmosphericDragEffect(eciState = state2_init, options = {}) {
         let {cd = this.cd, m = this.mass, area = this.area} = options
@@ -308,7 +310,7 @@ class Propagator {
     }
     solarRadiationPressure(state = state1_init, date = state1_init_Epoch, options = {}) {
         let {mass = 850, area = 1, cr = this.cr} = options
-        let sunEci = this.sunEciFromTime(date)
+        let sunEci = astro.sunEciFromTime(date)
         let p_srp = 4.57e-6
         let rSunSat = math.subtract(sunEci, state.slice(0,3))
     
@@ -383,9 +385,6 @@ class Propagator {
             this.c[row[0]][row[1]] = row[2]/normalizingFactor
             this.s[row[0]][row[1]] = row[3]/normalizingFactor
         })
-    }
-    meanObliquityOfTheEcliptic(T_tt=0.0426236319) {
-        return 23.439291 - 0.0130042*T_tt - (1.64e-7) * T_tt*T_tt+(5.04e-7)*T_tt*T_tt*T_tt
     }
 }
 
@@ -2944,3 +2943,4 @@ const EGM_96_NORMALIZED = [
     [70, 69, -2.20353040552e-9, 9.94013069152e-10],
     [70, 70, -4.70375138826e-10, -6.48306137833e-10]
   ];
+
