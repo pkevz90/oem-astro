@@ -5034,10 +5034,11 @@ function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, ori
 
 function perchSatellite(sat = 0, time = mainWindow.scenarioTime) {
     let curPos = mainWindow.satellites[sat].currentPosition({time})
-    let burnEst = math.norm([curPos.rd[0], curPos.id[0], curPos.cd[0]])
+    let burnEst = math.norm([curPos[3], curPos[4], curPos[5]])
     curPos = mainWindow.satellites[sat].currentPosition({time: time - burnEst / mainWindow.satellites[sat].a / 2})
 
-    let burnOut = perchSatelliteSolver([curPos.r[0], curPos.i[0], curPos.c[0], curPos.rd[0], curPos.id[0], curPos.cd[0]], mainWindow.satellites[sat].a)
+    let burnOut = perchSatelliteSolver(curPos, mainWindow.satellites[sat].a)
+    console.log(burnOut);
     insertDirectionBurn(sat, time - burnEst / mainWindow.satellites[sat].a / 2, burnOut.dir)
 }
 
