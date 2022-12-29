@@ -2422,9 +2422,9 @@ function handleContextClick(button) {
             let tempAngle = [reducedR, Math.cos(angle) * circleR, Math.sin(angle) * circleR]
             let waypoint = math.transpose(math.multiply(R, math.transpose(tempAngle)))
             let newTarget = {
-                r: [Number(target.r) + waypoint[0]],
-                i: [Number(target.i) + waypoint[1]],
-                c: [Number(target.c) + waypoint[2]]
+                r: Number(target[0]) + waypoint[0],
+                i: Number(target[1]) + waypoint[1],
+                c: Number(target[2]) + waypoint[2]
             }
             if (returnWaypoint) return newTarget
             let dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
@@ -2437,30 +2437,13 @@ function handleContextClick(button) {
             opt_fuction: opt_function
         })
         
-        for (ii = 0; ii < 50; ii++) {
+        for (ii = 0; ii < 10; ii++) {
             sunPso.step()
             console.log(sunPso.bestGlobabValue);
         }
         console.log(sunPso.particles.map(part => part.position[1] * 180 / Math.PI));
         target = opt_function(sunPso.bestGlobalPosition, true)
-        mainWindow.satellites[chaserSat].burns.push({
-            time: mainWindow.desired.scenarioTime,
-            direction: {
-                r: 0,
-                i: 0,
-                c: 0
-            },
-            waypoint: {
-                tranTime: tof,
-                target: {
-                    r: target.r[0],
-                    i: target.i[0],
-                    c: target.c[0],
-                }
-            }
-        })
-        mainWindow.satellites[chaserSat].calcTraj(true);
-        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + tof;
+        insertWaypointBurn(chaserSat, mainWindow.desired.scenarioTime, Object.values(target), tof)
         document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
     }
@@ -4233,7 +4216,7 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
 }
 
 function findDvFiniteBurn(r1, r2, a, tf) {
-    let dir = hcwFiniteBurnOneBurn({x: r1.r[0], y: r1.i[0], z: r1.c[0], xd: r1.rd[0], yd: r1.id[0], zd: r1.cd[0]}, {x: r2.r[0], y: r2.i[0], z: r2.c[0], xd: 0, yd: 0, zd: 0}, tf, a);
+    let dir = hcwFiniteBurnOneBurn({x: r1[0], y: r1[1], z: r1[2], xd: r1[3], yd: r1[4], zd: r1[5]}, {x: r2.r, y: r2.i, z: r2.c, xd: 0, yd: 0, zd: 0}, tf, a);
     return dir ? dir.t[0]*tf*a : 10000;
 }
 
