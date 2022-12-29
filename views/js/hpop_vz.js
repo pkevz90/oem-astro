@@ -46,7 +46,7 @@ class Propagator {
             position[3], position[4], position[5],...a]
     }
     recursiveGeoPotential(state, date) {
-        let {lat, long, rot, r_ecef} = this.fk5ReductionTranspose(state.slice(0,3), date)
+        let {lat, long, rot, r_ecef} = this.eci2latlong(state.slice(0,3), date)
         rot = math.transpose(rot)
         let re = 6378.1363, r = math.norm(state.slice()), x = r_ecef[0], y=r_ecef[1], z=r_ecef[2]
         let p = [[1],[Math.sin(lat), Math.cos(lat)]]
@@ -84,10 +84,10 @@ class Propagator {
     
         return {p, a: math.squeeze(math.multiply(rot, math.transpose([[a_i, a_j, a_k]])))}  
     }
-    fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
+    eci2latlong(r=[5102.508958, 6123.011401, 6378.136928], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
         // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
         // ECI to ECEF
-        let jd_TT = this.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()) 
+        let jd_TT = this.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()+date.getMilliseconds()/1000) 
         let t_TT = (jd_TT - 2451545) / 36525
         let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
         zeta /= 3600
@@ -97,19 +97,21 @@ class Propagator {
         z /= 3600
         let p = math.multiply(this.rot(zeta, 3), this.rot(-theta, 2), this.rot(z, 3))
 
-        let thetaGmst = this.siderealTime(this.julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + date.getMilliseconds() / 1000))
+        let thetaGmst = this.siderealTime(jd_TT)
         let w = this.rot(-thetaGmst, 3)
         let overallR = math.multiply(math.transpose(w), math.transpose(p))
         r = math.squeeze(math.multiply(overallR, math.transpose([r])))
+        // console.log(r);
         let long = math.atan2(r[1], r[0])
         let lat = math.atan2(r[2], math.norm(r.slice(0,2)))
         return {lat, long, rot: overallR, r_ecef: r}
     }
-    fk5Reduction(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28)) {
+    ecef2eci(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28,328)) {
         // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
         // ECI to ECEF
-        let jd_TT = this.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()) 
-        let t_TT = (jd_TT - 2451545) / 36525
+        let jd_UTI = this.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()+date.getMilliseconds()/1000) 
+        let jd_TT = this.julianDate(2004, 4, 6, 7, 52, 32.570009) 
+        let t_TT = (jd_UTI - 2451545) / 36525
         let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
         zeta /= 3600
         let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
@@ -117,10 +119,21 @@ class Propagator {
         let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
         z /= 3600
         let p = math.multiply(this.rot(zeta, 3), this.rot(-theta, 2), this.rot(z, 3))
-        let thetaGmst = this.siderealTime(this.julianDate(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds() + 328 / 1000))
+        let thetaGmst = this.siderealTime(jd_UTI)
+        // Figure out why theta doesn't match
+        thetaGmst = 312.8067654
         let w = this.rot(-thetaGmst, 3)
-        r = math.multiply(w,r) 
+        r = math.multiply(w, r) 
+        // console.log(r);
+        // how to calculate epsilon
+        // let epsilon1980 = 23.4407685
+        // let epsilon1980bat = 23.4387368
+        // let psi1980 = -0.0034108
+        // let nRot = math.multiply(this.rot(-epsilon1980bat,1), this.rot(psi1980, 3), this.rot(epsilon1980))
+        // r = math.multiply(nRot,r) 
         r = math.multiply(p, r)
+        // let expected = [5102.508958, 6123.011401, 6378.136928]
+        // console.log(math.subtract(r, expected));
         return r
     }
     siderealTime(jdUti=2448855.009722) {
@@ -303,7 +316,7 @@ class Propagator {
     
         return math.dotMultiply(a, rSunSat)
     }
-    propToTime(state, date, tf = 86400, maxError = 1e-9) {
+    propToTimeHistory(state, date, tf = 86400, maxError = 1e-9) {
         let h = 1000
         let t = 0
         let stateReturn = [{
@@ -311,7 +324,7 @@ class Propagator {
             state: state.slice()
         }]
         while ((t+h) < tf) {
-            let rkResult = rkf45(state, new Date(date - (-1000*t)), h, maxError)
+            let rkResult = this.rkf45(state, new Date(date - (-1000*t)), h, maxError)
             state = rkResult.y
             h = rkResult.hnew
             t += rkResult.dt
@@ -322,7 +335,7 @@ class Propagator {
                 })
             }
         }
-        let rkResult = rkf45(state, new Date(date - (-1000*t)), tf - t, 1)
+        let rkResult = this.rkf45(state, new Date(date - (-1000*t)), tf - t, 1)
         state = rkResult.y
         stateReturn.push({
             date: new Date(date - (-tf*1000)),
@@ -330,13 +343,26 @@ class Propagator {
         })
         return stateReturn
     }
+    propToTime(state, date, tf = 86400, maxError = 1e-9) {
+        let h = 1000
+        let t = 0
+        while ((t+h) < tf) {
+            let rkResult = this.rkf45(state, new Date(date - (-1000*t)), h, maxError)
+            state = rkResult.y
+            h = rkResult.hnew
+            t += rkResult.dt
+        }
+        let rkResult = this.rkf45(state, new Date(date - (-1000*t)), tf - t, 1)
+        state = rkResult.y
+        return state
+    }
     rkf45(state, time, h = 2000, epsilon = 1e-12) {
-        let k1 = math.dotMultiply(h, hpop.highPrecisionProp(state, time))
-        let k2 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(2/9,k1)), new Date(time - (-1000*h*2/9))))
-        let k3 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(1/12,k1),math.dotMultiply(1/4,k2)), new Date(time - (-1000*h/3))))
-        let k4 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(69/128,k1),math.dotMultiply(-243/128,k2),math.dotMultiply(135/64,k3)), new Date(time - (-1000*h*3/4))))
-        let k5 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(-17/12,k1),math.dotMultiply(27/4,k2),math.dotMultiply(-27/5,k3),math.dotMultiply(16/15,k4)), new Date(time - (-1000*h))))
-        let k6 = math.dotMultiply(h, hpop.highPrecisionProp(math.add(state,math.dotMultiply(65/432,k1),math.dotMultiply(-5/16,k2),math.dotMultiply(13/16,k3),math.dotMultiply(4/27,k4),math.dotMultiply(5/144,k5)), new Date(time - (-1000*h*5/6))))
+        let k1 = math.dotMultiply(h, this.highPrecisionProp(state, time))
+        let k2 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(2/9,k1)), new Date(time - (-1000*h*2/9))))
+        let k3 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(1/12,k1),math.dotMultiply(1/4,k2)), new Date(time - (-1000*h/3))))
+        let k4 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(69/128,k1),math.dotMultiply(-243/128,k2),math.dotMultiply(135/64,k3)), new Date(time - (-1000*h*3/4))))
+        let k5 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(-17/12,k1),math.dotMultiply(27/4,k2),math.dotMultiply(-27/5,k3),math.dotMultiply(16/15,k4)), new Date(time - (-1000*h))))
+        let k6 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(65/432,k1),math.dotMultiply(-5/16,k2),math.dotMultiply(13/16,k3),math.dotMultiply(4/27,k4),math.dotMultiply(5/144,k5)), new Date(time - (-1000*h*5/6))))
         let y = math.add(state, math.dotMultiply(47/450, k1), math.dotMultiply(12/25, k3), math.dotMultiply(32/225, k4), math.dotMultiply(1/30, k5), math.dotMultiply(6/25, k6))
         
         let te = math.norm(math.add(math.dotMultiply(-1/150, k1), math.dotMultiply(3/100, k3), math.dotMultiply(-16/75, k4), math.dotMultiply(-1/20, k5), math.dotMultiply(6/25, k6)))
@@ -357,6 +383,9 @@ class Propagator {
             this.c[row[0]][row[1]] = row[2]/normalizingFactor
             this.s[row[0]][row[1]] = row[3]/normalizingFactor
         })
+    }
+    meanObliquityOfTheEcliptic(T_tt=0.0426236319) {
+        return 23.439291 - 0.0130042*T_tt - (1.64e-7) * T_tt*T_tt+(5.04e-7)*T_tt*T_tt*T_tt
     }
 }
 

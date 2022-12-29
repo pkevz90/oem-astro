@@ -1686,3 +1686,13 @@ function showLogo() {
     ctx.fillText('Click anywhere to begin...', cnvs.width / 2, cnvs.height -30)
 }
 showLogo()
+
+function getAccessTimes(sensor = mainWindow.sensors[0], satellite = mainWindow.satellites[0], startEpoch = mainWindow.startTime, tf = 86400) {
+    let propObject = new Propagator()
+    let stateHistory = propObject.propToTime(satellite.origState, startEpoch, tf, 1e-5)
+    stateHistory = stateHistory.map(s => {
+        let azElResults = razel(s.state.slice(0,3), s.date, sensor.lat, sensor.long, h = 0)
+        return {...azElResults, date: s.date}
+    })
+    return stateHistory
+}
