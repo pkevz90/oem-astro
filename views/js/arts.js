@@ -632,7 +632,7 @@ class windowCanvas {
         ctx.textAlign = 'left';
         if (this.relativeData.dataReqs.length > mainWindow.relDataDivs.length) resetDataDivs()
         this.relativeData.dataReqs.forEach((req,ii) => {
-            let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0);
+            let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0, req.interceptTime);
             mainWindow.relDataDivs[ii].forEach(span => {
                 let type = span.getAttribute('type')
                 span.innerText = type === 'interceptData' ? relDataIn[span.getAttribute('type')] : relDataIn[span.getAttribute('type')].toFixed(2)
@@ -1543,7 +1543,9 @@ function startContextClick(event) {
         let target = dataDiv.getAttribute('target')
         let dataCurrent = mainWindow.relativeData.dataReqs.find(req => {
             return req.origin == origin && req.target == target
-        }).data
+        })
+        let intTime = dataCurrent.interceptTime || 1
+        dataCurrent = dataCurrent.data
         ctxMenu.innerHTML = `
         <div style="color: black; background-color: white; padding: 5px; font-family: Courier; cursor: default;">
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'range') ? 'checked' : ''} id="range" type="checkbox"/> <label style="cursor: pointer" for="range">Range</label></div>
@@ -1551,7 +1553,7 @@ function startContextClick(event) {
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'relativeVelocity') ? 'checked' : ''} id="relativeVelocity" type="checkbox"/> <label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'poca') ? 'checked' : ''} id="poca" type="checkbox"/> <label style="cursor: pointer" for="poca">POCA</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'sunAngle') ? 'checked' : ''} id="sunAngle" type="checkbox"/> <label style="cursor: pointer" for="sunAngle">CATS</label></div>
-            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'interceptData') ? 'checked' : ''} id="interceptData" type="checkbox"/> <label style="cursor: pointer" for="interceptData">1-hr Intercept</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'interceptData') ? 'checked' : ''} id="interceptData" type="checkbox"/> <label style="cursor: pointer" for="interceptData"><input placeholder="${intTime}" type="number" class="intercept-time-input" style="width: 4em; font-size: 22px;"/>-hr Intercept</label></div>
             <div onclick="changeData(this)" style="border: 1px solid black; border-radius: 10px; margin-top: 5px; cursor: pointer; width: 100%; text-align: center;" origin="${origin}" target="${target}">Confirm</div>
         <div>
         `
@@ -1660,9 +1662,14 @@ function startContextClick(event) {
 function changeData(el) {
     let origin = el.getAttribute('origin')
     let target = el.getAttribute('target')
+    let interceptTime = el.parentElement.querySelector('.intercept-time-input')
+    interceptTime = interceptTime.value === '' ? interceptTime.placeholder : interceptTime.value
+
+    interceptTime = Number(interceptTime)
     let checkBoxes = [...el.parentElement.querySelectorAll('input')].filter(s => s.checked).map(s => s.id)
     let reqIndex = mainWindow.relativeData.dataReqs.findIndex(s => s.origin == origin && s.target == target)
     mainWindow.relativeData.dataReqs[reqIndex].data = checkBoxes
+    mainWindow.relativeData.dataReqs[reqIndex].interceptTime = interceptTime
     resetDataDivs()
     document.getElementById('context-menu')?.remove();
 }
@@ -1813,7 +1820,8 @@ function handleContextClick(button) {
             mainWindow.relativeData.dataReqs.push({
                 data,
                 target,
-                origin: button.parentElement.sat
+                origin: button.parentElement.sat,
+                interceptTime: 1
             })
         })
         resetDataDivs()
@@ -4057,7 +4065,7 @@ function drawSatellite(satellite = {}) {
     ctx.fillText(name ? shortenString(name) : '', pixelPosition[0], letterY);
 }
 
-function getRelativeData(n_target, n_origin, intercept = true) {
+function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
     let sunAngle, rangeRate, range, poca, toca, tanRate, rangeStd;
     let relState = math.subtract(Object.values(mainWindow.satellites[n_origin].curPos), Object.values(mainWindow.satellites[n_target].curPos))
     let relPos = relState.slice(0,3)
@@ -4083,7 +4091,7 @@ function getRelativeData(n_target, n_origin, intercept = true) {
         toca = relPosHis.findIndex(element => element === poca) * mainWindow.timeDelta;
         if (intercept !== false) {
             let point1 = mainWindow.satellites[n_target].currentPosition()
-            let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + 3600})
+            let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + intTime*3600})
             let burn = hcwFiniteBurnOneBurn({
                 x: point1[0],
                 y: point1[1],
@@ -4098,12 +4106,12 @@ function getRelativeData(n_target, n_origin, intercept = true) {
                 xd: point2[3],
                 yd: point2[4],
                 zd: point2[5]
-            }, 3600, mainWindow.satellites[n_target].a, mainWindow.scenarioTime)
+            }, intTime*3600, mainWindow.satellites[n_target].a, mainWindow.scenarioTime)
             if (burn) {
                 let lastTimeStepOrigin = [burn.F.x - burn.F.xd, burn.F.y - burn.F.yd, burn.F.z - burn.F.zd]
                 let lastTimeStepTarget = math.subtract(point2.slice(0,3), point2.slice(3,6))// [point2[0] -  point2.rd[0], point2.i[0] -  point2.id[0], point2.c[0] -  point2.cd[0]]
                 let relPosInter = math.subtract(lastTimeStepOrigin, lastTimeStepTarget)
-                let sunInter = mainWindow.getCurrentSun(mainWindow.scenarioTime + 3599)
+                let sunInter = mainWindow.getCurrentSun(mainWindow.scenarioTime + intTime*3600-1)
                 let sunAng = math.acos(math.dot(sunInter, relPosInter) / math.norm(sunInter) / math.norm(relPosInter)) * 180 / Math.PI
                 interceptData = {
                     dV: math.norm([burn.r, burn.i, burn.c]),
@@ -4112,7 +4120,7 @@ function getRelativeData(n_target, n_origin, intercept = true) {
                 }
                 interceptData = `\ndV ${(1000*interceptData.dV).toFixed(1)} m/s\nCATS ${(interceptData.sunAng).toFixed(1)} deg\nRelVel ${(1000*interceptData.relVel).toFixed(1)} m/s`
             } else {
-                interceptData = '\n\nNo\nSolution'
+                interceptData = '\nOutside of\nKinematic\nReach'
             }
         }
     }
@@ -7505,6 +7513,7 @@ function resetDataDivs() {
             openDataDiv({
                 origin: div.origin,
                 target: div.target,
+                interceptTime: req.interceptTime,
                 data: req.data,
                 top: div.top + 'px',
                 left: div.left + 'px',
@@ -7515,6 +7524,7 @@ function resetDataDivs() {
             openDataDiv({
                 origin: req.origin,
                 target: req.target,
+                interceptTime: req.interceptTime,
                 data: req.data,
                 top: (20 + ii * 20) + 'px',
                 title: shortenString(mainWindow.satellites[req.origin].name, 12) + String.fromCharCode(8594) + shortenString(mainWindow.satellites[req.target].name,12)
@@ -7535,7 +7545,8 @@ function openDataDiv(options = {}) {
         origin = 'sat1',
         target = 'sat2',
         left = '10px',
-        top = '50px'
+        top = '50px',
+        interceptTime = 1
     } = options
     let properTerms = {
         range: {name: 'Range', units: 'km'},
@@ -7543,7 +7554,7 @@ function openDataDiv(options = {}) {
         sunAngle: {name: 'CATS', units: 'deg'},
         poca: {name: 'POCA', units: 'km'},
         rangeRate: {name: 'Range Rate', units: 'm/s'},
-        interceptData: {name: '1-hr Intercept', units:''}
+        interceptData: {name: (interceptTime*60).toFixed(0) + '-min Intercept', units:''}
     }
     let newDiv = document.createElement('div')
     newDiv.style.position = 'fixed'
