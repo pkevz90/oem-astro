@@ -4054,32 +4054,34 @@ function getRelativeData(n_target, n_origin, intercept = true) {
             let point1 = mainWindow.satellites[n_target].currentPosition()
             let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + 3600})
             let burn = hcwFiniteBurnOneBurn({
-                x: point1.r[0],
-                y: point1.i[0],
-                z: point1.c[0],
-                xd: point1.rd[0],
-                yd: point1.id[0],
-                zd: point1.cd[0]
+                x: point1[0],
+                y: point1[1],
+                z: point1[2],
+                xd: point1[3],
+                yd: point1[4],
+                zd: point1[5]
             }, {
-                x: point2.r[0],
-                y: point2.i[0],
-                z: point2.c[0],
-                xd: point2.rd[0],
-                yd: point2.id[0],
-                zd: point2.cd[0]
+                x: point2[0],
+                y: point2[1],
+                z: point2[2],
+                xd: point2[3],
+                yd: point2[4],
+                zd: point2[5]
             }, 3600, mainWindow.satellites[n_target].a, mainWindow.scenarioTime)
             if (burn) {
                 let lastTimeStepOrigin = [burn.F.x - burn.F.xd, burn.F.y - burn.F.yd, burn.F.z - burn.F.zd]
-                let lastTimeStepTarget = [point2.r[0] -  point2.rd[0], point2.i[0] -  point2.id[0], point2.c[0] -  point2.cd[0]]
+                let lastTimeStepTarget = math.subtract(point2.slice(0,3), point2.slice(3,6))// [point2[0] -  point2.rd[0], point2.i[0] -  point2.id[0], point2.c[0] -  point2.cd[0]]
                 let relPosInter = math.subtract(lastTimeStepOrigin, lastTimeStepTarget)
-                let sunInter = mainWindow.getCurrentSun(mainWindow.scenarioTime + 3600 - 1)
+                let sunInter = mainWindow.getCurrentSun(mainWindow.scenarioTime + 3599)
                 let sunAng = math.acos(math.dot(sunInter, relPosInter) / math.norm(sunInter) / math.norm(relPosInter)) * 180 / Math.PI
                 interceptData = {
                     dV: math.norm([burn.r, burn.i, burn.c]),
-                    relVel: math.norm(math.subtract([burn.F.xd, burn.F.yd, burn.F.zd], [point2.rd[0], point2.id[0], point2.cd[0]])),
+                    relVel: math.norm(math.subtract([burn.F.xd, burn.F.yd, burn.F.zd], point2.slice(3,6))),
                     sunAng
                 }
-                interceptData = `[${(1000*interceptData.dV).toFixed(1)}, ${(interceptData.sunAng).toFixed(1)}, ${(1000*interceptData.relVel).toFixed(1)}]`
+                interceptData = `\ndV ${(1000*interceptData.dV).toFixed(1)} m/s\nCATS ${(interceptData.sunAng).toFixed(1)} deg\nRelVel ${(1000*interceptData.relVel).toFixed(1)} m/s`
+            } else {
+                interceptData = 'No Solution'
             }
         }
     }
@@ -5038,7 +5040,6 @@ function perchSatellite(sat = 0, time = mainWindow.scenarioTime) {
     curPos = mainWindow.satellites[sat].currentPosition({time: time - burnEst / mainWindow.satellites[sat].a / 2})
 
     let burnOut = perchSatelliteSolver(curPos, mainWindow.satellites[sat].a)
-    console.log(burnOut);
     insertDirectionBurn(sat, time - burnEst / mainWindow.satellites[sat].a / 2, burnOut.dir)
 }
 
@@ -6971,7 +6972,7 @@ function openBurnsWindow(sat) {
             return `<div style="margin-bottom: 20px;">
                 <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
                 <div style="margin-left: 30px;">Direction: 
-                    ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
+                    ${b.direction.map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
                 </div>
                 <div style="margin-left: 30px;"> Waypoint Origin <select sat=${sat} burn=${bii} onchange="updateBurnOrigin(this)">
                     <option value="-1">RIC Origin</option>
@@ -6981,7 +6982,7 @@ function openBurnsWindow(sat) {
                     }).join('')}
                 </select></div>
                 <div class="burn-waypoint-disp-div" style="margin-left: 30px;">
-                    Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
+                    Waypoint: ${b.waypoint.target.map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
                 </div>
             </div>
             `
@@ -7013,7 +7014,7 @@ function openBurnsWindow(sat) {
                 return `<div style="margin-bottom: 20px;">
                     <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
                     <div style="margin-left: 30px;">Direction: 
-                        ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
+                        ${b.direction.map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
                     </div>
                     <div style="margin-left: 30px;"> Waypoint Origin <select sat=${sat} burn=${bii} onchange="updateBurnOrigin(this)">
                         <option value="-1">RIC Origin</option>
@@ -7024,7 +7025,7 @@ function openBurnsWindow(sat) {
                         }).join('')}
                     </select></div>
                     <div class="burn-waypoint-disp-div" style="margin-left: 30px;">
-                        Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
+                        Waypoint: ${b.waypoint.target.map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
                     </div>
                 </div>
                 `
