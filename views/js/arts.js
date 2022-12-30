@@ -1535,7 +1535,28 @@ function startContextClick(event) {
     ctxMenu = document.getElementById('context-menu');
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
-    if (activeSat !== false) {
+    // Check if right clicked on data display
+    let path = [...event.path].map(s => s.classList).filter(s => s !== undefined).map(s => s.contains('data-drag-div')).findIndex(s => s)
+    if (path !== -1) {
+        let dataDiv = event.path[path]
+        let origin = dataDiv.getAttribute('origin')
+        let target = dataDiv.getAttribute('target')
+        let dataCurrent = mainWindow.relativeData.dataReqs.find(req => {
+            return req.origin == origin && req.target == target
+        }).data
+        ctxMenu.innerHTML = `
+        <div style="color: black; background-color: white; padding: 5px; font-family: Courier; cursor: default;">
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'range') ? 'checked' : ''} id="range" type="checkbox"/> <label style="cursor: pointer" for="range">Range</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'rangeRate') ? 'checked' : ''} id="rangeRate" type="checkbox"/> <label style="cursor: pointer" for="rangeRate">Range Rate</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'relativeVelocity') ? 'checked' : ''} id="relativeVelocity" type="checkbox"/> <label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'poca') ? 'checked' : ''} id="poca" type="checkbox"/> <label style="cursor: pointer" for="poca">POCA</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'sunAngle') ? 'checked' : ''} id="sunAngle" type="checkbox"/> <label style="cursor: pointer" for="sunAngle">CATS</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'interceptData') ? 'checked' : ''} id="interceptData" type="checkbox"/> <label style="cursor: pointer" for="interceptData">1-hr Intercept</label></div>
+            <div onclick="changeData(this)" style="border: 1px solid black; border-radius: 10px; margin-top: 5px; cursor: pointer; width: 100%; text-align: center;" origin="${origin}" target="${target}">Confirm</div>
+        <div>
+        `
+    }
+    else if (activeSat !== false) {
         // User clicked on satellite, generate satellite option menu
         ctxMenu.sat = activeSat;
         let dispPosition = event.altKey ? getCurrentInertial(activeSat) : mainWindow.satellites[activeSat].curPos
@@ -1634,6 +1655,16 @@ function startContextClick(event) {
     }
     setTimeout(() => ctxMenu.style.transform = 'scale(1)', 10);
     return false;
+}
+
+function changeData(el) {
+    let origin = el.getAttribute('origin')
+    let target = el.getAttribute('target')
+    let checkBoxes = [...el.parentElement.querySelectorAll('input')].filter(s => s.checked).map(s => s.id)
+    let reqIndex = mainWindow.relativeData.dataReqs.findIndex(s => s.origin == origin && s.target == target)
+    mainWindow.relativeData.dataReqs[reqIndex].data = checkBoxes
+    resetDataDivs()
+    document.getElementById('context-menu')?.remove();
 }
 
 function changeLockStatus(el) {
@@ -4081,7 +4112,7 @@ function getRelativeData(n_target, n_origin, intercept = true) {
                 }
                 interceptData = `\ndV ${(1000*interceptData.dV).toFixed(1)} m/s\nCATS ${(interceptData.sunAng).toFixed(1)} deg\nRelVel ${(1000*interceptData.relVel).toFixed(1)} m/s`
             } else {
-                interceptData = 'No Solution'
+                interceptData = '\n\nNo\nSolution'
             }
         }
     }
