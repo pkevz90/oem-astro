@@ -5224,16 +5224,17 @@ function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
     }
 }
 
-function generateJ2000File(satellites, team=undefined, time = mainWindow.scenarioTime) {
+function generateJ2000File(team=1, time = mainWindow.scenarioTime, dontExport = []) {
+    let satellites = calculateSatErrorStates(team, time).map((s,ii) => [mainWindow.satellites[ii].name, s.trackedState])
     let startEphem = `Time (UTCG)              x (km)           y (km)         z (km)     vx (km/sec)    vy (km/sec)    vz (km/sec)
 -----------------------    -------------    -------------    ---------    -----------    -----------    -----------
 `
     let fileText = `\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t ${Date.now()}
-    Satellite-${satellites.map(s => s.name + `errarts${s.error[0].toFixed(2)}/${(1000*s.error[3]).toFixed(2)}`).join(', ')}:  J2000 Position & Velocity
+    Satellite-${satellites.map(s => s[0]).join(', ')}:  J2000 Position & Velocity
     `
     satellites.forEach(sat => {
         fileText += `\n\n${startEphem}`
-        let currentPos = sat.errorEciPosition
+        let currentPos = sat[1]
         currentPos = propToTime(currentPos, -time, false)
         let propTime = 0
         while (propTime < mainWindow.scenarioLength*3600) {
