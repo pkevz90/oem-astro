@@ -1,6 +1,6 @@
-let appAcr = 'ROTS'
+let appAcr = 'ROTS 2.0'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '29 Nov 2022'
+let cao = '15 Dec 2022'
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
@@ -16,6 +16,7 @@ lockDiv.style.transition = 'right 0.5s'
 document.getElementsByTagName('body')[0].append(lockDiv)
 let currentAction
 let pastActions = []
+let futureActions = []
 let lastSaveName = ''
 let errorList = []
 let ellipses = []
@@ -56,10 +57,11 @@ class windowCanvas {
     plotWidth = 200;
     plotHeight;
     plotCenter = 0;
+    j2 = false;
     stringLimit = [0,8];
     error = { // at right after manuever while generating J2000 states, halves every hour
-        neutral: {p: 25.6, v: 36.158, c: 1}, // Full Error
-        friendly: {p: 25.6 / 3, v: 36.158 / 3, c: 1}, // reduced error
+        neutral: {p: 25.6, v: 36.158, cp: 1.5, cv: 3.5}, // Full Error
+        friendly: {p: 25.6 / 3, v: 36.158 / 3, cp: 1.5, cv: 3.5}, // reduced error
         closed: {p: 0, v: 0, c: 1} // no error
     }; 
     frameCenter= {
@@ -94,18 +96,10 @@ class windowCanvas {
         burn: null,
         frame: null
     };
-    originOrbit = {
-        a: (398600.4418 / (2 * Math.PI / 86164) ** 2) ** (1/3),
-        e: 0,
-        i: 0,
-        raan: 0,
-        arg: 0,
-        tA: 0
-    }
+    
     trajSize = 1.5;
     encoder;
     mm = 2 * Math.PI / 86164;
-    timeDelta = 0.006*86164;
     scenarioLength = 48;
     burnSensitivity = 0.3;
     scenarioTime = 0.1; // Dont know why but this prevents bugs with burning immediately
@@ -188,6 +182,56 @@ class windowCanvas {
     aciveTouches = []
     constructor(cnvs) {
         this.cnvs = cnvs;
+        this.originOrbit = {
+            a: 42164.14,
+            e: 0.0,
+            i: 0,
+            raan: 0,
+            arg: 0,
+            tA: 0
+        }
+        this.scenarioLength = 48
+        this.timeDelta = 900
+        this.updateOrigin(this.originOrbit)
+    }
+    updateOrigin(newOrigin = {a: 42164, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, updateSats = true) {
+        this.originOrbit = newOrigin
+        let originEci = Object.values(Coe2PosVelObject(this.originOrbit))
+        this.mm = (398600.4418 / this.originOrbit.a ** 3) ** 0.5
+        this.timeDelta = 2 * Math.PI * 0.01044 / this.mm
+            
+        let sun = sunFromTime(this.startDate)  
+        sun = math.squeeze(Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sun, [0,0,0]).rHcw)
+        sun = math.dotDivide(sun, math.norm(sun))
+        this.initSun = sun
+        let results = this.generateOriginHistory()
+        this.originHistory = results.stateHistory
+        this.originRot = results.rotHistory
+        if (!updateSats) return
+        this.satellites.forEach(sat => sat.calcTraj(true))
+    }
+    changeTime(newTime = 3600, immediate = false) {
+        this.desired.scenarioTime = newTime
+        document.querySelector('#time-slider-range').value = newTime
+        if (immediate) {
+            this.scenarioTime = newTime
+        }
+    }
+    generateOriginHistory() {
+        let position = this.originOrbit
+        let calcPosition
+        let tProp = 0, tFinal = this.scenarioLength*3600, stateHistory = [], rotHistory = []
+        while ((tProp+this.timeDelta) < tFinal) {
+            calcPosition = propToTimeAnalytic(position, tProp, this.j2)
+            stateHistory.push({
+                t: tProp,
+                position: calcPosition.slice()
+            })
+            rotHistory.push(ConvEciToRic(calcPosition, [0,0,0,0,0,0], true))
+            // position = runge_kutta4(inertialEom, position, this.timeDelta)
+            tProp += this.timeDelta
+        }
+        return {stateHistory, rotHistory}
     }
     getWidth() {
         return this.cnvs.width;
@@ -518,13 +562,14 @@ class windowCanvas {
         ctx.fillStyle = color;
         line.forEach((point, ii) => {
             let pixelPos = this.convertToPixels(point);
-            if (this.state.search('ri') !== -1 && Math.abs(point.r) < (this.plotHeight / 2 * this.frameCenter.ri.h) && Math.abs(point.i - this.plotCenter) < (this.plotWidth / 2* this.frameCenter.ri.w)) {
+            console.log();
+            if (this.state.search('ri') !== -1 && Math.abs(point[0]) < (this.plotHeight / 2 * this.frameCenter.ri.h) && Math.abs(point[1] - this.plotCenter) < (this.plotWidth / 2* this.frameCenter.ri.w)) {
                 ctx.fillRect(pixelPos.ri.x - size, pixelPos.ri.y - size, size*2, size*2)
             }
-            if (this.state.search('ci') !== -1 && Math.abs(point.c) < (this.plotHeight / 2 * this.frameCenter.ci.h) && Math.abs(point.i - this.plotCenter) < (this.plotWidth / 2 * this.frameCenter.ci.w)){
+            if (this.state.search('ci') !== -1 && Math.abs(point[2]) < (this.plotHeight / 2 * this.frameCenter.ci.h) && Math.abs(point[1] - this.plotCenter) < (this.plotWidth / 2 * this.frameCenter.ci.w)){
                 ctx.fillRect(pixelPos.ci.x - size, pixelPos.ci.y - size, size*2, size*2)
             }
-            if (this.state.search('rc') !== -1 && Math.abs(point.c) < (this.plotHeight / 2 * this.frameCenter.rc.h) && Math.abs(point.r) < (this.plotWidth / 2 * this.frameCenter.rc.w)) {
+            if (this.state.search('rc') !== -1 && Math.abs(point[2]) < (this.plotHeight / 2 * this.frameCenter.rc.h) && Math.abs(point[0]) < (this.plotWidth / 2 * this.frameCenter.rc.w)) {
                 ctx.fillRect(pixelPos.rc.x - size, pixelPos.rc.y - size, size*2, size*2)
             }
         })
@@ -587,7 +632,7 @@ class windowCanvas {
         ctx.textAlign = 'left';
         if (this.relativeData.dataReqs.length > mainWindow.relDataDivs.length) resetDataDivs()
         this.relativeData.dataReqs.forEach((req,ii) => {
-            let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0);
+            let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0, req.interceptTime);
             mainWindow.relDataDivs[ii].forEach(span => {
                 let type = span.getAttribute('type')
                 span.innerText = type === 'interceptData' ? relDataIn[span.getAttribute('type')] : relDataIn[span.getAttribute('type')].toFixed(2)
@@ -713,15 +758,13 @@ class windowCanvas {
             startDate = this.startDate,
             originOrbit = this.originOrbit
         } = data
+        this.updateOrigin(originOrbit)
         this.plotWidth = plotWidth;
         this.relativeData = relativeData;
         this.satellites = [];
-        this.mm = mm;
         this.timeDelta = timeDelta;
         this.scenarioLength = scenarioLength;
-        this.initSun = initSun;
         this.startDate = new Date(startDate);
-        this.originOrbit = originOrbit
         satellites.forEach(sat =>{
             this.satellites.push(
                 new Satellite({
@@ -737,16 +780,15 @@ class windowCanvas {
                 })
             )
             this.satellites[this.satellites.length - 1].drawCurrentPosition();
-            this.satellites[this.satellites.length - 1].calcTraj();
-            this.satellites[this.satellites.length - 1].genBurns(true);
-            this.satellites[this.satellites.length - 1].curPos = this.satellites[this.satellites.length - 1].currentPosition();
+            this.satellites[this.satellites.length - 1].calcTraj(true)
+            let curPos = this.satellites[this.satellites.length - 1].currentPosition();
             this.satellites[this.satellites.length - 1].curPos = {
-                r: this.satellites[this.satellites.length - 1].curPos.r[0],
-                i: this.satellites[this.satellites.length - 1].curPos.i[0],
-                c: this.satellites[this.satellites.length - 1].curPos.c[0],
-                rd: this.satellites[this.satellites.length - 1].curPos.rd[0],
-                id: this.satellites[this.satellites.length - 1].curPos.id[0],
-                cd: this.satellites[this.satellites.length - 1].curPos.cd[0]
+                r: curPos[0],
+                i: curPos[1],
+                c: curPos[2],
+                rd: curPos[3],
+                id: curPos[4],
+                cd: curPos[5]
             }
         })
         resetDataDivs()
@@ -793,15 +835,8 @@ class Satellite {
             cov = undefined
         } = options; 
         if (position === undefined) {
-            position = rmoeToRic({ae: math.random() * 100, x: 0, y: 0, z: math.random() * 0.05, b: Math.random() * 360, m: Math.random() * 360})
-            position = {
-                r: position.rHcw[0][0],
-                i: position.rHcw[1][0],
-                c: position.rHcw[2][0],
-                rd: position.drHcw[0][0],
-                id: position.drHcw[1][0],
-                cd: position.drHcw[2][0],
-            }
+            position = {...mainWindow.originOrbit}
+            position.tA += Math.PI / 180*(-1 + 2*Math.random())
         }
         this.position = position;
         this.team = team
@@ -820,12 +855,14 @@ class Satellite {
         this.cov = cov
         setTimeout(() => this.calcTraj(), 250);
     }
-    calcTraj = calcSatTwoBody;
+    calcTraj (recalcBurns = false) {
+        this.stateHistory = calcSatTrajectory(this.position, this.burns, {recalcBurns, a: this.a})
+    }
     genBurns = generateBurns;
     drawTrajectory() {
         // console.log(this.stateHistory);
         if (!this.stateHistory) return;
-        mainWindow.drawCurve(this.stateHistory, {color: this.color});
+        mainWindow.drawCurve(this.stateHistory.map(s => s.position), {color: this.color});
     }
     drawBurns() {
         let timeDelta, ctx = mainWindow.getContext(), dist = mainWindow.getPlotWidth() * 0.025;
@@ -841,14 +878,14 @@ class Satellite {
         let textHeight = 20;
         burns.filter(b => b.time < mainWindow.scenarioTime).forEach(burn => {
             timeDelta = mainWindow.scenarioTime - burn.time;
-            let mag = math.norm(Object.values(burn.direction));
+            let mag = math.norm(burn.direction);
             let dispDist = timeDelta > (mag / this.a) ? dist : dist * timeDelta * this.a / mag;
             if (mainWindow.burnStatus.type) return;
             let point1 = mainWindow.convertToPixels(burn.location), mag2;
-            let point2 = math.add(Object.values(burn.location).map(s => s[0]).slice(0,3), math.dotMultiply(dispDist / mag, Object.values(burn.direction)))
+            let point2 = math.add(burn.location, math.dotMultiply(dispDist / mag, burn.direction))
             point2 = mainWindow.convertToPixels(point2);
             let textWidth = ctx.measureText((1000*mag).toFixed(1)).width;
-            if (state.search('ri') !== -1 && (Math.abs(burn.location.r) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location.i - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
+            if (state.search('ri') !== -1 && (Math.abs(burn.location[0]) < (mainWindow.getPlotHeight() * fC.ri.h / 2)) && (Math.abs(burn.location[1] - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ri.w / 2))) {
                 ctx.beginPath();
                 ctx.moveTo(point1.ri.x, point1.ri.y);
                 ctx.lineTo(point2.ri.x, point2.ri.y);
@@ -858,7 +895,7 @@ class Satellite {
                     ctx.stroke();
                 }
             }
-            if (state.search('ci') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location.i - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
+            if (state.search('ci') !== -1 && (Math.abs(burn.location[2]) < (mainWindow.getPlotHeight() * fC.ci.h / 2)) && (Math.abs(burn.location[2] - mainWindow.plotCenter) < (mainWindow.getPlotWidth() * fC.ci.w / 2))) {
             
                 ctx.beginPath();
                 ctx.moveTo(point1.ci.x, point1.ci.y);
@@ -870,7 +907,7 @@ class Satellite {
                     ctx.stroke();
                 }
             }
-            if (state.search('rc') !== -1 && (Math.abs(burn.location.c) < (mainWindow.getPlotHeight() * fC.rc.h / 2)) && (Math.abs(burn.location.r) < (mainWindow.getPlotWidth() * fC.rc.w / 2))) {
+            if (state.search('rc') !== -1 && (Math.abs(burn.location[2]) < (mainWindow.getPlotHeight() * fC.rc.h / 2)) && (Math.abs(burn.location[1]) < (mainWindow.getPlotWidth() * fC.rc.w / 2))) {
                 ctx.beginPath();
                 ctx.moveTo(point1.rc.x, point1.rc.y);
                 ctx.lineTo(point2.rc.x, point2.rc.y);
@@ -884,11 +921,19 @@ class Satellite {
             }
         })
     }
-    currentPosition = getCurrentPosition;
+    currentPosition = getCurrentPosition
     drawCurrentPosition() {
         if (!this.stateHistory) return;
         let cur = this.currentPosition(mainWindow.scenarioTime);
-        cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
+        this.curPos = cur
+        cur = {
+            r: cur[0], 
+            i: cur[1], 
+            c: cur[2], 
+            rd: cur[3], 
+            id: cur[4], 
+            cd: cur[5]
+        };
         this.curPos = cur;
         mainWindow.drawSatLocation(cur, {size: this.size, color: this.color, shape: this.shape, name: this.name});
     }
@@ -901,7 +946,7 @@ class Satellite {
             if (burns) {
                 let burnsCheck = false
                 this.burns.forEach((burn, ii) => {
-                    burnsCheck = math.norm([burn.location.r[0] - position.ri.r, burn.location.i[0] - position.ri.i]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
+                    burnsCheck = math.norm([burn.location[0] - position.ri.r, burn.location[1] - position.ri.i]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
                 })
                 out = burnsCheck
             }
@@ -913,7 +958,7 @@ class Satellite {
             if (burns) {
                 let burnsCheck = false
                 this.burns.forEach((burn, ii) => {
-                    burnsCheck = math.norm([burn.location.c[0] - position.ci.c, burn.location.i[0] - position.ci.i]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
+                    burnsCheck = math.norm([burn.location[2] - position.ci.c, burn.location[1] - position.ci.i]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
                 })
                 out = burnsCheck
             }
@@ -925,7 +970,7 @@ class Satellite {
             if (burns) {
                 let burnsCheck = false
                 this.burns.forEach((burn, ii) => {
-                    burnsCheck = math.norm([burn.location.c[0] - position.rc.c, burn.location.r[0] - position.rc.r]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
+                    burnsCheck = math.norm([burn.location[2] - position.rc.c, burn.location[0] - position.rc.r]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
                 })
                 out = burnsCheck
             }
@@ -952,22 +997,18 @@ class Satellite {
         let pixelLimit = 20
         let distLimit = mainWindow.getPlotWidth() * pixelLimit / mainWindow.cnvs.width
         for (let ii = 0; ii < this.burns.length; ii++) {
-            if (position.ri) out.ri = math.norm([this.burns[ii].location.r[0] - position.ri.r, this.burns[ii].location.i[0] - position.ri.i]) < distLimit ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
-            if (position.ci) out.ci = math.norm([this.burns[ii].location.c[0] - position.ci.c, this.burns[ii].location.i[0] - position.ci.i]) < distLimit ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
-            if (position.rc) out.rc = math.norm([this.burns[ii].location.c[0] - position.rc.c, this.burns[ii].location.r[0] - position.rc.r]) < distLimit ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
+            if (position.ri) out.ri = math.norm([this.burns[ii].location[0] - position.ri.r, this.burns[ii].location[1] - position.ri.i]) < distLimit ? ii : out.ri !== false && out.ri !== undefined ? out.ri : false; 
+            if (position.ci) out.ci = math.norm([this.burns[ii].location[2] - position.ci.c, this.burns[ii].location[1] - position.ci.i]) < distLimit ? ii : out.ci !== false && out.ci !== undefined ? out.ci : false; 
+            if (position.rc) out.rc = math.norm([this.burns[ii].location[2] - position.rc.c, this.burns[ii].location[0] - position.rc.r]) < distLimit ? ii : out.rc !== false && out.rc !== undefined ? out.rc : false; 
         }
         return out;
     }
     checkInBurn() {
         if (mainWindow.burnStatus.type) return;
-        let time = mainWindow.scenarioTime;
+        let time = mainWindow.scenarioTime
         this.burns.forEach(burn => {
-            let burnDuration = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a;
-            if (time > burn.time && time < (burn.time + burnDuration)) {
-                this.calcTraj();
-                burn.shown = 'during';
-            }
-            else if (burn.shown !== 'pre' && time < burn.time) {
+            // let burnDuration = math.norm(burn.direction) / this.a;
+            if (burn.shown !== 'pre' && time < burn.time) {
                 this.calcTraj();
                 burn.shown = 'pre';
             }
@@ -1068,8 +1109,7 @@ function sleep(milliseconds) {
 let threeD = false
 let timeFunction = false;
 (function animationLoop() {
-    try {
-        mainWindow.cnvs.getContext('2d').globalAlpha = 1 
+    mainWindow.cnvs.getContext('2d').globalAlpha = 1 
         if (timeFunction) console.time()
         mainWindow.clear();
         mainWindow.updateSettings();
@@ -1111,18 +1151,21 @@ let timeFunction = false;
             lastSaveTime = Date.now()
         }
         return window.requestAnimationFrame(animationLoop)
-    } catch (error) {
-        console.log(error);
-        errorList.push(error)
-        let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
-        mainWindow = new windowCanvas(document.getElementById('main-plot'));
-        mainWindow.loadDate(autosavedScen);
-        mainWindow.setAxisWidth('set', mainWindow.plotWidth);
-        animationLoop()
-        mainWindow.desired.scenarioTime = Number(document.getElementById('time-slider-range').value)
-        mainWindow.scenarioTime = Number(document.getElementById('time-slider-range').value)
-        showScreenAlert('System crash recovering to last autosave');
-    }
+    // try {
+        
+    // } catch (error) {
+    //     console.log(mainWindow.satellites[0].burns[0]);
+    //     console.log(error.stack);
+    //     errorList.push(error)
+    //     let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
+    //     mainWindow = new windowCanvas(document.getElementById('main-plot'));
+    //     mainWindow.loadDate(autosavedScen);
+    //     mainWindow.setAxisWidth('set', mainWindow.plotWidth);
+    //     animationLoop()
+    //     mainWindow.desired.scenarioTime = Number(document.getElementById('time-slider-range').value)
+    //     mainWindow.scenarioTime = Number(document.getElementById('time-slider-range').value)
+    //     showScreenAlert('System crash recovering to last autosave');
+    // }
 })()
 //------------------------------------------------------------------
 // Adding event listeners for window objects
@@ -1147,6 +1190,7 @@ function keydownFunction(key) {
         }
     }
     else if ((key.key === 'z' || key.key === 'Z') && key.ctrlKey) reverseLastAction()
+    else if ((key.key === 'y' || key.key === 'Y') && key.ctrlKey) redoLastAction()
 
     if (mainWindow.panelOpen) return;
     if (key.key === ' ') {
@@ -1305,14 +1349,14 @@ function keydownFunction(key) {
     else if (key.key === 'n' || key.key === 'N') {
         let newSat = mainWindow.satellites.length === 0 ?  new Satellite({
                 name: 'Chief',
-                position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
+                position: {...mainWindow.originOrbit},
                 shape: 'diamond',
                 color: '#bb00bb',
-                a: 0.001
+                a: 0.00001
             }) : 
             new Satellite({
                 name: 'Sat-' + (mainWindow.satellites.length + 1),
-                a: 0.001
+                a: 0.00001
             })
 
         newSat.calcTraj();
@@ -1390,14 +1434,14 @@ window.addEventListener('resize', () => mainWindow.fillWindow())
 window.addEventListener('wheel', event => {
     if (mainWindow.panelOpen || event.target.id !== 'main-plot') return;
     if (mainWindow.burnStatus.type === 'waypoint') {
-        let tranTimeDelta = event.deltaY > 0 ? -300 : 1800
-        document.querySelector('#time-slider-range').value = Number(document.querySelector('#time-slider-range').value) + tranTimeDelta
+        let tranTimeDelta = event.deltaY > 0 ? -300 / 86164 * (2*Math.PI / mainWindow.mm) : 1800  / 86164 * (2*Math.PI / mainWindow.mm)
+        let currentTranTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
         let curCrossState = mainWindow.satellites[mainWindow.burnStatus.sat].currentPosition({
-            time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime + tranTimeDelta
+            time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + currentTranTime
         })
-        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target.c = curCrossState.c[0]
-        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime += tranTimeDelta 
-        mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
+        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target[2] = curCrossState[2]
+        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime = currentTranTime 
+        mainWindow.changeTime(mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime,true);
         
         updateWhiteCellTimeAndErrors()
         return;
@@ -1491,7 +1535,30 @@ function startContextClick(event) {
     ctxMenu = document.getElementById('context-menu');
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
-    if (activeSat !== false) {
+    // Check if right clicked on data display
+    let path = [...event.path].map(s => s.classList).filter(s => s !== undefined).map(s => s.contains('data-drag-div')).findIndex(s => s)
+    if (path !== -1) {
+        let dataDiv = event.path[path]
+        let origin = dataDiv.getAttribute('origin')
+        let target = dataDiv.getAttribute('target')
+        let dataCurrent = mainWindow.relativeData.dataReqs.find(req => {
+            return req.origin == origin && req.target == target
+        })
+        let intTime = dataCurrent.interceptTime || 1
+        dataCurrent = dataCurrent.data
+        ctxMenu.innerHTML = `
+        <div style="color: black; background-color: white; padding: 5px; font-family: Courier; cursor: default;">
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'range') ? 'checked' : ''} id="range" type="checkbox"/> <label style="cursor: pointer" for="range">Range</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'rangeRate') ? 'checked' : ''} id="rangeRate" type="checkbox"/> <label style="cursor: pointer" for="rangeRate">Range Rate</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'relativeVelocity') ? 'checked' : ''} id="relativeVelocity" type="checkbox"/> <label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'poca') ? 'checked' : ''} id="poca" type="checkbox"/> <label style="cursor: pointer" for="poca">POCA</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'sunAngle') ? 'checked' : ''} id="sunAngle" type="checkbox"/> <label style="cursor: pointer" for="sunAngle">CATS</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'interceptData') ? 'checked' : ''} id="interceptData" type="checkbox"/> <label style="cursor: pointer" for="interceptData"><input placeholder="${intTime}" type="number" class="intercept-time-input" style="width: 4em; font-size: 22px;"/>-hr Intercept</label></div>
+            <div onclick="changeData(this)" style="border: 1px solid black; border-radius: 10px; margin-top: 5px; cursor: pointer; width: 100%; text-align: center;" origin="${origin}" target="${target}">Confirm</div>
+        <div>
+        `
+    }
+    else if (activeSat !== false) {
         // User clicked on satellite, generate satellite option menu
         ctxMenu.sat = activeSat;
         let dispPosition = event.altKey ? getCurrentInertial(activeSat) : mainWindow.satellites[activeSat].curPos
@@ -1533,10 +1600,12 @@ function startContextClick(event) {
     else if (activeBurn !== false) {
         // User clicked on burn, generate burn option menu
         let burn = mainWindow.satellites[activeBurn.sat].burns[activeBurn.burn]
-        let burnDir = [1000*burn.direction.r, 1000*burn.direction.i, 1000*burn.direction.c]
-        let rot = translateFrames(activeBurn.sat, {time: burn.time})
-        burnDir = math.squeeze(math.multiply(rot, math.transpose([burnDir])))
-        let burnWay = [burn.waypoint.target.r, burn.waypoint.target.i, burn.waypoint.target.c, burn.waypoint.tranTime]
+        let burnDir = burn.direction.map(s => s*1000)
+        let targetRic
+        if (burn.waypoint !== false) {
+            let targetOriginEci = propToTimeAnalytic(mainWindow.originOrbit, burn.time + burn.waypoint.tranTime)
+            targetRic = ConvEciToRic(targetOriginEci, [...burn.waypoint.target,0,0,0]).slice(0,3)
+        }
         let burnDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000)
         let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
         let uploadDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000 - 900000)
@@ -1546,7 +1615,7 @@ function startContextClick(event) {
             <div style="background-color: white; cursor: default; width: 100%; height: 2px; margin: 2.5px 0px"></div>
             <div style="font-size: 0.9em; padding: 2.5px 15px; color: white; cursor: default;">${burnTime}</div>
             <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" type="direction" onclick="handleContextClick(this)" class="context-item" title="Direction" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnDir[0].toFixed(2)} I: ${burnDir[1].toFixed(2)} C: ${burnDir[2].toFixed(2)} m/s</div>
-            <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnWay[0].toFixed(2)} I: ${burnWay[1].toFixed(2)} C: ${burnWay[2].toFixed(2)} km TT: ${(burnWay[3]/3600).toFixed(2)} hrs</div>
+            ${burn.waypoint !== false ? `<div dir="${burnDir.join('_')}" way="${targetRic.join('_')}"id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${targetRic[0].toFixed(2)} I: ${targetRic[1].toFixed(2)} C: ${targetRic[2].toFixed(2)} km TT: ${(burn.waypoint.tranTime/3600).toFixed(2)} hrs</div>`: ''}
             <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="angle" class="context-item" title="Az,El,Mag" style="font-size: 0.9em; margin-bottom: 10px; padding: 2.5px 15px; color: white;">Az: ${(math.atan2(burnDir[1], burnDir[0])*180 / Math.PI).toFixed(2)}<sup>o</sup>, El: ${(math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))*180/Math.PI).toFixed(2)}<sup>o</sup>, M: ${math.norm(burnDir).toFixed(2)} m/s</div>
             `
         let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
@@ -1588,6 +1657,21 @@ function startContextClick(event) {
     }
     setTimeout(() => ctxMenu.style.transform = 'scale(1)', 10);
     return false;
+}
+
+function changeData(el) {
+    let origin = el.getAttribute('origin')
+    let target = el.getAttribute('target')
+    let interceptTime = el.parentElement.querySelector('.intercept-time-input')
+    interceptTime = interceptTime.value === '' ? interceptTime.placeholder : interceptTime.value
+
+    interceptTime = Number(interceptTime)
+    let checkBoxes = [...el.parentElement.querySelectorAll('input')].filter(s => s.checked).map(s => s.id)
+    let reqIndex = mainWindow.relativeData.dataReqs.findIndex(s => s.origin == origin && s.target == target)
+    mainWindow.relativeData.dataReqs[reqIndex].data = checkBoxes
+    mainWindow.relativeData.dataReqs[reqIndex].interceptTime = interceptTime
+    resetDataDivs()
+    document.getElementById('context-menu')?.remove();
 }
 
 function changeLockStatus(el) {
@@ -1736,7 +1820,8 @@ function handleContextClick(button) {
             mainWindow.relativeData.dataReqs.push({
                 data,
                 target,
-                origin: button.parentElement.sat
+                origin: button.parentElement.sat,
+                interceptTime: 1
             })
         })
         resetDataDivs()
@@ -1812,39 +1897,6 @@ function handleContextClick(button) {
     else if (button.id === 'circ-maneuver') { 
         let sat = button.parentElement.sat;
         circSatellite(sat)
-        document.getElementById('context-menu')?.remove();
-    }
-    else if (button.id === 'burn-time-change') {
-        let sat = button.getAttribute('sat')
-        let burn = button.getAttribute('burn')
-        button.parentElement.innerHTML = `
-            <div class="context-item" >Time Diff: <input type="Number" style="width: 3em; font-size: 1em"> mins</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="burn-time-execute" sat="${sat}" burn="${burn}">Execute</div>
-        `
-    }
-    else if (button.id === 'burn-time-execute') {
-        let sat = button.getAttribute('sat')
-        let burn = button.getAttribute('burn')
-        console.log();
-        let timeDiff = button.parentElement.getElementsByTagName('input')[0].value
-        if (timeDiff === '') {
-            button.parentElement.getElementsByTagName('input')[0].style.backgroundColor = 'rgb(255,150,150)';
-            return
-        }
-        let newTime = mainWindow.satellites[sat].burns[burn].time + Number(timeDiff) * 60
-        if (newTime < 0 || (newTime > mainWindow.scenarioLength * 3600)) {
-            button.parentElement.getElementsByTagName('input')[0].style.backgroundColor = 'rgb(255,150,150)';
-            return
-        }
-        // mainWindow.satellites[sat].burns[burn].time = newTime
-        let pos = mainWindow.satellites[sat].currentPosition({time: newTime})
-        position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
-        let direction = mainWindow.satellites[sat].burns[burn].direction
-        direction = [direction.r, direction.i, direction.c]
-        let tof = mainWindow.satellites[sat].burns[burn].waypoint.tranTime
-        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, newTime, mainWindow.satellites[sat].a)
-        
-        // mainWindow.satellites[sat].genBurns()
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'prop-options') {
@@ -2044,8 +2096,27 @@ function handleContextClick(button) {
     }
     else if (button.id === 'prop-poca-execute') {
         let sat1 = button.getAttribute('sat'), sat2 = document.getElementById('context-menu').sat;
-        let dataGuess = findMinDistanceRedux(sat1, sat2)
-        mainWindow.desired.scenarioTime = dataGuess.tMin
+        let data = getRelativeData(button.getAttribute('sat'),document.getElementById('context-menu').sat);
+        let tGuess = data.toca + 600;
+        data = data.toca;
+        for (let ii = 0; ii < 200; ii++) {
+            let pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess})
+            let pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess})
+            let dr = math.subtract(pos1.slice(0,3), pos2.slice(0,3))
+            let dv = math.subtract(pos1.slice(3,6), pos2.slice(3,6))
+            let rr1 = math.dot(dr,dv) / math.norm(dr)
+            pos1 = mainWindow.satellites[sat1].currentPosition({time: tGuess + 0.001})
+            pos2 = mainWindow.satellites[sat2].currentPosition({time: tGuess + 0.001})
+            dr = math.subtract(pos1.slice(0,3), pos2.slice(0,3))
+            dv = math.subtract(pos1.slice(3,6), pos2.slice(3,6))
+            let rr2 = math.dot(dr,dv) / math.norm(dr)
+            dr = (rr2 - rr1) / 0.001
+            tGuess -= 0.05 * rr1 / dr
+            tGuess = tGuess < 0 ? 0 : tGuess
+            if (math.abs(rr1) < 1e-8) break
+
+        }
+        mainWindow.desired.scenarioTime = tGuess
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         document.getElementById('context-menu')?.remove();
     }
@@ -2132,6 +2203,11 @@ function handleContextClick(button) {
     else if (button.id === 'execute-drift') {
         let sat = button.parentElement.sat;
         
+        pastActions.push({
+            sat,
+            oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns)),
+            time: mainWindow.desired.scenarioTime
+        })
         let inputs = button.parentElement.getElementsByTagName('input');
         inputs[0].value = inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value
         let currentPos = mainWindow.satellites[sat].curPos
@@ -2148,50 +2224,19 @@ function handleContextClick(button) {
         let newVel = math.dotMultiply(vel, math.dotDivide(eciPos.drEci, math.norm(eciPos.drEci)))
         let newRic = Eci2Ric([(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0], eciPos.rEcci, newVel)
         let direction = math.subtract(math.squeeze(newRic.drHcw), [currentPos.rd, currentPos.id, currentPos.cd])
-        let tof = 0.125 * 2 * Math.PI / mainWindow.mm
+        
         position = {x: currentPos.r, y: currentPos.i, z: currentPos.c, xd: currentPos.rd, yd: currentPos.id, zd: currentPos.cd};
-        let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, mainWindow.scenarioTime, mainWindow.satellites[sat].a)
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
-        logAction({
-            type: 'addBurn', sat, index: mainWindow.satellites[sat].burns.length
-        })
-        mainWindow.satellites[sat].burns.push({
-            time: mainWindow.desired.scenarioTime,
-            direction: {
-                r: direction[0],
-                i: direction[1],
-                c: direction[2]
-            },
-            waypoint: {
-                tranTime: 0,
-                target: {
-                    r: 0,
-                    i: 0,
-                    c: 0,
-                }
-            }
-        })
-        mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
-            tranTime: tof,
-            target: {
-                r: wayPos.x,
-                i: wayPos.y,
-                c: wayPos.z
-            }
-        }
-        mainWindow.satellites[sat].genBurns();
-        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + 3600;
-        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
+        insertDirectionBurn(sat, mainWindow.desired.scenarioTime, direction)
+        mainWindow.satellites[sat].calcTraj(true);
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'change-burn') {
         let sat = button.getAttribute('sat')
         let burn = button.getAttribute('burn')
         let burnDirection = button.getAttribute('dir').split('_').map(s => Number(s))
-        let burnWaypoint = Object.values(mainWindow.satellites[sat].burns[burn].waypoint.target)
-        let burnTT = mainWindow.satellites[sat].burns[burn].waypoint.tranTime / 3600
         let burnAngles = [math.atan2(burnDirection[1], burnDirection[0]) * 180 / Math.PI, math.atan2(burnDirection[2], math.norm(burnDirection.slice(0,2))) * 180 / Math.PI, math.norm(burnDirection)]
         let type = button.getAttribute('type')
         if (button.getAttribute('type') === 'direction') {
@@ -2203,10 +2248,12 @@ function handleContextClick(button) {
             `
         }
         else if (button.getAttribute('type') === 'waypoint') {
+            let wayTarget = button.getAttribute('way').split('_').map(s => Number(s))
+            let burnTT = mainWindow.satellites[sat].burns[burn].waypoint.tranTime / 3600
             button.parentElement.innerHTML = `
-                <div class="context-item" >R: <input placeholder="${burnWaypoint[0].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
-                <div class="context-item" >I: <input placeholder="${burnWaypoint[1].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
-                <div class="context-item" >C: <input placeholder="${burnWaypoint[2].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
+                <div class="context-item" >R: <input placeholder="${wayTarget[0].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
+                <div class="context-item" >I: <input placeholder="${wayTarget[1].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
+                <div class="context-item" >C: <input placeholder="${wayTarget[2].toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> km</div>
                 <div class="context-item" >TT: <input placeholder="${burnTT.toFixed(4)}" type="Number" style="width: 5em; font-size: 1em"> hrs</div>
                 <div class="context-item" type="${type}" sat="${sat}" burn="${burn}" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-change-burn" tabindex="0">Change</div>
             `
@@ -2234,11 +2281,10 @@ function handleContextClick(button) {
         let sat = button.getAttribute('sat')
         let burn = button.getAttribute('burn')
         let type = button.getAttribute('type')
-        logAction({
-            type: 'alterBurn',
-            index: burn,
+        
+        pastActions.push({
             sat,
-            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns[burn]))
+            oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns))
         })
         let inputs = button.parentElement.getElementsByTagName('input');
         for (let ii = 0; ii < inputs.length; ii++) {
@@ -2248,28 +2294,30 @@ function handleContextClick(button) {
         switch (type) {
             case 'direction':
                 dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
-                rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
-                dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
-                insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
+                mainWindow.satellites[sat].burns[burn].direction = dir
+                mainWindow.satellites[sat].burns[burn].waypoint = false
+                mainWindow.satellites[sat].calcTraj(true)
                 break
             case 'waypoint':
                 let way = [Number(inputs[0].value), Number(inputs[1].value), Number(inputs[2].value)];
                 let tranTime = Number(inputs[3].value) * 3600
+                let targetOriginEci = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.satellites[sat].burns[burn].time + tranTime)
+                way = Ric2Eci(way, [0,0,0], targetOriginEci.slice(0,3), targetOriginEci.slice(3,6)).rEcci
                 mainWindow.satellites[sat].burns[burn].waypoint = {
-                    target: {
-                        r: way[0], i: way[1], c: way[2]
-                    },
+                    target: way,
                     tranTime
                 }
-                mainWindow.satellites[sat].genBurns()
-                mainWindow.satellites[sat].calcTraj()
+                mainWindow.satellites[sat].calcTraj(true)
+                mainWindow.desired.scenarioTime = tranTime + mainWindow.satellites[sat].burns[burn].time
+                mainWindow.scenarioTime = tranTime + mainWindow.satellites[sat].burns[burn].time
+                document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;   
                 break
             case 'angle':
                 dir = [Number(inputs[0].value) * Math.PI / 180, Number(inputs[1].value) * Math.PI / 180, Number(inputs[2].value) / 1000];
                 dir = [dir[2] * math.cos(dir[0]) * Math.cos(dir[1]), dir[2] * math.sin(dir[0]) * Math.cos(dir[1]), dir[2] * math.sin(dir[1])]
-                rot = translateFrames(sat, {time: mainWindow.satellites[sat].burns[burn].time})
-                dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
-                insertDirectionBurn(sat, mainWindow.satellites[sat].burns[burn].time, dir, burn)
+                mainWindow.satellites[sat].burns[burn].direction = dir
+                mainWindow.satellites[sat].burns[burn].waypoint = false
+                mainWindow.satellites[sat].calcTraj(true)
                 break
         }
         document.getElementById('context-menu')?.remove();
@@ -2302,23 +2350,12 @@ function handleContextClick(button) {
             waypoint = {r: Number(inputs[1].value), i: Number(inputs[2].value), c: Number(inputs[3].value)}
         }
         else {
-            let rot = translateFrames(target, {
-                time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
-            })
-            waypoint = math.reshape([Number(inputs[1].value), Number(inputs[2].value), Number(inputs[3].value)], [3,1])
-            waypoint = math.multiply(math.transpose(rot), waypoint)
-            waypoint = {r: waypoint[0][0], i: waypoint[1][0], c: waypoint[2][0]}
-
+            let targetEci = Object.values(getCurrentInertial(target, mainWindow.scenarioTime + 3600*Number(inputs[0].value)))
+            let eciWaypoint = Ric2Eci(Object.values({r: Number(inputs[1].value), i: Number(inputs[2].value), c: Number(inputs[3].value)}), [0,0,0],targetEci.slice(0,3), targetEci.slice(3,6)).rEcci
+            let originEci = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime + 3600*Number(inputs[0].value))
+            waypoint = ConvEciToRic(originEci, [...eciWaypoint,0,0,0]).slice(0,3)
         }
-        logAction({
-            type: 'addBurn',
-            index: mainWindow.satellites[sat].burns.length,
-            sat
-        })
-        let origin = target === 'origin' ? {r: [0], i: [0], c: [0]} : mainWindow.satellites[target].currentPosition({
-            time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
-        })
-        insertWaypointBurn(sat, mainWindow.desired.scenarioTime, Object.values(waypoint), 3600*Number(inputs[0].value),math.squeeze(Object.values(origin)) )
+        insertWaypointBurn(sat, mainWindow.desired.scenarioTime, Object.values(waypoint), 3600*Number(inputs[0].value))
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-rmoes') {
@@ -2356,10 +2393,7 @@ function handleContextClick(button) {
         }
         let sat = button.parentElement.sat;
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
-        let rot = translateFrames(sat)
-        dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
         insertDirectionBurn(sat, mainWindow.scenarioTime, dir)
-        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + 3600;
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'execute-dsk') {
@@ -2373,25 +2407,8 @@ function handleContextClick(button) {
             return burn.time < mainWindow.scenarioTime;
         })
         let curPos = mainWindow.satellites[sat].curPos;
-        mainWindow.satellites[sat].burns.push({
-            time: mainWindow.desired.scenarioTime,
-            direction: {
-                r: 0,
-                i: 0,
-                c: 0
-            },
-            waypoint: {
-                tranTime: Number(inputs[0].value) * 3600,
-                target: {
-                    r: curPos.r,
-                    i: curPos.i,
-                    c: curPos.c,
-                }
-            }
-        })
-        mainWindow.satellites[sat].genBurns();
-        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
-        document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600;
+        insertWaypointBurn(sat, mainWindow.desired.scenarioTime, [curPos.r, curPos.i, curPos.c], Number(inputs[0].value) * 3600)
+        
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'sun-maneuver') {
@@ -2444,9 +2461,9 @@ function handleContextClick(button) {
             let tempAngle = [reducedR, Math.cos(angle) * circleR, Math.sin(angle) * circleR]
             let waypoint = math.transpose(math.multiply(R, math.transpose(tempAngle)))
             let newTarget = {
-                r: [Number(target.r) + waypoint[0]],
-                i: [Number(target.i) + waypoint[1]],
-                c: [Number(target.c) + waypoint[2]]
+                r: Number(target[0]) + waypoint[0],
+                i: Number(target[1]) + waypoint[1],
+                c: Number(target[2]) + waypoint[2]
             }
             if (returnWaypoint) return newTarget
             let dV = findDvFiniteBurn(origin, newTarget, mainWindow.satellites[chaserSat].a, tof);
@@ -2459,30 +2476,13 @@ function handleContextClick(button) {
             opt_fuction: opt_function
         })
         
-        for (ii = 0; ii < 50; ii++) {
+        for (ii = 0; ii < 10; ii++) {
             sunPso.step()
             console.log(sunPso.bestGlobabValue);
         }
         console.log(sunPso.particles.map(part => part.position[1] * 180 / Math.PI));
         target = opt_function(sunPso.bestGlobalPosition, true)
-        mainWindow.satellites[chaserSat].burns.push({
-            time: mainWindow.desired.scenarioTime,
-            direction: {
-                r: 0,
-                i: 0,
-                c: 0
-            },
-            waypoint: {
-                tranTime: tof,
-                target: {
-                    r: target.r[0],
-                    i: target.i[0],
-                    c: target.c[0],
-                }
-            }
-        })
-        mainWindow.satellites[chaserSat].genBurns();
-        mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + tof;
+        insertWaypointBurn(chaserSat, mainWindow.desired.scenarioTime, Object.values(target), tof)
         document.getElementById('time-slider-range').value = tof;
         document.getElementById('context-menu')?.remove();
     }
@@ -2650,67 +2650,72 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
             lastHiddenSatClicked = false
+            let defaultTranTime = 7200
             let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
-                time: mainWindow.desired.scenarioTime + 7200
+                time: mainWindow.desired.scenarioTime + defaultTranTime
             });
+            let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
+                time: mainWindow.desired.scenarioTime
+            });
+            let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
+            pastActions.push({
+                sat: mainWindow.currentTarget.sat,
+                oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns)),
+                time: mainWindow.desired.scenarioTime
+            })
+            // Ensure previous burn has finished, otherwise cut previous burn short
+            let lastBurn = mainWindow.satellites[mainWindow.currentTarget.sat].burns.filter(b => b.time < mainWindow.desired.scenarioTime)
+            let lastBurnIndex = lastBurn.length - 1 
+            lastBurn = lastBurn.length > 0 ? lastBurn[lastBurnIndex] : undefined
+            if (lastBurn !== undefined) {
+                let burnDuration = math.norm(lastBurn.direction) / mainWindow.satellites[mainWindow.currentTarget.sat].a
+                let lastBurnEndTime = lastBurn.time + burnDuration
+                if (lastBurnEndTime > mainWindow.desired.scenarioTime) {
+                    burnDuration = mainWindow.desired.scenarioTime - lastBurn.time - 900
+                    let newBurnMag = burnDuration * mainWindow.satellites[mainWindow.currentTarget.sat].a
+                    let newBurnDirection = lastBurn.direction.map(s => s *newBurnMag / math.norm(lastBurn.direction))
+                    mainWindow.satellites[mainWindow.currentTarget.sat].burns[lastBurnIndex].direction = newBurnDirection
+                    mainWindow.satellites[mainWindow.currentTarget.sat].burns[lastBurnIndex].waypoint = false
+                    
+                    mainWindow.satellites[mainWindow.currentTarget.sat].calcTraj()
+                    showScreenAlert('Previous finite burn duration curtailed to ' + (1000*newBurnMag).toFixed(2) + ' m/s')
+                }
+            }
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.push({
                 time: mainWindow.desired.scenarioTime,
                 shown: 'during',
-                location: null,
-                direction: {
-                    r: 0,
-                    i: 0,
-                    c: 0
-                },
-                waypoint: {
-                    tranTime: math.round(2 * Math.PI * 0.08356158 / mainWindow.mm / 10) * 10,
-                    target: {
-                        r: targetState.r[0],
-                        i: targetState.i[0],
-                        c: targetState.c[0]
-                    }
+                location: Object.values(satLocation).slice(0,3),
+                direction: [0,0,0],
+                waypoint: burnType === 'direction' ? false : {
+                    target: targetState,
+                    tranTime: defaultTranTime
                 }
             })
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.sort((a, b) => {
                 return a.time - b.time;
             })
-            mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
-            let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
             mainWindow.burnStatus = {
                 type: burnType,
                 sat: mainWindow.currentTarget.sat,
                 burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
                 frame: Object.keys(check)[0]
             }
-            logAction({
-                index: mainWindow.burnStatus.burn,
-                sat: mainWindow.currentTarget.sat,
-                type: 'addBurn'
-            })
             if (burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
-                mainWindow.desired.scenarioTime += math.round(2 * Math.PI * 0.08356158 / mainWindow.mm / 10) * 10;
+                mainWindow.desired.scenarioTime += defaultTranTime;
                 document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
             };
         }, 250)
     }
     else if (mainWindow.currentTarget.type === 'burn') {
+        pastActions.push({
+            sat: mainWindow.currentTarget.sat,
+            oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns))
+        })
         if (event.ctrlKey) {
-            logAction({
-                type: 'deleteBurn',
-                index: check[mainWindow.currentTarget.frame],
-                sat: mainWindow.currentTarget.sat,
-                burn:  mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]
-            })
             mainWindow.satellites[mainWindow.currentTarget.sat].burns.splice(check[mainWindow.currentTarget.frame], 1);
             mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
             return;
         }
-        logAction({
-            type: 'alterBurn',
-            index: check[mainWindow.currentTarget.frame],
-            sat: mainWindow.currentTarget.sat,
-            burn:  JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns[check[mainWindow.currentTarget.frame]]))
-        })
         let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
         mainWindow.burnStatus = {
             type: burnType,
@@ -2719,6 +2724,12 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             frame: mainWindow.currentTarget.frame
         }
         if (burnType === 'waypoint' && mainWindow.burnStatus.frame === 'ri') {
+            if (mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint === false) {
+                mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint = {
+                    tranTime: 7200,
+                    target: [0,0,0]
+                }
+            }
             mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
             document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
         }
@@ -2780,50 +2791,11 @@ document.getElementById('main-plot').addEventListener('pointermove', event => {
     }
 })
 
-function moveTrueAnomaly(delta = 0.1, recalcBurns = true) {
-    return
-    // Angle in degrees
+function moveTrueAnomaly(delta = 0.05) {
     delta *= Math.PI / 180
-    if (mainWindow.desired.plotWidth < math.abs(delta*2*mainWindow.originOrbit.a)) {
-        mainWindow.desired.plotWidth = math.abs(delta*2*mainWindow.originOrbit.a) * 4
-    }
-    let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-    let sats = mainWindow.satellites.map(sat => {
-        let pos = Object.values(sat.position)
-        let eciPos = Ric2Eci(pos.slice(0,3), pos.slice(3,6), originEci.slice(0,3), originEci.slice(3,6))
-        return [...eciPos.rEcci, ...eciPos.drEci]
-    })
-    let satWaypoints = mainWindow.satellites.map(sat => {
-        return sat.burns.map(b => {
-            let way = [...Object.values(b.waypoint.target),0,0,0]
-            way = Ric2Eci(way.slice(0,3), [0,0,0], originEci.slice(0,3), originEci.slice(3,6))
-            return [...way.rEcci, ...way.drEci]  
-        })
-    })
-    mainWindow.originOrbit.tA += delta
-    originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-    for (let index = 0; index < mainWindow.satellites.length; index++) {
-        let ricPos = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sats[index].slice(0,3), sats[index].slice(3,6))
-       mainWindow.satellites[index].position = {
-            r: ricPos.rHcw[0][0],
-            i: ricPos.rHcw[1][0],
-            c: ricPos.rHcw[2][0],
-            rd: ricPos.drHcw[0][0],
-            id: ricPos.drHcw[1][0],
-            cd: ricPos.drHcw[2][0]
-       }
-       for (let jj = 0; jj < mainWindow.satellites[index].burns.length; jj++) {
-        let way = satWaypoints[index][jj]
-        let ricWay = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), way.slice(0,3), way.slice(3,6))
-        mainWindow.satellites[index].burns[jj].waypoint.target = {
-            r: ricWay.rHcw[0][0],
-            i: ricWay.rHcw[1][0],
-            c: ricWay.rHcw[2][0]
-        }
-       }
-       if (recalcBurns) mainWindow.satellites[index].calcTraj(true)
-       mainWindow.satellites[index].calcTraj()
-    }
+    let origin = {...mainWindow.originOrbit}
+    origin.tA += delta
+    mainWindow.updateOrigin(origin)
 }
 
 function exportScenario(name = mainWindow.satellites.map(sat => sat.name).join('_') + '.sas') {
@@ -2902,7 +2874,6 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let stateInputs = document.querySelectorAll('.origin-input')
     let coe = document.getElementById('coe-radio').checked
     let state = [...stateInputs].map(s => Number(s.value === '' ? s.placeholder : s.value))
-    console.log(state, [...stateInputs].map(s => s.value));
     let startDate = new Date(document.getElementById('start-time').value)
     if (!coe) {
         state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
@@ -2917,18 +2888,11 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
             tA: state[5] * Math.PI / 180
         }
     }
-    if (state.e > 0.01) return showScreenAlert('State has an eccentricity of over 0.01, rejected')
-    let eciState = Object.values(Coe2PosVelObject(state))
-    console.log(state);
-    let sun = sunFromTime(startDate) 
-    sun = math.squeeze(Eci2Ric(eciState.slice(0,3), eciState.slice(3,6), sun, [0,0,0]).rHcw)
-    sun = math.dotDivide(sun, math.norm(sun))
-    mainWindow.initSun = sun
-    mainWindow.originOrbit = state
     mainWindow.startDate = startDate
-    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
     mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
     mainWindow.scenarioLength = Number(document.querySelector('#scen-length-input').value === '' ? document.querySelector('#scen-length-input').placeholder : document.querySelector('#scen-length-input').value)
+    
+    mainWindow.updateOrigin(state)
     let strStart = Number(document.querySelector('#str-start-input').value === ''? document.querySelector('#str-start-input').placeholder : document.querySelector('#str-start-input').value)
     let strEnd = Number(document.querySelector('#str-end-input').value === ''? document.querySelector('#str-end-input').placeholder : document.querySelector('#str-end-input').value)
     mainWindow.stringLimit = [strStart - 1, strEnd]
@@ -3207,29 +3171,141 @@ function phiMatrixWhole(t = 0, n = mainWindow.mm) {
         [0, 0, -n * snt, 0, 0, cnt]
     ];
 }
+let lastLambertError
+function estimateWaypointBurn(r1, r2, dt, a) {
+    let lamResults1, long, option
+    try {
+        long = Math.floor(dt / (Math.PI / mainWindow.mm))
+        let n = Math.floor(long / 2) 
+        let crossVector = math.cross(r1.slice(0,3),r2.slice(0,3))
+        let h1 = math.cross(r1.slice(0,3), r1.slice(3,6))
+        long = crossVector[2] * h1[2] > 0
+        option = n < 1 ? 1 : long ? -1 : 1
+        lamResults1 = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, option)
+        if (lamResults1 === 'collinear') return {
+            data: false,
+            reason: 'collinear'
+        }
+        let burnEst = math.subtract(lamResults1.v1, r1.slice(3,6))
+        let r = ConvEciToRic(r1, [...burnEst,0,0,0], true)
+        // convert ECI burn direction into satellites RIC direction
+        burnEst = math.multiply(r[0], burnEst)
+        // console.log(lamResults.v1);
+        return result = eciFiniteBurnOneBurn(r1,r2,dt,a,burnEst)
+    } catch (error) {
+        lastLambertError = {
+            data: false,
+            reason: 'unknown lambert error',
+            results: lamResults1,
+            long,
+            option,
+            r1,r2,dt
+        }
+        return {
+            data: false,
+            reason: 'unknown lambert error',
+            results: lamResults1,
+            long,
+            option,
+            r1,r2,dt
+        }
+    }
+}
 
-function nonLinearBurnEstimator(posInit = [0,0,0], posFinal=[-30,1000,0], dt = 18*3600, start = mainWindow.desired.scenarioTime) {
-    posInit = math.squeeze(posInit)
-    posFinal = math.squeeze(posFinal)
-    console.log(proxOpsTargeter(posInit, posFinal, dt)[0]);
+function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
+    let yErr= [100], S, dX = 1,
+        F;
+    let dv1 = guess
+    let X = [
+        Math.atan2(dv1[1], dv1[0]),
+        Math.atan2(dv1[2], math.norm([dv1[0], dv1[1]])),
+        math.norm(math.squeeze(dv1)) / a0 / tf
+    ];
+    if (X[2] < 1e-11) {
+        return {
+            data: false,
+            reason: 'no burn mag'
+        }
+    }
+    if (X[2] > 1) return {
+        data: false,
+        reason: 'no kinematic reach'
+    }
+    let errCount = 0, fHistory = []
+    while (math.norm(math.squeeze(yErr)) > 1e-3) {
+        F = eciOneBurnFiniteCalc(stateInit, X[0], X[1], X[2], tf, a0).slice(0,3)
+        fHistory.push(F.slice(0,3))
+        yErr = math.subtract(stateFinal, F)
+        S = eciJacobianOneBurn(stateInit, a0, X[0], X[1], X[2], tf);
+        try {
+            dX = math.multiply(math.inv(S), math.transpose([yErr]));
+        } catch (error) {
+            dX = math.zeros([3,1])
+        }
+        X = math.squeeze(math.add(math.transpose([X]), dX))
+        X[2] = X[2] < 0 ? 1e-9 : X[2]
+        X[2] = X[2] > 1 ? 0.95 : X[2]
+        if (errCount > 30) return {
+            data: false,
+            reason: 'upper errcount',
+            goal: stateFinal,
+            acheived: F,
+            history: fHistory,
+            guess
+        };
+        errCount++;
+    }
+    // console.log(math.squeeze(X));
+    if (X[2] > 1 || X[2] < 0) return {
+        data: false,
+        reason: 'no kinematic reach'
+    }
+    let cosEl = Math.cos(X[1])
+    return {
+        data: {
+            r: a0 * X[2] * tf * Math.cos(X[0]) * cosEl,
+            i: a0 * X[2] * tf * Math.sin(X[0]) * cosEl,
+            c: a0 * X[2] * tf * Math.sin(X[1]),
+            t: X[2] *tf,
+            position: F,
+            final: X
+        }
+    }
+}
 
-    let chiefInit = {...mainWindow.originOrbit}
-    chiefInit.tA = propTrueAnomaly(chiefInit.tA, chiefInit.a, chiefInit.e, start)
-    chiefInit = Object.values(Coe2PosVelObject(chiefInit))
+function eciOneBurnFiniteCalc(state=[42164.14, 0, 0, 0, 3.0746611, 0], alpha=0, phi=0, tB=0.1, finalTime=60, a = 0.00001) {
+    let cosEl = Math.cos(phi)
+    let direction = [a * Math.cos(alpha) * cosEl, a * Math.sin(alpha) * cosEl, a * Math.sin(phi)];
+    let burnDuration = tB * finalTime
+    propPosition = runge_kutta4(inertialEom, state, burnDuration, direction)
+    propPosition = propToTime(propPosition, finalTime - tB*finalTime)
+    return propPosition
+}
+
+function eciJacobianOneBurn(state, a, alpha, phi, tB, tF) {
+    let m1, m2, m, mC
+    // alpha; If phi is at 90 degrees, jacobian won't have full rank, set to 89 deg for az jacobian calculation
+    let phi2 = math.abs(Math.cos(phi)) < 1e-6 ? 89 * Math.PI / 180 : phi;
+    m1 = math.transpose([eciOneBurnFiniteCalc(state, alpha, phi2, tB, tF, a).slice(0,3)])
     
-    let chiefFinal = {...mainWindow.originOrbit}
-    chiefFinal.tA = propTrueAnomaly(chiefFinal.tA, chiefFinal.a, chiefFinal.e, dt + start)
-    chiefFinal = Object.values(Coe2PosVelObject(chiefFinal))
-    console.log(posInit, [0,0,0], chiefInit.slice(0,3), chiefInit.slice(3,6));
-    posInit = Ric2Eci(posInit, [0,0,0], chiefInit.slice(0,3), chiefInit.slice(3,6))
-    posFinal = Ric2Eci(posFinal, [0,0,0], chiefFinal.slice(0,3), chiefFinal.slice(3,6))
-    let nRevs = math.floor(dt / (2 * Math.PI / mainWindow.mm))
-    let long = (dt - nRevs * (2 * Math.PI / mainWindow.mm)) < (Math.PI / mainWindow.mm)
-    let lamResults1 = solveLambertsProblem(posInit.rEcci, posFinal.rEcci, dt, nRevs, long)
-    let hcw1 = Eci2Ric(chiefInit.slice(0,3), chiefInit.slice(3,6), posInit.rEcci, posInit.drEci)
-    let hcw2 = Eci2Ric(chiefInit.slice(0,3), chiefInit.slice(3,6), posInit.rEcci, math.squeeze(lamResults1.v1))
-    let dV = math.subtract(hcw2.drHcw, hcw1.drHcw)
-    return dV
+    m2 = math.transpose([eciOneBurnFiniteCalc(state, alpha + 0.01, phi2, tB, tF, a).slice(0,3)])
+    mC = math.dotDivide(math.subtract(m2, m1), 0.01);
+
+    //phi
+    m2 =  math.transpose([eciOneBurnFiniteCalc(state, alpha, phi + 0.01, tB, tF, a).slice(0,3)])
+    m = math.dotDivide(math.subtract(m2, m1), 0.01);
+    mC = math.concat(mC, m);
+
+    //tB
+    m2 = math.transpose([eciOneBurnFiniteCalc(state, alpha, phi, tB + tB * 0.1, tF, a).slice(0,3)])
+    m = math.dotDivide(math.subtract(m2, m1), tB * 0.1);
+    mC = math.concat(mC, m);
+
+    return mC;
+}
+
+function runLambertSolution(r1 = [42164, 0, 0, 0, 3.0147, 0], r2, dt = 18*3600, start = mainWindow.desired.scenarioTime) {
+
 }
 
 function curve2linear(state = [0, 1000, 0,0,0,0], origin = mainWindow.originOrbit) {
@@ -3447,57 +3523,28 @@ function calcBurns() {
     let mousePosition = this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
     if (mainWindow.burnStatus.type === 'waypoint' && !cross && sat.a > 0.000001) {
-        sat.burns[this.burnStatus.burn].waypoint.target = {
-            r: mousePosition[this.burnStatus.frame].r,
-            i: mousePosition[this.burnStatus.frame].i,
-            c: sat.burns[this.burnStatus.burn].waypoint.target.c
-        }
+        let originAtTime = propToTimeAnalytic(mainWindow.originOrbit, sat.burns[this.burnStatus.burn].time+sat.burns[this.burnStatus.burn].waypoint.tranTime)
+        let target = [
+            mousePosition[this.burnStatus.frame].r,
+            mousePosition[this.burnStatus.frame].i,
+            sat.burns[this.burnStatus.burn].waypoint.target[2]
+        ]
+        target = Ric2Eci(target, [0,0,0], originAtTime.slice(0,3), originAtTime.slice(3,6)).rEcci
+        sat.burns[this.burnStatus.burn].waypoint.target = target
     } else {
-        sat.burns[this.burnStatus.burn].direction = {
-            r: cross ? sat.burns[this.burnStatus.burn].direction.r : (mousePosition[this.burnStatus.frame].r - sat.burns[this.burnStatus.burn].location.r[0]) * mainWindow.burnSensitivity / 1000,
-            i: cross ? sat.burns[this.burnStatus.burn].direction.i : (mousePosition[this.burnStatus.frame].i - sat.burns[this.burnStatus.burn].location.i[0]) * mainWindow.burnSensitivity / 1000,
-            c: cross ? (mousePosition[this.burnStatus.frame].c - sat.burns[this.burnStatus.burn].location.c[0]) *
-                mainWindow.burnSensitivity / 1000 : sat.burns[this.burnStatus.burn].direction.c
-        }
-        let tranTime = 1.5*math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c]) / sat.a;
-        tranTime = tranTime < (2 * Math.PI / mainWindow.mm) * 0.12534 ? (2 * Math.PI / mainWindow.mm) * 0.12534 : tranTime;
-        tranTime = cross ? sat.burns[this.burnStatus.burn].waypoint.tranTime : tranTime; 
-        // If burn time is longer than about an eighth of the orbit (times 1.5), limit burn
-        if (tranTime > (2 * Math.PI / mainWindow.mm) * 0.3 && sat.a > 0.000001 && !cross) {
-            tranTime = (2 * Math.PI / mainWindow.mm) * 0.3;
-            let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
-            dir = math.dotDivide(dir, math.norm(dir));
-            dir = math.dotMultiply(dir, (tranTime/1.5) * sat.a);
-            sat.burns[this.burnStatus.burn].direction = {
-                r: dir[0],
-                i: dir[1],
-                c: dir[2],
-            }
-        }
-        sat.burns[this.burnStatus.burn].waypoint.tranTime = tranTime;
-        let dir = [sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c];
-        let targetState = sat.currentPosition({
-            time: sat.burns[this.burnStatus.burn].time
-        });
-        targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / tranTime, tranTime, sat.burns[this.burnStatus.burn].time, sat.a);
-        sat.burns[this.burnStatus.burn].waypoint.target = {
-            r: cross ? sat.burns[this.burnStatus.burn].waypoint.target.r : targetState.x,
-            i: cross ? sat.burns[this.burnStatus.burn].waypoint.target.i : targetState.y,
-            c: targetState.z
-        }
-        // Reset cross-track waypoint values in future to natural motion
+        sat.burns[this.burnStatus.burn].direction = [
+            cross ? sat.burns[this.burnStatus.burn].direction[0] : (mousePosition[this.burnStatus.frame].r - sat.burns[this.burnStatus.burn].location[0]) * mainWindow.burnSensitivity / 1000,
+            cross ? sat.burns[this.burnStatus.burn].direction[1] : (mousePosition[this.burnStatus.frame].i - sat.burns[this.burnStatus.burn].location[1]) * mainWindow.burnSensitivity / 1000,
+            cross ? (mousePosition[this.burnStatus.frame].c - sat.burns[this.burnStatus.burn].location[2]) *
+                mainWindow.burnSensitivity / 1000 : sat.burns[this.burnStatus.burn].direction[2]
+        ]
+        sat.burns[this.burnStatus.burn].waypoint = false
+        // Reset cross-track directiom burns in future to 0
         for (let hh = this.burnStatus.burn + 1; hh < sat.burns.length; hh++) {
-            targetState = sat.currentPosition({
-                time: sat.burns[hh].time
-            });
-            dir = [sat.burns[hh].direction.r, sat.burns[hh].direction.i, 0];
-            sat.burns[hh].direction.c = 0;
-            targetState = oneBurnFiniteHcw({x: targetState.r[0], y: targetState.i[0], z: targetState.c[0], xd: targetState.rd[0], yd: targetState.id[0], zd: targetState.cd[0]}, Math.atan2(dir[1], dir[0]), Math.atan2(dir[2], math.norm([dir[1], dir[0]])), math.norm(dir) / sat.a / sat.burns[hh].waypoint.tranTime, sat.burns[hh].waypoint.tranTime, sat.burns[hh].time, sat.a);
-            sat.burns[hh].waypoint.target.c = targetState.z;
-            // sat.burns[hh].waypoint.target.c = targetState.c[0];
+            sat.burns[hh].direction[2] = 0
         }
     }
-    let mag = math.norm([sat.burns[this.burnStatus.burn].direction.r, sat.burns[this.burnStatus.burn].direction.i, sat.burns[this.burnStatus.burn].direction.c])
+    let mag = math.norm([sat.burns[this.burnStatus.burn].direction[0], sat.burns[this.burnStatus.burn].direction[1], sat.burns[this.burnStatus.burn].direction[2]])
     let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location)[this.burnStatus.frame];
     let ctx = this.getContext();
     ctx.strokeStyle = sat.color;
@@ -3505,7 +3552,7 @@ function calcBurns() {
     ctx.beginPath();
     ctx.moveTo(initPos.x, initPos.y);
     let dist = mag * 1000 / this.burnSensitivity;
-    let point2 = {r: sat.burns[this.burnStatus.burn].location.r[0] + dist * sat.burns[this.burnStatus.burn].direction.r / mag, i: sat.burns[this.burnStatus.burn].location.i[0] + dist * sat.burns[this.burnStatus.burn].direction.i / mag, c: sat.burns[this.burnStatus.burn].location.c[0] + dist * sat.burns[this.burnStatus.burn].direction.c / mag}
+    let point2 = {r: sat.burns[this.burnStatus.burn].location[0] + dist * sat.burns[this.burnStatus.burn].direction[0] / mag, i: sat.burns[this.burnStatus.burn].location[1] + dist * sat.burns[this.burnStatus.burn].direction[1]/ mag, c: sat.burns[this.burnStatus.burn].location[2] + dist * sat.burns[this.burnStatus.burn].direction[2] / mag}
     let finalPos = this.convertToPixels(point2)[this.burnStatus.frame];
     ctx.lineTo(finalPos.x, finalPos.y);
     ctx.stroke();
@@ -3513,7 +3560,7 @@ function calcBurns() {
     ctx.textBaseline = "middle"
     ctx.textAlign = 'center'
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
-    sat.genBurns(true, mainWindow.burnStatus.burn);
+    sat.calcTraj(true)
 }
 
 function addToolTip(element) {
@@ -3588,7 +3635,7 @@ function initStateFunction(el) {
     else if (el.id === 'add-satellite-button') {
         let inputs = document.querySelectorAll('.sat-input')
         let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-        let ricState
+        let eciState, ricState, eciOrigin
         switch (radioId) {
             case 'ric-sat-input':
                 ricState = [
@@ -3598,11 +3645,14 @@ function initStateFunction(el) {
                     inputs[3].value,
                     inputs[4].value,
                     inputs[5].value,
-                ].map((s, ii) => Number(s) / (ii > 2 ? 1000 : 1))
+                ]
+                eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+                eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
+                eciState = [...eciState.rEcci, ...eciState.drEci]
                 break
             case 'eci-sat-input':
                 let date = new Date(inputs[0].value)
-                let eciState = [
+                eciState = [
                     inputs[1].value,
                     inputs[2].value,
                     inputs[3].value,
@@ -3611,10 +3661,7 @@ function initStateFunction(el) {
                     inputs[6].value,
                 ].map(s => Number(s))
                 let dt = (mainWindow.startDate - date) / 1000
-                eciState = propToTime(eciState, dt, false)
-                let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-                ricState = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), eciState.slice(0,3), eciState.slice(3,6))
-                ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+                eciState = propToTime(eciState, dt)
                 break
             case 'rmoe-sat-input':
                 let rmoes = [
@@ -3625,14 +3672,6 @@ function initStateFunction(el) {
                     inputs[4].value,
                     inputs[5].value,
                 ].map((s,ii) => Number(s))
-                console.log({
-                    ae: rmoes[0],
-                    x: rmoes[1],
-                    y: rmoes[2],
-                    b: rmoes[3],
-                    z: rmoes[4],
-                    m: rmoes[5]
-                });
                 ricState = rmoeToRic({
                     ae: rmoes[0],
                     x: rmoes[1],
@@ -3642,16 +3681,12 @@ function initStateFunction(el) {
                     m: rmoes[5]
                 })
                 ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+                eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+                eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
+                eciState = [...eciState.rEcci, ...eciState.drEci]
                 break
         }
-        position = {
-            r: ricState[0],
-            i: ricState[1],
-            c: ricState[2],
-            rd: ricState[3],
-            id: ricState[4],
-            cd: ricState[5]
-        }
+        let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
         let styleInputs = document.querySelectorAll('.sat-style-input')
         mainWindow.satellites.push(new Satellite({
             position,
@@ -3660,10 +3695,6 @@ function initStateFunction(el) {
             color: styleInputs[2].value,
             name: styleInputs[3].value === '' ? 'Sat' + (mainWindow.satellites.length + 1) : styleInputs[3].value
         }))
-        let newWidth = (Math.abs(position.i) * 2.2) > (Math.abs(position.r) * 2.4 / mainWindow.getRatio()) ? Math.abs(position.i) * 2.2 : Math.abs(position.r) * 2.4 / mainWindow.getRatio()
-        if (newWidth > mainWindow.desired.plotWidth) {
-            mainWindow.desired.plotWidth = newWidth
-        }
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ');
         updateWhiteCellWindow()
         updateLockScreen()
@@ -4034,12 +4065,11 @@ function drawSatellite(satellite = {}) {
     ctx.fillText(name ? shortenString(name) : '', pixelPosition[0], letterY);
 }
 
-function getRelativeData(n_target, n_origin, intercept = true) {
+function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
     let sunAngle, rangeRate, range, poca, toca, tanRate, rangeStd;
-    let relPos = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getPositionArray(), mainWindow.satellites[n_target]
-        .getPositionArray()));
-    let relVel = math.squeeze(math.subtract(mainWindow.satellites[n_origin].getVelocityArray(), mainWindow.satellites[n_target]
-        .getVelocityArray()));
+    let relState = math.subtract(Object.values(mainWindow.satellites[n_origin].curPos), Object.values(mainWindow.satellites[n_target].curPos))
+    let relPos = relState.slice(0,3)
+    let relVel = relState.slice(3,6)
     range = math.norm(relPos);
     if (monteCarloData !== null) {
         if (n_target == monteCarloData.sat) {
@@ -4061,34 +4091,36 @@ function getRelativeData(n_target, n_origin, intercept = true) {
         toca = relPosHis.findIndex(element => element === poca) * mainWindow.timeDelta;
         if (intercept !== false) {
             let point1 = mainWindow.satellites[n_target].currentPosition()
-            let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + 3600})
+            let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + intTime*3600})
             let burn = hcwFiniteBurnOneBurn({
-                x: point1.r[0],
-                y: point1.i[0],
-                z: point1.c[0],
-                xd: point1.rd[0],
-                yd: point1.id[0],
-                zd: point1.cd[0]
+                x: point1[0],
+                y: point1[1],
+                z: point1[2],
+                xd: point1[3],
+                yd: point1[4],
+                zd: point1[5]
             }, {
-                x: point2.r[0],
-                y: point2.i[0],
-                z: point2.c[0],
-                xd: point2.rd[0],
-                yd: point2.id[0],
-                zd: point2.cd[0]
-            }, 3600, mainWindow.satellites[n_target].a, mainWindow.scenarioTime)
+                x: point2[0],
+                y: point2[1],
+                z: point2[2],
+                xd: point2[3],
+                yd: point2[4],
+                zd: point2[5]
+            }, intTime*3600, mainWindow.satellites[n_target].a, mainWindow.scenarioTime)
             if (burn) {
                 let lastTimeStepOrigin = [burn.F.x - burn.F.xd, burn.F.y - burn.F.yd, burn.F.z - burn.F.zd]
-                let lastTimeStepTarget = [point2.r[0] -  point2.rd[0], point2.i[0] -  point2.id[0], point2.c[0] -  point2.cd[0]]
+                let lastTimeStepTarget = math.subtract(point2.slice(0,3), point2.slice(3,6))// [point2[0] -  point2.rd[0], point2.i[0] -  point2.id[0], point2.c[0] -  point2.cd[0]]
                 let relPosInter = math.subtract(lastTimeStepOrigin, lastTimeStepTarget)
-                let sunInter = mainWindow.getCurrentSun(mainWindow.scenarioTime + 3600 - 1)
+                let sunInter = mainWindow.getCurrentSun(mainWindow.scenarioTime + intTime*3600-1)
                 let sunAng = math.acos(math.dot(sunInter, relPosInter) / math.norm(sunInter) / math.norm(relPosInter)) * 180 / Math.PI
                 interceptData = {
                     dV: math.norm([burn.r, burn.i, burn.c]),
-                    relVel: math.norm(math.subtract([burn.F.xd, burn.F.yd, burn.F.zd], [point2.rd[0], point2.id[0], point2.cd[0]])),
+                    relVel: math.norm(math.subtract([burn.F.xd, burn.F.yd, burn.F.zd], point2.slice(3,6))),
                     sunAng
                 }
-                interceptData = `[${(1000*interceptData.dV).toFixed(1)}, ${(interceptData.sunAng).toFixed(1)}, ${(1000*interceptData.relVel).toFixed(1)}]`
+                interceptData = `\ndV ${(1000*interceptData.dV).toFixed(1)} m/s\nCATS ${(interceptData.sunAng).toFixed(1)} deg\nRelVel ${(1000*interceptData.relVel).toFixed(1)} m/s`
+            } else {
+                interceptData = '\nOutside of\nKinematic\nReach'
             }
         }
     }
@@ -4110,8 +4142,8 @@ function getRelativeData(n_target, n_origin, intercept = true) {
 function findMinDistance(vector1, vector2) {
     let outVec = [];
     for (let jj = 0; jj < Math.min(vector1.length, vector2.length); jj++) {
-        outVec.push(math.norm([vector1[jj].r - vector2[jj].r, vector1[jj].i - vector2[jj].i, vector1[jj].c -
-            vector2[jj].c
+        outVec.push(math.norm([vector1[jj].position[0] - vector2[jj].position[0], vector1[jj].position[1] - vector2[jj].position[1], vector1[jj].position[2] -
+            vector2[jj].position[2]
         ]));
     }
     return outVec
@@ -4225,7 +4257,7 @@ function drawAngleCircle(r = 10, angle = 60, tof = 7200) {
 }
 
 function findDvFiniteBurn(r1, r2, a, tf) {
-    let dir = hcwFiniteBurnOneBurn({x: r1.r[0], y: r1.i[0], z: r1.c[0], xd: r1.rd[0], yd: r1.id[0], zd: r1.cd[0]}, {x: r2.r[0], y: r2.i[0], z: r2.c[0], xd: 0, yd: 0, zd: 0}, tf, a);
+    let dir = hcwFiniteBurnOneBurn({x: r1[0], y: r1[1], z: r1[2], xd: r1[3], yd: r1[4], zd: r1[5]}, {x: r2.r, y: r2.i, z: r2.c, xd: 0, yd: 0, zd: 0}, tf, a);
     return dir ? dir.t[0]*tf*a : 10000;
 }
 
@@ -4286,61 +4318,6 @@ function twoBodyRpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
     ];
 }
 
-function j2Rpo(state = [-1.89733896, 399.98, 0, 0, 0, 0], options = {}) {
-    let {mu = 398600.4418, a = [0,0,0], time= 0} = options;
-    let inertChief = {...mainWindow.originOrbit}
-    inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
-    inertChief = Coe2PosVelObject(inertChief, true)
-    let r = Object.values(inertChief)
-    let v = r.slice(3,6)
-    r = r.slice(0,3)
-    let rn = math.norm(r)
-    let radRate = math.dot(r, v) / rn
-    let tanRate = (math.norm(v) ** 2 - radRate ** 2) ** (1/2)
-    
-    let chiefAcc = twoBodyJ2(r, true).slice(3,6)
-    
-    let h = math.cross(r, v);
-    let ricX = math.dotDivide(r, rn);
-    let ricZ = math.dotDivide(h, math.norm(h));
-    let ricY = math.cross(ricZ, ricX);
-    let C = [ricX, ricY, ricZ];
-    let depPosition = math.add(r, math.squeeze(math.multiply(math.transpose(C), math.transpose([state.slice(0,3)]))))
-    let depAcc = twoBodyJ2(depPosition, true).slice(3,6)
-    let relAcc = math.squeeze(math.multiply(C, math.transpose([math.subtract(depAcc, chiefAcc)])))
-
-    let n = tanRate / rn
-    let ndot = -2 * radRate * n / rn
-
-    let x = state[0], y = state[1], z = state[2], dx = state[3], dy = state[4], dz = state[5];
-    // console.log(relAcc);
-    return [
-        dx,
-        dy,
-        dz,
-        relAcc[0] + 2 * n * dy + n ** 2 * x + ndot * y +  a[0] + mainWindow.extraAcc[0],
-        relAcc[1] - 2 * n * dx - ndot * x + n ** 2 * y + a[1] + mainWindow.extraAcc[1],
-        relAcc[2] + a[2] + mainWindow.extraAcc[2]
-    ]
-}
-
-function twoBodyJ2(position = [42164, 0, 0, 0, 3.074, 0], j2Eff = true) {
-    let mu = 398600.44189, j2 = 0.00108262668, re = 6378, x = position[0], y = position[1], z = position[2]
-    let r = math.norm(position.slice(0,3))
-    return j2Eff ? [
-        position[3], position[4], position[5],
-        -mu * x / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 1)),
-        -mu * y / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 1)),
-        -mu * z / r ** 3 * (1 - 1.5 * j2 * re ** 2 / r ** 2 * (5 * z ** 2 / r ** 2 - 3))
-    ] : 
-    [
-        position[3], position[4], position[5],
-        -mu * x / r ** 3 ,
-        -mu * y / r ** 3 ,
-        -mu * z / r ** 3 
-    ]
-}
-
 function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
     if (mainWindow.prop === 4) {
         let k1 = eom(state, {a, time});
@@ -4349,182 +4326,58 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
         let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a, time: time + dt});
         return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
     }
-    // eom = j2 ? j2Rpo : eom
     let k1 = eom(state, {a, time});
     let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a, time: time + dt/2});
     return math.add(state, math.dotMultiply(dt, k2));
 }
 
-function calcSatTwoBody(recalcBurns = false, burns = 0) {
-    // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
-    let t_calc = 0, currentState = Object.values(this.position), satBurn = this.burns.length > 0 ? 0 : undefined;
-    this.stateHistory = [];
-    while (t_calc <= mainWindow.scenarioLength * 3600) {
-        this.stateHistory.push({
-            t: t_calc, 
-            r: currentState[0],
-            i: currentState[1],
-            c: currentState[2],
-            rd: currentState[3],
-            id: currentState[4],
-            cd: currentState[5]
-        });
-        if (satBurn !== undefined) {
-            if ((this.burns[satBurn].time - t_calc) <= mainWindow.timeDelta && (this.burns[satBurn].time <=
-                (mainWindow.scenarioTime + 0.5) || recalcBurns)) {
-                currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time - t_calc, [0,0,0], t_calc);
-                let remainder = mainWindow.timeDelta - (this.burns[satBurn].time - t_calc)
-                t_calc = this.burns[satBurn].time
-                // Recalculate Burns if needed
-                if (recalcBurns && satBurn >= burns) {
-                    this.burns[satBurn].location  = {
-                        r: [currentState[0]],
-                        i: [currentState[1]],
-                        c: [currentState[2]],
-                        rd: [currentState[3]],
-                        id: [currentState[4]],
-                        cd: [currentState[5]],
-                    }  
-                    if (this.a > 0.000001){
-                        let dir = hcwFiniteBurnOneBurn({
-                            x: currentState[0],
-                            y: currentState[1],
-                            z: currentState[2],
-                            xd: currentState[3],
-                            yd: currentState[4],
-                            zd: currentState[5]
-                        }, {
-                            x: this.burns[satBurn].waypoint.target.r,
-                            y: this.burns[satBurn].waypoint.target.i,
-                            z: this.burns[satBurn].waypoint.target.c,
-                            xd: 0,
-                            yd: 0,
-                            zd: 0
-                        }, this.burns[satBurn].waypoint.tranTime, this.a, t_calc)
-                        if (dir && dir.t > 0 && dir.t < 1) {
-                            this.burns[satBurn].direction.r = dir.r;
-                            this.burns[satBurn].direction.i = dir.i;
-                            this.burns[satBurn].direction.c = dir.c;
-                        }
-                    }
-                } 
-                // Burn duration
-                let t_burn = math.norm([this.burns[satBurn].direction.r, this.burns[satBurn]
-                    .direction.i, this.burns[satBurn].direction.c
-                ]) / this.a;
-                
-                if (satBurn !== this.burns.length - 1) {
-                    t_burn = t_burn > (this.burns[satBurn + 1].time - this.burns[satBurn].time) ? this.burns[satBurn + 1].time - this.burns[satBurn].time : t_burn;
-                } 
-                t_burn = ((mainWindow.scenarioTime - this.burns[satBurn].time) < t_burn) && !recalcBurns ? (mainWindow.scenarioTime - this.burns[satBurn].time) : t_burn;
-                
-                let direction = Object.values(this.burns[satBurn].direction)
-                direction = math.dotMultiply(this.a / math.norm(direction), direction)
-
-                if (t_burn > remainder) {
-                    currentState = runge_kutta(twoBodyRpo, currentState, remainder, direction, t_calc);
-                    t_calc += remainder
-                    this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
-                    remainder = 0
-                }
-                while ((this.burns[satBurn].time + t_burn - t_calc) > mainWindow.timeDelta) {
-                    currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, direction, t_calc);
-                    t_calc += mainWindow.timeDelta
-                    this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
-                }
-                // console.log(this.burns[satBurn].time + t_burn - t_calc);
-                if (t_burn > 1e-3) {
-                    currentState = runge_kutta(twoBodyRpo, currentState, this.burns[satBurn].time + t_burn - t_calc, direction, t_calc);
-                    remainder = remainder > 0 ? remainder - (this.burns[satBurn].time + t_burn - t_calc) : mainWindow.timeDelta - (this.burns[satBurn].time + t_burn - t_calc)
-                    t_calc = t_burn + this.burns[satBurn].time
-                }
-                t_calc += remainder
-                currentState = runge_kutta(twoBodyRpo, currentState, remainder, [0,0,0], t_calc)
-                // this.stateHistory.push({t: t_calc, r: currentState[0], i: currentState[1], c: currentState[2], rd: currentState[3], id: currentState[4], cd: currentState[5]});
-                satBurn = this.burns.length === satBurn + 1 ? undefined : satBurn + 1;
-                continue;
-            }
+function getCurrentPosition(options = {}) {
+    let {time = mainWindow.scenarioTime} = options;
+    let index = this.stateHistory.findIndex(s => s.t > time) - 1
+    index = index < 0 ? this.stateHistory.length - 1 : index
+    let indexTime = this.stateHistory[index].t
+    let position = this.stateHistory[index].position
+    // Find all burns that have any duration inside the timeDelta period
+    let burnsWithin = this.burns.map(b => {
+        let mag_a = math.norm(b.direction) / this.a
+        let endTime = time
+        let burnEnd = b.time + mag_a
+        let burnStart = b.time < indexTime ? indexTime : b.time
+        burnEnd = burnEnd > endTime ? endTime : burnEnd
+        if (burnEnd < indexTime) return false
+        if (burnStart > endTime) return false
+        return {
+            burnStart,
+            burnEnd,
+            direction: b.direction.map(s => s * 1/mag_a)
         }
-        // console.log(currentState.slice());
-        currentState = runge_kutta(twoBodyRpo, currentState, mainWindow.timeDelta, [0,0,0], t_calc);
-        t_calc += mainWindow.timeDelta;
+    }).filter(b => b !== false)
+    let tProp = indexTime
+    for (let b = 0; b < burnsWithin.length; b++) {
+        position = propRelMotionTwoBodyAnalytic(position, burnsWithin[b].burnStart - tProp, tProp)
+        position = runge_kutta(twoBodyRpo, position, burnsWithin[b].burnEnd-burnsWithin[b].burnStart, burnsWithin[b].direction, burnsWithin[b].burnStart)
+        tProp = burnsWithin[b].burnEnd
     }
+    // position = propRelMotionTwoBodyAnalytic(position, time-tProp, tProp)
+    position = runge_kutta(twoBodyRpo, position, time-tProp, [0,0,0], tProp)
+    return position
 }
 
-function getCurrentPosition(options = {}) {
+function getCurrentPositionOld(options = {}) {
     let {time = mainWindow.scenarioTime, burn} = options;
-    let stateIndex;
-    stateIndex = this.stateHistory.findIndex(el => {
-        return el.t > (burn !== undefined ? this.burns[burn].time : time)
-    }) - 1;
-    stateIndex = stateIndex < 0 ? this.stateHistory.length - 1: stateIndex;
-    let refState = [
-        this.stateHistory[stateIndex].r,
-        this.stateHistory[stateIndex].i,
-        this.stateHistory[stateIndex].c,
-        this.stateHistory[stateIndex].rd,
-        this.stateHistory[stateIndex].id,
-        this.stateHistory[stateIndex].cd,
-    ]
-    if (burn !== undefined) {
-        refState = runge_kutta(twoBodyRpo, refState, this.burns[burn].time - this.stateHistory[stateIndex].t, this.stateHistory[stateIndex].t);
-        let direction = [this.burns[burn].direction.r, this.burns[burn].direction.i, this.burns[burn].direction.c];
-        let burnTime = math.norm(direction) / this.a;
-        direction = math.dotMultiply(this.a, math.dotDivide(direction, math.norm(direction)));
-        refState = runge_kutta(twoBodyRpo, refState, burnTime, direction, this.burns[burn].time);
-        refState = runge_kutta(twoBodyRpo, refState, time - this.burns[burn].time - burnTime, this.burns[burn].time + burnTime);
-        return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
+    let index = this.stateHistory.findIndex(s => s.t >= time)
+    index = index < 2 ? 2 : index
+    if (index === -1) {
+        index = this.stateHistory.length - 1
     }
-    let isTimeDuringBurn = this.burns.filter(burn => {
-        let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
-        return time >= burn.time && time < burnEnd;
-    });
-    // Check if reference time during burn
-    let isIndexDuringBurn = this.burns.filter(burn => {
-        let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
-        return this.stateHistory[stateIndex].t >= burn.time && this.stateHistory[stateIndex].t < burnEnd;
-    });
-    let isSurroundsBurn = this.burns.filter(burn => {
-        let burnEnd = math.norm([burn.direction.r, burn.direction.i, burn.direction.c]) / this.a + burn.time;
-        return this.stateHistory[stateIndex].t < burn.time && time > burnEnd;
-    });
-    if (isTimeDuringBurn.length > 0 && isIndexDuringBurn.length > 0) {
-        let direction = isTimeDuringBurn[0].direction;
-        direction = [direction.r, direction.i, direction.c];
-        direction = math.dotDivide(direction, math.norm(direction) / this.a);
-        refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t, direction, this.stateHistory[stateIndex].t);
+    let indexVector = [index-1,index,index+1].map(s => [this.stateHistory[s].t, this.stateHistory[s].position])
+    indexVector = [[indexVector[0][0],indexVector[1][0],indexVector[2][0]],[indexVector[0][1],indexVector[1][1],indexVector[2][1]]]
+    let elements = []
+    for (let index = 0; index < 6; index++) {
+        elements.push(fitPolynomialRedux(indexVector[0], indexVector[1].map(s => s[index]))) 
     }
-    else if (isTimeDuringBurn.length > 0) {
-        let direction = isTimeDuringBurn[0].direction;
-        direction = [direction.r, direction.i, direction.c];
-        direction = math.dotDivide(direction, math.norm(direction) / this.a);
-        refState = runge_kutta(twoBodyRpo, refState, isTimeDuringBurn[0].time - this.stateHistory[stateIndex].t, [0,0,0], this.stateHistory[stateIndex].t);
-        refState = runge_kutta(twoBodyRpo, refState, time - isTimeDuringBurn[0].time, direction, isTimeDuringBurn[0].time);
-    }
-    else if (isIndexDuringBurn.length > 0) {
-        let direction = isIndexDuringBurn[0].direction;
-        direction = [direction.r, direction.i, direction.c];
-        let burnEnd = math.norm(direction) / this.a + isIndexDuringBurn[0].time;
-        direction = math.dotDivide(direction, math.norm(direction) / this.a);
-        refState = runge_kutta(twoBodyRpo, refState, burnEnd - this.stateHistory[stateIndex].t, direction, this.stateHistory[stateIndex].t);
-        refState = runge_kutta(twoBodyRpo, refState, time - burnEnd, [0,0,0], burnEnd);
-
-    }
-    else if (isSurroundsBurn.length > 0) {
-        let direction = isSurroundsBurn[0].direction;
-        direction = [direction.r, direction.i, direction.c];
-        let burnEnd = math.norm(direction) / this.a + isSurroundsBurn[0].time;
-        direction = math.dotDivide(direction, math.norm(direction) / this.a);
-        refState = runge_kutta(twoBodyRpo, refState, isSurroundsBurn[0].time - this.stateHistory[stateIndex].t, [0,0,0], this.stateHistory[stateIndex].t);
-        refState = runge_kutta(twoBodyRpo, refState, burnEnd - isSurroundsBurn[0].time, direction, isSurroundsBurn[0].time);
-        refState = runge_kutta(twoBodyRpo, refState, time - burnEnd, [0,0,0], burnEnd);
-
-    }
-    else {
-        refState = runge_kutta(twoBodyRpo, refState, time - this.stateHistory[stateIndex].t, [0,0,0], this.stateHistory[stateIndex].t);
-    }
-    // console.log(isTimeDuringBurn.length, isIndexDuringBurn.length, isSurroundsBurn.length);
-    return {r: [refState[0]], i: [refState[1]], c: [refState[2]], rd: [refState[3]], id:[refState[4]], cd: [refState[5]]};
+    let position = elements.map(s => answerPolynomial(s, time))
+    return position
 }
 
 function addLaunch() {
@@ -4576,9 +4429,8 @@ function addLaunch() {
     closeAll();
 }
 
-function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
+function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long, option = 1) {
     let r1 = math.norm(r1_vec);
-    console.log(r1_vec);
     let r2 = math.norm(r2_vec);
     let cosNu = math.dot(r1_vec, r2_vec) / r1 / r2;
     if (Math.abs(cosNu + 1) < 1e-3) return 'collinear'
@@ -4588,8 +4440,8 @@ function solveLambertsProblem(r1_vec, r2_vec, tMan, Nrev, long) {
     k = r1 * r2 * (1 - cosNu);
     el = r1 + r2;
     m = r1 * r2 * (1 + cosNu);
-    let p_i  = k / (el + Math.sqrt(2 * m));
-    let p_ii  = k / (el - Math.sqrt(2 * m));
+    let p_i  = k / (el + option*Math.sqrt(2 * m));
+    let p_ii  = k / (el - option*Math.sqrt(2 * m));
     let p;
     let del = 0.0001;
     if (long) p = p_i + del;
@@ -4664,6 +4516,26 @@ function Eci2Ric(rC, drC, rD, drD, c = false) {
     }
 }
 
+function ConvEciToRic(chief_eci, deputy_eci, returnRot = false) {
+    let rC = chief_eci.slice(0,3), drC = chief_eci.slice(3,6), rD = deputy_eci.slice(0,3), drD = deputy_eci.slice(3,6)
+    let h = math.cross(rC, drC);
+    let ricX = math.dotDivide(rC, math.norm(rC));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+
+    let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+    let ricYd = math.cross(ricZ, ricXd);
+    let ricZd = [0,0,0];
+
+    let C = [ricX, ricY, ricZ];
+    let Cd = [ricXd, ricYd, ricZd];
+    if (returnRot) return [C, Cd]
+    return [
+        ...math.squeeze(math.multiply(C, math.transpose([math.subtract(rD, rC)]))),
+        ...math.squeeze(math.add(math.multiply(Cd, math.transpose([math.subtract(rD, rC)])), math.multiply(C, math.transpose([math.subtract(drD, drC)]))))
+    ]
+}
+
 function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, peri = false) {
     let p = coe.a * (1 - coe.e * coe.e);
     let cTa = Math.cos(coe.tA);
@@ -4694,7 +4566,7 @@ function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA:
     let sAr = Math.sin(coe.arg);
     let cIn = Math.cos(coe.i);
     let sin = Math.sin(coe.i);
-    R = [
+    let R = [
         [cRa * cAr - sRa * sAr * cIn, -cRa * sAr - sRa * cAr * cIn, sRa * sin],
         [sRa * cAr + cRa * sAr * cIn, -sRa * sAr + cRa * cAr * cIn, -cRa * sin],
         [sAr * sin, cAr * sin, cIn]
@@ -4957,11 +4829,11 @@ function findRangeTime(sat= 0, satTarget = 1, r= 10, time = mainWindow.scenarioT
     let getRange = function(sat1, sat2, timeIn) {
         let s1 = mainWindow.satellites[sat1].currentPosition({time: timeIn})
         let s2 = mainWindow.satellites[sat2].currentPosition({time: timeIn})
-        return math.norm([s1.r[0] - s2.r[0], s1.i[0] - s2.i[0], s1.c[0] - s2.c[0]])
+        return math.norm(math.subtract(s1,s2))
     }
     let positionSeed = getRange(sat, satTarget, time) < r ? 1 : -1;
     let seedIndex = stateHist.map((state, ii) => {
-        return math.norm([state.r - stateHistTarget[ii].r, state.i - stateHistTarget[ii].i, state.c - stateHistTarget[ii].c])
+        return math.norm([state.position[0] - stateHistTarget[ii].position[0], state.position[1] - stateHistTarget[ii].position[1], state.position[2] - stateHistTarget[ii].position[2]])
     }).findIndex(range => {
         return range * positionSeed > r * positionSeed
     });
@@ -4987,7 +4859,7 @@ function findCatsTime(sat= 0, satTarget = 1, c= 90, time = mainWindow.scenarioTi
     let getCats = function(sat1, sat2, timeIn) {
         let s1 = mainWindow.satellites[sat1].currentPosition({time: timeIn})
         let s2 = mainWindow.satellites[sat2].currentPosition({time: timeIn})
-        let relPos = math.squeeze(math.subtract(Object.values(s1), Object.values(s2))).slice(0,3)
+        let relPos = math.squeeze(math.subtract(s1, s2)).slice(0,3)
         let sunVec = mainWindow.getCurrentSun(timeIn)
         return math.acos(math.dot(relPos, sunVec) / math.norm(relPos) / math.norm(sunVec)) * 180 / Math.PI
     }
@@ -5001,9 +4873,7 @@ function findCatsTime(sat= 0, satTarget = 1, c= 90, time = mainWindow.scenarioTi
     let seedTime = stateHist[seedIndex].t
     for (let index = 0; index < 10; index++) {
         let dt = 0.1
-        // let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
         let time1 = getCats(sat, satTarget, seedTime)
-        // let time2 = mainWindow.satellites[sat].currentPosition({time: seedTime - dt})
         let time2 = getCats(sat, satTarget, seedTime - dt)
         let di_dt = (time1 - time2) / dt
         seedTime += (c - time1) / di_dt
@@ -5018,7 +4888,7 @@ function findInTrackTime(sat= 0, it= -20, time = mainWindow.scenarioTime) {
     stateHist = stateHist.filter(state => state.t > time)
     let curState = mainWindow.satellites[sat].curPos
     let positionSeed = curState.i < it ? 1 : -1;
-    let seedIndex = stateHist.findIndex(state => state.i * positionSeed > it * positionSeed);
+    let seedIndex = stateHist.findIndex(state => state.position[1] * positionSeed > it * positionSeed);
     if (seedIndex === -1) return showScreenAlert('No Solution in Time Frame')
     let seedTime = stateHist[seedIndex].t
     // console.log(seedTime);
@@ -5026,8 +4896,8 @@ function findInTrackTime(sat= 0, it= -20, time = mainWindow.scenarioTime) {
         let dt = 0.1
         let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
         let time2 = mainWindow.satellites[sat].currentPosition({time: seedTime - dt})
-        let di_dt = (time1.i[0] - time2.i[0]) / dt
-        seedTime += (it - time1.i[0]) / di_dt
+        let di_dt = (time1[1] - time2[1]) / dt
+        seedTime += (it - time1[1]) / di_dt
     }
     mainWindow.desired.scenarioTime = seedTime
     document.getElementById('time-slider-range').value = seedTime
@@ -5040,7 +4910,7 @@ function findRadialTime(sat= 0, r= -20, time = mainWindow.scenarioTime) {
     let curState = mainWindow.satellites[sat].curPos
     let positionSeed = curState.r < r ? 1 : -1;
     let baseSma = (398600.4418 / (mainWindow.mm)**2) ** (1/3)
-    let seedIndex = stateHist.map(state => math.norm([state.r + baseSma, state.i]) - baseSma).findIndex(state => state * positionSeed > r * positionSeed)
+    let seedIndex = stateHist.map(state => math.norm([state.position[0] + baseSma, state.position[1]]) - baseSma).findIndex(state => state * positionSeed > r * positionSeed)
     if (seedIndex === -1) return showScreenAlert('No Solution in Time Frame')
     let seedTime = stateHist[seedIndex].t
     // console.log(seedTime);
@@ -5048,8 +4918,8 @@ function findRadialTime(sat= 0, r= -20, time = mainWindow.scenarioTime) {
         let dt = 0.1
         let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
         let time2 = mainWindow.satellites[sat].currentPosition({time: seedTime - dt})
-        time1 = math.norm([time1.r[0] + baseSma, time1.i[0]]) - baseSma
-        time2 = math.norm([time2.r[0] + baseSma, time2.i[0]]) - baseSma
+        time1 = math.norm([time1[0] + baseSma, time1[1]]) - baseSma
+        time2 = math.norm([time2[0] + baseSma, time2[1]]) - baseSma
         let di_dt = (time1 - time2) / dt
         seedTime += (r - time1) / di_dt
     }
@@ -5063,7 +4933,7 @@ function findCrossTrackTime(sat= 0, c= -5, time = mainWindow.scenarioTime) {
     stateHist = stateHist.filter(state => state.t > time)
     let curState = mainWindow.satellites[sat].curPos
     let positionSeed = curState.c < c ? 1 : -1;
-    let seedIndex = stateHist.findIndex(state => state.c * positionSeed > c * positionSeed);
+    let seedIndex = stateHist.findIndex(state => state.position[2] * positionSeed > c * positionSeed);
     if (seedIndex === -1) return showScreenAlert('No Solution in Time Frame')
     let seedTime = stateHist[seedIndex].t
     // console.log(seedTime);
@@ -5071,8 +4941,8 @@ function findCrossTrackTime(sat= 0, c= -5, time = mainWindow.scenarioTime) {
         let dt = 0.1
         let time1 = mainWindow.satellites[sat].currentPosition({time: seedTime})
         let time2 = mainWindow.satellites[sat].currentPosition({time: seedTime - dt})
-        let di_dt = (time1.c[0] - time2.c[0]) / dt
-        seedTime += (c - time1.c[0]) / di_dt
+        let di_dt = (time1[2] - time2[2]) / dt
+        seedTime += (c - time1[2]) / di_dt
     }
     mainWindow.desired.scenarioTime = seedTime
     document.getElementById('time-slider-range').value = seedTime
@@ -5148,88 +5018,54 @@ function perchSatelliteSolver(state = [1, 10, 0, -0.005, 0, 0], a = 0.00001, sta
     return {dir: math.dotMultiply(params.tb, dir), stateF, params}
 }
 
-function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0], burn, translate = false) {
-    if (translate) {
-        let rot = translateFrames(sat, {time})
-        dir = math.transpose(math.multiply(math.transpose(rot), math.transpose([dir])))[0];
-        
-    }
-    if (burn !== undefined) {
-        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.slice(0, Number(burn))
-    }
-    else {
-        mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
-            return burn.time < time
-        })
-    }
+function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
     let position = mainWindow.satellites[sat].currentPosition({time});
-    
-    logAction({
-        type: 'addBurn',
-        index: mainWindow.satellites[sat].burns.length,
-        sat
+    pastActions.push({
+        sat,
+        oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns)),
+        time: mainWindow.desired.scenarioTime
     })
     mainWindow.satellites[sat].burns.push({
-        time: time,
-        direction: {
-            r: dir[0],
-            i: dir[1],
-            c: dir[2]
-        },
-        waypoint: {
-            tranTime: 0,
-            target: {
-                r: 0,
-                i: 0,
-                c: 0,
-            }
-        }
+        time,
+        direction: dir,
+        location: position.slice(0,3),
+        waypoint: false
     })
-    let tof = 1.5 * math.norm(dir) / mainWindow.satellites[sat].a;
-    tof = tof > 10800 ? tof : 10800;
-    position = {x: position.r[0], y: position.i[0], z: position.c[0], xd: position.rd[0], yd: position.id[0], zd: position.cd[0]};
-    let direction = dir;
-    let wayPos = oneBurnFiniteHcw(position, Math.atan2(direction[1], direction[0]), Math.atan2(direction[2], math.norm([direction[0], direction[1]])), (math.norm(direction) / mainWindow.satellites[sat].a) / tof, tof, time, mainWindow.satellites[sat].a)
-    
-    mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1].waypoint  = {
-        tranTime: tof,
-        target: {
-            r: wayPos.x,
-            i: wayPos.y,
-            c: wayPos.z
-        }
-    }
-    mainWindow.satellites[sat].genBurns();
-    if (burn !== undefined) return
+    mainWindow.satellites[sat].calcTraj(true)
     mainWindow.desired.scenarioTime = time + 3600;
     document.querySelector('#time-slider-range').value = mainWindow.desired.scenarioTime
     updateWhiteCellWindow()
 }
 
 function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, origin = [0,0,0]) {
+    
+    pastActions.push({
+        sat,
+        oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns)),
+        time: mainWindow.desired.scenarioTime
+    })
+    let ricWaypoint = [
+        way[0] + origin[0],
+        way[1] + origin[1],
+        way[2] + origin[2],
+    ]
+    let targetEci = propToTimeAnalytic(mainWindow.originOrbit, time + tof)
+    let target = Ric2Eci(ricWaypoint, [0,0,0],targetEci.slice(0,3), targetEci.slice(3,6)).rEcci
     mainWindow.satellites[sat].burns.push({
         time,
-        direction: {
-            r: 0,
-            i: 0,
-            c: 0
-        },
+        direction: [0,0,0],
         waypoint: {
             tranTime: tof,
-            target: {
-                r: way[0] + origin[0],
-                i: way[1] + origin[1],
-                c: way[2] + origin[2],
-            }
+            target
         }
     })
-    mainWindow.satellites[sat].genBurns();
+    mainWindow.satellites[sat].calcTraj(true);
     let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
-    mainWindow.desired.scenarioTime = time + 3600;
+    mainWindow.desired.scenarioTime = time + tof;
     document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
     if (math.norm(Object.values(checkBurn.direction)) < 1e-8) {
         mainWindow.satellites[sat].burns.pop();
-        mainWindow.satellites[sat].genBurns();
+        mainWindow.satellites[sat].calcTraj(true);
         showScreenAlert('Waypoint outside kinematic reach or error in calculating burn');
         return false;
     }
@@ -5239,10 +5075,10 @@ function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, ori
 
 function perchSatellite(sat = 0, time = mainWindow.scenarioTime) {
     let curPos = mainWindow.satellites[sat].currentPosition({time})
-    let burnEst = math.norm([curPos.rd[0], curPos.id[0], curPos.cd[0]])
+    let burnEst = math.norm([curPos[3], curPos[4], curPos[5]])
     curPos = mainWindow.satellites[sat].currentPosition({time: time - burnEst / mainWindow.satellites[sat].a / 2})
 
-    let burnOut = perchSatelliteSolver([curPos.r[0], curPos.i[0], curPos.c[0], curPos.rd[0], curPos.id[0], curPos.cd[0]], mainWindow.satellites[sat].a)
+    let burnOut = perchSatelliteSolver(curPos, mainWindow.satellites[sat].a)
     insertDirectionBurn(sat, time - burnEst / mainWindow.satellites[sat].a / 2, burnOut.dir)
 }
 
@@ -5250,46 +5086,28 @@ function circSatellite(sat = 0, time = mainWindow.scenarioTime) {
     let dt = 7200
     let curPos = mainWindow.satellites[sat].currentPosition({time})
     let curPos2 = mainWindow.satellites[sat].currentPosition({time: time + dt})
-    let curR = math.norm([curPos.r[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3), curPos.i[0], curPos.c[0]])
-    let curTh = math.atan2( curPos.i[0], curPos.r[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3))
+    let curR = math.norm([curPos[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3), curPos[1], curPos[2]])
+    let curTh = math.atan2( curPos[1], curPos[0] + (398600.4418 / mainWindow.mm ** 2) ** (1/3))
     let dTh = (398600.4418 / curR ** 3) ** (1/2) - (398600.4418 / (398600.4418 / mainWindow.mm ** 2)) ** (1/2)
     let newTh = curTh + dt * dTh
-    let newPos = [curR * Math.cos(newTh) - (398600.4418 / mainWindow.mm ** 2) ** (1/3), curR * Math.sin(newTh), curPos2.c[0]]
+    let newPos = [curR * Math.cos(newTh) - (398600.4418 / mainWindow.mm ** 2) ** (1/3), curR * Math.sin(newTh), curPos2[2]]
     
     mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
         return burn.time < mainWindow.scenarioTime;
     })
-    mainWindow.satellites[sat].burns.push({
-        time: mainWindow.desired.scenarioTime,
-        direction: {
-            r: 0,
-            i: 0,
-            c: 0
-        },
-        waypoint: {
-            tranTime: dt,
-            target: {
-                r: newPos[0],
-                i: newPos[1],
-                c: newPos[2],
-            }
-        }
-    })
-    mainWindow.satellites[sat].genBurns();
-    let dV = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].direction
-    dV = math.norm([dV.r, dV.i, dV.c]) / mainWindow.satellites[sat].a
-    mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].time -= dV / 2
-    mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].waypoint.tranTime += dV / 2
-    mainWindow.satellites[sat].genBurns();
-    let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
-    if (math.norm([checkBurn.direction.r, checkBurn.direction.i, checkBurn.direction.c]) < 1e-8) {
-        mainWindow.satellites[sat].burns.pop();
-        mainWindow.satellites[sat].genBurns();
-        showScreenAlert('Waypoint outside kinematic reach of satellite with given time of flight');
-        return;
-    }
-    mainWindow.desired.scenarioTime = mainWindow.desired.scenarioTime + dt;
-    document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime + dt;
+    insertWaypointBurn(sat, mainWindow.desired.scenarioTime, newPos,dt)
+    // let dV = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].direction
+    // dV = math.norm(dV) / mainWindow.satellites[sat].a
+    // mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].time -= dV / 2
+    // mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length - 1].waypoint.tranTime += dV / 2
+    // mainWindow.satellites[sat].calcTraj(true);
+    // let checkBurn = mainWindow.satellites[sat].burns[mainWindow.satellites[sat].burns.length-1];
+    // if (math.norm(checkBurn.direction) < 1e-8) {
+    //     mainWindow.satellites[sat].burns.pop();
+    //     mainWindow.satellites[sat].genBurns();
+    //     showScreenAlert('Waypoint outside kinematic reach of satellite with given time of flight');
+    //     return;
+    // }
     
 }
 
@@ -5393,11 +5211,8 @@ function calcSatelliteEccentricity(position = [10,0,0,0,0,0]) {
 }
 
 function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
-    let inertChief = {...mainWindow.originOrbit}
-    inertChief.tA = propTrueAnomaly(inertChief.tA, inertChief.a, inertChief.e, time)
-    inertChief = Coe2PosVelObject(inertChief)
-    inertChief = [inertChief.x, inertChief.y, inertChief.z, inertChief.vx, inertChief.vy, inertChief.vz]
-    let satPos = math.squeeze(Object.values(mainWindow.satellites[sat].currentPosition({time})))
+    let inertChief = propToTimeAnalytic(mainWindow.originOrbit, time)
+    let satPos = mainWindow.satellites[sat].currentPosition({time})
     satPos = Ric2Eci(satPos.slice(0,3), satPos.slice(3,6), inertChief.slice(0,3), inertChief.slice(3,6))
     return {
         r: satPos.rEcci[0],
@@ -5409,16 +5224,17 @@ function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
     }
 }
 
-function generateJ2000File(satellites, team=undefined, time = mainWindow.scenarioTime) {
+function generateJ2000File(team=1, time = mainWindow.scenarioTime, dontExport = []) {
+    let satellites = calculateSatErrorStates(team, time).map((s,ii) => [mainWindow.satellites[ii].name, s.trackedState])
     let startEphem = `Time (UTCG)              x (km)           y (km)         z (km)     vx (km/sec)    vy (km/sec)    vz (km/sec)
 -----------------------    -------------    -------------    ---------    -----------    -----------    -----------
 `
     let fileText = `\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t ${Date.now()}
-    Satellite-${satellites.map(s => s.name + `errarts${s.error[0].toFixed(2)}/${(1000*s.error[3]).toFixed(2)}`).join(', ')}:  J2000 Position & Velocity
+    Satellite-${satellites.map(s => s[0]).join(', ')}:  J2000 Position & Velocity
     `
     satellites.forEach(sat => {
         fileText += `\n\n${startEphem}`
-        let currentPos = sat.errorEciPosition
+        let currentPos = sat[1]
         currentPos = propToTime(currentPos, -time, false)
         let propTime = 0
         while (propTime < mainWindow.scenarioLength*3600) {
@@ -5444,31 +5260,37 @@ function logAction(options = {}) {
         type
     })
 }
+function redoLastAction() {
+    if (futureActions.length === 0) return
+    let action = futureActions.pop()
+    console.log(action);
+    pastActions.push({
+        sat: action.sat,
+        oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[action.sat].burns)),
+        time: action.time
+    })
+    if (action.time !== undefined) {
+        mainWindow.changeTime(action.time, true)
+    }
+    mainWindow.satellites[action.sat].burns = action.oldBurns
+    mainWindow.satellites[action.sat].calcTraj(true)
+    mainWindow.satellites[action.sat].calcTraj()
+}
 
 function reverseLastAction() {
     if (pastActions.length === 0) return
     let action = pastActions.pop()
-    switch (action.type) {
-        case 'addBurn':
-            mainWindow.satellites[action.sat].burns.splice(action.index, 1)
-            mainWindow.satellites[action.sat].burns = mainWindow.satellites[action.sat].burns.filter(burn => burn !== undefined)
-            mainWindow.satellites[action.sat].genBurns()
-            mainWindow.satellites[action.sat].calcTraj()
-            mainWindow.desired.scenarioTime = action.time
-            break
-        case 'deleteBurn':
-            mainWindow.satellites[action.sat].burns.splice(action.index, 0, action.burn)
-            mainWindow.satellites[action.sat].genBurns()
-            mainWindow.satellites[action.sat].calcTraj()
-            mainWindow.desired.scenarioTime = action.time
-            break
-        case 'alterBurn':
-            mainWindow.satellites[action.sat].burns.splice(action.index, 1, action.burn)
-            mainWindow.satellites[action.sat].genBurns()
-            mainWindow.satellites[action.sat].calcTraj()
-            break
+    futureActions.push({
+        sat: action.sat,
+        oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[action.sat].burns)),
+        time: mainWindow.desired.scenarioTime
+    })
+    if (action.time !== undefined) {
+        mainWindow.changeTime(action.time, true)
     }
-
+    mainWindow.satellites[action.sat].burns = action.oldBurns
+    mainWindow.satellites[action.sat].calcTraj(true)
+    mainWindow.satellites[action.sat].calcTraj()
 }
 
 function impulsiveHcwProp(p1 = [[1],[0],[0]], v1 =[[0],[0],[0]], dt = 3600) {
@@ -5606,11 +5428,9 @@ function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
     if ((burnOld.time + dt) < timeLimits[0]) return showScreenAlert('Burn too early')
     if ((burnOld.time + dt) > timeLimits[1]) return showScreenAlert('Burn too late')
     mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(b => b.time < burnOld.time)
-    mainWindow.satellites[sat].calcTraj()
     insertDirectionBurn(sat, burnOld.time + dt, Object.values(burnOld.direction))
     mainWindow.satellites[sat].burns.push(...futureBurns)
-    mainWindow.satellites[sat].genBurns()
-    mainWindow.satellites[sat].calcTraj()
+    mainWindow.satellites[sat].calcTraj(true)
 }
 
 function startMonteCarlo(sat = 0, burn = 0, options= {}) {
@@ -5706,66 +5526,17 @@ function randn_bm() {
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
 }
 
-function changeOrigin(sat = 1) {
-    let lanes = satClusterK(mainWindow.nClusters, mainWindow.satellites, mainWindow.originOrbit)
-    let laneSatIn = lanes.find(s => s.find(n => n === sat) !== undefined)
-    let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-    let sats = mainWindow.satellites.map(sat => {
-        let pos = Object.values(sat.position)
-        let eciPos = Ric2Eci(pos.slice(0,3), pos.slice(3,6), originEci.slice(0,3), originEci.slice(3,6))
-        return [...eciPos.rEcci, ...eciPos.drEci]
-    })
-    let satWaypoints = mainWindow.satellites.map(sat => {
-        return sat.burns.map(b => {
-            let wayEci = {...mainWindow.originOrbit}
-            wayEci.tA = propTrueAnomaly(wayEci.tA, wayEci.a, wayEci.e, b.time + b.waypoint.tranTime)
-            wayEci = Object.values(Coe2PosVelObject(wayEci))
-            let way = Ric2Eci(Object.values(b.waypoint.target), [0,0,0], wayEci.slice(0,3), wayEci.slice(3,6))
-            return [...way.rEcci, ...way.drEci]  
-        })
-    })
-    let newOrigin = sats[sat]
-    // let newOrigin = Object.values(mainWindow.satellites[sat].curPos)
-    // newOrigin = propRelMotionTwoBodyAnalytic(newOrigin, -mainWindow.scenarioTime, mainWindow.scenarioTime)
-    // newOrigin = Ric2Eci(newOrigin.slice(0,3), newOrigin.slice(3,6), originEci.slice(0,3), originEci.slice(3,6))
-    // newOrigin = [...newOrigin.rEcci, ...newOrigin.drEci]
-    mainWindow.originOrbit = PosVel2CoeNew(newOrigin.slice(0,3), newOrigin.slice(3,6))
-    originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-    mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
-    for (let index = 0; index < mainWindow.satellites.length; index++) {
-        let ricPos = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sats[index].slice(0,3), sats[index].slice(3,6))
-       mainWindow.satellites[index].position = {
-            r: ricPos.rHcw[0][0],
-            i: ricPos.rHcw[1][0],
-            c: ricPos.rHcw[2][0],
-            rd: ricPos.drHcw[0][0],
-            id: ricPos.drHcw[1][0],
-            cd: ricPos.drHcw[2][0]
-       }
-       for (let jj = 0; jj < mainWindow.satellites[index].burns.length; jj++) {
-        let way = satWaypoints[index][jj]
-        let wayEci = {...mainWindow.originOrbit}
-        wayEci.tA = propTrueAnomaly(wayEci.tA, wayEci.a, wayEci.e, mainWindow.satellites[index].burns[jj].time + mainWindow.satellites[index].burns[jj].waypoint.tranTime)
-        wayEci = Object.values(Coe2PosVelObject(wayEci))
-        let ricWay = Eci2Ric(wayEci.slice(0,3), wayEci.slice(3,6), way.slice(0,3), way.slice(3,6))
-        mainWindow.satellites[index].burns[jj].waypoint.target = {
-            r: ricWay.rHcw[0][0],
-            i: ricWay.rHcw[1][0],
-            c: ricWay.rHcw[2][0]
-        }
-       }
-       mainWindow.satellites[index].calcTraj(true)
-       mainWindow.satellites[index].calcTraj()
+function changeOrigin(sat = 1, currentState = false) {
+    if (currentState === true) {
+        let curPos = Object.values(getCurrentInertial(sat))
+        console.log(curPos);
+        curPos = propToTime(curPos, -mainWindow.desired.scenarioTime, true)
+        console.log(curPos);
+        curPos = PosVel2CoeNew(curPos.slice(0,3), curPos.slice(3,6))
+        mainWindow.updateOrigin(curPos)
+        return
     }
-    let sun = sunFromTime(mainWindow.startDate)  
-    sun = math.squeeze(Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sun, [0,0,0]).rHcw)
-    sun = math.dotDivide(sun, math.norm(sun))
-    mainWindow.initSun = sun
-    // Lock satellites not in lane
-    for (let index = 0; index < mainWindow.satellites.length; index++) {
-        mainWindow.satellites[index].locked = laneSatIn.find(s => s === index) === undefined
-    }
-    updateLockScreen()
+    mainWindow.updateOrigin(mainWindow.satellites[sat].position)
 }
 
 function forcePlaneCrossing(sat = 0, dt = 4) {
@@ -6051,31 +5822,24 @@ function handleTleFile(file) {
 
 function importStates(states, time) {
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
-    let findOrigin = mainWindow.satellites.find(sat => math.norm(Object.values(sat.position)) < 1e-3)
-    let originII = 0
+    let findOrigin = mainWindow.satellites.findIndex(sat => {
+        let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+        let satEci = Object.values(Coe2PosVelObject(sat.position))
+        return math.norm(math.subtract(originEci, satEci)) < 1e-3
+    })
+    let originII = findOrigin !== -1 ? findOrigin : 0
+    
     // Copy old burns to re-implement if satellite still exists
     let timeDelta = (time - mainWindow.startDate) / 1000
-    console.log(timeDelta)
     let oldBurns = mainWindow.satellites.map(s => s.burns.map(b => {
-        let currentOrigin = {...mainWindow.originOrbit}
-        let waypoint = Object.values(b.waypoint.target)
-        let tranTime = b.waypoint.tranTime
-        currentOrigin.tA = propTrueAnomaly(currentOrigin.tA, currentOrigin.a, currentOrigin.e, b.time + tranTime)
-        currentOrigin = Object.values(Coe2PosVelObject(currentOrigin))
-        waypoint = Ric2Eci(waypoint, [0,0,0], currentOrigin.slice(0,3), currentOrigin.slice(3,6)).rEcci
         return {
             time: b.time - timeDelta,
-            waypoint: {
-                tranTime,
-                target: waypoint
-            },
-            shown: b.shown,
-            location: b.location,
-            direction: b.direction
+            direction: b.direction,
+            waypoint: b.waypoint
         }
     }).filter(b => b.time >= 0))
-    if (findOrigin !== undefined) {
-        let originIndex = states.findIndex(sat => findOrigin.name.match(sat.name))
+    if (findOrigin !== -1) {
+        let originIndex = states.findIndex(sat => states[findOrigin].name.match(sat.name))
         originII = originIndex !== -1 ? originIndex : originII
     }
     let oldReqs = mainWindow.relativeData.dataReqs.map(req => {
@@ -6093,56 +5857,34 @@ function importStates(states, time) {
     states = states.map((s,ii) => {
         let utcDiff = s.epoch.getUTCHours() - s.epoch.getHours()
         if (ii === originII) {
-            let originOrbit = propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
-            mainWindow.originOrbit = PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6))
-            mainWindow.mm = (398600.4418 / mainWindow.originOrbit.a ** 3) ** 0.5
-            mainWindow.timeDelta = 2 * Math.PI * 0.006 / mainWindow.mm
+            let originOrbit = propToTimeAnalytic(s.orbit, (baseEpoch - s.epoch) / 1000)
+            mainWindow.updateOrigin(PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6)), false)
             if (mainWindow.originOrbit.a < 15000) {
                 mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 4)/3600
             }
             else {
                 mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 2)/3600
             }
+            mainWindow.updateOrigin(PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6)), false)
             document.querySelector('#time-slider-range').max = mainWindow.scenarioLength * 3600
         }
         return {
             name: s.name,
-            orbit: propToTime(Object.values(Coe2PosVelObject(s.orbit)), (baseEpoch - s.epoch) / 1000, false)
+            orbit: propToTimeAnalytic(s.orbit, (baseEpoch - s.epoch) / 1000)
         }
 
     })
-    console.log('hey');
     oldBurns = oldBurns.map(sat => sat.map(b => {
-        let currentOrigin = {...mainWindow.originOrbit}
-        let target = b.waypoint.target
-        let tranTime = b.waypoint.tranTime
-        currentOrigin.tA = propTrueAnomaly(currentOrigin.tA, currentOrigin.a, currentOrigin.e, b.time + tranTime)
-        currentOrigin = Object.values(Coe2PosVelObject(currentOrigin))
-        target = math.squeeze(Eci2Ric(currentOrigin.slice(0,3), currentOrigin.slice(3,6), target.slice(0,3), [0,0,0]).rHcw)
-        target = {
-            r: target[0],
-            i: target[1],
-            c: target[2]
-        }
-
         return {
             time: b.time,
             direction: b.direction,
-            shown: b.shown,
-            location: b.location,
-            waypoint: {
-                target,
-                tranTime
-            }
+            shown: 'during',
+            waypoint: b.waypoint
         }
     }))
-    let sun = sunFromTime(baseEpoch)  
-    sun = math.squeeze(Eci2Ric(states[0].orbit.slice(0,3), states[0].orbit.slice(3,6), sun, [0,0,0]).rHcw)
-    sun = math.dotDivide(sun, math.norm(sun))
-    mainWindow.initSun = sun
     mainWindow.satellites = []
     states.forEach(st => {
-        let ricState = Eci2Ric(states[originII].orbit.slice(0,3), states[originII].orbit.slice(3,6), st.orbit.slice(0,3), st.orbit.slice(3,6))
+        let position = PosVel2CoeNew(st.orbit.slice(0,3), st.orbit.slice(3,6))
         let existingSat = satCopies.filter(sat => sat.name.match(st.name) !== null)
         let color, shape, side, a, name, burns
         if (existingSat.length > 0) {
@@ -6154,16 +5896,8 @@ function importStates(states, time) {
             name = existingSat[0].name
             burns = oldBurns[existingSatIndex]
         }
-        ricState = {
-            r: ricState.rHcw[0][0],
-            i: ricState.rHcw[1][0],
-            c: ricState.rHcw[2][0],
-            rd: ricState.drHcw[0][0],
-            id: ricState.drHcw[1][0],
-            cd: ricState.drHcw[2][0]
-        }
         mainWindow.satellites.push(new Satellite({
-            position: ricState,
+            position,
             name: name === undefined ? st.name : name,
             color,
             a,
@@ -6329,17 +6063,7 @@ function randv(coe) {
     return math.squeeze(state)
 }
 
-function propToTime(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, j2 = true) {
-    function twoBodyAcc(state) {
-        let mu = 398600.4418
-        let rn = math.norm(state.slice(0,3))
-        return [
-            state[3], state[4], state[5],
-            -mu * state[0] / rn ** 3,
-            -mu * state[1] / rn ** 3,
-            -mu * state[2] / rn ** 3
-        ]
-    }
+function propToTime(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0], dt = 86164, j2 = mainWindow.j2) {
     state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     if (j2) {
         state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
@@ -6439,12 +6163,10 @@ function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime)
 function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites, origin = mainWindow.originOrbit) {
     nClusters = nClusters > sats.length ? sats.length : nClusters
     nClusters = math.floor(nClusters)
-    let originECI = Object.values(Coe2PosVelObject(origin))
     sats = sats.map(s => {
-        let satRic = Object.values(s.position)
-        let satEci = Ric2Eci(satRic.slice(0,3), satRic.slice(3,6), originECI.slice(0,3), originECI.slice(3,6))
-        let y = satEci.rEcci[1]
-        let x = satEci.rEcci[0]
+        let satEci = Object.values(Coe2PosVelObject(s.position))
+        let y = satEci[1]
+        let x = satEci[0]
         return {long: Math.atan2(y,x) * 180 / Math.PI, cluster: undefined}
     })
     let maxLong = math.max(sats.map(s => s.long))
@@ -6526,12 +6248,12 @@ function draw3dScene(az = azD, el = elD) {
     mainWindow.satellites.forEach(sat => {
         if (sat.stateHistory === undefined) sat.calcTraj()
         let cur = sat.currentPosition(mainWindow.scenarioTime);
-        cur = {r: cur.r[0], i: cur.i[0], c: cur.c[0], rd: cur.rd[0], id: cur.id[0], cd: cur.cd[0]};
+        cur = {r: cur[0], i: cur[1], c: cur[2], rd: cur[3], id: cur[4], cd: cur[5]};
         sat.curPos = cur;
         if (!sat.locked) sat.stateHistory.forEach(point => {
             points.push({
                 color: sat.color,
-                position: math.multiply(r, [point.r, point.i, point.c]),
+                position: math.multiply(r, [point.position[0], point.position[1], point.position[2]]),
                 size: 2
             })
         })
@@ -6879,9 +6601,25 @@ function fitPolynomial(x = [0, 1, 3], y = [[1],[-2],[4]], d=2) {
     return consts.reverse()
 }
 
+function fitPolynomialRedux(x = [0, 1, 3], y = [1,-2,4]) {
+    y = math.transpose([y])
+    if (x.length !== y.length) return console.error('X & Y values need to be the same length')
+    let d = x.length - 1
+    let jac = []
+    for (let ii = 0; ii < x.length; ii++) {
+        let line = []
+        for (let jj = 0; jj <= d; jj++) {
+            line.push(x[ii] ** jj)
+        }
+        jac.push(line)
+    }
+    let consts = math.squeeze(math.multiply(math.inv(jac), y))
+    return consts.reverse()
+}
+
 function errorFromTime(t = mainWindow.scenarioTime, error = mainWindow.error.neutral) {
-    let p = error.p / (1.6 ** (t / 3600))
-    let v = error.v / (4.51977 ** (t / 3600)) / 1000
+    let p = error.p / (error.cp ** (t / 3600))
+    let v = error.v / (error.cv ** (t / 3600)) / 1000
     return [p,p,p,v,v,v]
 }
 
@@ -7124,16 +6862,23 @@ function updateWhiteCellTimeAndErrors() {
     let time = mainWindow.desired.scenarioTime
     let teamPerspective = Number(whiteCellWindow.document.querySelector('#white-cell-team').value)
     let satErrors = calculateSatErrorStates(teamPerspective)
-    let posErrors = whiteCellWindow.document.querySelectorAll('.pos-error')
-    let velErrors = whiteCellWindow.document.querySelectorAll('.vel-error')
+    let errorSpans = whiteCellWindow.document.querySelectorAll('.sat-error-span')
     let pointingData = whiteCellWindow.document.querySelectorAll('.white-pointing-data')
-    for (let index = 0; index < posErrors.length; index++) {
-        posErrors[index].innerText = satErrors[index].error[0].toFixed(2)
-        velErrors[index].innerText = (satErrors[index].error[0]).toFixed(2)
-        if (mainWindow.satellites[index].point !== 'none'  && mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point) !== -1) {
+    for (let index = 0; index < errorSpans.length; index++) {
+        if (satErrors[index].ref !== undefined) {
+            errorSpans[index].innerHTML = 'CL StD ' + mainWindow.satellites[satErrors[index].ref].name + '&#8594 ' + satErrors[index].error.toFixed(2) + ' km'
+        }
+        else {
+            errorSpans[index].innerText = 'OL StD ' + satErrors[index].p.toFixed(2) + ' km/' + (1000*satErrors[index].v).toFixed(2) + ' m/s'
+        }
+        if (mainWindow.satellites[index].point !== 'none' && mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point) !== -1) {
             let relData = getRelativeData(index, mainWindow.satellites.findIndex(satRel => satRel.name === mainWindow.satellites[index].point))
             let relDataString = `Range: ${relData.range.toFixed(1)} km CATS: ${relData.sunAngle.toFixed(1)}<sup>o</sup>`
             pointingData[index].innerHTML = relDataString
+        }
+        else {
+            pointingData[index].innerHTML = ''
+
         }
     }
     whiteCellWindow.document.getElementById('main-time').value = convertTimeToDateTimeInput(new Date(mainWindow.startDate - (-time * 1000)))
@@ -7161,8 +6906,7 @@ function updateWhiteCellWindow() {
                 <option ${sat.team === 3 ? 'selected' : ''} value="3">3</option>
                 <option ${sat.team === 4 ? 'selected' : ''} value="4">4</option>
             </select> 
-            <span style="margin-left: 20px">
-                Error StD <span class="pos-error"></span> km <span class="vel-error"></span> m/s
+            <span style="margin-left: 20px" class="sat-error-span">
             </span>
         </div>
         <div style="margin-left: 30px">Pointing 
@@ -7251,9 +6995,6 @@ function shortenString(str = 'teststring12345', n=mainWindow.stringLimit[1], sta
     return str.length > n ? str.slice(start,n+start-1) + String.fromCharCode(8230) : str
 }
 
-async function testFetch() {
-    fetch('./fetchTest.txt').then(response => response.text()).then(txt => console.log(txt))
-}
 let burnWindows = []
 function openBurnsWindow(sat) {
     sat = sat.getAttribute('sat')
@@ -7265,7 +7006,7 @@ function openBurnsWindow(sat) {
             return `<div style="margin-bottom: 20px;">
                 <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
                 <div style="margin-left: 30px;">Direction: 
-                    ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
+                    ${b.direction.map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
                 </div>
                 <div style="margin-left: 30px;"> Waypoint Origin <select sat=${sat} burn=${bii} onchange="updateBurnOrigin(this)">
                     <option value="-1">RIC Origin</option>
@@ -7275,7 +7016,7 @@ function openBurnsWindow(sat) {
                     }).join('')}
                 </select></div>
                 <div class="burn-waypoint-disp-div" style="margin-left: 30px;">
-                    Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
+                    Waypoint: ${b.waypoint.target.map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
                 </div>
             </div>
             `
@@ -7307,7 +7048,7 @@ function openBurnsWindow(sat) {
                 return `<div style="margin-bottom: 20px;">
                     <div>${toStkFormat((new Date(mainWindow.startDate - (-1000*b.time))).toString())}</div>
                     <div style="margin-left: 30px;">Direction: 
-                        ${Object.values(b.direction).map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
+                        ${b.direction.map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
                     </div>
                     <div style="margin-left: 30px;"> Waypoint Origin <select sat=${sat} burn=${bii} onchange="updateBurnOrigin(this)">
                         <option value="-1">RIC Origin</option>
@@ -7318,7 +7059,7 @@ function openBurnsWindow(sat) {
                         }).join('')}
                     </select></div>
                     <div class="burn-waypoint-disp-div" style="margin-left: 30px;">
-                        Waypoint: ${Object.values(b.waypoint.target).map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
+                        Waypoint: ${b.waypoint.target.map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
                     </div>
                 </div>
                 `
@@ -7579,67 +7320,121 @@ function generateTleHistory() {
 
 function calculateSatErrorStates(team = 1, time = mainWindow.desired.scenarioTime) {
     team = Number(team)
-    let errors = [], currentOrigin = propToTime(Object.values(Coe2PosVelObject(mainWindow.originOrbit)), time, false)
-    mainWindow.satellites.forEach((sat) => {
-        let currentState = math.squeeze(Object.values(sat.currentPosition({time})))
-        let currentEciState = Ric2Eci(currentState.slice(0,3), currentState.slice(3,6), currentOrigin.slice(0,3), currentOrigin.slice(3,6))
-        currentEciState = [...currentEciState.rEcci, ...currentEciState.drEci]
+    // Calculate expected open loop errors
+    let errors = mainWindow.satellites.map((sat,iiSat) => {
+        let lastBurn = [{t: -86400, mag: 0}, ...sat.burns.filter(b => b.time < time).map(b => {
+            return {t: b.time, mag: math.norm(b.direction)}
+        })]
+        lastBurn = lastBurn[lastBurn.length - 1]
         let trackType = sat.team === team ? 'friendly' : 'neutral'
-        let lastBurn = [-86400, ...sat.burns.filter(b => b.time < time).map(b => b.time)]
-        lastBurn = time - lastBurn[lastBurn.length - 1]
-        let error = errorFromTime(lastBurn, mainWindow.error[trackType])
-        let errorEciPosition = currentEciState.map((s,ii) => s + randn_bm() * error[ii])
-        errors.push({
-            name: sat.name,
-            lastBurn,
-            position: currentState,
-            eciPosition: currentEciState,
-            errorEciPosition,
-            error
-        })
+        let err = errorFromTime(time - lastBurn.t, mainWindow.error[trackType])
+        return {p: err[0], v: err[3], truth: Object.values(getCurrentInertial(iiSat, time)), selfIndex: iiSat}
     })
-    // Account for satellites tracking other satellites onboard
-    mainWindow.satellites.forEach(sat => {
-        let currentSun = mainWindow.getCurrentSun(time)
-        let currentState = math.squeeze(Object.values(sat.currentPosition({time})))
-        let errorSat = errors.findIndex(s => s.name === sat.name)
-        let satellitesTracking = mainWindow.satellites.filter(filt => filt.team === team && filt.point === sat.name)
-        if (satellitesTracking.length > 0) {
-            // Get error information from sats tracking and filter out those without Sun
-            satellitesTracking = satellitesTracking.map(mSat => errors.find(findSat => findSat.name === mSat.name)).filter(filtSat => {
-                let originPos = filtSat.position
-                let targetPos = currentState
-                let relPos = math.subtract(originPos, targetPos).slice(0,3)
-                let sunAngle = math.acos(math.dot(currentSun, relPos) / math.norm(currentSun) / math.norm(relPos)) * 180 / Math.PI
-                return sunAngle < 90
-            })
-            let parallelRange = satellitesTracking.map(mSat => math.norm(math.subtract(mSat.position, currentState)))
-            console.log(parallelRange);
-            parallelRange = 1/parallelRange.reduce((a,b) => a + 1/b,0)
-            // StD from onboard is 2% of 1/(1/a + 1/b) from from satellites tracking
-            let std = parallelRange / 50
-            std = [std, std, std, std/1000, std/1000, std/1000]
-            let minErrorTracker = satellitesTracking.find(findSat => findSat.error[0] === Math.min(...satellitesTracking.map(s => s.error[0])))
-            let satOrigError = errors[errorSat].error.slice()
-            if (satellitesTracking.length > 0) {
-                if ((minErrorTracker.error[0] + std[0]) < errors[errorSat].error[0]) {
-                    errors[errorSat].error = math.add(minErrorTracker.error.slice(), std)
-                    let relState = math.subtract(errors[errorSat].eciPosition, minErrorTracker.eciPosition).map((s,ii) => s + randn_bm() * std[ii])
-                    errors[errorSat].errorEciPosition = math.add(minErrorTracker.errorEciPosition, relState)
-                }
-            }
-            // If error on tracked satellite is lower than current error on tracking satellite, can be used
-            // to buy down error on tracking satellite
-            satellitesTracking.forEach(trackSat => {
-                if ((satOrigError[0] + std[0]) < trackSat.error[0]) {
-                    // Buy down error from tracked satellite
-                    trackSat.error = math.add(satOrigError, std)
-                    let relState = math.subtract(trackSat.eciPosition, errors[errorSat].eciPosition).map((s,ii) => s + randn_bm() * std[ii])
-                    trackSat.errorEciPosition = math.add(errors[errorSat].errorEciPosition, relState)
-                }
-            })
+    
+    // Find all team satellites that are looking at another satellite and have Sun
+    let teamSats = mainWindow.satellites.filter((sat,iiSat) => {
+        if (sat.team !== team) return false
+        if (sat.point === 'none') return false
+        // Get index of satellite pointing to
+        let pointIndex = mainWindow.satellites.findIndex(satPoint => satPoint.name === sat.point)
+        let relData = getRelativeData(iiSat, pointIndex, false)
+        if (relData.sunAngle > 90) return false
+        return true
+    }).map((sat, iiSat) => {
+        let selfIndex = mainWindow.satellites.findIndex(satSelf => satSelf.name === sat.name)
+        let pointIndex = mainWindow.satellites.findIndex(satPoint => satPoint.name === sat.point)
+        let relData = getRelativeData(selfIndex, pointIndex, false)
+        return {
+            position: sat.currentPosition({time}),
+            selfIndex,
+            target: pointIndex,
+            range: relData.range
         }
     })
+    console.log(teamSats);
+
+    // Calculate combined covariance of all "groupings" (satellites looking at the same target)
+    // Get unique targets
+    let targets = [...new Set(teamSats.map(t => t.target))]
+    // Sort by the targets with most pointed at it (so that it's covariance is figured first)
+    targets = targets.sort((a,b) => {
+        return teamSats.filter(t => t.target === a).length - teamSats.filter(t => t.target === b).length
+    }).reverse()
+    for (let index = 0; index < targets.length; index++) {
+        let pointedToTarget = teamSats.filter(s => s.target === targets[index])
+        // get sat with lowest covariance, that will be base for everything
+        let combinedIndexes = [targets[index], ...pointedToTarget.map(s => s.selfIndex)]
+        let covCombined = combinedIndexes.map(s => errors[s].p)
+        let minCov = math.min(covCombined)
+        let minIndex = combinedIndexes[covCombined.findIndex(s => minCov === s)]
+        let targetIndex = targets[index]
+        combinedIndexes.forEach((ii,jj) => {
+            if (errors[ii].ref !== undefined) return
+            let curError = errors[ii]
+            let lastBurn = [{t: -86400, mag: 0}, ...mainWindow.satellites[ii].burns.filter(b => b.time < time).map(b => {
+                return {t: b.time, mag: math.norm(b.direction)}
+            })]
+            lastBurn = lastBurn[lastBurn.length - 1]
+            let timeSinceLastBurn = time - lastBurn.t
+            if (ii === minIndex) return
+            else if (ii === targetIndex) {
+                // More trackers will result in better std
+                let dataAll = teamSats.filter(s => s.target === targetIndex).map(s => s.range)
+                let combinedRange = 1/dataAll.reduce((a,b) => a + 1/b, 0)
+                
+                let trackError = {
+                    p: 0.06 * combinedRange,
+                    v: 0.06 * combinedRange,
+                    cp: 200,
+                    cv: 200
+                }
+                errors[ii].ref = minIndex
+                errors[ii].error = errorFromTime(timeSinceLastBurn, trackError)[0] + 0.001*combinedRange
+            }
+            else {
+                let data = teamSats.find(s => s.selfIndex === ii)
+                let trackError = {
+                    p: 0.06 * data.range,
+                    v: 0.06 * data.range,
+                    cp: 6,
+                    cv: 6
+                }
+                errors[ii].ref = targetIndex
+                errors[ii].error = errorFromTime(timeSinceLastBurn, trackError)[0] + 0.005*data.range
+            }
+        })
+    }
+
+    //  Calc states of open-loop satellits
+    for (let index = 0; index < errors.length; index++) {
+        if (errors[index].ref === undefined) {
+            let std = [errors[index].p,errors[index].p,errors[index].p,errors[index].v,errors[index].v,errors[index].v].map(s => s * randn_bm())
+            errors[index].trackedState = math.add(errors[index].truth, std)
+        }
+    }
+    // Iterate until all satellites have a tracked state, start by getting list of satellites that are referenced by others
+    let referencedSatellites = errors.filter(e => errors.filter(s => e.selfIndex === s.ref).length > 0 && e.trackedState === undefined).map(s => s.selfIndex)
+    while (referencedSatellites.length > 0) {
+        for (let index = 0; index < referencedSatellites.length; index++) {
+            let ref = errors[referencedSatellites[index]].ref;
+            let error = errors[referencedSatellites[index]].error
+            error = [error, error, error, error/1000, error/1000, error/1000].map(s => s * randn_bm())
+            let relState = math.subtract(errors[referencedSatellites[index]].truth, errors[ref].truth)
+            relState = math.add(relState, error)
+            errors[referencedSatellites[index]].trackedState = math.add(relState, errors[ref].trackedState)
+        }
+        referencedSatellites = errors.filter(e => errors.filter(s => e.selfIndex === s.ref).length > 0 && e.trackedState === undefined).map(s => s.selfIndex)
+    }
+    // Calc tracked state for the rest of the satellites
+    for (let index = 0; index < errors.length; index++) {
+        if (errors[index].trackedState !== undefined) continue
+        let ref = errors[index].ref
+        let error = errors[index].error
+        error = [error, error, error, error/1000, error/1000, error/1000].map(s => s * randn_bm())
+        let relState = math.subtract(errors[index].truth, errors[ref].truth)
+        relState = math.add(relState, error)
+        errors[index].trackedState = math.add(relState, errors[ref].trackedState)
+    }
 
     return errors
 }
@@ -7713,6 +7508,7 @@ function resetDataDivs() {
             openDataDiv({
                 origin: div.origin,
                 target: div.target,
+                interceptTime: req.interceptTime,
                 data: req.data,
                 top: div.top + 'px',
                 left: div.left + 'px',
@@ -7723,6 +7519,7 @@ function resetDataDivs() {
             openDataDiv({
                 origin: req.origin,
                 target: req.target,
+                interceptTime: req.interceptTime,
                 data: req.data,
                 top: (20 + ii * 20) + 'px',
                 title: shortenString(mainWindow.satellites[req.origin].name, 12) + String.fromCharCode(8594) + shortenString(mainWindow.satellites[req.target].name,12)
@@ -7743,7 +7540,8 @@ function openDataDiv(options = {}) {
         origin = 'sat1',
         target = 'sat2',
         left = '10px',
-        top = '50px'
+        top = '50px',
+        interceptTime = 1
     } = options
     let properTerms = {
         range: {name: 'Range', units: 'km'},
@@ -7751,7 +7549,7 @@ function openDataDiv(options = {}) {
         sunAngle: {name: 'CATS', units: 'deg'},
         poca: {name: 'POCA', units: 'km'},
         rangeRate: {name: 'Range Rate', units: 'm/s'},
-        interceptData: {name: '1-hr Intercept', units:''}
+        interceptData: {name: (interceptTime*60).toFixed(0) + '-min Intercept', units:''}
     }
     let newDiv = document.createElement('div')
     newDiv.style.position = 'fixed'
@@ -7861,6 +7659,7 @@ function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
     for (let ii = 0; ii < x.length; ii++) {
         let subAnswer = [], subAnswerDen = 1
         for (let jj = 0; jj < x.length; jj++) {
+            console.log(jj);
             if (ii === jj) continue
             subAnswer.push([1, -x[jj]])
             subAnswerDen *= x[ii] - x[jj]
@@ -7869,6 +7668,7 @@ function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
             return multiplyPolynomial(a,b)
         }, subAnswer[0])
         answer = math.add(answer, math.dotMultiply(y[ii] / subAnswerDen, subAnswer))
+        console.log(ii);
     }
     return answer
 }
@@ -7904,4 +7704,147 @@ function derivateOfPolynomial(poly = [3,2,1]) {
         return p * (ddp.length - ii)
     })
     return ddp
+}
+
+function runge_kutta4(eom, state = mainWindow.originOrbit, dt = 1, a = [0,0,0]) {
+    if (true) {
+        let k1 = eom(state, {a});
+        let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a});
+        let k3 = eom(math.add(state, math.dotMultiply(dt/2, k2)), {a});
+        let k4 = eom(math.add(state, math.dotMultiply(dt/1, k3)), {a});
+        return math.add(state, math.dotMultiply(dt / 6, (math.add(k1, math.dotMultiply(2, k2), math.dotMultiply(2, k3), k4))));
+    }
+    let k1 = eom(state, {a});
+    let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)), {a});
+    return math.add(state, math.dotMultiply(dt, k2));
+}
+
+function inertialEom(state = [42164, 0, 0, 0, 3.074, 0], options = {}) {
+    let {a = [0.001,0,0]} = options
+    let mu_r3 = 398600.4418 / (math.norm(state.slice(0,3)) ** 3)
+    let c = ConvEciToRic(state, [0,0,0,0,0,0], true)[0]
+    a = math.multiply(math.transpose(c), a)
+    return [
+        state[3],
+        state[4],
+        state[5],
+        -mu_r3 * state[0] + a[0],
+        -mu_r3 * state[1] + a[1],
+        -mu_r3 * state[2] + a[2]
+    ]
+}
+
+function Eci2RicWithC(chief, deputy, c) {
+    return [
+        ...math.multiply(c[0],math.subtract(deputy.slice(0,3), chief.slice(0,3))),
+        ...math.add(math.multiply(c[1], math.subtract(deputy.slice(0,3), chief.slice(0,3))), math.multiply(c[0], math.subtract(deputy.slice(3,6), chief.slice(3,6))))
+    ]
+}
+
+function propToTimeAnalytic(state = mainWindow.originOrbit, dt = 86164, j2 = mainWindow.j2) {
+    state = {...state}
+    if (j2) {
+        state.tA = propTrueAnomalyj2(state.tA, state.a, state.e, state.i, dt)
+        let j2 = 1.082626668e-3
+        let n = (398600.4418 / state.a / state.a / state.a) ** 0.5
+        let n_rEarth2 = n*40680622.66137769
+        let p = state.a * (1 - state.e ** 2)
+        let raanJ2Rate = -3 * n_rEarth2*j2*Math.cos(state.i) / 2 / p / p
+        let argJ2Rate = 3 * n_rEarth2 * j2 * (4 - 5 * Math.sin(state.i) ** 2) / 4 / p / p 
+        state.raan += raanJ2Rate * dt
+        state.arg += argJ2Rate * dt
+    }
+    else {
+        state.tA = propTrueAnomaly(state.tA, state.a, state.e, dt)
+    }
+    state = Object.values(Coe2PosVelObject(state))
+    return state
+}
+
+function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], options = {}) {
+    // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
+    let {timeDelta = mainWindow.timeDelta, recalcBurns = false, tFinal = mainWindow.scenarioLength*3600, a = 0.001, time = mainWindow.scenarioTime} = options
+    let cutTime = recalcBurns ? mainWindow.scenarioLength*3600 : time
+    let epochPosition = {...position}, epochTime = 0
+    let propPosition, tProp = 0, stateHist = [], histIndex = 0, burnIndex = 0
+    burns = burns.slice().filter(b => b.time < cutTime)
+    burns.push({time: tFinal*2})
+    while ((tProp+timeDelta) < tFinal) {
+        propPosition = propToTimeAnalytic(epochPosition, tProp - epochTime)
+        stateHist.push({
+            t: tProp, position: Eci2RicWithC(mainWindow.originHistory[histIndex].position, propPosition, mainWindow.originRot[histIndex])
+        })
+        if ((tProp + timeDelta) > burns[burnIndex].time) {
+            propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
+            // Time propagated before burn start to keep synced with time step
+            let propToBurnTime = burns[burnIndex].time - tProp
+            if (recalcBurns) {
+                // console.time()
+                let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time)
+                let ricOrigin = ConvEciToRic(eciOriginStart, propPosition)
+                burns[burnIndex].location = ricOrigin.slice(0,3)
+                if (burns[burnIndex].waypoint !== false) {
+                    let newBurn = estimateWaypointBurn(propPosition, burns[burnIndex].waypoint.target,  burns[burnIndex].waypoint.tranTime, a)
+                    if (newBurn.data !== false) {
+                        if (isNaN(newBurn.data.r) || isNaN(newBurn.data.i) || isNaN(newBurn.data.c)) {
+                            newBurn.data = false
+                        }
+                    }
+                    if (newBurn.data !== false) {
+                        burns[burnIndex].direction = [newBurn.data.r, newBurn.data.i, newBurn.data.c]
+                    }
+                    else {
+                        // If lambert solution fails, go to less precise non-linear rel equation estimate
+                        console.log(newBurn, newBurn.reason, propPosition);
+                        let eciOriginEnd = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time + burns[burnIndex].waypoint.tranTime)
+                        let eciOriginBegin = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time)
+                        let ricTarget = ConvEciToRic(eciOriginEnd, [...burns[burnIndex].waypoint.target,0,0,0])
+                        newBurn = hcwFiniteBurnOneBurn(ricOrigin, ricTarget, burns[burnIndex].waypoint.tranTime, a, tProp)
+                        console.log(newBurn);
+                        if (newBurn !== false) {
+                            console.log('saved');
+                            let burnDir = [newBurn.r, newBurn.i, newBurn.c]
+                            let cOrigin = ConvEciToRic(eciOriginBegin, [0,0,0,0,0,0], true)[0]
+                            let cSat = ConvEciToRic(propPosition, [0,0,0,0,0,0], true)[0]
+                            burnDir = math.multiply(cSat, math.transpose(cOrigin), burnDir)
+                            burns[burnIndex].direction = burnDir.filter(b => isNaN(b)).length > 0 ? [0,0,0] : [newBurn.r, newBurn.i, newBurn.c]
+                        } else console.log('not saved');
+                    }
+                }
+                // console.timeEnd()
+            }
+            let mag = math.norm(burns[burnIndex].direction)
+            burnIndex++
+            if (mag > 0) {
+                let burnDuration = mag / a
+                let burnedTime = 0
+                // Catch up to time delta step if smaller than burn duration
+                if (burnDuration > (timeDelta - propToBurnTime)) {
+                    propPosition = runge_kutta4(inertialEom, propPosition, timeDelta - propToBurnTime, burns[burnIndex-1].direction.map(s => s * a / mag))
+                    tProp += timeDelta
+                    histIndex++
+                    stateHist.push({
+                        t: tProp, position: Eci2RicWithC(mainWindow.originHistory[histIndex].position, propPosition, mainWindow.originRot[histIndex])
+                    })
+                    burnedTime += timeDelta - propToBurnTime
+                }
+                // Finish rest of time step if longer than time delta
+                while ((burnedTime + timeDelta) < burnDuration) {
+                    propPosition = runge_kutta4(inertialEom, propPosition, timeDelta, burns[burnIndex-1].direction.map(s => s * a / mag))
+                    histIndex++
+                    tProp += timeDelta
+                    stateHist.push({
+                        t: tProp, position: Eci2RicWithC(mainWindow.originHistory[histIndex].position, propPosition, mainWindow.originRot[histIndex])
+                    })
+                    burnedTime += timeDelta
+                }
+                propPosition = runge_kutta4(inertialEom, propPosition, burnDuration-burnedTime, burns[burnIndex-1].direction.map(s => s * a / mag))
+                epochPosition = PosVel2CoeNew(propPosition.slice(0,3), propPosition.slice(3,6))
+                epochTime = burns[burnIndex-1].time + burnDuration
+            }
+        }
+        tProp += timeDelta
+        histIndex++
+    }
+    return stateHist
 }

@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ARTS</title>
     <script src="../SupportLibraries/math.min.js"></script>
+    <script src="./js/astro_vz.js"></script>
     <script src="../SupportLibraries/LZWEncoder.js"></script>
     <script src="../SupportLibraries/NeuQuant.js"></script>
     <script src="../SupportLibraries/GIFEncoder.js"></script>
@@ -118,11 +119,17 @@
             
             <div style="margin: 20px 5px">Scenario Length <input id="scen-length-input" type="Number" min="0" max="360" step="1"> hrs</div>
             <div style="margin: 20px 5px">String Limits <input id="str-start-input" type="Number" min="0" max="360" step="1"> to <input id="str-end-input" type="Number" min="0" max="360" step="1"></div>
-            <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="openWhiteCellWindow()" class="close-button panel-button hoverable noselect">Open White Cell</div>
-            <div id="upload-scenario-button" style="font-size: 1.5em; padding: 14px 4px;"  onclick="uploadScenario(event)" class="close-button panel-button hoverable noselect">Import .SAS File<input oninput="uploadScenario(event)" style="display: none" type="file" id="upload-sas-input" accept="*.sas, *.sasm"/></div>
-            <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="exportScenario()" class="close-button panel-button hoverable noselect">Export .SAS File</div>
-            <div style="font-size: 1.5em; padding: 14px 4px;"  id="confirm-option-button" class="panel-button hoverable noselect">Confirm</div>
-            <div style="font-size: 1.5em; padding: 14px 4px;"  onclick="closeAll()" class="close-button panel-button hoverable noselect">Cancel</div>
+            <div>
+                <button style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;" class="hoverable" id="confirm-option-button">Confirm</button>
+                <button style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;" class="hoverable" onclick="closeAll()">Cancel</button>
+            </div>
+            <div style="display: inline;">
+                <button id="upload-scenario-button" style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;" class="hoverable" onclick="uploadScenario(event)">Import .SAS File<input oninput="uploadScenario(event)" style="display: none" type="file" id="upload-sas-input" accept="*.sas, *.sasm"/></button>
+                <button style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;" class="hoverable" onclick="exportScenario()">Export .SAS File</button>
+            </div>
+            <div>
+                <button style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;"  onclick="openWhiteCellWindow()" class="hoverable">Open White Cell</button>
+            </div>
         </div>
     </div>
 </body>

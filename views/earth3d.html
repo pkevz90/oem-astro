@@ -1,0 +1,23 @@
+<canvas id="myCanvas" width="600" height="400"></canvas>
+
+<script>
+  const canvas = document.getElementById('myCanvas');
+const ctx = canvas.getContext('2d');
+
+const earthRadius = 50; // radius of the earth in pixels
+const earthX = 100; // x-coordinate of the center of the earth
+const earthY = 100; // y-coordinate of the center of the earth
+
+// draw the earth as a sphere
+ctx.beginPath();
+ctx.arc(earthX, earthY, earthRadius, 0, 2 * Math.PI);
+ctx.fillStyle = 'blue';
+ctx.fill();
+
+// add a shadow to give the earth a 3D appearance
+ctx.beginPath();
+ctx.arc(earthX + earthRadius/2, earthY + earthRadius/2, earthRadius, 0, 2 * Math.PI);
+ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+ctx.fill();
+
+</script>
