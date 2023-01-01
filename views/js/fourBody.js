@@ -18,7 +18,7 @@ let hpop = new Propagator(
     }
 )
 
-let orbitHist = hpop.propToTimeHistory(orbit, startDate, tf*3600, 1e-6)
+let orbitHist = hpop.propToTimeHistory(orbit, startDate, tf*3600, 1e-4)
 let view = 'xy'
 function eciToPixel(eci, axis = view) {
     // if (axis === 'xz') {
@@ -72,29 +72,29 @@ function draw3dScene(satPoints, az = azD, el = elD) {
     let r = math.multiply( rotationMatrices(el, 1), rotationMatrices(az, 3))
     satPoints.forEach((p,ii) => {
         let pos = math.multiply(r, p.state.slice(0,3))
-        pos = eciToPixel(pos)
+        pos = [...eciToPixel(pos), pos[2]]
         points.push({
             color: 'blue',
             position: pos,
-            size: 0.5
+            size: 2
         })
         // Draw Moon
         let moonEci = astro.moonEciFromTime(p.date)
         // console.log(moonEci);
         moonEci = math.multiply(r, moonEci.slice(0,3))
-        moonEci = eciToPixel(moonEci)
+        moonEci = [...eciToPixel(moonEci),moonEci[2]]
         if (ii > (satPoints.length-200))
         points.push({
             color: 'gray',
             position: moonEci,
-            size: 4
+            size: 8
         })
     })
     //Earth
     points.push({
         color: 'green',
-        position: [cnvs.width / 2, cnvs.height / 2],
-        size: 8
+        position: [cnvs.width / 2, cnvs.height / 2,0],
+        size: 16
     })
     points = points.sort((a,b) => a.position[2] - b.position[2])
     ctx.textAlign = 'center'

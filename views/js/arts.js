@@ -274,7 +274,7 @@ class windowCanvas {
     getCurrentSun(t = this.scenarioTime) {
         let monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         let curDate = new Date(mainWindow.startDate)
-        let daySinceWinterSolstice = monthDays.slice(0, curDate.getMonth()).reduce((a, b) => a + b) + curDate.getDate() - 80
+        let daySinceWinterSolstice = monthDays.slice(0, curDate.getMonth()).reduce((a, b) => a + b,0) + curDate.getDate() - 80
         let freq = 2 * Math.PI /365.25
         let maxCt = mainWindow.initSun[2] / Math.sin(freq * daySinceWinterSolstice)
         let initSunWithCrossComponent = this.initSun.slice()
