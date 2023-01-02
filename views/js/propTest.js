@@ -20,11 +20,13 @@ let hpop = new Propagator({
     thirdBody: true,
     solarRad: true
 })
-
-// let t = 0, dt = 20, timeDelta = (state1_final_Epoch-state1_init_Epoch) / 1000
-// let state = state1_init.slice()
-// state = hpop.propToTime(state, state1_init_Epoch, timeDelta, 1e-6)
-// console.log(state);
+hpop.highPrecisionProp()
+let t = 0, dt = 20, timeDelta = (state1_final_Epoch-state1_init_Epoch) / 1000
+let state = state1_init.slice()
+console.time('prop')
+state = hpop.propToTime(state, state1_init_Epoch, timeDelta, 1e-6)
+console.timeEnd('prop')
+console.log(math.norm(math.subtract(state, state1_final)));
 
 
 // function propToTime(state, date, tf = 86400, maxError = 1e-9) {

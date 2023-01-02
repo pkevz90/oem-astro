@@ -169,20 +169,29 @@ class Propagator {
             -mu* y / r ** 3,
             -mu* z / r ** 3
         ]
+        // console.time('geo')
         let a_pert = this.recursiveGeoPotential(position, date)
         a = math.add(a_pert.a,a)
+        // console.timeEnd('geo')
+        // console.time('3B')
         if (this.thirdBody) {
             a_pert = this.thirdBodyEffects(position, date)
             a = math.add(a_pert,a)
         }
+        // console.timeEnd('3B')
+        // console.time('atm')
         if (this.atmDrag) {
             a_pert = this.atmosphericDragEffect(position)
             a = math.add(a_pert,a)
         }
+        // console.timeEnd('atm')
+        
+        // console.time('solarRad')
         if (this.solarRad) {
             a_pert = this.solarRadiationPressure(position, date)
             a = math.add(a_pert,a)
         }
+        // console.timeEnd('solarRad')
         return [
             position[3], position[4], position[5],...a]
     }
@@ -190,27 +199,45 @@ class Propagator {
         let {lat, long, rot, r_ecef} = astro.eci2latlong(state.slice(0,3), date)
         rot = math.transpose(rot)
         let re = 6378.1363, r = math.norm(state.slice()), x = r_ecef[0], y=r_ecef[1], z=r_ecef[2]
-        let p = [[1],[Math.sin(lat), Math.cos(lat)]]
+        let cosLat = Math.cos(lat), sinLat = Math.sin(lat)
+        let p = [[1],[sinLat, cosLat]]
         for (let order = 2; order <= this.order; order++) {
             let row = []
             for (let rowNum = 0; rowNum <= order; rowNum++) {
-                if (rowNum === 0) row.push(((2*order-1)*Math.sin(lat)*p[order-1][0] - (order-1)*p[order-2][0])/order)
-                else if (rowNum === order) row.push((2*order-1)*Math.cos(lat)*p[order-1][order-1])
+                if (rowNum === 0) row.push(((2*order-1)*sinLat*p[order-1][0] - (order-1)*p[order-2][0])/order)
+                else if (rowNum === order) row.push((2*order-1)*cosLat*p[order-1][order-1])
                 else {
                     let po_2m = rowNum > (order-2) ? 0 : p[order-2][rowNum]
-                    row.push(po_2m + (2*order-1)*Math.cos(lat)*p[order-1][rowNum-1])
+                    row.push(po_2m + (2*order-1)*cosLat*p[order-1][rowNum-1])
                 }
             }
             p.push(row)
         }
+        // console.log(long * 180/Math.PI);
+        let cosLong = Math.cos(long)
+        let sinArray = [0,Math.sin(long)]
+        let cosArray = [1,cosLong]
+        let tanLat = Math.tan(lat)
+        let mTanArray = [0, tanLat]
+        let re_r = re/r
+        let rArray = [1, re_r]
+        for (let index = 2; index <= 70; index++) {
+            sinArray.push(2*cosLong*sinArray[index-1]-sinArray[index-2])
+            cosArray.push(2*cosLong*cosArray[index-1]-cosArray[index-2])  
+            mTanArray.push((index-1)*tanLat+tanLat)
+            rArray.push(rArray[index-1]*re_r)
+        }
         let du_dr = 0, du_dlat = 0, du_dlong = 0
         for (let order = 2; order <= this.order; order++) {
             for (let m = 0; m <= order; m++) {
-                du_dr += (re/r)**order*(order+1)*p[order][m]*(this.c[order][m]*Math.cos(m*long)+this.s[order][m]*Math.sin(m*long))
+                // du_dr += (re/r)**order*(order+1)*p[order][m]*(this.c[order][m]*Math.cos(m*long)+this.s[order][m]*Math.sin(m*long))
+                du_dr += rArray[order]*(order+1)*p[order][m]*(this.c[order][m]*cosArray[m]+this.s[order][m]*sinArray[m])
     
                 let pt_m_1 = (m+1) > order ? 0 : p[order][m+1] 
-                du_dlat += (re/r)**order * (pt_m_1 - m * Math.tan(lat) * p[order][m]) * (this.c[order][m]*Math.cos(m*long) + this.s[order][m]*Math.sin(m*long))
-                du_dlong += (re/r)**order * m * p[order][m] * (this.s[order][m]*Math.cos(m*long) - this.c[order][m]*Math.sin(m*long))
+                // du_dlat += (re/r)**order * (pt_m_1 - m * Math.tan(lat) * p[order][m]) * (this.c[order][m]*Math.cos(m*long) + this.s[order][m]*Math.sin(m*long))
+                du_dlat += rArray[order] * (pt_m_1 - mTanArray[m] * p[order][m]) * (this.c[order][m]*cosArray[m] + this.s[order][m]*sinArray[m])
+                // du_dlong += (re/r)**order * m * p[order][m] * (this.s[order][m]*Math.cos(m*long) - this.c[order][m]*Math.sin(m*long))
+                du_dlong += rArray[order]* m * p[order][m] * (this.s[order][m]*cosArray[m] - this.c[order][m]*sinArray[m])
             }
         }
         du_dr *= -398600.4418/r/r
@@ -239,10 +266,12 @@ class Propagator {
         let moonSatVec = math.subtract(moonVector, eciState.slice(0,3))
         let rEarthMoon = math.norm(moonVector)
         let rSatMoon = math.norm(moonSatVec)
+        let rSatMoon3 = rSatMoon**3
+        let rEarthMoon3 = rEarthMoon**3
         let aMoon = [
-            muMoon*(moonSatVec[0] / rSatMoon**3 - moonVector[0]/rEarthMoon**3),
-            muMoon*(moonSatVec[1] / rSatMoon**3 - moonVector[1]/rEarthMoon**3),
-            muMoon*(moonSatVec[2] / rSatMoon**3 - moonVector[2]/rEarthMoon**3),
+            muMoon*(moonSatVec[0] / rSatMoon3 - moonVector[0]/rEarthMoon3),
+            muMoon*(moonSatVec[1] / rSatMoon3 - moonVector[1]/rEarthMoon3),
+            muMoon*(moonSatVec[2] / rSatMoon3 - moonVector[2]/rEarthMoon3),
         ]
         //Sun
         let sunVector = astro.sunEciFromTime(date)
@@ -250,10 +279,12 @@ class Propagator {
         let sunSatVec = math.subtract(sunVector, eciState.slice(0,3))
         let rEarthSun = math.norm(sunVector)
         let rSatSun = math.norm(sunSatVec)
+        let rEarthSun3 = rEarthSun**3
+        let rSatSun3 = rSatSun**3
         let aSun = [
-            muSun*(sunSatVec[0] / rSatSun**3 - sunVector[0]/rEarthSun**3),
-            muSun*(sunSatVec[1] / rSatSun**3 - sunVector[1]/rEarthSun**3),
-            muSun*(sunSatVec[2] / rSatSun**3 - sunVector[2]/rEarthSun**3),
+            muSun*(sunSatVec[0] / rSatSun3 - sunVector[0]/rEarthSun3),
+            muSun*(sunSatVec[1] / rSatSun3 - sunVector[1]/rEarthSun3),
+            muSun*(sunSatVec[2] / rSatSun3 - sunVector[2]/rEarthSun3),
         ]
         return math.add(aMoon, aSun)
     }
