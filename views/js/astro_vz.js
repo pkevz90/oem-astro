@@ -162,40 +162,27 @@ class Propagator {
         this.thirdBody = thirdBody
     }
     highPrecisionProp(position = [42164, 0, 0, 0, 3.074, 0], date = new Date()) {
-        let mu = 398600.4415, x = position[0], y = position[1], z = position[2]
         let r = math.norm(position.slice(0,3))
-        let a = [
-            -mu* x / r ** 3,
-            -mu* y / r ** 3,
-            -mu* z / r ** 3
-        ]
+        let a = math.dotMultiply(-398600.4415 /r/r/r, position.slice(0,3))
         // console.time('geo')
-        let a_pert = this.recursiveGeoPotential(position, date)
-        a = math.add(a_pert.a,a)
+        a = math.add(this.recursiveGeoPotential(position, date).a,a)
         // console.timeEnd('geo')
+
         // console.time('3B')
-        if (this.thirdBody) {
-            a_pert = this.thirdBodyEffects(position, date)
-            a = math.add(a_pert,a)
-        }
+        if (this.thirdBody) {a = math.add(this.thirdBodyEffects,a)}
         // console.timeEnd('3B')
+
         // console.time('atm')
-        if (this.atmDrag) {
-            a_pert = this.atmosphericDragEffect(position)
-            a = math.add(a_pert,a)
-        }
+        if (this.atmDrag) {a = math.add(this.atmosphericDragEffect(position),a)}
         // console.timeEnd('atm')
         
         // console.time('solarRad')
-        if (this.solarRad) {
-            a_pert = this.solarRadiationPressure(position, date)
-            a = math.add(a_pert,a)
-        }
+        if (this.solarRad) {a = math.add(this.solarRadiationPressure(position, date),a)}
         // console.timeEnd('solarRad')
-        return [
-            position[3], position[4], position[5],...a]
+
+        return [position[3], position[4], position[5],...a]
     }
-    recursiveGeoPotential(state, date) {
+    recursiveGeoPotential(state=[42164, 0, 0], date) {
         let {lat, long, rot, r_ecef} = astro.eci2latlong(state.slice(0,3), date)
         rot = math.transpose(rot)
         let re = 6378.1363, r = math.norm(state.slice()), x = r_ecef[0], y=r_ecef[1], z=r_ecef[2]
