@@ -169,7 +169,7 @@ class Propagator {
         // console.timeEnd('geo')
 
         // console.time('3B')
-        if (this.thirdBody) {a = math.add(this.thirdBodyEffects,a)}
+        if (this.thirdBody) {a = math.add(this.thirdBodyEffects(position, date),a)}
         // console.timeEnd('3B')
 
         // console.time('atm')
@@ -187,19 +187,19 @@ class Propagator {
         rot = math.transpose(rot)
         let re = 6378.1363, r = math.norm(state.slice()), x = r_ecef[0], y=r_ecef[1], z=r_ecef[2]
         let cosLat = Math.cos(lat), sinLat = Math.sin(lat)
-        let p = [[1],[sinLat, cosLat]]
-        for (let order = 2; order <= this.order; order++) {
-            let row = []
-            for (let rowNum = 0; rowNum <= order; rowNum++) {
-                if (rowNum === 0) row.push(((2*order-1)*sinLat*p[order-1][0] - (order-1)*p[order-2][0])/order)
-                else if (rowNum === order) row.push((2*order-1)*cosLat*p[order-1][order-1])
-                else {
-                    let po_2m = rowNum > (order-2) ? 0 : p[order-2][rowNum]
-                    row.push(po_2m + (2*order-1)*cosLat*p[order-1][rowNum-1])
-                }
-            }
-            p.push(row)
-        }
+        // let p = [[1],[sinLat, cosLat]]
+        // for (let order = 2; order <= this.order; order++) {
+        //     let row = []
+        //     for (let rowNum = 0; rowNum <= order; rowNum++) {
+        //         if (rowNum === 0) row.push(((2*order-1)*sinLat*p[order-1][0] - (order-1)*p[order-2][0])/order)
+        //         else if (rowNum === order) row.push((2*order-1)*cosLat*p[order-1][order-1])
+        //         else {
+        //             let po_2m = rowNum > (order-2) ? 0 : p[order-2][rowNum]
+        //             row.push(po_2m + (2*order-1)*cosLat*p[order-1][rowNum-1])
+        //         }
+        //     }
+        //     p.push(row)
+        // }
         // console.log(long * 180/Math.PI);
         let cosLong = Math.cos(long)
         let sinArray = [0,Math.sin(long)]
@@ -215,17 +215,32 @@ class Propagator {
             rArray.push(rArray[index-1]*re_r)
         }
         let du_dr = 0, du_dlat = 0, du_dlong = 0
+        let pMat = [[1],[sinLat, cosLat]]
         for (let order = 2; order <= this.order; order++) {
+            let pRow = []
             for (let m = 0; m <= order; m++) {
-                // du_dr += (re/r)**order*(order+1)*p[order][m]*(this.c[order][m]*Math.cos(m*long)+this.s[order][m]*Math.sin(m*long))
-                du_dr += rArray[order]*(order+1)*p[order][m]*(this.c[order][m]*cosArray[m]+this.s[order][m]*sinArray[m])
+                if (m === 0) pRow.push(((2*order-1)*sinLat*pMat[order-1][0] - (order-1)*pMat[order-2][0])/order)
+                else if (m === order) pRow.push((2*order-1)*cosLat*pMat[order-1][order-1])
+                else {
+                    let po_2m = m > (order-2) ? 0 : pMat[order-2][m]
+                    pRow.push(po_2m + (2*order-1)*cosLat*pMat[order-1][m-1])
+                }
+                let pMpl1
+                if ((m+1) === order) {pMpl1 = (2*order-1)*cosLat*pMat[order-1][order-1]}
+                else {
+                    let po_2m = (m+1) > (order-2) ? 0 : pMat[order-2][m+1]
+                    pMpl1 = po_2m + (2*order-1)*cosLat*pMat[order-1][m]
+                }
+                pMpl1 = (m+1) > order ? 0 : pMpl1
+                let pM = pRow[pRow.length-1]
+                
+                du_dr += rArray[order]*(order+1)*pM*(this.c[order][m]*cosArray[m]+this.s[order][m]*sinArray[m])
     
-                let pt_m_1 = (m+1) > order ? 0 : p[order][m+1] 
-                // du_dlat += (re/r)**order * (pt_m_1 - m * Math.tan(lat) * p[order][m]) * (this.c[order][m]*Math.cos(m*long) + this.s[order][m]*Math.sin(m*long))
-                du_dlat += rArray[order] * (pt_m_1 - mTanArray[m] * p[order][m]) * (this.c[order][m]*cosArray[m] + this.s[order][m]*sinArray[m])
-                // du_dlong += (re/r)**order * m * p[order][m] * (this.s[order][m]*Math.cos(m*long) - this.c[order][m]*Math.sin(m*long))
-                du_dlong += rArray[order]* m * p[order][m] * (this.s[order][m]*cosArray[m] - this.c[order][m]*sinArray[m])
+                du_dlat += rArray[order] * (pMpl1 - mTanArray[m] * pM) * (this.c[order][m]*cosArray[m] + this.s[order][m]*sinArray[m])
+                
+                du_dlong += rArray[order]* m * pM * (this.s[order][m]*cosArray[m] - this.c[order][m]*sinArray[m])
             }
+            pMat.push(pRow)
         }
         du_dr *= -398600.4418/r/r
     
@@ -237,7 +252,7 @@ class Propagator {
         let a_j = (1/r * du_dr - z/r/r/Math.sqrt(x*x+y*y)*du_dlat)*y + (1/(x*x+y*y)*du_dlong)*x
         let a_k = 1/r * du_dr * z + Math.sqrt(x*x+y*y)/r/r * du_dlat
     
-        return {p, a: math.squeeze(math.multiply(rot, math.transpose([[a_i, a_j, a_k]])))}  
+        return {pMat, a: math.squeeze(math.multiply(rot, math.transpose([[a_i, a_j, a_k]])))}  
     }
     rk4(state = [42164, 0, 0, 0, -3.070, 0], dt = 10, date = new Date()) {
         let k1 = this.highPrecisionProp(state, date);
