@@ -3766,7 +3766,8 @@ function editSatellite(button) {
     if (button.nextSibling.selectedIndex < 0) return;
     let inputs = document.querySelectorAll('.sat-input')
     let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-    let ricState
+    let originState = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+    let eciState, ricState
     switch (radioId) {
         case 'ric-sat-input':
             ricState = [
@@ -3777,10 +3778,12 @@ function editSatellite(button) {
                 inputs[4].value,
                 inputs[5].value,
             ].map((s, ii) => Number(s) / (ii > 2 ? 1000 : 1))
+            eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), originState.slice(0,3), originState.slice(3,6))
+            eciState = [...eciState.rEcci, ...eciState.drEci]
             break
         case 'eci-sat-input':
             let date = new Date(inputs[0].value)
-            let eciState = [
+            eciState = [
                 inputs[1].value,
                 inputs[2].value,
                 inputs[3].value,
@@ -3790,9 +3793,6 @@ function editSatellite(button) {
             ].map(s => Number(s))
             let dt = (mainWindow.startDate - date) / 1000
             eciState = propToTime(eciState, dt, false)
-            let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-            ricState = Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), eciState.slice(0,3), eciState.slice(3,6))
-            ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
             break
         case 'rmoe-sat-input':
             let rmoes = [
@@ -3803,14 +3803,6 @@ function editSatellite(button) {
                 inputs[4].value,
                 inputs[5].value,
             ].map((s,ii) => Number(s))
-            console.log({
-                ae: rmoes[0],
-                x: rmoes[1],
-                y: rmoes[2],
-                b: rmoes[3],
-                z: rmoes[4],
-                m: rmoes[5]
-            });
             ricState = rmoeToRic({
                 ae: rmoes[0],
                 x: rmoes[1],
@@ -3820,22 +3812,17 @@ function editSatellite(button) {
                 m: rmoes[5]
             })
             ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+            eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), originState.slice(0,3), originState.slice(3,6))
+            eciState = [...eciState.rEcci, ...eciState.drEci]
             break
     }   
+    eciState = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
     let color = mainWindow.satellites[button.nextSibling.selectedIndex].color;
     let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
     let shape = mainWindow.satellites[button.nextSibling.selectedIndex].shape;
     let a = mainWindow.satellites[button.nextSibling.selectedIndex].a;
-    state = {
-        r:  ricState[0],
-        i:  ricState[1],
-        c:  ricState[2],
-        rd: ricState[3],
-        id: ricState[4],
-        cd: ricState[5],
-    }
     let sat = new Satellite({
-        position: state,
+        position: eciState,
         color,
         shape,
         a,
@@ -3844,7 +3831,7 @@ function editSatellite(button) {
     mainWindow.satellites[button.nextSibling.selectedIndex] = sat;
     mainWindow.satellites[button.nextSibling.selectedIndex].calcTraj();
     let curPos = mainWindow.satellites[button.nextSibling.selectedIndex].currentPosition();
-    mainWindow.satellites[button.nextSibling.selectedIndex].curPos = {r: curPos.r[0], i: curPos.i[0], c: curPos.c[0], rd: curPos.rd[0], id: curPos.id[0], cd: curPos.cd[0]}
+    mainWindow.satellites[button.nextSibling.selectedIndex].curPos = {r: curPos[0], i: curPos[1], c: curPos[2], rd: curPos[3], id: curPos[4], cd: curPos[5]}
     mainWindow.satellites[button.nextSibling.selectedIndex].originDate = Date.now()
     closeAll();
 }
