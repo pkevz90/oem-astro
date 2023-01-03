@@ -389,7 +389,7 @@ class Propagator {
         }
         let rkResult = this.rkf45(state, new Date(date - (-1000*t)), tf - t, 1)
         state = rkResult.y
-        return state
+        return {state, date: new Date(date - (-1000*tf))}
     }
     rkf45(state, time, h = 2000, epsilon = 1e-12) {
         let k1 = math.dotMultiply(h, this.highPrecisionProp(state, time))

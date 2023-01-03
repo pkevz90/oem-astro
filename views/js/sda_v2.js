@@ -1382,6 +1382,7 @@ function availHandlerFunction(el) {
     }
 }
 
+let f = 1, zOffset = 3 //earth radii
 function produceEarthSphere(rot = {long: 0, lat: 0}, points = 20000) {
     function pos2pixels(pos, width) {
         return [
@@ -1391,34 +1392,56 @@ function produceEarthSphere(rot = {long: 0, lat: 0}, points = 20000) {
     }
     let positions
     if (sphereData === undefined) {
-        let goldenRatio = 1.618
-        let i = math.range(0, points)._data
         positions = []
-        i.forEach(ii => {
-            let theta = 2 * Math.PI * ii / goldenRatio
-            let phi = math.acos(1 - 2 * (ii + 0.5) / points) - Math.PI / 2
-            let color = getImageColor(phi * 180 / Math.PI , theta * 180 / Math.PI % 360)
-            if (color[2] < math.norm([color[0], color[1]])) {
-                
+        coastlines.forEach(sets => {
+            sets.forEach(s => {
+                // let theta = s[0]*Math.PI /180
+                // let phi = s[1] * Math.PI / 180
                 positions.push({
-                    pos: math.multiply(rotationMatrices(-90, 1), math.transpose([math.cos(theta) * math.cos(phi), math.sin(theta) * math.cos(phi), math.sin(phi)])),
-                    color: `rgb(${color[0]}, ${color[1]}, ${color[2]})`
+                    pos: math.multiply(rotationMatrices(-90, 1), math.transpose(s)),
+                    color: `black`,
+                    size: 2
                 })
-            }
-            
+            })
         })
-        console.log(positions.length);
         sphereData = positions
     }
+    if (mainWindow.satellites[0].orbitHist === undefined) {
+        let hpop = new Propagator()
+        let tf = 21600
+        let hist = hpop.propToTimeHistory(mainWindow.satellites[0].origState, mainWindow.startTime, tf, 1e-5)
+        mainWindow.satellites[0].orbitHist = hist.map(s => {
+            let ecef = fk5ReductionTranspose(s.state.slice(0,3), s.date)
+            ecef = ecef.slice(0,3)
+            return ecef.map(s => s / 6371)
+        })
+    }
     // console.time()
-    let f = 1
-    let realWidth = 2
+    let realWidth = 3
     let r = math.multiply(rotationMatrices(rot.lat, 1), rotationMatrices(rot.long, 2))
-    let drawPosition = sphereData.map(pos => {
+    let sensData = mainWindow.sensors.filter(s => s.type !== 'space').map(s => {
+        let testLoc = [math.cos(-s.long*Math.PI / 180) * math.cos(s.lat*Math.PI / 180), math.sin(s.long*Math.PI / 180) * math.cos(s.lat*Math.PI / 180), math.sin(s.lat*Math.PI / 180)]
+        // console.log(testLoc);
+        return {
+            pos: math.multiply(rotationMatrices(-90, 1), math.transpose(testLoc).map(s => s*1.001)),
+            color: s.type === 'radar' ? 'red' : 'blue',
+            size: 10
+        }
+    })
+    let orbitData = mainWindow.satellites[0].orbitHist.map(s => {
+        return {
+            pos: math.multiply(rotationMatrices(-90, 1), math.transpose(s)),
+            color: 'green',
+            size: 5
+        }
+    })
+    // console.log(sphereData);
+    let drawPosition = [...orbitData, ...sensData, ...sphereData].map(pos => {
+        // console.log(pos);
         let rotPos = math.squeeze(math.multiply(r, pos.pos))
         let z = rotPos[2]
-        rotPos = pos2pixels(math.dotMultiply(-f / (rotPos[2] - 3), rotPos.slice(0,2)), realWidth)       
-        return {color: pos.color, pos: rotPos, z}
+        rotPos = pos2pixels(math.dotMultiply(-f / (rotPos[2] - zOffset), rotPos.slice(0,2)), realWidth)       
+        return {color: pos.color, pos: rotPos, z, size: pos.size}
     }).filter(pos => pos.z > filterLevel)
     .sort(function(a,b) {return a.z - b.z})
     if (cnvs3d === undefined) {
@@ -1439,16 +1462,17 @@ function produceEarthSphere(rot = {long: 0, lat: 0}, points = 20000) {
     
     // console.timeEnd()
     // console.time()
-    ctx.strokeStlke = 'black'
+    ctx.strokeStyle = 'black'
+    ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.arc(cnvs3d.width / 2, cnvs3d.height / 2, cnvs3d.width / 3.45, 0, 2 * Math.PI)
+    ctx.arc(cnvs3d.width / 2, cnvs3d.height / 2, cnvs3d.width *f / zOffset / 2.7, 0, 2 * Math.PI)
     ctx.stroke()
     ctx.fillStyle = 'black'
     drawPosition.forEach(pos => {
-        // ctx.fillStyle = pos.color
+        ctx.fillStyle = pos.color
         ctx.beginPath()
         // ctx.arc(pos.pos[0] * cnvs3d.width, pos.pos[1] * cnvs3d.height, 6, 0, 2 * Math.PI)
-        let pixelSize = 3
+        let pixelSize = pos.size
         ctx.rect(pos.pos[0] * cnvs3d.width-pixelSize / 2, pos.pos[1] * cnvs3d.height-pixelSize / 2,pixelSize,pixelSize)
         ctx.fill()
     })
@@ -1611,34 +1635,35 @@ function drawSatellite(options = {}) {
     return points
 }
 
-let imgSp = new Image()
-imgSp.src = './Media/2_no_clouds_4k.jpg'
-
-function getImageColor(lat = 47, long = 0) {
-    long = long > 180 ? long - 360 : long
-    const {
-        data
-    } = context.getImageData(shadowCnvs.width *(long + 180) / 360, shadowCnvs.height*(90-lat)/180, 1, 1);
-    return data
-}
 let shadowCnvs = document.createElement('canvas')
 shadowCnvs.width = 10000
 shadowCnvs.height = 10000
 const context = shadowCnvs.getContext('2d');
-imgSp.onload = function() {
-    context.drawImage(imgSp, 0, 0, shadowCnvs.width, shadowCnvs.height);
-}
+
 let cnvs3d
 let sphereData
 let angle = 0
-let lat = 0
-let filterLevel = 0.4
+let lat = 30
+let filterLevel = 0
 function animationFunction() {
     produceEarthSphere({long: angle, lat})
     angle += 1
+    // lat += 0.1
     window.requestAnimationFrame(animationFunction)
 }
-
+let coastlines 
+fetch('./Media/coastline.geojson').then(s => s.json()).then(s => {
+    coastlines = s.features.map(s => s.geometry.coordinates)
+    coastlines = coastlines.map(s => {
+        return s.map(a => {
+            return [math.cos(a[0]*Math.PI / 180) * math.cos(a[1]*Math.PI / 180), math.sin(a[0]*Math.PI / 180) * math.cos(a[1]*Math.PI / 180), math.sin(a[1]*Math.PI / 180)]
+        })
+    })
+    // .forEach(element => {
+    //     drawCoordinateOnCanvas(element)
+        
+    // });
+})
 function showLogo() {
     let cnvs = document.createElement('canvas')
     document.getElementsByTagName('body')[0].append(cnvs)

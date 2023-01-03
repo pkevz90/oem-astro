@@ -26,7 +26,7 @@ let state = state1_init.slice()
 console.time('prop')
 state = hpop.propToTime(state, state1_init_Epoch, timeDelta, 1e-4)
 console.timeEnd('prop')
-console.log(math.norm(math.subtract(state, state1_final)));
+console.log(math.norm(math.subtract(state.state, state1_final)));
 
 
 // function propToTime(state, date, tf = 86400, maxError = 1e-9) {
