@@ -19,18 +19,18 @@ let mainWindow = {
 }
 
 function loopStartTime() {
-    let state = [...document.getElementsByClassName('vector')].map(s => Number(s.value))
-    let site = [...document.getElementsByClassName('site')].map(s => Number(s.value))
-    let inputs = document.getElementsByTagName('body')[0].getElementsByTagName('input')
+    let state = [...document.querySelectorAll('.vector')].map(s => Number(s.value))
+    let site = [...document.querySelectorAll('.site')].map(s => Number(s.value))
+    let inputs = document.querySelectorAll('input')
     let startTime = new Date(inputs[inputs.length - 3].value)
     let loopTime = Number(inputs[inputs.length - 2].value) * 3600
     let loopDelta = Number(inputs[inputs.length - 1].value) * 60
     mainWindow.site = {lat: site[0], long: site[1], h: site[2]}
-    mainWindow.sat.coes = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
-    mainWindow.sat.epoch = new Date(document.getElementById('sat-epoch').value)
+    mainWindow.sat.coes = astro.j20002Coe(state)
+    mainWindow.sat.epoch = new Date(document.querySelector('#sat-epoch').value)
     let options = []
     let time = 0
-    let elMask = Number(document.getElementsByTagName('input')[3].value)
+    let elMask = Number(document.querySelectorAll('input')[3].value)
     while (time <= loopTime) {
         let loopStart = new Date(startTime - (-time*1000))
         let calc = calcInterceptTraj(mainWindow.site, mainWindow.sat, loopStart, 600)
@@ -166,7 +166,7 @@ function calcInterceptTraj(site = mainWindow.site, sat = mainWindow.sat, startTi
     // sunEci = math.dotDivide(sunEci, math.norm(sunEci))
     let siteECEF = sensorGeodeticPosition(site.lat, site.long, site.h).r
     let siteECI = fk5Reduction(siteECEF, startTime)
-    let satState = Object.values(Coe2PosVelObject(sat.coes))
+    let satState = astro.coe2J2000(sat.coes)
     tof = estTof(siteECI, satState)
     satState = propToTime(satState, (startTime - sat.epoch) / 1000 + tof, false)
     let v1Opt1 = solveLambertsProblem(siteECI, satState.slice(0,3), tof, 0, true)

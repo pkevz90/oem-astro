@@ -137,6 +137,117 @@ class astro {
         r = math.multiply(p, r)
         return r
     }
+    static j20002Coe(state = [42164.14, 0, 0, 0, 3.0746611796284924, 0]) {
+        let r = state.slice(0,3), v = state.slice(3,6)
+        let mu = 398600.4418
+        let rn = math.norm(r)
+        let vn = math.norm(v)
+        let h = math.cross(r,v)
+        let hn = math.norm(h)
+        let n = math.cross([0,0,1], h)
+        let e = math.dotDivide(math.subtract(math.dotMultiply(vn ** 2 - mu / rn, r), math.dotMultiply(math.dot(r, v), v)), mu)
+        let en = math.norm(e)
+        let specMechEn = vn ** 2 / 2 - mu / rn
+        let a = -mu / 2 / specMechEn
+        let i = math.acos(h[2] / hn)
+        let raan = math.acos(n[0] / math.norm(n))
+        if (n[1] < 0) {
+            raan = 2 * Math.PI - raan
+        }
+        let arg = math.acos(math.dot(n, e) / math.norm(n) / en)
+        if (arg.re !== undefined) {
+            arg = arg.re
+        }
+        if (e[2] < 0) {
+            arg = 2 * Math.PI - arg
+        }
+        let tA = math.acos(math.dot(e, r) / en / rn)
+        if (tA.re !== undefined) {
+            tA = tA.re
+        }
+        if (math.dot(r, v) < 0) {
+            tA = 2 * Math.PI - tA
+        }
+        let longOfPeri, argLat, trueLong
+        if (en < 1e-6 && i < 1e-6) {
+            trueLong = math.acos(r[0] / rn)
+            if (r[1] < 0) {
+                trueLong = 2 * Math.PI - trueLong
+            }
+            arg = 0
+            raan = 0
+            tA = trueLong 
+        }
+        else if (en < 1e-6) {
+            argLat = math.acos(math.dot(n, r) / math.norm(n) / rn)
+            if (r[2] < 0) {
+                argLat = 2 * Math.PI - argLat
+            }
+            arg = 0
+            tA = argLat
+        }
+        else if (i < 1e-6) {
+            longOfPeri = math.acos(e[0] / en)
+            if (e[1] < 0) {
+                longOfPeri = 2 * Math.PI - longOfPeri
+            }
+            raan = 0
+            arg = longOfPeri
+        }
+        return {
+            a,
+            e: en,
+            i,
+            raan,
+            arg,
+            tA
+        };
+    }
+    static coe2J2000(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, peri = false) {
+        let p = coe.a * (1 - coe.e * coe.e);
+        let cTa = Math.cos(coe.tA);
+        let sTa = Math.sin(coe.tA);
+        let r = [
+            [p * cTa / (1 + coe.e * cTa)],
+            [p * sTa / (1 + coe.e * cTa)],
+            [0]
+        ];
+        let constA = Math.sqrt(398600.4418 / p);
+        let v = [
+            [-constA * sTa],
+            [(coe.e + cTa) * constA],
+            [0]
+        ];
+        if (peri) return [
+            r[0],
+            r[1],
+            r[2],
+            v[0],
+            v[1],
+            v[2]
+        ].map(s => s[0])
+        let cRa = Math.cos(coe.raan);
+        let sRa = Math.sin(coe.raan);
+        let cAr = Math.cos(coe.arg);
+        let sAr = Math.sin(coe.arg);
+        let cIn = Math.cos(coe.i);
+        let sin = Math.sin(coe.i);
+        let R = [
+            [cRa * cAr - sRa * sAr * cIn, -cRa * sAr - sRa * cAr * cIn, sRa * sin],
+            [sRa * cAr + cRa * sAr * cIn, -sRa * sAr + cRa * cAr * cIn, -cRa * sin],
+            [sAr * sin, cAr * sin, cIn]
+        ];
+        r = math.multiply(R, r);
+        v = math.multiply(R, v);
+        return [
+            r[0],
+            r[1],
+            r[2],
+            v[0],
+            v[1],
+            v[2]
+        ].map(s => s[0])
+    }
 }
 
 class Propagator {
