@@ -131,7 +131,7 @@ class astro {
         let p = math.multiply(astro.rot(zeta, 3), astro.rot(-theta, 2), astro.rot(z, 3))
         let thetaGmst = astro.siderealTime(jd_UTI)
         // Figure out why theta doesn't match
-        thetaGmst = 312.8067654
+        // thetaGmst = 312.8067654
         let w = astro.rot(-thetaGmst, 3)
         r = math.multiply(w, r) 
         r = math.multiply(p, r)
@@ -247,6 +247,22 @@ class astro {
             v[1],
             v[2]
         ].map(s => s[0])
+    }
+    static sensorGeodeticPosition(lat = 39.586667, long = -105.64, h = 4.347667) {
+        lat *= Math.PI / 180
+    
+        // let eEarth = 0.081819221
+        let eEarth = 0.006694385 ** 0.5
+        let rEarth = 6378.1363
+        let rFocus = eEarth * rEarth
+    
+        let cEarth = rEarth / (1 - eEarth ** 2 * Math.sin(lat) ** 2) ** 0.5
+        let sEarth = rEarth * (1 - eEarth ** 2) / (1 - eEarth ** 2 * Math.sin(lat) ** 2) ** 0.5
+        
+        let rSigma = (cEarth + h) * Math.cos(lat)
+        let rk = (sEarth + h) * Math.sin(lat)
+        return math.squeeze(math.multiply(astro.rot(-long, 3),math.transpose([[rSigma, 0, rk]])));
+        
     }
 }
 
@@ -463,13 +479,14 @@ class Propagator {
         return math.dotMultiply(a, rSunSat)
     }
     propToTimeHistory(state, date, tf = 86400, maxError = 1e-9) {
-        let h = 1000
+        let h = 500
+        h = h > tf ? tf : h
         let t = 0
         let stateReturn = [{
             date: new Date(date - (-t*1000)),
             state: state.slice()
         }]
-        while ((t+h) < tf) {
+        while ((t+h) <= tf) {
             let rkResult = this.rkf45(state, new Date(date - (-1000*t)), h, maxError)
             state = rkResult.y
             h = rkResult.hnew
@@ -490,9 +507,10 @@ class Propagator {
         return stateReturn
     }
     propToTime(state, date, tf = 86400, maxError = 1e-9) {
-        let h = 1000
+        let h = 500
+        h = h > tf ? tf : h
         let t = 0
-        while ((t+h) < tf) {
+        while ((t+h) <= tf) {
             let rkResult = this.rkf45(state, new Date(date - (-1000*t)), h, maxError)
             state = rkResult.y
             h = rkResult.hnew
