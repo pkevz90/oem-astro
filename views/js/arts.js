@@ -418,13 +418,13 @@ class windowCanvas {
             ctx.lineTo(sunCoor.ri.x , sunCoor.ri.y);
             ctx.stroke();
             ctx.strokeStyle = this.colors.foregroundColor;
-            ctx.fillText('R', origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.ri.w / 60)
+            ctx.fillText('R', origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.plotSize * this.cnvs.height * this.frameCenter.ri.h / 20)
             ctx.fillText('I', origin.ri.x - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.ri.w / 80, origin.ri.y)
 
             ctx.textAlign = 'left';
             ctx.textBaseline = 'bottom';
             ctx.fillStyle = '#555 ';
-            let fontSize = this.cnvs.height * this.frameCenter.ri.w / 40
+            let fontSize = this.cnvs.height * this.frameCenter.ri.h / 40
             ctx.font = 'bold ' + fontSize + 'px serif';
             let dist = (mainWindow.desired.plotWidth / 2).toFixed(0) + 'km'
             for (let letter = 0; letter < dist.length; letter++) {
@@ -443,7 +443,7 @@ class windowCanvas {
             ctx.strokeRect(this.frameCenter.ci.x * this.cnvs.width - this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height - this.frameCenter.ci.h / 2 * this.cnvs.height, this.frameCenter.ci.x * this.cnvs.width + this.frameCenter.ci.w / 2 * this.cnvs.width, this.frameCenter.ci.y * this.cnvs.height + this.frameCenter.ci.h / 2 * this.cnvs.height);
             ctx.fillStyle = this.colors.foregroundColor;
             ctx.strokeStyle = this.colors.foregroundColor
-            ctx.font = 'bold ' + this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 40 + 'px serif';
+            ctx.font = 'bold ' + this.plotSize * this.cnvs.height * this.frameCenter.ci.h / 10 + 'px serif';
             let drawX = math.abs(this.plotCenter) < this.plotWidth / 2* this.frameCenter.ci.w;
             let drawY = this.plotCenter + this.plotWidth / 2 * this.frameCenter.ci.w;
             ctx.beginPath()
@@ -465,8 +465,8 @@ class windowCanvas {
             }
             ctx.strokeStyle = this.colors.foregroundColor;
             
-            if (drawX) ctx.fillText('C', origin.ci.x, origin.ci.y - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 60)
-            if (drawY > this.plotHeight / 2 * this.frameCenter.ci.h * axesLength) ctx.fillText('I', origin.ci.x - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.ci.w / 80, origin.ci.y)
+            if (drawX) ctx.fillText('C', origin.ci.x, origin.ci.y - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.plotSize * this.cnvs.height * this.frameCenter.ci.h / 20)
+            if (drawY > this.plotHeight / 2 * this.frameCenter.ci.h * axesLength) ctx.fillText('I', origin.ci.x - this.cnvs.height * axesLength * this.frameCenter.ci.h / 2 - this.plotSize * this.cnvs.height * this.frameCenter.ci.h / 30, origin.ci.y)
         }
         if (this.state.search('rc') !== -1) {
             ctx.fillStyle = this.colors.backgroundColor;
@@ -477,7 +477,7 @@ class windowCanvas {
             ctx.fillStyle = this.colors.foregroundColor;
             
             ctx.lineWidth = this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 200;
-            ctx.font = 'bold ' + this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 40 + 'px serif';
+            ctx.font = 'bold ' + this.plotSize * this.cnvs.height * this.frameCenter.rc.h / 10 + 'px serif';
             ctx.strokeStyle = this.colors.foregroundColor
             ctx.beginPath()
             ctx.moveTo(origin.rc.x, origin.rc.y);
@@ -491,8 +491,8 @@ class windowCanvas {
             ctx.lineTo(sunCoor.rc.x, sunCoor.rc.y);
             ctx.stroke();
             ctx.strokeStyle = this.colors.foregroundColor;
-            ctx.fillText('C', origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 - this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 60)
-            ctx.fillText('R', origin.rc.x + this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 + this.plotSize * this.cnvs.width * this.frameCenter.rc.w / 80, origin.rc.y)
+            ctx.fillText('C', origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 - this.plotSize * this.cnvs.height * this.frameCenter.rc.h / 20)
+            ctx.fillText('R', origin.rc.x + this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 + this.plotSize * this.cnvs.height * this.frameCenter.rc.h / 30, origin.rc.y)
         }
     }
     drawPlot() {
@@ -1214,6 +1214,20 @@ function keydownFunction(key) {
                 })
                 break;
             case 'ri ci': 
+                mainWindow.setState('ri ci03');
+                mainWindow.setFrameCenter({
+                    ri: {
+                        x: 0.5, y: 0.375, w: 1, h: 0.75
+                    },
+                    ci: {
+                        x: 0.5, y: 0.875, w: 1, h: 0.25
+                    },
+                    rc: {
+                        x: 0, y:1, w: 0, h: 0
+                    }
+                })
+                break;
+            case 'ri ci03': 
                 mainWindow.setState('ri ci rc');
                 mainWindow.setFrameCenter({
                     ri: {
