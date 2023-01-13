@@ -5050,7 +5050,6 @@ function insertDirectionBurn(sat = 0, time = 3600, dir = [0.001, 0, 0]) {
 }
 
 function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, origin = [0,0,0]) {
-    
     pastActions.push({
         sat,
         oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns)),
@@ -5063,6 +5062,7 @@ function insertWaypointBurn(sat = 0, time = 3600, way = [0,0,0], tof = 7200, ori
     ]
     let targetEci = propToTimeAnalytic(mainWindow.originOrbit, time + tof)
     let target = Ric2Eci(ricWaypoint, [0,0,0],targetEci.slice(0,3), targetEci.slice(3,6)).rEcci
+
     mainWindow.satellites[sat].burns.push({
         time,
         direction: [0,0,0],
@@ -7560,6 +7560,19 @@ function changeInterceptTime(el) {
     }
 }
 
+function executeDataIntercept(el) {
+    // Execute the displayed intercept on the data div
+    let parentDiv = el.parentElement.parentElement.parentElement
+    let origin = Number(parentDiv.getAttribute('origin'))
+    let target = Number(parentDiv.getAttribute('target'))
+    let dataIndex = mainWindow.relativeData.dataReqs.findIndex(s => s.target == target && s.origin == origin)
+    if (dataIndex !== -1) {
+        let intercecptTime = mainWindow.relativeData.dataReqs[dataIndex].interceptTime
+        let waypoint = mainWindow.satellites[target].currentPosition({time: mainWindow.scenarioTime + intercecptTime*3600})
+        insertWaypointBurn(origin, mainWindow.scenarioTime, waypoint.slice(0,3), intercecptTime*3600)
+    }
+}
+
 function openDataDiv(options = {}) {
     let {
         title = 'Data Title',
@@ -7578,7 +7591,7 @@ function openDataDiv(options = {}) {
         sunAngle: {name: 'CATS', units: 'deg'},
         poca: {name: 'POCA', units: 'km'},
         rangeRate: {name: 'Range Rate', units: 'm/s'},
-        interceptData: {name: `<span onclick="changeInterceptTime(this)" style="margin: 2px 1px; padding: 2px; border: 1px solid black; border-radius: 10px; cursor: pointer;">+</span>${(interceptTime*60).toFixed(0)}<span onclick="changeInterceptTime(this)" style="margin: 2px; padding: 2px 1px; border: 1px solid black; border-radius: 10px; cursor: pointer;">-</span>-min Intercept`, units:''}
+        interceptData: {name: `<span onclick="changeInterceptTime(this)" style="margin: 2px 1px; padding: 2px; border: 1px solid black; border-radius: 10px; cursor: pointer;">+</span>${(interceptTime*60).toFixed(0)}<span onclick="changeInterceptTime(this)" style="margin: 2px; padding: 2px 1px; border: 1px solid black; border-radius: 10px; cursor: pointer;">-</span>min Intercept <button onclick="executeDataIntercept(this)">Execute</button>`, units:''}
     }
     let newDiv = document.createElement('div')
     newDiv.style.position = 'fixed'
