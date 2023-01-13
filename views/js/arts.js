@@ -4109,6 +4109,17 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
                 zd: point2[5]
             }, intTime*3600, mainWindow.satellites[n_target].a, mainWindow.scenarioTime)
             if (burn) {
+                // If intercept is within reach, draw intercept trajectory and 
+                // Display data
+                let burnDuration = burn.t[0] * intTime*3600
+                let state = Object.values(burn.F)
+                let stateHist = [], t = intTime*3600-burnDuration, dt = t / 20
+                for (let ii = 0; ii < 20; ii++) {
+                    state = propRelMotionTwoBodyAnalytic(state, -dt, mainWindow.scenarioTime + t)
+                    stateHist.push(state)
+                    t -= dt
+                }
+                mainWindow.drawCurve(stateHist, {color: 'rgba(100,100,100,0.5)'})
                 let lastTimeStepOrigin = [burn.F.x - burn.F.xd, burn.F.y - burn.F.yd, burn.F.z - burn.F.zd]
                 let lastTimeStepTarget = math.subtract(point2.slice(0,3), point2.slice(3,6))// [point2[0] -  point2.rd[0], point2.i[0] -  point2.id[0], point2.c[0] -  point2.cd[0]]
                 let relPosInter = math.subtract(lastTimeStepOrigin, lastTimeStepTarget)
@@ -7532,6 +7543,23 @@ function resetDataDivs() {
     })
 }
 
+function changeInterceptTime(el) {
+    // Element for user to change intercept time of intercept data by hitting button on div
+    let parentDiv = el.parentElement.parentElement.parentElement
+    let origin = Number(parentDiv.getAttribute('origin'))
+    let target = Number(parentDiv.getAttribute('target'))
+
+    let dataIndex = mainWindow.relativeData.dataReqs.findIndex(s => s.target == target && s.origin == origin)
+    if (dataIndex !== -1) {
+        // If index is found, alter the intercept time by 15 minutes at a time, with a minimum intercept of 15 min
+        let currentTime = mainWindow.relativeData.dataReqs[dataIndex].interceptTime
+        currentTime += el.innerText === '-' ? -0.25 : 0.25
+        currentTime = currentTime < 0.25 ? 0.25 : currentTime
+        mainWindow.relativeData.dataReqs[dataIndex].interceptTime = currentTime
+        resetDataDivs()
+    }
+}
+
 function openDataDiv(options = {}) {
     let {
         title = 'Data Title',
@@ -7550,7 +7578,7 @@ function openDataDiv(options = {}) {
         sunAngle: {name: 'CATS', units: 'deg'},
         poca: {name: 'POCA', units: 'km'},
         rangeRate: {name: 'Range Rate', units: 'm/s'},
-        interceptData: {name: (interceptTime*60).toFixed(0) + '-min Intercept', units:''}
+        interceptData: {name: `<span onclick="changeInterceptTime(this)" style="margin: 2px 1px; padding: 2px; border: 1px solid black; border-radius: 10px; cursor: pointer;">+</span>${(interceptTime*60).toFixed(0)}<span onclick="changeInterceptTime(this)" style="margin: 2px; padding: 2px 1px; border: 1px solid black; border-radius: 10px; cursor: pointer;">-</span>-min Intercept`, units:''}
     }
     let newDiv = document.createElement('div')
     newDiv.style.position = 'fixed'
