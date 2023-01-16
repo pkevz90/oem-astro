@@ -728,7 +728,7 @@ class windowCanvas {
             // })
         }
     }
-    getData() {
+    getData(options= {}) {
         let satellites = [];
         this.satellites.forEach(sat => {
             satellites.push(sat.getData())
@@ -742,7 +742,9 @@ class windowCanvas {
             scenarioLength: this.scenarioLength,
             initSun: this.initSun,
             startDate: this.startDate,
-            originOrbit: this.originOrbit
+            originOrbit: this.originOrbit,
+            time: new Date(),
+            description: options.description
         }
     }
     loadDate(data = {}) {
@@ -1550,9 +1552,21 @@ function startContextClick(event) {
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
     // Check if right clicked on data display
-    let path = [...event.path].map(s => s.classList).filter(s => s !== undefined).map(s => s.contains('data-drag-div')).findIndex(s => s)
-    if (path !== -1) {
-        let dataDiv = event.path[path]
+    let eventPath = event.path
+    if (eventPath === undefined) {
+        eventPath = []
+        let el = event.target
+        while (el !== null) {
+            eventPath.push(el)
+            el = el.parentElement
+        }
+    }
+    let pathIndex = -1
+    if (eventPath.length > 0) {
+        pathIndex = eventPath.map(s => s.classList).filter(s => s !== undefined).map(s => s.contains('data-drag-div')).findIndex(s => s)
+    }
+    if (pathIndex !== -1) {
+        let dataDiv = eventPath[pathIndex]
         let origin = dataDiv.getAttribute('origin')
         let target = dataDiv.getAttribute('target')
         let dataCurrent = mainWindow.relativeData.dataReqs.find(req => {
@@ -7000,6 +7014,7 @@ window.addEventListener('beforeunload', function() {
     if (whiteCellWindow !== undefined) whiteCellWindow.close()
     if (instructionWindow !== undefined) instructionWindow.close()
     if (tleWindow !== undefined) tleWindow.close()
+    if (saveWindow !== undefined) saveWindow.close()
     burnWindows.forEach(w => w.close())
 })
 
@@ -7658,6 +7673,78 @@ function openDataDiv(options = {}) {
         }
     })
     dragElement(newDiv)
+}
+
+let saveWindow
+
+function updateSaveWindow() {
+    let local = Object.keys(window.localStorage).filter(a => a.slice(0,5) === 'arts_').map(a => a.slice(5))
+    local = local.map(s => {
+        return {
+            name: s,
+            data: JSON.parse(window.localStorage.getItem('arts_'+s))
+        }
+    })
+    let inner = `
+        <div>
+            <div style="font-weight: bolder; height: 20px;">Save Name</div>
+            ${local.map( s => `<div style="height: 30px;" title="Satellites: ${s.data.satellites.map(sat => sat.name).join(', ')}\nStart: ${toStkFormat((new Date(s.data.startDate)).toString())}z\n\n${s.data.description}">${s.name}</div>`).join('')}
+        </div>  
+        <div style="text-align: center;">
+            <div style="font-weight: bolder; height: 20px;">Save Time</div>
+            ${local.map( s => `<div style="height: 30px; color: rgb(150,150,150)">${s.data.time === undefined ? 'N/A' : toStkFormat((new Date(s.data.time)).toString())}</div>`).join('')}
+        </div>
+        <div>
+            <div style="height: 20px;"></div>
+            ${local.map( s => `<div savefile="${s.name}" style="height: 30px;"><button onclick="loadScenario(this)">Load</button><button>Overwrite</button><button onclick="deleteScenario(this)">Delete</button></div>`).join('')}
+        </div>
+    `
+    saveWindow.document.querySelector('#saved-scenarios').innerHTML = inner
+}
+
+function openSaveWindow() {
+    saveWindow = window.open('', 'save', "width=600px,height=600px")
+    
+    saveWindow.loadScenario = el => {
+        let saveName = el.parentElement.getAttribute('savefile')
+        let item = window.localStorage.getItem('arts_'+saveName)
+        mainWindow.loadDate(JSON.parse(item))
+    }
+
+    saveWindow.saveScenario = el => {
+        el = el.parentElement
+        let input = el.querySelector('input').value
+        let description = el.parentElement.querySelector('#description-area').value
+        if (input.length === 0) return
+        input = 'arts_' + input
+        description = description.length === 0 ? 'No Description' : description
+        let outData = mainWindow.getData({description})
+        window.localStorage.setItem(input, JSON.stringify(outData))
+        updateSaveWindow()
+    }
+    saveWindow.deleteScenario = el => {
+        let saveName = el.parentElement.getAttribute('savefile')
+        window.localStorage.removeItem('arts_'+saveName)
+        updateSaveWindow()
+    }
+
+    setTimeout(() => saveWindow.document.title = 'Load/Save Window', 1000)
+    
+
+    saveWindow.document.body.innerHTML = `
+        <div style="display: flex; justify-content: space-around">
+            <div>
+                <div>Save Current <input style="width: 30ch; text-align: center; " placeholder="Save Name"/><button onclick="saveScenario(this)">Save</button></div>
+                
+                <div style="margin: 10px;"><textarea id="description-area" placeholder="Save Description (Optional)" id="story" name="story" rows="2" cols="45"/></textarea></div>
+            </div>
+        </div>
+        <div style="margin: 4px 0px 5px 0px; width: 100%; height: 2px; background-color: black;"></div>
+        <div id="saved-scenarios" style="margin-top: 10px; display: flex; justify-content: space-between;">   
+            
+        </div>
+    `
+    setTimeout(updateSaveWindow, 250)
 }
 
 function fk5ReductionTranspose(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
