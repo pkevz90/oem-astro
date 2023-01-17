@@ -1379,11 +1379,8 @@ function keydownFunction(key) {
         mainWindow.satellites.push(newSat)
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
     }
-    else if ((key.key === 'S' || key.key === 's') && key.shiftKey) {
-        let saveName = prompt('Set name of save file:', lastSaveName)
-        if (saveName.length > 0) setDefaultScenario(saveName)
-    }
-    else if ((key.key === 'L' || key.key === 'l') && key.shiftKey) recoverDefaultScenario()
+    else if ((key.key === 'S' || key.key === 's') && key.shiftKey) openSaveWindow()
+    else if ((key.key === 'L' || key.key === 'l') && key.shiftKey) openSaveWindow()
     else if (key.key === ',' && key.ctrlKey) mainWindow.satellites.forEach(sat => sat.size = sat.size > 1 ? sat.size - 0.25 : sat.size)
     else if (key.key === '.' && key.ctrlKey) mainWindow.satellites.forEach(sat => sat.size += 0.25)
     else if (key.key === '<' && key.shiftKey && key.altKey) mainWindow.plotSize = mainWindow.plotSize > 0.1 ? mainWindow.plotSize - 0.05 : mainWindow.plotSize
@@ -1552,18 +1549,23 @@ function startContextClick(event) {
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
     // Check if right clicked on data display
-    let eventPath = event.path
-    if (eventPath === undefined) {
-        eventPath = []
-        let el = event.target
-        while (el !== null) {
-            eventPath.push(el)
-            el = el.parentElement
+    let eventPath = event.path, pathIndex = -1
+    try {
+        if (eventPath === undefined) {
+            eventPath = []
+            let el = event.target
+            while (el !== null) {
+                eventPath.push(el)
+                el = el.parentElement
+            }
         }
-    }
-    let pathIndex = -1
-    if (eventPath.length > 0) {
-        pathIndex = eventPath.map(s => s.classList).filter(s => s !== undefined).map(s => s.contains('data-drag-div')).findIndex(s => s)
+        if (eventPath.length > 0) {
+            pathIndex = eventPath.map(s => s.classList).filter(s => s !== undefined).map(s => s.contains('data-drag-div')).findIndex(s => s)
+        }
+        else throw Error
+    } catch (error) {
+        console.error('Error on right click path')
+        pathIndex = -1
     }
     if (pathIndex !== -1) {
         let dataDiv = eventPath[pathIndex]
@@ -7740,6 +7742,8 @@ function openSaveWindow() {
         let input = el.querySelector('input').value
         let description = el.parentElement.querySelector('#description-area').value
         if (input.length === 0) return
+        el.querySelector('input').value = ''
+        el.parentElement.querySelector('#description-area').value = ''
         input = 'arts_' + input
         description = description.length === 0 ? 'No Description' : description
         let outData = mainWindow.getData({description})
