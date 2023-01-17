@@ -7685,10 +7685,16 @@ function updateSaveWindow() {
             data: JSON.parse(window.localStorage.getItem('arts_'+s))
         }
     })
+    local.sort((a,b) => {
+        let aDate = a.data.time === undefined ? new Date() : a.data.time
+        let bDate = b.data.time === undefined ? new Date() : b.data.time
+        return (new Date(bDate)) - (new Date(aDate))
+    }
+    )
     let inner = `
         <div>
             <div style="font-weight: bolder; height: 20px;">Save Name</div>
-            ${local.map( s => `<div style="height: 30px;" title="Satellites: ${s.data.satellites.map(sat => sat.name).join(', ')}\nStart: ${toStkFormat((new Date(s.data.startDate)).toString())}z\n\n${s.data.description}">${s.name}</div>`).join('')}
+            ${local.map( s => `<div contentEditable="true" oninput="editName(this)" savefile="${s.name}" style="height: 30px;" title="Satellites: ${s.data.satellites.map(sat => sat.name).join(', ')}\nStart: ${toStkFormat((new Date(s.data.startDate)).toString())}z\n\n${s.data.description}">${s.name}</div>`).join('')}
         </div>  
         <div style="text-align: center;">
             <div style="font-weight: bolder; height: 20px;">Save Time</div>
@@ -7696,7 +7702,7 @@ function updateSaveWindow() {
         </div>
         <div>
             <div style="height: 20px;"></div>
-            ${local.map( s => `<div savefile="${s.name}" style="height: 30px;"><button onclick="loadScenario(this)">Load</button><button>Overwrite</button><button onclick="deleteScenario(this)">Delete</button></div>`).join('')}
+            ${local.map( s => `<div savefile="${s.name}" style="height: 30px;"><button onclick="loadScenario(this)">Load</button><button onclick="saveScenario(this)">Overwrite</button><button onclick="deleteScenario(this)">Delete</button></div>`).join('')}
         </div>
     `
     saveWindow.document.querySelector('#saved-scenarios').innerHTML = inner
@@ -7711,7 +7717,25 @@ function openSaveWindow() {
         mainWindow.loadDate(JSON.parse(item))
     }
 
+    saveWindow.editName = el => {
+        newName = el.innerText
+        if (newName.length === 0) return
+        let currentSaveName = el.getAttribute('savefile')
+        let item = window.localStorage.getItem('arts_'+currentSaveName)
+        window.localStorage.removeItem('arts_'+currentSaveName)
+        window.localStorage.setItem('arts_'+newName, item)
+        updateSaveWindow()
+    }
+
     saveWindow.saveScenario = el => {
+        if (el.innerText === 'Overwrite') {
+            let saveName = el.parentElement.getAttribute('savefile')
+            let oldData = JSON.parse(window.localStorage.getItem('arts_'+saveName))
+            let outData = mainWindow.getData({description: oldData.description})
+            window.localStorage.setItem('arts_'+saveName,JSON.stringify(outData))
+            updateSaveWindow()
+            return
+        }
         el = el.parentElement
         let input = el.querySelector('input').value
         let description = el.parentElement.querySelector('#description-area').value
