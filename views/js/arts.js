@@ -7731,6 +7731,16 @@ function openSaveWindow() {
 
     saveWindow.saveScenario = el => {
         if (el.innerText === 'Overwrite') {
+            el.innerText = 'Confirm?'
+            setTimeout(() => {
+                if (el.innerText === 'Confirm?') {
+                    el.innerText = 'Overwrite'
+                }
+            }, 2000)
+            return
+        }
+        if (el.innerText === 'Confirm?') {
+            el.innerText = 'Overwrite'
             let saveName = el.parentElement.getAttribute('savefile')
             let oldData = JSON.parse(window.localStorage.getItem('arts_'+saveName))
             let outData = mainWindow.getData({description: oldData.description})
@@ -7751,6 +7761,15 @@ function openSaveWindow() {
         updateSaveWindow()
     }
     saveWindow.deleteScenario = el => {
+        if (el.innerText === 'Delete') {
+            el.innerText = 'Confirm?'
+            setTimeout(() => {
+                if (el.innerText === 'Confirm?') {
+                    el.innerText = 'Delete'
+                }
+            }, 2000)
+            return
+        }
         let saveName = el.parentElement.getAttribute('savefile')
         window.localStorage.removeItem('arts_'+saveName)
         updateSaveWindow()
