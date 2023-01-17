@@ -2932,8 +2932,9 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
 
 function uploadScenario(event) {
     if (event.target.id === 'upload-scenario-button') return document.querySelector('#upload-sas-input').click()
-    if (event.path[0].files[0] === undefined) return
-    loadFileAsText(event.path[0].files[0])
+    // if (event.path[0].files[0] === undefined) return
+    if (event.target.files[0] === undefined) return
+    loadFileAsText(event.target.files[0])
     event.target.value = ''
     closeAll()
 }
@@ -5768,8 +5769,10 @@ function showLogo() {
 showLogo()
 
 function uploadTles(event) {
-    if (event.path[0].files[0] === undefined) return
-    loadFileTle(event.path[0].files[0])
+    console.log(event.target.files[0]);
+    // if (event.path[0].files[0] === undefined) return
+    if (event.target.files[0] === undefined) return
+    loadFileTle(event.target.files[0])
 }
 
 function tellInputStateFileType(file) {
@@ -7654,6 +7657,7 @@ function openDataDiv(options = {}) {
             return !(origin == req.origin && target == req.target)
         })
         el.target.parentElement.remove()
+        document.getElementById('context-menu')?.remove();
     }
     let fontSizeButton = document.createElement('div')
     fontSizeButton.innerHTML = '<span type="small" style="font-size: 0.5em; margin-right: 15px; cursor: pointer">A</span><span type="big" style="font-size: 1em; cursor: pointer">A</span>'
