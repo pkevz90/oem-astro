@@ -1549,7 +1549,12 @@ function startContextClick(event) {
     ctxMenu.style.top = event.clientY +'px';
     ctxMenu.style.left = event.clientX + 'px';
     // Check if right clicked on data display
-    let eventPath = event.path, pathIndex = -1
+    let eventPath, pathIndex = -1
+    try {
+        eventPath = event.composedPath()
+    } catch (error) {
+        eventPath = undefined
+    }
     try {
         if (eventPath === undefined) {
             eventPath = []
