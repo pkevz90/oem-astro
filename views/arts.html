@@ -17,7 +17,7 @@
     <link rel="icon" href="./Media/sallellite_icon.ico">
 </head>
 
-<body class="noselect">
+<body ondrop="artsDropHandler(event)" ondragover="artsDropHandler(event)" class="noselect">
     <div id="canvas-div" style="touch-action: none;">
         <canvas id="main-plot"></canvas>
     </div>
@@ -122,10 +122,6 @@
             <div>
                 <button style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;" class="hoverable" id="confirm-option-button">Confirm</button>
                 <button style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;" class="hoverable" onclick="closeAll()">Cancel</button>
-            </div>
-            <div style="display: inline;">
-                <button id="upload-scenario-button" style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;" class="hoverable" onclick="uploadScenario(event)">Import .SAS File<input oninput="uploadScenario(event)" style="display: none" type="file" id="upload-sas-input" accept="*.sas, *.sasm"/></button>
-                <button style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;" class="hoverable" onclick="exportScenario()">Export .SAS File</button>
             </div>
             <div>
                 <button style="font-size: 1.5em; padding: 14px 6px; border-radius: 10px; cursor: pointer;"  onclick="openWhiteCellWindow()" class="hoverable">Open White Cell</button>

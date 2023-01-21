@@ -5782,6 +5782,16 @@ function uploadTles(event) {
 
 function tellInputStateFileType(file) {
     // Tells if file is J2000 or TLE file
+    if (file.search(/^1 *\d*.*\n2 *\d*.*/) !== -1) {
+        // Assume file is TLE
+        return 'tle'
+    }
+    return 'j2000'
+    if (file.search(/1 \d{5}/) !== -1) {
+        // Assume file is j2000
+        return 'j2000'
+    }
+
     let testString = 'J2000 Position & Velocity'
     return file.search(testString) !== -1
 }
@@ -5962,10 +5972,7 @@ function importStates(states, time) {
 
 function loadFileTle(fileToLoad) {
     var fileReader = new FileReader();
-    fileReader.onload = function (fileLoadedEvent) {
-        if (tellInputStateFileType(fileLoadedEvent.target.result)) return handleStkJ200File(fileLoadedEvent.target.result)
-        else return handleTleFile(fileLoadedEvent.target.result)
-    };
+    fileReader.onload = (fileLoadedEvent) => handleImportTextFile(fileLoadedEvent.target.result)
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
 
@@ -7109,7 +7116,10 @@ function openBurnsWindow(sat) {
 let tleWindow
 function openTleWindow(tleSatellites) {
     document.getElementById('context-menu')?.remove();
-    tleWindow = window.open('', 'tle', "width=600px,height=600px")
+    if (tleWindow === undefined) {
+        tleWindow = window.open('', 'tle', "width=600px,height=600px")
+        setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
+    }
     tleWindow.importTleChoices = (el) => {
         function True2Eccentric(e, ta) {
             return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
@@ -7174,7 +7184,6 @@ function openTleWindow(tleSatellites) {
         })
     }
     
-    setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
     let uniqueSats = tleSatellites.filter((element, index, array) => array.findIndex(el => el.name === element.name) === index).map(sat => sat.name)
     tleWindow.tleSatellites = tleSatellites
     let defaultEpoch = convertTimeToDateTimeInput(tleSatellites[0].epoch)
@@ -7199,10 +7208,11 @@ function openTleWindow(tleSatellites) {
 let j2000Window
 function openJ2000Window(j2000Satellites = [], km) {
     document.getElementById('context-menu')?.remove();
-    j2000Window = window.open('', 'j2000', "width=600px,height=600px")
+    if (tleWindow === undefined) {
+        j2000Window = window.open('', 'j2000', "width=600px,height=600px")
+        setTimeout(() => j2000Window.document.title = 'J2000 Import Tool', 1000)
+    }
     let time = j2000Satellites[0].state[0][0]
-    console.log(time);
-    setTimeout(() => j2000Window.document.title = 'J2000 Import Tool', 1000)
     j2000Window.j2000Satellites = j2000Satellites
     j2000Window.km = km
     j2000Window.updateWindow = updateJ200Window
@@ -7293,10 +7303,11 @@ function tleFromState(ricState = [0,0,0,0,0,0], time = mainWindow.scenarioTime, 
     let month = epoch.getMonth()
     let leapYear = !((year % 4 !== 0) || ((year % 100 === 0) && (year % 400 !== 0)))
     let dayCount = [31, (leapYear ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    let jd = dayCount.slice(0,month).reduce((a,b) => a + b) + epoch.getDate()
+    let jd = dayCount.slice(0,month).reduce((a,b) => a + b, 0) + epoch.getDate()
+    jd = pad(jd, 3, 0)
     let fractionalDay = (epoch.getHours() * 3600 + epoch.getMinutes() * 60 +  epoch.getSeconds()) / 86400
-    jd += fractionalDay
-    jd = year.toFixed(0).slice(2) + jd.toFixed(8)
+    jd += fractionalDay.toFixed(8).slice(1)
+    jd = year.toFixed(0).slice(2) + jd
     let originOrbit = JSON.parse(JSON.stringify(mainWindow.originOrbit))
     originOrbit.tA = propTrueAnomaly(originOrbit.tA, originOrbit.a, originOrbit.e, time)
     originOrbit = Object.values(Coe2PosVelObject(originOrbit))
@@ -7343,15 +7354,14 @@ function generateTleHistory() {
         for (let ii = 0; ii < satTleTimes[index].length; ii++) {
             let time = satTleTimes[index][ii]
             let ricState = mainWindow.satellites[index].currentPosition({time})
-            ricState = math.squeeze(Object.values(ricState))
             out += tleFromState(ricState, time, index+1) + '\n'
-            
         }
     }
 
     mainWindow.desired.scenarioTime = oldTime
     mainWindow.scenarioTime = oldTime
     for (let index = 0; index < mainWindow.satellites.length; index++) mainWindow.satellites[index].calcTraj()
+    console.log('he');
     downloadFile('tle.tce', out)
 }
 
@@ -8032,4 +8042,35 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
         histIndex++
     }
     return stateHist
+}
+
+function artsDropHandler(event) {
+    event.preventDefault()
+    if (event.type === 'dragover') return
+    reader = new FileReader()
+    reader.onload = (event) => handleImportTextFile(event.target.result)
+
+    reader.readAsText(event.dataTransfer.items[0].getAsFile())
+}
+
+function handleImportTextFile(inText) {
+    let objectFromText
+    try {
+        objectFromText = JSON.parse(inText)
+        // Confirm it is JSON from a valid scenario
+        if (objectFromText.satellites === undefined || objectFromText.originOrbit === undefined) {
+            objectFromText = undefined
+        }
+    } catch (error) {
+        console.log(error);
+    }
+    if (objectFromText === undefined) {
+        let fileType = tellInputStateFileType(inText)
+        
+        if (fileType === 'j2000') return handleStkJ200File(inText)
+        else return handleTleFile(inText)
+    }
+    else {
+        mainWindow.loadDate(objectFromText)
+    }
 }
