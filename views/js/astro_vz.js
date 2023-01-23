@@ -264,6 +264,25 @@ class astro {
         return math.squeeze(math.multiply(astro.rot(-long, 3),math.transpose([[rSigma, 0, rk]])));
         
     }
+    static ConvEciToRic(chief_eci, deputy_eci, returnRot = false) {
+        let rC = chief_eci.slice(0,3), drC = chief_eci.slice(3,6), rD = deputy_eci.slice(0,3), drD = deputy_eci.slice(3,6)
+        let h = math.cross(rC, drC);
+        let ricX = math.dotDivide(rC, math.norm(rC));
+        let ricZ = math.dotDivide(h, math.norm(h));
+        let ricY = math.cross(ricZ, ricX);
+    
+        let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+        let ricYd = math.cross(ricZ, ricXd);
+        let ricZd = [0,0,0];
+    
+        let C = [ricX, ricY, ricZ];
+        let Cd = [ricXd, ricYd, ricZd];
+        if (returnRot) return [C, Cd]
+        return [
+            ...math.squeeze(math.multiply(C, math.transpose([math.subtract(rD, rC)]))),
+            ...math.squeeze(math.add(math.multiply(Cd, math.transpose([math.subtract(rD, rC)])), math.multiply(C, math.transpose([math.subtract(drD, drC)]))))
+        ]
+    }
 }
 
 class Propagator {
@@ -288,7 +307,7 @@ class Propagator {
         this.solarRad = solarRad
         this.thirdBody = thirdBody
     }
-    highPrecisionProp(position = [42164, 0, 0, 0, 3.074, 0], date = new Date()) {
+    highPrecisionProp(position = [42164, 0, 0, 0, 3.074, 0], date = new Date(), burnAcc = [0,0,0]) {
         let r = math.norm(position.slice(0,3))
         let a = math.dotMultiply(-398600.4415 /r/r/r, position.slice(0,3))
         // console.time('geo')
@@ -306,6 +325,11 @@ class Propagator {
         // console.time('solarRad')
         if (this.solarRad) {a = math.add(this.solarRadiationPressure(position, date),a)}
         // console.timeEnd('solarRad')
+        if (math.norm(burnAcc) > 1e-8) {
+            let c = astro.ConvEciToRic(position, [0,0,0,0,0,0], true)[0]
+            burnAcc = math.multiply(math.transpose(c), burnAcc)
+            a = math.add(burnAcc,a)
+        }
 
         return [position[3], position[4], position[5],...a]
     }
@@ -506,27 +530,29 @@ class Propagator {
         })
         return stateReturn
     }
-    propToTime(state, date, tf = 86400, maxError = 1e-9) {
+    propToTime(state, date, tf = 86400, options = {}) {
+        let {maxError = 1e-9, a = [0,0,0]} = options
         let h = 500
         h = h > tf ? tf : h
         let t = 0
         while ((t+h) <= tf) {
-            let rkResult = this.rkf45(state, new Date(date - (-1000*t)), h, maxError)
+            let rkResult = this.rkf45(state, new Date(date - (-1000*t)), h, maxError, {a})
             state = rkResult.y
             h = rkResult.hnew
             t += rkResult.dt
         }
-        let rkResult = this.rkf45(state, new Date(date - (-1000*t)), tf - t, 1)
+        let rkResult = this.rkf45(state, new Date(date - (-1000*t)), tf - t, 1, {a})
         state = rkResult.y
         return {state, date: new Date(date - (-1000*tf))}
     }
-    rkf45(state, time, h = 2000, epsilon = 1e-12) {
-        let k1 = math.dotMultiply(h, this.highPrecisionProp(state, time))
-        let k2 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(2/9,k1)), new Date(time - (-1000*h*2/9))))
+    rkf45(state, time, h = 2000, epsilon = 1e-12, options = {}) {
+        let {a = [0,0,0]} = options
+        let k1 = math.dotMultiply(h, this.highPrecisionProp(state, time, a))
+        let k2 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(2/9,k1)), new Date(time - (-1000*h*2/9)), a))
         let k3 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(1/12,k1),math.dotMultiply(1/4,k2)), new Date(time - (-1000*h/3))))
-        let k4 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(69/128,k1),math.dotMultiply(-243/128,k2),math.dotMultiply(135/64,k3)), new Date(time - (-1000*h*3/4))))
-        let k5 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(-17/12,k1),math.dotMultiply(27/4,k2),math.dotMultiply(-27/5,k3),math.dotMultiply(16/15,k4)), new Date(time - (-1000*h))))
-        let k6 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(65/432,k1),math.dotMultiply(-5/16,k2),math.dotMultiply(13/16,k3),math.dotMultiply(4/27,k4),math.dotMultiply(5/144,k5)), new Date(time - (-1000*h*5/6))))
+        let k4 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(69/128,k1),math.dotMultiply(-243/128,k2),math.dotMultiply(135/64,k3)), new Date(time - (-1000*h*3/4)), a))
+        let k5 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(-17/12,k1),math.dotMultiply(27/4,k2),math.dotMultiply(-27/5,k3),math.dotMultiply(16/15,k4)), new Date(time - (-1000*h)), a))
+        let k6 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(65/432,k1),math.dotMultiply(-5/16,k2),math.dotMultiply(13/16,k3),math.dotMultiply(4/27,k4),math.dotMultiply(5/144,k5)), new Date(time - (-1000*h*5/6)), a))
         let y = math.add(state, math.dotMultiply(47/450, k1), math.dotMultiply(12/25, k3), math.dotMultiply(32/225, k4), math.dotMultiply(1/30, k5), math.dotMultiply(6/25, k6))
         
         let te = math.norm(math.add(math.dotMultiply(-1/150, k1), math.dotMultiply(3/100, k3), math.dotMultiply(-16/75, k4), math.dotMultiply(-1/20, k5), math.dotMultiply(6/25, k6)))

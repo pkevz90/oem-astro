@@ -1,6 +1,6 @@
 let appAcr = 'ROTS 2.0'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '15 Dec 2022'
+let cao = '21 Jan 2023'
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
@@ -191,14 +191,13 @@ class windowCanvas {
             tA: 0
         }
         this.scenarioLength = 48
-        this.timeDelta = 900
         this.updateOrigin(this.originOrbit)
     }
-    updateOrigin(newOrigin = {a: 42164, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, updateSats = true) {
+    updateOrigin(newOrigin = this.originOrbit, updateSats = true) {
         this.originOrbit = newOrigin
         let originEci = Object.values(Coe2PosVelObject(this.originOrbit))
         this.mm = (398600.4418 / this.originOrbit.a ** 3) ** 0.5
-        this.timeDelta = 2 * Math.PI * 0.01044 / this.mm
+        this.timeDelta = 2 * Math.PI * 0.02044 / this.mm
             
         let sun = sunFromTime(this.startDate)  
         sun = math.squeeze(Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sun, [0,0,0]).rHcw)
@@ -753,10 +752,7 @@ class windowCanvas {
             plotWidth = this.plotWidth, 
             relativeData = this.relativeData,
             satellites,
-            mm = this.mm,
-            timeDelta = this.timeDelta,
             scenarioLength = this.scenarioLength,
-            initSun = this.initSun,
             startDate = this.startDate,
             originOrbit = this.originOrbit
         } = data
@@ -764,7 +760,6 @@ class windowCanvas {
         this.plotWidth = plotWidth;
         this.relativeData = relativeData;
         this.satellites = [];
-        this.timeDelta = timeDelta;
         this.scenarioLength = scenarioLength;
         this.startDate = new Date(startDate);
         satellites.forEach(sat =>{
@@ -782,7 +777,7 @@ class windowCanvas {
                 })
             )
             this.satellites[this.satellites.length - 1].drawCurrentPosition();
-            this.satellites[this.satellites.length - 1].calcTraj(true)
+            // this.satellites[this.satellites.length - 1].calcTraj(true)
             let curPos = this.satellites[this.satellites.length - 1].currentPosition();
             this.satellites[this.satellites.length - 1].curPos = {
                 r: curPos[0],
@@ -7930,9 +7925,11 @@ function inertialEom(state = [42164, 0, 0, 0, 3.074, 0], options = {}) {
 }
 
 function Eci2RicWithC(chief, deputy, c) {
+    let rC = chief.slice(0,3), vC = chief.slice(3,6)
+    let rD = deputy.slice(0,3), vD = deputy.slice(3,6)
     return [
-        ...math.multiply(c[0],math.subtract(deputy.slice(0,3), chief.slice(0,3))),
-        ...math.add(math.multiply(c[1], math.subtract(deputy.slice(0,3), chief.slice(0,3))), math.multiply(c[0], math.subtract(deputy.slice(3,6), chief.slice(3,6))))
+        ...math.multiply(c[0],math.subtract(rD, rC)),
+        ...math.add(math.multiply(c[1], math.subtract(rD, rC)), math.multiply(c[0], math.subtract(vD, vC)))
     ]
 }
 
@@ -8073,4 +8070,19 @@ function handleImportTextFile(inText) {
     else {
         mainWindow.loadDate(objectFromText)
     }
+}
+
+function testCodeTime(sat = 0) {
+    console.time('calc')
+    for (let index = 0; index < 1000; index++) {
+        mainWindow.satellites[sat].calcTraj()
+        
+    }
+    console.timeEnd('calc')
+    console.time('calcwburns')
+    for (let index = 0; index < 1000; index++) {
+        mainWindow.satellites[sat].calcTraj(true)
+        
+    }
+    console.timeEnd('calcwburns')
 }
