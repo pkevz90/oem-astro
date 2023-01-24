@@ -197,8 +197,7 @@ class windowCanvas {
         this.originOrbit = newOrigin
         let originEci = Object.values(Coe2PosVelObject(this.originOrbit))
         this.mm = (398600.4418 / this.originOrbit.a ** 3) ** 0.5
-        this.timeDelta = 2 * Math.PI * 0.02044 / this.mm
-            
+        this.timeDelta = 2 * Math.PI / this.mm / 48
         let sun = sunFromTime(this.startDate)  
         sun = math.squeeze(Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sun, [0,0,0]).rHcw)
         sun = math.dotDivide(sun, math.norm(sun))
@@ -852,8 +851,8 @@ class Satellite {
         this.cov = cov
         setTimeout(() => this.calcTraj(), 250);
     }
-    calcTraj (recalcBurns = false) {
-        this.stateHistory = calcSatTrajectory(this.position, this.burns, {recalcBurns, a: this.a})
+    calcTraj (recalcBurns = false, burnStart = 0) {
+        this.stateHistory = calcSatTrajectory(this.position, this.burns, {recalcBurns, a: this.a, startBurn: burnStart})
     }
     genBurns = generateBurns;
     drawTrajectory() {
@@ -3267,7 +3266,7 @@ function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
         F = eciOneBurnFiniteCalc(stateInit, X[0], X[1], X[2], tf, a0).slice(0,3)
         fHistory.push(F.slice(0,3))
         yErr = math.subtract(stateFinal, F)
-        S = eciJacobianOneBurn(stateInit, a0, X[0], X[1], X[2], tf);
+        S = eciJacobianOneBurn(stateInit, a0, X[0], X[1], X[2], tf, math.transpose([F]));
         try {
             dX = math.multiply(math.inv(S), math.transpose([yErr]));
         } catch (error) {
@@ -3305,31 +3304,28 @@ function eciFiniteBurnOneBurn(stateInit, stateFinal, tf, a0, guess) {
 }
 
 function eciOneBurnFiniteCalc(state=[42164.14, 0, 0, 0, 3.0746611, 0], alpha=0, phi=0, tB=0.1, finalTime=60, a = 0.00001) {
-    let cosEl = Math.cos(phi)
-    let direction = [a * Math.cos(alpha) * cosEl, a * Math.sin(alpha) * cosEl, a * Math.sin(phi)];
+    let cosEl = a*Math.cos(phi)
+    let direction = [Math.cos(alpha) * cosEl, Math.sin(alpha) * cosEl, a * Math.sin(phi)];
     let burnDuration = tB * finalTime
     propPosition = runge_kutta4(inertialEom, state, burnDuration, direction)
     propPosition = propToTime(propPosition, finalTime - tB*finalTime)
     return propPosition
 }
 
-function eciJacobianOneBurn(state, a, alpha, phi, tB, tF) {
-    let m1, m2, m, mC
-    // alpha; If phi is at 90 degrees, jacobian won't have full rank, set to 89 deg for az jacobian calculation
-    let phi2 = math.abs(Math.cos(phi)) < 1e-6 ? 89 * Math.PI / 180 : phi;
-    m1 = math.transpose([eciOneBurnFiniteCalc(state, alpha, phi2, tB, tF, a).slice(0,3)])
+function eciJacobianOneBurn(state, a, alpha, phi, tB, tF, m1) {
+    let m2, m, mC
     
-    m2 = math.transpose([eciOneBurnFiniteCalc(state, alpha + 0.01, phi2, tB, tF, a).slice(0,3)])
-    mC = math.dotDivide(math.subtract(m2, m1), 0.01);
+    m2 = math.transpose([eciOneBurnFiniteCalc(state, alpha + 0.001, phi, tB, tF, a).slice(0,3)])
+    mC = math.dotDivide(math.subtract(m2, m1), 0.001);
 
     //phi
-    m2 =  math.transpose([eciOneBurnFiniteCalc(state, alpha, phi + 0.01, tB, tF, a).slice(0,3)])
-    m = math.dotDivide(math.subtract(m2, m1), 0.01);
+    m2 =  math.transpose([eciOneBurnFiniteCalc(state, alpha, phi + 0.001, tB, tF, a).slice(0,3)])
+    m = math.dotDivide(math.subtract(m2, m1), 0.001);
     mC = math.concat(mC, m);
 
     //tB
-    m2 = math.transpose([eciOneBurnFiniteCalc(state, alpha, phi, tB + tB * 0.1, tF, a).slice(0,3)])
-    m = math.dotDivide(math.subtract(m2, m1), tB * 0.1);
+    m2 = math.transpose([eciOneBurnFiniteCalc(state, alpha, phi, tB + tB * 0.01, tF, a).slice(0,3)])
+    m = math.dotDivide(math.subtract(m2, m1), tB * 0.01);
     mC = math.concat(mC, m);
 
     return mC;
@@ -3591,7 +3587,7 @@ function calcBurns() {
     ctx.textBaseline = "middle"
     ctx.textAlign = 'center'
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
-    sat.calcTraj(true)
+    sat.calcTraj(true, this.burnStatus.burn)
 }
 
 function addToolTip(element) {
@@ -4301,7 +4297,7 @@ function propTrueAnomaly(tA = 0, a = 10000, e = 0.1, time = 3600) {
     function solveKeplersEquation(M,e) {
         let E = M;
         let del = 1;
-        while (Math.abs(del) > 1e-6) {
+        while (Math.abs(del) > 1e-4) {
             del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
             E -= del;
         }
@@ -4611,6 +4607,54 @@ function Coe2PosVelObject(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA:
         vy: state[1][1][0],
         vz: state[1][2][0]
     };
+}
+
+function Coe2PosVel(coe = {a: 42164.1401, e: 0, i: 0, raan: 0, arg: 0, tA: 0}, peri = false) {
+    let p = coe.a * (1 - coe.e * coe.e);
+    let cTa = Math.cos(coe.tA);
+    let sTa = Math.sin(coe.tA);
+    let r = [
+        [p * cTa / (1 + coe.e * cTa)],
+        [p * sTa / (1 + coe.e * cTa)],
+        [0]
+    ];
+    let constA = Math.sqrt(398600.4418 / p);
+    let v = [
+        [-constA * sTa],
+        [(coe.e + cTa) * constA],
+        [0]
+    ];
+    if (peri) return {
+        
+        x: r[0][0],
+        y: r[1][0],
+        z: r[2][0],
+        vx: v[0][0],
+        vy: v[1][0],
+        vz: v[2][0]
+    }
+    let cRa = Math.cos(coe.raan);
+    let sRa = Math.sin(coe.raan);
+    let cAr = Math.cos(coe.arg);
+    let sAr = Math.sin(coe.arg);
+    let cIn = Math.cos(coe.i);
+    let sin = Math.sin(coe.i);
+    let R = [
+        [cRa * cAr - sRa * sAr * cIn, -cRa * sAr - sRa * cAr * cIn, sRa * sin],
+        [sRa * cAr + cRa * sAr * cIn, -sRa * sAr + cRa * cAr * cIn, -cRa * sin],
+        [sAr * sin, cAr * sin, cIn]
+    ];
+    r = math.multiply(R, r);
+    v = math.multiply(R, v);
+    let state = [r, v];
+    return [
+        state[0][0][0],
+        state[0][1][0],
+        state[0][2][0],
+        state[1][0][0],
+        state[1][1][0],
+        state[1][2][0]
+    ];
 }
 
 function Ric2Eci(rHcw = [10,0,0], drHcw = [0,0,0], rC = [(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0]) {
@@ -7949,13 +7993,12 @@ function propToTimeAnalytic(state = mainWindow.originOrbit, dt = 86164, j2 = mai
     else {
         state.tA = propTrueAnomaly(state.tA, state.a, state.e, dt)
     }
-    state = Object.values(Coe2PosVelObject(state))
-    return state
+    return Coe2PosVel(state)
 }
 
 function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], options = {}) {
     // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
-    let {timeDelta = mainWindow.timeDelta, recalcBurns = false, tFinal = mainWindow.scenarioLength*3600, a = 0.001, time = mainWindow.scenarioTime} = options
+    let {timeDelta = mainWindow.timeDelta, recalcBurns = false, tFinal = mainWindow.scenarioLength*3600, a = 0.001, time = mainWindow.scenarioTime, startBurn = 0} = options
     let cutTime = recalcBurns ? mainWindow.scenarioLength*3600 : time
     let epochPosition = {...position}, epochTime = 0
     let propPosition, tProp = 0, stateHist = [], histIndex = 0, burnIndex = 0
@@ -7970,8 +8013,7 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
             propPosition = propToTimeAnalytic(epochPosition, burns[burnIndex].time - epochTime)
             // Time propagated before burn start to keep synced with time step
             let propToBurnTime = burns[burnIndex].time - tProp
-            if (recalcBurns) {
-                // console.time()
+            if (recalcBurns && burnIndex >= startBurn) {
                 let eciOriginStart = propToTimeAnalytic(mainWindow.originOrbit, burns[burnIndex].time)
                 let ricOrigin = ConvEciToRic(eciOriginStart, propPosition)
                 burns[burnIndex].location = ricOrigin.slice(0,3)
@@ -8081,7 +8123,7 @@ function testCodeTime(sat = 0) {
     console.timeEnd('calc')
     console.time('calcwburns')
     for (let index = 0; index < 1000; index++) {
-        mainWindow.satellites[sat].calcTraj(true)
+        mainWindow.satellites[sat].calcTraj(true, 1)
         
     }
     console.timeEnd('calcwburns')
