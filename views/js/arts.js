@@ -760,7 +760,7 @@ class windowCanvas {
         this.relativeData = relativeData;
         this.satellites = [];
         this.scenarioLength = scenarioLength;
-        this.startDate = new Date(startDate);
+        this.startDate = new Date(startDate)
         satellites.forEach(sat =>{
             this.satellites.push(
                 new Satellite({
@@ -775,17 +775,6 @@ class windowCanvas {
                     team: sat.team
                 })
             )
-            this.satellites[this.satellites.length - 1].drawCurrentPosition();
-            // this.satellites[this.satellites.length - 1].calcTraj(true)
-            let curPos = this.satellites[this.satellites.length - 1].currentPosition();
-            this.satellites[this.satellites.length - 1].curPos = {
-                r: curPos[0],
-                i: curPos[1],
-                c: curPos[2],
-                rd: curPos[3],
-                id: curPos[4],
-                cd: curPos[5]
-            }
         })
         resetDataDivs()
         document.title = this.satellites.map(sat => sat.name).join(' / ')
