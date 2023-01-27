@@ -59,6 +59,7 @@ class windowCanvas {
     plotCenter = 0;
     j2 = false;
     stringLimit = [0,8];
+    ephemViewerMode = false;
     error = { // at right after manuever while generating J2000 states, halves every hour
         neutral: {p: 25.6, v: 36.158, cp: 1.5, cv: 3.5}, // Full Error
         friendly: {p: 25.6 / 3, v: 36.158 / 3, cp: 1.5, cv: 3.5}, // reduced error
@@ -841,6 +842,7 @@ class Satellite {
         setTimeout(() => this.calcTraj(), 250);
     }
     calcTraj (recalcBurns = false, burnStart = 0) {
+        if (mainWindow.ephemViewerMode) return
         this.stateHistory = calcSatTrajectory(this.position, this.burns, {recalcBurns, a: this.a, startBurn: burnStart})
     }
     genBurns = generateBurns;
@@ -1580,7 +1582,38 @@ function startContextClick(event) {
         // User clicked on satellite, generate satellite option menu
         ctxMenu.sat = activeSat;
         let dispPosition = event.altKey ? getCurrentInertial(activeSat) : mainWindow.satellites[activeSat].curPos
-        ctxMenu.innerHTML = `
+        ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
+            `
+                <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
+                    <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
+                    <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
+                    <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+                    <datalist id="sat-color-picker2">
+                        <option>#ff0000</option>
+                        <option>#0000ff</option>
+                    </datalist>
+                    <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
+                        <option value=""></option>
+                        <option value="delta">Delta</option>
+                        <option value="square">Square</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="diamond">Diamond</option>
+                        <option value="4-star">4-Point Star</option>
+                        <option value="star">5-Point Star</option>
+                    </select>
+                    <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
+                </div>
+                <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+                <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
+                ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
+                <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
+                    ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
+                </div>
+                <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">
+                    ${mainWindow.satellites[activeSat].cov !== undefined ? mainWindow.satellites[activeSat].cov : ''}
+                </div> 
+            `
+            :`
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
                 <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
@@ -1655,7 +1688,12 @@ function startContextClick(event) {
     }
     else {
         let lockScreenStatus = lockDiv.style.right === '-25%' ? false : true
-        ctxMenu.innerHTML = `
+        ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
+        `
+            <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Seed Regular Scenario</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Exit Ephemeris View</div>
+        `
+        : `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
             ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
@@ -1753,6 +1791,33 @@ function handleContextClick(button) {
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'exit-ephem-viewer') {
+        if (button.innerText === 'Seed Regular Scenario') {
+            let originOrbit = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime)
+            console.log(originOrbit);
+            let satellites = mainWindow.satellites
+                .map(s => {
+                    let ricPos = Object.values(s.curPos)
+                    let eciPos = Ric2Eci(ricPos.slice(0,3), ricPos.slice(3,6), originOrbit.slice(0,3), originOrbit.slice(3,6))
+                    eciPos = PosVel2CoeNew(eciPos.rEcci, eciPos.drEci)
+                    return eciPos
+                })
+            mainWindow.satellites = satellites.map((s,ii) => {
+                return new Satellite({
+                    position: s,
+                    color: mainWindow.satellites[ii].color
+                })
+            })
+            mainWindow.ephemViewerMode = false
+            mainWindow.startDate = new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000))
+            mainWindow.changeTime(0, true)
+            mainWindow.updateOrigin(PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6)))
+            return
+        }
+        mainWindow.ephemViewerMode = false
+        mainWindow.satellites = []
+        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'lock-screen') {
         if (lockDiv.style.right === '-25%') {
@@ -2665,6 +2730,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         sat++
     }
     if (mainWindow.currentTarget.type === 'current') {
+        if (mainWindow.ephemViewerMode) return
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
             lastHiddenSatClicked = false
@@ -5311,6 +5377,27 @@ function generateJ2000File(team=1, time = mainWindow.scenarioTime, dontExport = 
     downloadFile(`${fileTime}${team !== undefined ? `_Team${team}` : ''}_artsEphem.txt`, fileText)
 }
 
+function generateJ2000FileTruth() {
+    let startEphem = `Time (UTCG)              x (km)           y (km)         z (km)     vx (km/sec)    vy (km/sec)    vz (km/sec)
+-----------------------    -------------    -------------    ---------    -----------    -----------    -----------
+`
+    let fileText = `\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t ${Date.now()}
+    Satellite-${mainWindow.satellites.map(s => s.name).join(', ')}:  J2000 Position & Velocity
+    `
+    mainWindow.satellites.forEach((sat, satii) => {
+        fileText += `\n\n${startEphem}`
+        let propTime = 0
+        while (propTime < mainWindow.scenarioLength*3600) {
+            let eciState = Object.values(getCurrentInertial(satii, propTime))
+            let pointTime = new Date(mainWindow.startDate - (-propTime*1000))
+            pointTime = toStkFormat(pointTime.toString())
+            fileText += `${pointTime}     ${eciState.map(n => n.toFixed(5)).join('     ')}\n`
+            propTime += 3600
+        }
+    })
+    downloadFile(`artsEphem.txt`, fileText)
+}
+
 function logAction(options = {}) {
     let {type, sat, time = mainWindow.scenarioTime, burn, index, satellitesState} = options
     pastActions.push({
@@ -5838,21 +5925,20 @@ function handleStkJ200File(file) {
     let km = file.search('(km)') !== -1
     let satNames = file.split('\n').find(line => line.search('Satellite-') !== -1).split('Satellite-')[1].split(':  J')[0].split(',').map(name => name.trim())
     
-    file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2).filter(row => row !== '').map(row => row.split(/ {2,}/)).map(row => {
-        return [
-            new Date(row[0]),
-            Number(row[1]),
-            Number(row[2]),
-            Number(row[3]),
-            Number(row[4]),
-            Number(row[5]),
-            Number(row[6]),
-        ]
-    }))
+    file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2)).filter(row => row !== '')
+    console.log(file);
+    file = file.map(satSection => {
+        let newSection = satSection.map(row => {
+            let items = row.split(/ {2,}/)
+            let date = new Date(items.shift())
+            let state = items.map(s => Number(s))
+            return [date, ...state]
+        }).filter(s => s.length === 7)
+        return newSection
+    })
     openJ2000Window(file.map((s,ii) => {
         return {name: satNames[ii], state: s}
     }), km)
-    return
 }
 
 function handleTleFile(file) {
@@ -7245,6 +7331,7 @@ function openJ2000Window(j2000Satellites = [], km) {
     j2000Window.km = km
     j2000Window.updateWindow = updateJ200Window
     j2000Window.importJ2000Choices = (el) => {
+        mainWindow.ephemViewerMode = false
         let sats = j2000Window.j2000Satellites.map(s => s.name)
         let time = new Date(j2000Window.document.querySelector('#tle-import-time').value)
         let coes = [...j2000Window.document.querySelectorAll('.coe-state-div')].map((div, ii) => {
@@ -7264,6 +7351,10 @@ function openJ2000Window(j2000Satellites = [], km) {
         })
         importStates(coes, time)
     }
+    j2000Window.importAsViewer = (el) => {
+        mainWindow.ephemViewerMode = true
+        loadEphemFileInViewer(j2000Window.j2000Satellites);
+    }
     j2000Window.document.body.innerHTML = `
         <div style="font-size: 1.75em; font-weight: bolder; text-align: center;">ARTS J2000 Import Tool</div>
         <div style="width: 100%; text-align: center; margin: 10px 0px;">Import Time <input onchange="updateWindow(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(time))}></div>
@@ -7278,6 +7369,7 @@ function openJ2000Window(j2000Satellites = [], km) {
             }).join('')}
         </div>
         <div><button onclick="importJ2000Choices(this)">Import J2000 States</button></div>
+        <div><button onclick="importAsViewer(this)">Load as Viewer</button></div>
     `
     updateJ200Window()
 }
@@ -7288,11 +7380,14 @@ function updateJ200Window() {
     let eciDivs = j2000Window.document.querySelectorAll('.eci-state-div')
     let coeDivs = j2000Window.document.querySelectorAll('.coe-state-div')
     j2000Window.j2000Satellites.forEach((sat, ii) => {
-        let closestTimeState = sat.state.find(stateIndex => {
+        let closestTimeState = sat.state.findIndex(stateIndex => {
             return stateIndex[0] >= time
         })
-        if (closestTimeState === undefined) {
-            closestTimeState = sat.state[sat.state.length - 1]
+        if (closestTimeState === -1) {
+            closestTimeState = sat.state[sat.state.length - 1].slice()
+        }
+        else {
+            closestTimeState = sat.state[closestTimeState].slice()
         }
         let stateTime = closestTimeState.shift()
         closestTimeState = propToTime(closestTimeState.map(s => s / (j2000Window.km ? 1 : 1000)), (time - stateTime) / 1000, false)
@@ -8116,4 +8211,56 @@ function testCodeTime(sat = 0) {
         
     }
     console.timeEnd('calcwburns')
+}
+
+function loadEphemFileInViewer(satellites, km = true) {
+    console.log(satellites);
+    mainWindow.satellites = []
+    
+    let originStatej2000 = {
+        epoch: satellites[0].state[0][0],
+        state: satellites[0].state[0].slice(1)
+    }
+    satellites.map(sat => sat.name).forEach((sat, satii) => {
+        let colors = [
+            '#aa3333',
+            '#33aa33',
+            '#3333aa',
+            '#aa33aa',
+        ]
+        mainWindow.satellites.push(new Satellite({
+            name: sat,
+            color: colors[satii % 4]
+        }))
+    })
+    mainWindow.startDate = originStatej2000.epoch
+    mainWindow.updateOrigin(PosVel2CoeNew(originStatej2000.state.slice(0,3), originStatej2000.state.slice(3,6)))
+    setTimeout(() => {
+        satellites.forEach((sat, satii) => {
+            let history = []
+            for (let time = 0; time < 86400*2; time+= 1800) {
+                // console.log(originState.epoch);
+                let epochTime = new Date(originStatej2000.epoch - (-time*1000))
+                let closestTimeState = sat.state.findIndex(stateIndex => {
+                    return stateIndex[0] >= epochTime
+                })
+                if (closestTimeState === -1) {
+                    closestTimeState = sat.state[sat.state.length - 1].slice()
+                }
+                else {
+                    closestTimeState = sat.state[closestTimeState].slice()
+                }
+                let stateTime = closestTimeState.shift()
+                closestTimeState = propToTime(closestTimeState.map(s => s / (km ? 1 : 1000)), (epochTime - stateTime) / 1000, false)
+                let originStateEci = propToTime(originStatej2000.state.map(s => s / (km ? 1 : 1000)), (epochTime - originStatej2000.epoch) / 1000, false)
+                let ricState = Eci2Ric(originStateEci.slice(0,3), originStateEci.slice(3,6), closestTimeState.slice(0,3), closestTimeState.slice(3,6))
+                ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
+                history.push({
+                    t: time,
+                    position: ricState
+                })
+            }
+            mainWindow.satellites[satii].stateHistory = history
+        })
+    }, 1000)
 }
