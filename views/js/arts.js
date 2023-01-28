@@ -6890,7 +6890,8 @@ function openInstructionWindow() {
                             </ul>
                         </li>
                         <li>Enter origin J2000 origin state manually under <em>Options</em>, then add satellites with <em>Satellite Menu</em></li>
-                        <li>Import .SAS file inside <em>Opttions</em> with <em>Import .SAS File</em></li>
+                        <li>Import .SAS file generated previously with ARTS
+                        <li>Drag and drop file into main window will open requisite data handler</li>
                     </ul>
                 </li>
                 <li>By default, all burns are computed with finite accelerations, goto for impulsive burns in 1000 mm/s<sup>2</sup></li>
@@ -6926,19 +6927,22 @@ function openInstructionWindow() {
         <li>
             White Cell
             <ul>
-                <li>White Cell Details</li>
+                <li>An exercise over a local network can be facilitated using Alt+W to open the white cell window</li>
+                <li>Error is automatically generated based on time since last maneuver and any friendly satellites gathering measurements</li>
+                <li>Select the team state will go to and generate file for state info management during scenario</li>
             </ul>
         </li>
         <li>Spacebar changes current view</li>
         <li>
             Hot Keys
             <ul>
+                <li>Shit + S or L - Open save window</li>
                 <li>W - Move Origin to the West</li>
                 <li>E - Move Origin to the East</li>
-                <li>Shift + W - Open White Cell Window</li>
+                <li>Alt + W - Open White Cell Window</li>
                 <li>D - Switch between dark and light mode</li>
-                <li>N - Add random satellite</li>
-                <li>Cntr + <> - Change satellite display size</li>
+                <li>N - Add random perched satellite</li>
+                <li>Cntrl + <> - Change satellite display size</li>
                 <li><> - Change trajectory dot size</li>
             </ul>
         </li>
@@ -7007,9 +7011,8 @@ function openWhiteCellWindow() {
         mainWindow.satellites[el.getAttribute('sat')].team = Number(el.value)
         updateWhiteCellTimeAndErrors()
     }
-    whiteCellWindow.updateWhiteCellTimeAndErrorsWhite = () => [
-        updateWhiteCellTimeAndErrors()
-    ]
+    whiteCellWindow.genTruthEphem = () => generateJ2000FileTruth()
+    whiteCellWindow.updateWhiteCellTimeAndErrorsWhite = () => updateWhiteCellTimeAndErrors()
     closeAll()
     updateWhiteCellWindow()
 }
@@ -7132,8 +7135,13 @@ function updateWhiteCellWindow() {
         <div style="width: 100%; margin-top: 30px">
             <button onclick="exportStates(this)" style="width: 100%">Export Current State</button>
         </div>
+        <div style="display: flex; justify-content: space-around;">
         <div style="width: 100%; margin-top: 30px">
             <button onclick="genTles(this)" style="width: 100%">Export TLE History</button>
+        </div>
+        <div style="width: 100%; margin-top: 30px">
+            <button onclick="genTruthEphem(this)" style="width: 100%">Export Truth Ephem History</button>
+        </div>
         </div>
     </div>
     `
@@ -7890,6 +7898,7 @@ function openSaveWindow() {
             updateSaveWindow()
             return
         }
+        if (el.innerText === 'Generate .SAS File') exportScenario()
         el = el.parentElement
         let input = el.querySelector('input').value
         let description = el.parentElement.querySelector('#description-area').value
@@ -7930,8 +7939,9 @@ function openSaveWindow() {
         </div>
         <div style="margin: 4px 0px 5px 0px; width: 100%; height: 2px; background-color: black;"></div>
         <div id="saved-scenarios" style="margin-top: 10px; display: flex; justify-content: space-between;">   
-            
+        
         </div>
+        <div style="margin-top: 20px; display: flex; justify-content: space-around;"><div><button onclick="saveScenario(this)">Generate .SAS File</button></div></div>
     `
     setTimeout(updateSaveWindow, 250)
 }
