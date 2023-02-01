@@ -1437,7 +1437,9 @@ window.addEventListener('wheel', event => {
         let curCrossState = mainWindow.satellites[mainWindow.burnStatus.sat].currentPosition({
             time: mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + currentTranTime
         })
-        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target[2] = curCrossState[2]
+        let currentOrigin = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + currentTranTime)
+        let curCrossStateEci = Ric2Eci(curCrossState.slice(0,3), curCrossState.slice(3,6), currentOrigin.slice(0,3), currentOrigin.slice(3,6))
+        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target = [...curCrossStateEci.rEcci, ...curCrossStateEci.drEci]
         mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime = currentTranTime 
         mainWindow.changeTime(mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime,true);
         
@@ -3606,10 +3608,11 @@ function calcBurns() {
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
     if (mainWindow.burnStatus.type === 'waypoint' && !cross && sat.a > 0.000001) {
         let originAtTime = propToTimeAnalytic(mainWindow.originOrbit, sat.burns[this.burnStatus.burn].time+sat.burns[this.burnStatus.burn].waypoint.tranTime)
-        let target = [
+        let target= Eci2Ric(originAtTime.slice(0,3), originAtTime.slice(3,6), sat.burns[this.burnStatus.burn].waypoint.target.slice(0,3), [0,0,0])
+        target = [
             mousePosition[this.burnStatus.frame].r,
             mousePosition[this.burnStatus.frame].i,
-            sat.burns[this.burnStatus.burn].waypoint.target[2]
+            target.rHcw[2][0]
         ]
         target = Ric2Eci(target, [0,0,0], originAtTime.slice(0,3), originAtTime.slice(3,6)).rEcci
         sat.burns[this.burnStatus.burn].waypoint.target = target
