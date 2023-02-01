@@ -3724,14 +3724,13 @@ function initStateFunction(el) {
         switch (radioId) {
             case 'ric-sat-input':
                 ricState = [
-                    Number(inputs[0].value),
-                    Number(inputs[1].value),
-                    Number(inputs[2].value),
-                    Number(inputs[3].value) / 1000,
-                    Number(inputs[4].value) / 1000,
-                    Number(inputs[5].value) / 1000,
+                    inputs[0].value,
+                    inputs[1].value,
+                    inputs[2].value,
+                    inputs[3].value,
+                    inputs[4].value,
+                    inputs[5].value,
                 ]
-                
                 eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
                 eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
                 eciState = [...eciState.rEcci, ...eciState.drEci]
