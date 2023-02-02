@@ -186,10 +186,10 @@ class windowCanvas {
         this.originOrbit = {
             a: 42164.14,
             e: 0.0,
-            i: 0,
-            raan: 0,
-            arg: 0,
-            tA: 0
+            i: 5*Math.PI / 180 * Math.random(),
+            raan: 360*Math.PI / 180 * Math.random(),
+            arg: 360*Math.PI / 180 * Math.random(),
+            tA: 360*Math.PI / 180 * Math.random()
         }
         this.scenarioLength = 48
         this.updateOrigin(this.originOrbit)
@@ -756,12 +756,12 @@ class windowCanvas {
             startDate = this.startDate,
             originOrbit = this.originOrbit
         } = data
+        this.startDate = new Date(startDate)
         this.updateOrigin(originOrbit)
         this.plotWidth = plotWidth;
         this.relativeData = relativeData;
         this.satellites = [];
         this.scenarioLength = scenarioLength;
-        this.startDate = new Date(startDate)
         satellites.forEach(sat =>{
             this.satellites.push(
                 new Satellite({
@@ -4139,25 +4139,24 @@ function drawSatellite(satellite = {}) {
 }
 
 function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
-    let sunAngle, rangeRate, range, poca, toca, tanRate, rangeStd;
-    let relState = math.subtract(Object.values(mainWindow.satellites[n_origin].curPos), Object.values(mainWindow.satellites[n_target].curPos))
-    let relPos = relState.slice(0,3)
-    let relVel = relState.slice(3,6)
-    range = math.norm(relPos);
-    if (monteCarloData !== null) {
-        if (n_target == monteCarloData.sat) {
-            let rData = monteCarloData.points.map(p => math.norm(math.subtract(Object.values(p).slice(0,3), math.squeeze(mainWindow.satellites[n_origin].getPositionArray()))))
-            let rDataAve = rData.reduce((a,b) => a + b, 0) / rData.length
-            rangeStd = (rData.reduce((a, b) => a + (b - rDataAve) ** 2, 0) / (rData.length-1)) ** 0.5
-        }
-    }
-    sunAngle = mainWindow.getCurrentSun()
-    sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
-    sunAngle = 180 - sunAngle; // Appropriate for USSF
-    rangeRate = math.dot(relVel, relPos) * 1000 / range;
-    // tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
-    let relPosHis, interceptData
+    let sunAngle, rangeRate, range, poca, toca, tanRate, rangeStd, relPos, relVel, relPosHis, interceptData;
     try {
+        let relState = math.subtract(Object.values(mainWindow.satellites[n_origin].curPos), Object.values(mainWindow.satellites[n_target].curPos))
+        relPos = relState.slice(0,3)
+        relVel = relState.slice(3,6)
+        range = math.norm(relPos);
+        if (monteCarloData !== null) {
+            if (n_target == monteCarloData.sat) {
+                let rData = monteCarloData.points.map(p => math.norm(math.subtract(Object.values(p).slice(0,3), math.squeeze(mainWindow.satellites[n_origin].getPositionArray()))))
+                let rDataAve = rData.reduce((a,b) => a + b, 0) / rData.length
+                rangeStd = (rData.reduce((a, b) => a + (b - rDataAve) ** 2, 0) / (rData.length-1)) ** 0.5
+            }
+        }
+        sunAngle = mainWindow.getCurrentSun()
+        sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
+        sunAngle = 180 - sunAngle; // Appropriate for USSF
+        rangeRate = math.dot(relVel, relPos) * 1000 / range;
+        // tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
         relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
 
         poca = math.min(relPosHis);
@@ -4208,7 +4207,20 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
             }
         }
     }
-    catch (err) {console.log(err)}
+    catch (err) {
+        console.log(err)
+        return {
+            sunAngle: 0,
+            rangeRate: 0,
+            range: 0,
+            rangeStd: 0,
+            poca: 0,
+            toca: 0,
+            tanRate: 0,
+            relativeVelocity: 0,
+            interceptData: '\nOutside of\nKinematic\nReach'
+        }
+    }
     
     return {
         sunAngle,
