@@ -1,6 +1,6 @@
 let appAcr = 'ROTS 2.0'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '21 Jan 2023'
+let cao = '3 Feb 2023'
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
@@ -8263,13 +8263,12 @@ function testCodeTime(sat = 0) {
     console.timeEnd('calcwburns')
 }
 
-function loadEphemFileInViewer(satellites, km = true) {
-    console.log(satellites);
+function loadEphemFileInViewer(satellites, originSat = 0, km = true) {
     mainWindow.satellites = []
     
     let originStatej2000 = {
-        epoch: satellites[0].state[0][0],
-        state: satellites[0].state[0].slice(1)
+        epoch: satellites[originSat].state[0][0],
+        state: satellites[originSat].state[0].slice(1)
     }
     satellites.map(sat => sat.name).forEach((sat, satii) => {
         let colors = [
@@ -8288,7 +8287,7 @@ function loadEphemFileInViewer(satellites, km = true) {
     setTimeout(() => {
         satellites.forEach((sat, satii) => {
             let history = []
-            for (let time = 0; time < 86400*2; time+= 1800) {
+            for (let time = 0; time < 86400*2; time+= mainWindow.timeDelta) {
                 // console.log(originState.epoch);
                 let epochTime = new Date(originStatej2000.epoch - (-time*1000))
                 let closestTimeState = sat.state.findIndex(stateIndex => {
