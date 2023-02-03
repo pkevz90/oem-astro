@@ -184,13 +184,15 @@ class windowCanvas {
     constructor(cnvs) {
         this.cnvs = cnvs;
         this.originOrbit = {
-            a: 42164.14,
-            e: 0.0,
+            a: 42164.14+100*randn_bm(),
+            e: 0.001*Math.random(),
             i: 5*Math.PI / 180 * Math.random(),
             raan: 360*Math.PI / 180 * Math.random(),
             arg: 360*Math.PI / 180 * Math.random(),
             tA: 360*Math.PI / 180 * Math.random()
         }
+        let startDate = new Date()
+        this.startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
         this.scenarioLength = 48
         this.updateOrigin(this.originOrbit)
     }
@@ -206,6 +208,7 @@ class windowCanvas {
         let results = this.generateOriginHistory()
         this.originHistory = results.stateHistory
         this.originRot = results.rotHistory
+        this.originSun = results.sunHistory
         if (!updateSats) return
         this.satellites.forEach(sat => sat.calcTraj(true))
     }
@@ -219,7 +222,7 @@ class windowCanvas {
     generateOriginHistory() {
         let position = this.originOrbit
         let calcPosition
-        let tProp = 0, tFinal = this.scenarioLength*3600, stateHistory = [], rotHistory = []
+        let tProp = 0, tFinal = this.scenarioLength*3600, stateHistory = [], rotHistory = [], sunHistory = []
         while ((tProp+this.timeDelta) < tFinal) {
             calcPosition = propToTimeAnalytic(position, tProp, this.j2)
             stateHistory.push({
@@ -227,10 +230,22 @@ class windowCanvas {
                 position: calcPosition.slice()
             })
             rotHistory.push(ConvEciToRic(calcPosition, [0,0,0,0,0,0], true))
+            // console.log(this.startDate);
+            let tProp2 = tProp+this.timeDelta / 2
+            let calcPosition2 = propToTimeAnalytic(position, tProp2, this.j2)
+            sunHistory.push([tProp, this.ricSunFromEciState([new Date(this.startDate - (-1000*tProp)), ...calcPosition.slice()])])
+            sunHistory.push([tProp2, this.ricSunFromEciState([new Date(this.startDate - (-1000*tProp2)), ...calcPosition2.slice()])])
             // position = runge_kutta4(inertialEom, position, this.timeDelta)
             tProp += this.timeDelta
         }
-        return {stateHistory, rotHistory}
+        return {stateHistory, rotHistory, sunHistory}
+    }
+    ricSunFromEciState(state = [new Date(), 42164, 0, 0, 0, 3.014, 0]) {
+        // console.log(state);
+        let sun = sunFromTime(state.shift())  
+        sun = math.squeeze(Eci2Ric(state.slice(0,3), state.slice(3,6), sun, [0,0,0]).rHcw)
+        sun = math.dotDivide(sun, math.norm(sun))
+        return sun
     }
     getWidth() {
         return this.cnvs.width;
@@ -271,14 +286,22 @@ class windowCanvas {
         }
     }
     getCurrentSun(t = this.scenarioTime) {
-        let monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        let curDate = new Date(mainWindow.startDate)
-        let daySinceWinterSolstice = monthDays.slice(0, curDate.getMonth()).reduce((a, b) => a + b,0) + curDate.getDate() - 80
-        let freq = 2 * Math.PI /365.25
-        let maxCt = mainWindow.initSun[2] / Math.sin(freq * daySinceWinterSolstice)
-        let initSunWithCrossComponent = this.initSun.slice()
-        initSunWithCrossComponent[2] = maxCt * Math.sin(freq * (daySinceWinterSolstice + t / 86164))
-        return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 360 / 365 / 86164), 3), math.transpose([initSunWithCrossComponent])));
+        let curSunIndex = this.originSun.findIndex(s => s[0] > t)
+        if (curSunIndex === -1) {
+            return this.originSun[this.originSun.length-1][1]
+        }
+        let leadSun = this.originSun[curSunIndex]
+        let trailSun = this.originSun[curSunIndex-1]
+        let sun = math.add(math.subtract(leadSun[1], trailSun[1]).map(s => s*(t-trailSun[0])/(leadSun[0]-trailSun[0])), trailSun[1])
+        return sun
+        // let monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        // let curDate = new Date(mainWindow.startDate)
+        // let daySinceWinterSolstice = monthDays.slice(0, curDate.getMonth()).reduce((a, b) => a + b,0) + curDate.getDate() - 80
+        // let freq = 2 * Math.PI /365.25
+        // let maxCt = mainWindow.initSun[2] / Math.sin(freq * daySinceWinterSolstice)
+        // let initSunWithCrossComponent = this.initSun.slice()
+        // initSunWithCrossComponent[2] = maxCt * Math.sin(freq * (daySinceWinterSolstice + t / 86164))
+        // return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 360 / 365 / 86164), 3), math.transpose([initSunWithCrossComponent])));
     }
     setInitSun(sun) {
         this.initSun = sun;
@@ -561,7 +584,6 @@ class windowCanvas {
         ctx.fillStyle = color;
         line.forEach((point, ii) => {
             let pixelPos = this.convertToPixels(point);
-            console.log();
             if (this.state.search('ri') !== -1 && Math.abs(point[0]) < (this.plotHeight / 2 * this.frameCenter.ri.h) && Math.abs(point[1] - this.plotCenter) < (this.plotWidth / 2* this.frameCenter.ri.w)) {
                 ctx.fillRect(pixelPos.ri.x - size, pixelPos.ri.y - size, size*2, size*2)
             }
@@ -832,14 +854,17 @@ class Satellite {
         this.color = color;
         this.shape = shape;
         this.name = name;
-        this.burns = burns;
         this.side = side
         this.a = Number(a);
         this.originDate = Date.now()
         this.locked = locked
         this.pixelPos = [0,0]
         this.cov = cov
-        setTimeout(() => this.calcTraj(), 250);
+        setTimeout(() => {
+            this.burns = burns;
+            this.calcTraj(true)
+            this.calcTraj()
+        }, 250);
     }
     calcTraj (recalcBurns = false, burnStart = 0) {
         if (mainWindow.ephemViewerMode) return
@@ -1081,8 +1106,6 @@ function testTimeDelta(dt = 500, time = 7200) {
 }
 
 let mainWindow = new windowCanvas(document.getElementById('main-plot'));
-let startDate = new Date()
-mainWindow.startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
 mainWindow.fillWindow();
 let lastSaveTime = Date.now() - 30000
 function sleep(milliseconds) {
@@ -6055,7 +6078,8 @@ function importStates(states, time) {
             time: b.time,
             direction: b.direction,
             shown: 'during',
-            waypoint: b.waypoint
+            location: b.location,
+            waypoint: false
         }
     }))
     mainWindow.satellites = []
