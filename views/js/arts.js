@@ -7234,7 +7234,7 @@ function openBurnsWindow(sat) {
         let burnTime = mainWindow.satellites[sat].burns[burn].time + mainWindow.satellites[sat].burns[burn].waypoint.tranTime
         let burnWaypoint = [...mainWindow.satellites[sat].burns[burn].waypoint.target,0,0,0]
         console.log(originChoice);
-        let originRefOrbit = originChoice == -1 ? propToTimeAnalytic(mainWindow.originOrbit, burnTime) : Object.values(getCurrentInertial(originChoice))
+        let originRefOrbit = originChoice == -1 ? propToTimeAnalytic(mainWindow.originOrbit, burnTime) : Object.values(getCurrentInertial(originChoice, burnTime))
         let newOriginWaypoint = math.squeeze(Eci2Ric(originRefOrbit.slice(0,3), originRefOrbit.slice(3,6), burnWaypoint.slice(0,3), burnWaypoint.slice(3,6)).rHcw)
         console.log(newOriginWaypoint);
         el.parentElement.parentElement.querySelector('.burn-waypoint-disp-div').innerHTML = `Waypoint: ${newOriginWaypoint.map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(mainWindow.satellites[sat].burns[burn].waypoint.tranTime / 3600).toFixed(1)} hrs`
