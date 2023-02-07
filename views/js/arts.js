@@ -1802,16 +1802,15 @@ function handleContextClick(button) {
          button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
             <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="rmoes-maneuver">Target RMOE's</div>
             <div class="context-item" onclick="handleContextClick(this)" id="dsk-maneuver">DSK</div>
             <div class="context-item" onclick="handleContextClick(this)" id="drift-maneuver">Set Drift Rate</div>
             <div class="context-item" onclick="handleContextClick(this)" id="perch-maneuver">Perch</div>
             <div class="context-item" onclick="handleContextClick(this)" id="circ-maneuver">Circularize</div>
             ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="sun-maneuver">Gain Sun</div>' : ''}
-            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="poca-maneuver">Maximizer POCA</div>' : ''}
         `
         //<div class="context-item" onclick="handleContextClick(this)" id="multi-maneuver">Multi-Burn</div>
-            
+        // <div class="context-item" onclick="handleContextClick(this)" id="rmoes-maneuver">Target RMOE's</div>
+            // ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="poca-maneuver">Maximize POCA</div>' : ''}
         let cm = document.getElementById('context-menu')
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
@@ -7233,22 +7232,16 @@ function openBurnsWindow(sat) {
         let sat = el.getAttribute('sat');
         let burn = el.getAttribute('burn');
         let burnTime = mainWindow.satellites[sat].burns[burn].time + mainWindow.satellites[sat].burns[burn].waypoint.tranTime
-        let burnWaypoint = Object.values(mainWindow.satellites[sat].burns[burn].waypoint.target)
-        let refOrbit = {...mainWindow.originOrbit}
-        refOrbit.tA = propTrueAnomaly(refOrbit.tA, refOrbit.a, refOrbit.e, burnTime)
-        refOrbit = Object.values(Coe2PosVelObject(refOrbit))
-        let originRefOrbit = originChoice == -1 ? [0,0,0,0,0,0] : math.squeeze(Object.values(mainWindow.satellites[originChoice].currentPosition({time: burnTime})))
-        
-        originRefOrbit = Ric2Eci(originRefOrbit.slice(0,3), originRefOrbit.slice(3,6), refOrbit.slice(0,3), refOrbit.slice(3,6))
-        originRefOrbit = [...originRefOrbit.rEcci, ...originRefOrbit.drEci]
-        burnWaypoint = Ric2Eci(burnWaypoint.slice(0,3), [0,0,0], refOrbit.slice(0,3), refOrbit.slice(3,6))
-        burnWaypoint = [...burnWaypoint.rEcci, ...burnWaypoint.drEci]
+        let burnWaypoint = [...mainWindow.satellites[sat].burns[burn].waypoint.target,0,0,0]
+        console.log(originChoice);
+        let originRefOrbit = originChoice == -1 ? propToTimeAnalytic(mainWindow.originOrbit, burnTime) : Object.values(getCurrentInertial(originChoice))
         let newOriginWaypoint = math.squeeze(Eci2Ric(originRefOrbit.slice(0,3), originRefOrbit.slice(3,6), burnWaypoint.slice(0,3), burnWaypoint.slice(3,6)).rHcw)
+        console.log(newOriginWaypoint);
         el.parentElement.parentElement.querySelector('.burn-waypoint-disp-div').innerHTML = `Waypoint: ${newOriginWaypoint.map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(mainWindow.satellites[sat].burns[burn].waypoint.tranTime / 3600).toFixed(1)} hrs`
     }
     setTimeout(() => burnWindows[burnWindows.length - 1].document.title = mainWindow.satellites[sat].name + ' Burns', 250)
     burnWindows[burnWindows.length - 1].document.body.innerHTML = `
-        <div>${mainWindow.satellites[sat].name} Burn List</div>
+        <div style="text-align: center; font-size: 1.25em; font-weight: bolder;">${mainWindow.satellites[sat].name} Burn List</div>
         <div class="no-scroll" style="max-height: 90%; overflow: scroll; margin-top: 10px" id="burn-list-div">
             ${mainWindow.satellites[sat].burns.map((b,bii) => {
                 return `<div style="margin-bottom: 20px;">
@@ -7256,17 +7249,18 @@ function openBurnsWindow(sat) {
                     <div style="margin-left: 30px;">Direction: 
                         ${b.direction.map(dir => (dir*1000).toFixed(2)).join(', ')} m/s
                     </div>
-                    <div style="margin-left: 30px;"> Waypoint Origin <select sat=${sat} burn=${bii} onchange="updateBurnOrigin(this)">
-                        <option value="-1">RIC Origin</option>
+                    ${b.waypoint !== false ? `
+                    <div style="margin-left: 30px;"> Waypoint Ref Frame <select sat=${sat} burn=${bii} onchange="updateBurnOrigin(this)">
+                        <option value="-1">ECI</option>
                         ${mainWindow.satellites.map((waySat, ii) => {
                             console.log(ii, sat)
                             if (ii == sat) return ''
-                            return `<option ${waySat.burns.length > 0 ? 'disabled title="Can only choose satellits with no burns"' : ''} value="${ii}">${waySat.name}</option>`
+                            return `<option ${waySat.burns.length > 0 ? 'disabled title="Can only choose satellits with no burns"' : ''} value="${ii}">${waySat.name} RIC</option>`
                         }).join('')}
                     </select></div>
                     <div class="burn-waypoint-disp-div" style="margin-left: 30px;">
                         Waypoint: ${b.waypoint.target.map(dir => dir.toFixed(2)).join(', ')} km, TOF: ${(b.waypoint.tranTime / 3600).toFixed(1)} hrs
-                    </div>
+                    </div>` : ''}
                 </div>
                 `
             }).join('')}
