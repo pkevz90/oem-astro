@@ -2831,11 +2831,14 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             burn: check[mainWindow.currentTarget.frame],
             frame: mainWindow.currentTarget.frame
         }
+        console.log({...mainWindow.burnStatus});
         if (burnType === 'waypoint' && mainWindow.burnStatus.frame === 'ri') {
             if (mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint === false) {
+                let newTranTime = mainWindow.desired.scenarioTime - mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time
+                newTranTime = newTranTime < (2*Math.PI / mainWindow.mm) / 12 ? (2*Math.PI / mainWindow.mm) / 12 : newTranTime
                 mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint = {
-                    tranTime: 7200,
-                    target: [0,0,0]
+                    tranTime: newTranTime,
+                    target: Object.values(mainWindow.satellites[mainWindow.burnStatus.sat].curPos).slice(0,3)
                 }
             }
             mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
