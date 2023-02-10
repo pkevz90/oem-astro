@@ -2762,6 +2762,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime + defaultTranTime
             });
+            let targetStateEci = Object.values(getCurrentInertial(mainWindow.currentTarget.sat))
             let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime
             });
@@ -2795,7 +2796,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
                 location: Object.values(satLocation).slice(0,3),
                 direction: [0,0,0],
                 waypoint: burnType === 'direction' ? false : {
-                    target: targetState,
+                    target: targetStateEci,
                     tranTime: defaultTranTime
                 }
             })
