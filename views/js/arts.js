@@ -60,6 +60,7 @@ class windowCanvas {
     j2 = false;
     stringLimit = [0,8];
     ephemViewerMode = false;
+    hpop = false;
     error = { // at right after manuever while generating J2000 states, halves every hour
         neutral: {p: 25.6, v: 36.158, cp: 1.5, cv: 3.5}, // Full Error
         friendly: {p: 25.6 / 3, v: 36.158 / 3, cp: 1.5, cv: 3.5}, // reduced error
@@ -674,6 +675,10 @@ class windowCanvas {
         ctx.font = 'bold ' + fontSize + 'px serif'
         ctx.fillText(new Date(this.startDate.getTime() + this.scenarioTime * 1000).toString()
             .split(' GMT')[0].substring(4), 10, this.cnvs.height - 5);
+        if (mainWindow.hpop) {
+            ctx.font = 'bold ' + fontSize/2+ 'px serif'
+            ctx.fillText('HPOP', 10, this.cnvs.height - 5 - fontSize);
+        }
     }
     showLocation() {
         try {
@@ -1387,6 +1392,10 @@ function keydownFunction(key) {
         mainWindow.satellites.push(newSat)
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
     }
+    else if (key.key ==='h' && key.ctrlKey) {
+        key.preventDefault()
+        displayHpopTraj()
+    }
     else if ((key.key === 'S' || key.key === 's') && key.shiftKey) openSaveWindow()
     else if ((key.key === 'L' || key.key === 'l') && key.shiftKey) openSaveWindow()
     else if (key.key === ',' && key.ctrlKey) mainWindow.satellites.forEach(sat => sat.size = sat.size > 1 ? sat.size - 0.25 : sat.size)
@@ -1715,8 +1724,8 @@ function startContextClick(event) {
         let lockScreenStatus = lockDiv.style.right === '-25%' ? false : true
         ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
         `
-            <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Seed Regular Scenario</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Exit Ephemeris View</div>
+            ${mainWindow.hpop ? '' : `<div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Seed Regular Scenario</div>`}
+            <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Exit ${mainWindow.hpop ? 'HPOP ' : ''}Ephemeris View</div>
         `
         : `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
@@ -1770,31 +1779,63 @@ function changeSide(sat, side="neutral") {
     mainWindow.satellites[sat].side = side
 }
 
-function updateLockScreen() {
+function updateLockScreen(filter) {
+    // IF filter isn't undefined, that means that if comes from a filter input callback to search for a
+    // certain object
     if (mainWindow.satellites.length === 0) return
-    let out = ''
+    let laneList = document.querySelector('#lane-list-div')
+    if (laneList === null) {
+        let height = 0.86 * window.innerHeight
+        let out = ''
+
+        out += `<div><input oninput="updateLockScreen(this)" id="lane-list-search" placeholder="Search" style="text-align: left; width: 10ch;"/></div>`
+        out += `<div class="no-scroll" id="lane-list-div" style="overflow: scroll; max-height: ${height}px">`
+        out += `
+            </div>
+            <div>
+                # Lanes<input step="1" oninput="changeNumLanes(this)" style="width: 5ch;" type="number" value="${mainWindow.nLane}"/>
+            </div>
+            <div style="float: right;"><button onclick="changeNumLanes(this)" id="refresh-lanes">Refresh Lanes</button></div>
+        `
+        lockDiv.innerHTML = out
+        updateLockScreen()
+        return
+    }
     let lanes = satClusterK()
-    console.log(lanes);
-    let height = 0.86 * window.innerHeight
-    out += `<div class="no-scroll" style="overflow: scroll; max-height: ${height}px">`
+    let outLanes = ``
+    if (filter !== undefined) {
+        let filterName = filter.value
+        const re = new RegExp("^"+filterName.toLowerCase());
+        let foundSatellite = mainWindow.satellites.findIndex(s => s.name.toLowerCase().search(re) !== -1)
+        if (foundSatellite === -1) {
+            foundSatellite = mainWindow.satellites.findIndex(s => s.name.toLowerCase().search(filterName.toLowerCase()) !== -1)
+        }
+        if (foundSatellite !== -1 && filterName.length > 0) {
+            let checked = mainWindow.satellites[foundSatellite].locked ? '' : 'checked'
+            outLanes += `
+                <div style="text-align: right">
+                <label style="cursor: pointer; padding: 5px" for="lock-${foundSatellite}">${mainWindow.satellites[foundSatellite].name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${foundSatellite}" id="lock-${foundSatellite}" type="checkbox"/>
+                <button onclick="changeOrigin(${foundSatellite})">Center</button>
+            </div>
+            <div style="width: 100%; height: 2px; background-color: black; margin: 5px 0px"></div>`
+            
+
+        }
+        
+    }
     lanes.forEach((lane, ii) => {
-        out += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
+        if (lanes.length > 1) {
+            outLanes += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
+        }
         lane.forEach(sat => {
             let checked = mainWindow.satellites[sat].locked ? '' : 'checked'
-            out += `<div style="text-align: right">
+            outLanes += `<div style="text-align: right">
                         <label style="cursor: pointer; padding: 5px" for="lock-${sat}">${mainWindow.satellites[sat].name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${sat}" id="lock-${sat}" type="checkbox"/>
                         <button onclick="changeOrigin(${sat})">Center</button>
                     </div>`
         })
     })
-    out += `
-        </div>
-        <div>
-            # Lanes<input step="1" oninput="changeNumLanes(this)" style="width: 5ch;" type="number" value="${mainWindow.nLane}"/>
-        </div>
-        <div style="float: right;"><button onclick="changeNumLanes(this)" id="refresh-lanes">Refresh Lanes</button></div>
-    `
-    lockDiv.innerHTML = out
+    laneList.innerHTML = outLanes
 }
 
 function handleContextClick(button) {
@@ -1817,6 +1858,8 @@ function handleContextClick(button) {
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
     }
     if (button.id === 'exit-ephem-viewer') {
+        document.getElementById('context-menu')?.remove();
+        if (mainWindow.hpop) return displayHpopTraj()
         if (button.innerText === 'Seed Regular Scenario') {
             let originOrbit = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime)
             console.log(originOrbit);
@@ -2758,10 +2801,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
             lastHiddenSatClicked = false
-            let defaultTranTime = 7200
-            let targetState = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
-                time: mainWindow.desired.scenarioTime + defaultTranTime
-            });
+            let defaultTranTime = 2*Math.PI / mainWindow.mm / 12
             let targetStateEci = Object.values(getCurrentInertial(mainWindow.currentTarget.sat))
             let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime
@@ -6979,6 +7019,7 @@ function openInstructionWindow() {
         <li>
             Hot Keys
             <ul>
+                <li>Cntrl + h - Run sim with HPOP</li>
                 <li>Shit + S or L - Open save window</li>
                 <li>W - Move Origin to the West</li>
                 <li>E - Move Origin to the East</li>
@@ -8310,4 +8351,145 @@ function loadEphemFileInViewer(satellites, originSat = 0, km = true) {
             mainWindow.satellites[satii].stateHistory = history
         })
     }, 1000)
+}
+
+function createHpopStateHistory(startPosition = mainWindow.satellites[0].position, burns = mainWindow.satellites[0].burns, a = 0.001) {
+    let prop
+    try {
+        prop = new Propagator({
+            order: 30
+        })
+    } catch (error) {
+        return
+    }
+    let tf = mainWindow.scenarioLength*3600
+    let tD = mainWindow.timeDelta
+    let time = 0
+    let position = Object.values(Coe2PosVel(startPosition))
+    let stateHistory = [], startDate = mainWindow.startDate
+    // while ((time+tD) < tf) {
+    //     stateHistory.push({
+    //         t: time,
+    //         position
+    //     })
+    //     position = prop.propToTime(position, new Date(startDate - (-1000*time)), tD, {
+    //         maxError: 1e-6
+    //     }).state
+    //     time += tD
+    // }
+
+    let tProp = 0, stateHist = [], histIndex = 0, burnIndex = 0, tFinal = mainWindow.scenarioLength*3600
+    burns = burns.slice()
+    burns.push({time: tFinal*2})
+    while ((tProp+tD) < tf) {
+        stateHistory.push({
+            t: tProp,
+            position
+        })
+        if ((tProp + tD) > burns[burnIndex].time) {
+            let burnMagnitude = math.norm(burns[burnIndex].direction)
+            let burnDuration = burnMagnitude / a
+            let timeToBurn = burns[burnIndex].time - tProp
+            let acc = burns[burnIndex].direction.map(s => s * a / burnMagnitude)
+            console.log(burnDuration, acc, a);
+            position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), timeToBurn, {
+                maxError: 1e-6
+            }).state
+            tProp = burns[burnIndex].time
+            burnIndex++
+            // Prop to next time step
+            let timeToNextTimeStep = tD - timeToBurn
+            if (burnDuration > timeToNextTimeStep) {
+                // position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), timeToNextTimeStep, {
+                //     maxError: 1e-6,
+                //     a: acc
+                // }).state
+                
+                position = runge_kutta4(inertialEom, position, timeToNextTimeStep, acc)
+                tProp += timeToNextTimeStep
+                stateHistory.push({
+                    t: tProp,
+                    position
+                })
+                burnDuration -= timeToNextTimeStep
+                while (burnDuration > tD) {
+                    // position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), tD, {
+                    //     maxError: 1e-6,
+                    //     a: acc
+                    // }).state
+                    position = runge_kutta4(inertialEom, position, tD, acc)
+                    tProp += tD
+                    stateHistory.push({
+                        t: tProp,
+                        position
+                    })
+                    burnDuration -= tD
+                }
+                position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), burnDuration, {
+                    maxError: 1e-6,
+                    a: acc
+                }).state
+                tProp += burnDuration
+                position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), tD - burnDuration, {
+                    maxError: 1e-6
+                }).state
+                tProp += tD - burnDuration
+                stateHistory.push({
+                    t: tProp,
+                    position
+                })
+            }
+            else {
+                // position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), burnDuration, {
+                //     maxError: 1e-6,
+                //     a: acc
+                // }).state
+                
+                position = runge_kutta4(inertialEom, position, burnDuration, acc)
+                tProp += burnDuration
+                timeToNextTimeStep = tD - timeToBurn - burnDuration
+                position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), timeToNextTimeStep, {
+                    maxError: 1e-6
+                }).state
+                tProp += timeToNextTimeStep
+                stateHistory.push({
+                    t: tProp,
+                    position
+                })
+
+            }
+            
+        }
+        position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), tD, {
+            maxError: 1e-6
+        }).state
+        tProp += tD
+    }
+    return stateHistory
+}
+
+function displayHpopTraj() {
+    if (mainWindow.hpop) {
+        mainWindow.ephemViewerMode = false
+        mainWindow.hpop = false
+        mainWindow.satellites.forEach(sat => sat.calcTraj())
+        return
+    }
+    let origin = createHpopStateHistory({...mainWindow.originOrbit}, [])
+    let satHists = mainWindow.satellites.map(sat => createHpopStateHistory(sat.position, sat.burns, sat.a))
+    satHists = satHists.map(sat => {
+        return sat.map((point, ii) => {
+            let ric = Eci2Ric(origin[ii].position.slice(0,3), origin[ii].position.slice(3,6), point.position.slice(0,3), point.position.slice(3,6))
+            return {
+                t: point.t,
+                position: math.squeeze([...ric.rHcw, ...ric.drHcw])
+            }
+        })
+    })
+    
+    mainWindow.ephemViewerMode = true
+    mainWindow.hpop = true
+    satHists.forEach((hist,ii) => {
+        mainWindow.satellites[ii].stateHistory = hist
+    })
 }
