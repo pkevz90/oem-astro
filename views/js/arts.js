@@ -1478,6 +1478,16 @@ window.addEventListener('wheel', event => {
         updateWhiteCellTimeAndErrors()
         return;
     }
+    if (mainWindow.burnStatus.type === 'manual') {
+        let tranTimeDelta = event.deltaY > 0 ? -450  : 900
+        let newTime = mainWindow.scenarioTime + tranTimeDelta
+        let burnTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time
+        newTime = newTime < burnTime ? burnTime : newTime
+        mainWindow.changeTime(newTime,true);
+        
+        updateWhiteCellTimeAndErrors()
+        return;
+    }
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
 })
 document.oncontextmenu = startContextClick
@@ -2446,6 +2456,10 @@ function handleContextClick(button) {
                 dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
                 mainWindow.satellites[sat].burns[burn].direction = dir
                 mainWindow.satellites[sat].burns[burn].waypoint = false
+                if (mainWindow.hpop) {
+                    displayHpopTraj(true)
+                    break
+                }
                 mainWindow.satellites[sat].calcTraj(true)
                 break
             case 'waypoint':
@@ -2467,6 +2481,10 @@ function handleContextClick(button) {
                 dir = [dir[2] * math.cos(dir[0]) * Math.cos(dir[1]), dir[2] * math.sin(dir[0]) * Math.cos(dir[1]), dir[2] * math.sin(dir[1])]
                 mainWindow.satellites[sat].burns[burn].direction = dir
                 mainWindow.satellites[sat].burns[burn].waypoint = false
+                if (mainWindow.hpop) {
+                    displayHpopTraj(true)
+                    break
+                }
                 mainWindow.satellites[sat].calcTraj(true)
                 break
         }
@@ -8364,7 +8382,6 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
     }
     let tf = mainWindow.scenarioLength*3600
     let tD = mainWindow.timeDelta
-    let time = 0
     let position = Object.values(Coe2PosVel(startPosition))
     let stateHistory = [], startDate = mainWindow.startDate
     // while ((time+tD) < tf) {
@@ -8468,8 +8485,8 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
     return stateHistory
 }
 
-function displayHpopTraj() {
-    if (mainWindow.hpop) {
+function displayHpopTraj(update = false) {
+    if (mainWindow.hpop && !update) {
         mainWindow.ephemViewerMode = false
         mainWindow.hpop = false
         mainWindow.satellites.forEach(sat => sat.calcTraj())
