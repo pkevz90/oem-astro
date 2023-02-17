@@ -52,6 +52,10 @@ if (checkTouchScreen()) {
     document.body.append(screenViewChange)
 }
 
+function recordGif() {
+    mainWindow.startRecord()
+}
+
 class windowCanvas {
     cnvs;
     plotWidth = 200;
@@ -708,22 +712,23 @@ class windowCanvas {
     }
     calculateBurn = calcBurns;
     startRecord(button) {
+        let startTime = Number(prompt('Start Time (hrs)', 0))
+        let endTime = Number(prompt('End Time (hrs)', mainWindow.scenarioLength))
+        let timeLength = Number(prompt('Video Length (seconds)', 10))
+        let resolution = prompt('Video Resolution (L x W)', '400x400').split('x').map(s => Number(s)).slice(0,2)
+        resolution = resolution.length < 2 ? [400,400] : resolution
+        resolution = resolution.filter(s => isNaN(s)).length > 0 ? [400,400] : resolution
         closeAll();
-        let inputs = button.parentNode.parentNode.getElementsByTagName('input');
-        this.makeGif.stopEpoch = Number(inputs[6].value) * 60;
-        this.desired.scenarioTime = Number(inputs[5].value) * 60;
-        this.scenarioTime = Number(inputs[5].value) * 60;
-        this.makeGif.step = Number(inputs[7].value);
-        let val = document.getElementById('res-select').value;
-        val = val.split('x');
-        if (val[0] !== 'full') {
-            this.cnvs.width = Number(val[0]);
-            this.cnvs.height = Number(val[1]);
-        }
+        this.makeGif.stopEpoch = endTime*3600;
+        this.desired.scenarioTime = startTime*3600;
+        this.scenarioTime = startTime*3600;
+        this.makeGif.step = (endTime - startTime) * 3600 / timeLength / 30;
+        this.cnvs.width = resolution[0];
+        this.cnvs.height = resolution[1];
         this.encoder = new GIFEncoder();
         this.encoder.setQuality(20);
-        this.encoder.setRepeat(inputs[9].checked ? 0 : 1);
-        this.encoder.setDelay(1000 / Number(inputs[8].value));
+        this.encoder.setRepeat(0);
+        this.encoder.setDelay(1000 / 33);
         setTimeout(() => {
             this.makeGif.start = true;
             this.encoder.start();
@@ -733,8 +738,8 @@ class windowCanvas {
         if (this.makeGif.start) {
             let ctx = this.getContext();
             this.encoder.addFrame(ctx);
-            this.scenarioTime += this.makeGif.step * 60;
-            this.desired.scenarioTime += this.makeGif.step * 60;
+            this.scenarioTime += this.makeGif.step;
+            this.desired.scenarioTime += this.makeGif.step;
             if (this.makeGif.stop) {
                 this.makeGif.start = false;
                 this.makeGif.stop = false;
@@ -742,7 +747,7 @@ class windowCanvas {
                 this.encoder.download("download.gif");
                 this.fillWindow();
             }
-            else if (this.scenarioTime >= this.makeGif.stopEpoch) {this.makeGif.stop = true;}
+            else if (this.scenarioTime >= this.makeGif.stopEpoch) {this.makeGif.stop = true}
             // this.makeGif.keyFrames.forEach(key => {
             //     if (windowOptions.scenario_time_des > key.time && !key.complete) {
             //         // windowOptions.screen.mode = key.view;
@@ -1365,6 +1370,14 @@ function keydownFunction(key) {
                 break;       
         }
     }
+    else if ('zx'.search(key.key) !== -1 && mainWindow.burnStatus.type !== false) {
+        wheelFunction({
+            deltaY: 'x'.search(key.key) !== -1 ? -1 : 1,
+            target: {
+                id: 'main-plot'
+            }
+        })
+    } 
     else if (key.key === 'd' || key.key === 'D') {
         if (mainWindow.colors.backgroundColor === '#111122') {
             mainWindow.colors.backgroundColor = 'white'
@@ -1461,7 +1474,7 @@ window.addEventListener('keyup', key => {
     else if (key === 'e') moveTrueAnomaly(0)
 })
 window.addEventListener('resize', () => mainWindow.fillWindow())
-window.addEventListener('wheel', event => {
+function wheelFunction(event) {
     if (mainWindow.panelOpen || event.target.id !== 'main-plot') return;
     if (mainWindow.burnStatus.type === 'waypoint') {
         let tranTimeDelta = event.deltaY > 0 ? -300 / 86164 * (2*Math.PI / mainWindow.mm) : 1800  / 86164 * (2*Math.PI / mainWindow.mm)
@@ -1489,6 +1502,9 @@ window.addEventListener('wheel', event => {
         return;
     }
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
+}
+window.addEventListener('wheel', event => {
+    wheelFunction(event)
 })
 document.oncontextmenu = startContextClick
 let openInstructions = function() {
