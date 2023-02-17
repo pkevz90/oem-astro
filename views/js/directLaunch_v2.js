@@ -32,7 +32,9 @@ function loopStartTime() {
         let siteEci = astro.ecef2eci(site.ecef, state.date)
         let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
         let tof = estTof(siteEci, state.state)
-        let targetEndState = hpop.propToTime(state.state, state.date, tof, 1e-6).state
+        let targetEndState = hpop.propToTime(state.state, state.date, tof, {
+            maxError: 1e-4
+        }).state
         let vOptions = [solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, false).v1,solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, true).v1].filter(s => s !== undefined).filter(s => {
             return s.filter(a => isNaN(a)).length === 0
         })
@@ -42,16 +44,28 @@ function loopStartTime() {
             vOptions = vOptions[minIndex]
             let elevationAngle = 90-math.acos(math.dot(siteEci, vOptions) / math.norm(siteEci) / math.norm(vOptions))*180/Math.PI
             if (elevationAngle > site.elMask) {
-               // If above el mask, add html code to options
+                // Calculate sun angle at rendezvous
+                let startState = [...siteEci,...vOptions]
+                let endState = propToTime(startState, tof)
+                let sunEci = astro.sunEciFromTime(new Date(state.date - (-tof*1000)))
+                let cats = math.acos(math.dot(endState.slice(3), sunEci) / math.norm(endState.slice(3)) / math.norm(sunEci))*180/Math.PI
+                // If above el mask, add html code to options
                 options.push(`
-                    <div onclick="displayLaunch(this)" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">${dateToDateTimeInput(state.date)}--dV: ${dV[minIndex].toFixed(3)} km/s--TOF: ${(tof/60).toFixed(2)} mins</div>
+                    <div style="font-size: 1.5em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" onclick="displayLaunch(this)" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
+                        <div>${dateToDateTimeInput(state.date).split('T').join(' ')}z</div>
+                        <div>Launch &#916V: ${dV[minIndex].toFixed(3)} km/s</div>
+                        <div>TOF: ${(tof/60).toFixed(2)} mins</div>
+                        <div>CATS: ${cats.toFixed(1)}<sup>o</sup></div>
+                    </div>
                 `)
             }
 
         }
 
 
-        state = hpop.propToTime(state.state, state.date, searchStep)
+        state = hpop.propToTime(state.state, state.date, searchStep, {
+            maxError: 1e-4
+        })
         time += searchStep
     }
     document.querySelector('#results-div').innerHTML = options.join('\n')
@@ -76,7 +90,7 @@ function displayLaunch(el) {
 
     let targetPropTime = (launchTime - startTime) / 1000 + tof
 
-    let targetHistory = hpop.propToTimeHistory(targetState, startTime, targetPropTime) 
+    let targetHistory = hpop.propToTimeHistory(targetState, startTime, targetPropTime, 1e-5) 
     targetHistory = targetHistory.map(s => {
         let coor = astro.eci2latlong(s.state.slice(0,3), s.date)
         return {
@@ -85,7 +99,7 @@ function displayLaunch(el) {
             long: coor.long * 180 / Math.PI
         }
     })
-    let launchHistory = hpopNoAtm.propToTimeHistory(launchState, launchTime, tof, 1e-8)
+    let launchHistory = hpopNoAtm.propToTimeHistory(launchState, launchTime, tof, 1e-4)
     launchHistory = launchHistory.map(s => {
         let coor = astro.eci2latlong(s.state.slice(0,3), s.date)
         return {
@@ -440,26 +454,71 @@ function handleInputs(target) {
         inputs[5].value = vector[5].toFixed(5)
     }
     else {
-        let inputs = [...document.getElementsByClassName('vector')].map(s => Number(s.value))
+        let inputs = [...document.getElementsByClassName('vector')].slice(1).map(s => Number(s.value))
         let coes = PosVel2CoeNew(inputs.slice(0,3), inputs.slice(3,6))
         inputs = document.getElementsByClassName('coe')
-        inputs[0].value = coes.a.toFixed(3)
-        inputs[1].value = coes.e.toFixed(3)
-        inputs[2].value = (180 / Math.PI * coes.i).toFixed(3)
-        inputs[3].value = (180 / Math.PI * coes.raan).toFixed(3)
-        inputs[4].value = (180 / Math.PI * coes.arg).toFixed(3)
-        inputs[5].value = (180 / Math.PI * coes.tA).toFixed(3)
+        inputs[1].value = coes.a.toFixed(3)
+        inputs[2].value = coes.e.toFixed(3)
+        inputs[3].value = (180 / Math.PI * coes.i).toFixed(3)
+        inputs[4].value = (180 / Math.PI * coes.raan).toFixed(3)
+        inputs[5].value = (180 / Math.PI * coes.arg).toFixed(3)
+        inputs[6].value = (180 / Math.PI * coes.tA).toFixed(3)
     }
     
 }
 
+function testIfTle(inText) {
+    function True2Eccentric(e, ta) {
+        return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+    }
+    function Eccentric2True(e,E) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
+    }
+    
+    function solveKeplersEquation(M,e) {
+        let E = M;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+            E -= del;
+        }
+        return E;
+    }
+    let test = inText.search(/^1 {1,4}\d{1,5}/) !== -1 && inText.search(/ 2 {1,4}\d{1,5}/) !== -1
+    if (!test) return false
+    let slStart = inText.search(/ 2 {1,4}\d{1,5}/)
+    let fl = inText.slice(0, slStart).split(/ {1,}/)
+    let sl = inText.slice(slStart).split(/ {1,}/).filter(s => s.length > 0)
+    console.log(fl, sl);
+    let epoch = fl[3].split('.')
+    epoch = new Date('20'+epoch[0].slice(0,2), 0,epoch[0].slice(2),0,0,Number('.'+epoch[1])*86400)
+    let coe = {
+        i: Number(sl[2])*Math.PI / 180,
+        raan: Number(sl[3])*Math.PI / 180,
+        e: Number('0.'+sl[4]),
+        arg: Number(sl[5])*Math.PI / 180,
+        tA: Number(sl[6])*Math.PI / 180,
+        a: Number(sl[7])
+    }
+    let mu = 398600.4418
+    coe.a = ((((86400 / coe.a) / 2 / Math.PI)**2)*mu)**(1/3)
+    coe.tA = solveKeplersEquation(coe.tA, coe.e)
+    coe.tA = Eccentric2True(coe.e, coe.tA)
+    return {
+        epoch,
+        coe
+    }
+}
+ 
 function importState(el) {
     let inputValue = el.value
+    let tleTest = testIfTle(inputValue)
     el.value = ''
+    if (tleTest !== false) return newStateToInputs(tleTest.coe, tleTest.epoch)
     inputValue = inputValue.split(/ {2,}/);
     let date = new Date(inputValue.shift())
     setTimeout(() => {
-        el.placeholder = 'J2000 State'
+        el.placeholder = 'J2000 or TLE State'
     }, 2000)
     if (date == 'Invalid Date' || inputValue.length < 6) {
         el.placeholder = 'State Rejected!'
@@ -467,26 +526,27 @@ function importState(el) {
     }
     el.placeholder = 'State Accepted!'
     inputValue = inputValue.map(s => Number(s))
-    document.getElementById('sat-epoch').value = dateToDateTimeInput(date)
-    a = document.getElementsByTagName('input')
-    a[a.length - 3].value = dateToDateTimeInput(date)
     let newCoe = PosVel2CoeNew(inputValue.slice(0,3), inputValue.slice(3,6))
-    console.log(inputValue.slice(0,3), inputValue.slice(3,6));
-    console.log(newCoe);
+    newStateToInputs(newCoe, date)
+}
+
+function newStateToInputs(newCoe, epoch) {
     let coeInputs = document.getElementsByClassName('coe')
     let vectorInputs = document.getElementsByClassName('vector')
-    coeInputs[0].value = newCoe.a.toFixed(2)
-    coeInputs[1].value = newCoe.e.toFixed(5)
-    coeInputs[2].value = (newCoe.i*180 / Math.PI).toFixed(2)
-    coeInputs[3].value = (newCoe.raan*180 / Math.PI).toFixed(2)
-    coeInputs[4].value = (newCoe.arg*180 / Math.PI).toFixed(2)
-    coeInputs[5].value = (newCoe.tA*180 / Math.PI).toFixed(2)
-    vectorInputs[0].value = inputValue[0].toFixed(3)
-    vectorInputs[1].value = inputValue[1].toFixed(3)
-    vectorInputs[2].value = inputValue[2].toFixed(3)
-    vectorInputs[3].value = inputValue[3].toFixed(5)
-    vectorInputs[4].value = inputValue[4].toFixed(5)
-    vectorInputs[5].value = inputValue[5].toFixed(5)
+    coeInputs[0].value = dateToDateTimeInput(epoch)
+    coeInputs[1].value = newCoe.a.toFixed(2)
+    coeInputs[2].value = newCoe.e.toFixed(5)
+    coeInputs[3].value = (newCoe.i*180 / Math.PI).toFixed(2)
+    coeInputs[4].value = (newCoe.raan*180 / Math.PI).toFixed(2)
+    coeInputs[5].value = (newCoe.arg*180 / Math.PI).toFixed(2)
+    coeInputs[6].value = (newCoe.tA*180 / Math.PI).toFixed(2)
+    let inputValue = Object.values(Coe2PosVelObject(newCoe))
+    vectorInputs[1].value = inputValue[0].toFixed(3)
+    vectorInputs[2].value = inputValue[1].toFixed(3)
+    vectorInputs[3].value = inputValue[2].toFixed(3)
+    vectorInputs[4].value = inputValue[3].toFixed(5)
+    vectorInputs[5].value = inputValue[4].toFixed(5)
+    vectorInputs[6].value = inputValue[5].toFixed(5)
 }
 
 function dateToDateTimeInput(date) {
