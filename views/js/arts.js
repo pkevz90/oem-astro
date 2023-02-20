@@ -22,17 +22,6 @@ let errorList = []
 let ellipses = []
 let monteCarloData = null
 document.getElementById('time-slider-range').max = 48*3600
-/*
-var listDiv = document.createElement('div');
-listDiv.innerHTML = `
-    <datalist id="name-list">
-    <option value="Sat1">
-    <option value="Sat2">
-    <option value="Sat3">
-    </datalist>
-`
-document.getElementsByTagName('body')[0].append(listDiv);
-*/
 
 // If on touch screen, set and add required assets
 if (checkTouchScreen()) {
@@ -214,6 +203,7 @@ class windowCanvas {
         this.originHistory = results.stateHistory
         this.originRot = results.rotHistory
         this.originSun = results.sunHistory
+        this.burnType = newOrigin.a < 15000 ? 'manual' : this.burnType
         if (!updateSats) return
         this.satellites.forEach(sat => sat.calcTraj(true))
     }
@@ -1394,11 +1384,11 @@ function keydownFunction(key) {
                 position: {...mainWindow.originOrbit},
                 shape: 'diamond',
                 color: '#bb00bb',
-                a: 0.00001
+                a: 0.001
             }) : 
             new Satellite({
                 name: 'Sat-' + (mainWindow.satellites.length + 1),
-                a: 0.00001
+                a: 0.001
             })
 
         newSat.calcTraj();
@@ -2840,7 +2830,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime
             });
-            let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
+            let burnType = mainWindow.originOrbit.a < 5000 ? 'manual' : mainWindow.burnType
             pastActions.push({
                 sat: mainWindow.currentTarget.sat,
                 oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns)),
@@ -2899,7 +2889,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             mainWindow.satellites[mainWindow.currentTarget.sat].genBurns();
             return;
         }
-        let burnType = mainWindow.originOrbit.a < 15000 ? 'manual' : mainWindow.burnType
+        let burnType = mainWindow.originOrbit.a < 5000 ? 'manual' : mainWindow.burnType
         mainWindow.burnStatus = {
             type: burnType,
             sat: mainWindow.currentTarget.sat,

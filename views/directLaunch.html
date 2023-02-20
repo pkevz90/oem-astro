@@ -11,8 +11,9 @@
     <script src="./js/directLaunch_v2.js" defer></script>
     <style>
         body {
-            background-color: rgb(90,0,0);
-            color: rgb(200,200,200);
+            background-color: rgb(240,150,150);
+            color: rgb(100,0,0);
+            font-size: 1.25em;
         }
         .state {
             width: 10ch;   
@@ -54,9 +55,9 @@
             <div><span class="state-label">Epoch</span><input class="vector coe" id="sat-epoch" type="datetime-local" value="2022-06-24T14:00:00"></div>
         </div>
         <div style="display: flex; justify-content: center;">
-            <div><span class="state-label"><em>a</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="6800"/></div>
+            <div><span class="state-label"><em>a</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="42164"/></div>
             <div><span class="state-label"><em>e</em></span><input class="state coe" oninput="handleInputs(this)" step="0.01" type="number" value="0"/></div>
-            <div><span class="state-label"><em>i</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="50"/></div>
+            <div><span class="state-label"><em>i</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="0"/></div>
             <div><span class="state-label"><em>&#937</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="0"/></div>
             <div><span class="state-label"><em>&#969</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="0"/></div>
             <div><span class="state-label"><em>&#957</em></span><input class="state coe" oninput="handleInputs(this)" type="number" value="0"/></div>
@@ -69,12 +70,14 @@
             <div><span class="state-label">V<sub>y</sub></span><input oninput="handleInputs(this)" class="state vector" type="number"/></div>
             <div><span class="state-label">V<sub>z</sub></span><input oninput="handleInputs(this)" class="state vector" type="number"/></div>
         </div>
-        <div style="display: flex; justify-content: center;"><div><input style="width: 90ch;" placeholder="J2000 State" type="text" oninput="importState(this)"></div></div>
+        <div style="display: flex; justify-content: center;"><div><input style="width: 90ch;" placeholder="J2000 State or TLE" type="text" oninput="importState(this)"></div></div>
         <div class="info-label">Search Information</div>
         <div style="display: flex; justify-content: space-around;">
-            <div><span class="state-label"><em>Start Time</em></span><input class="search" type="datetime-local" value="2022-06-24T15:25:00">z</div>
-            <div><span class="state-label"><em>Duration</em></span><input class="search" type="number" value="24"/>hrs</div>
-            <div><span class="state-label"><em>Time Step</em></span><input class="search" type="number" value="5"/>min</div>
+            <div><span class="state-label"><em>Start Time</em></span><input class="search" type="datetime-local" value="2022-06-24T14:00:00">z</div>
+            <div><span class="state-label"><em>Duration</em></span><input  style="width: 5ch;" class="search" type="number" value="24"/>hrs</div>
+            <div><span class="state-label"><em>Time Step</em></span><input style="width: 5ch;"  class="search" type="number" value="5"/>min</div>
+            <div title="CATS must be less than this value"><label class="state-label" for="cats-limit"><em>CATS Limit</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="cats-limit"><input style="width: 5ch;" type="Number" value="90"/> deg</div>
+            <div title="If checked omits if Earth blocking sunlight"><label class="state-label" for="earth-block"><em>Earth Block</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="earth-block"></div>
         </div>
         <div><button style="width: 100%; padding: 10px; cursor: pointer;" onclick="loopStartTime()">Calculate</button></div>
         <div class="info-label">Results</div>

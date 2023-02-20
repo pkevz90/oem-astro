@@ -18,5 +18,25 @@ let sites = [
         name: 'Sydney',
         lat: -33.8688,
         long: 151.2093
+    },
+    {
+        name: 'Paris',
+        lat: 48.853,
+        long: 2.351
+    },
+    {
+        name: 'Casablanca',
+        lat: 33.53333,
+        long: 7.583333
+    },
+    {
+        name: 'Baghdad',
+        lat: 33.309,
+        long: 44.359
+    },
+    {
+        name: 'New Delhi',
+        lat: 28.6138,
+        long: 77.209
     }
 ]

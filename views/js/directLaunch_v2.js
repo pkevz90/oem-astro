@@ -14,6 +14,9 @@ function loopStartTime() {
     let searchStep = search[1]*60, searchDuration = search[0]*3600
     state = hpop.propToTime(state, epoch, (searchStart - epoch)/1000, 1e-6)
 
+    let catsLimit = document.querySelector('#cats-limit').checked ? 90 : 180
+    let earthIntercept = document.querySelector('#earth-block').checked
+
     let origState = state.state.slice()
 
     // Site targeting from
@@ -29,6 +32,7 @@ function loopStartTime() {
 
     let time = 0, options = []
     while (time < searchDuration) {
+        console.log(`${time}/${searchDuration}`);
         let siteEci = astro.ecef2eci(site.ecef, state.date)
         let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
         let tof = estTof(siteEci, state.state)
@@ -48,16 +52,20 @@ function loopStartTime() {
                 let startState = [...siteEci,...vOptions]
                 let endState = propToTime(startState, tof)
                 let sunEci = astro.sunEciFromTime(new Date(state.date - (-tof*1000)))
-                let cats = math.acos(math.dot(endState.slice(3), sunEci) / math.norm(endState.slice(3)) / math.norm(sunEci))*180/Math.PI
-                // If above el mask, add html code to options
-                options.push(`
+                let relativeVel = math.subtract(endState.slice(3), targetEndState.slice(3)).map(s => -s)
+                let cats = math.acos(math.dot(relativeVel, sunEci) / math.norm(relativeVel) / math.norm(sunEci))*180/Math.PI
+                let earthBlock = earthIntercept ? lineSphereIntercetionBool(math.subtract(endState.slice(0,3), sunEci), sunEci, [0,0,0], 6371) : false
+                if (cats < catsLimit && !earthBlock) {
+                    // CATS within limit and lighting source not blocked (if boxes checked) add to results div
+                    options.push(`
                     <div style="font-size: 1.5em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" onclick="displayLaunch(this)" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
                         <div>${dateToDateTimeInput(state.date).split('T').join(' ')}z</div>
                         <div>Launch &#916V: ${dV[minIndex].toFixed(3)} km/s</div>
                         <div>TOF: ${(tof/60).toFixed(2)} mins</div>
                         <div>CATS: ${cats.toFixed(1)}<sup>o</sup></div>
                     </div>
-                `)
+                    `)  
+                }
             }
 
         }
@@ -71,8 +79,13 @@ function loopStartTime() {
     document.querySelector('#results-div').innerHTML = options.join('\n')
 }
 
+function lineSphereIntercetionBool(line = [-0.45, 0, 0.45], lineOrigin = [282.75,0,0], sphereOrigin = [0,0,0], sphereRadius=200) {
+    line = math.dotDivide(line, math.norm(line))
+    let check = math.dot(line, math.subtract(lineOrigin, sphereOrigin)) ** 2 - (math.norm(math.subtract(lineOrigin, sphereOrigin)) ** 2 - sphereRadius ** 2)
+    return check > 0
+} 
+
 function displayLaunch(el) {
-    
     let hpop = new Propagator()
     let hpopNoAtm = new Propagator({
         atmDrag: false
@@ -86,6 +99,7 @@ function displayLaunch(el) {
     }
     let launchTime = new Date(el.getAttribute('launch'))
     let startTime = new Date(el.getAttribute('start'))
+    navigator.clipboard.writeText(dateToDateTimeInput(launchTime) + '    ' + launchState.join('   '))
     let tof = Number(el.getAttribute('tof'))
 
     let targetPropTime = (launchTime - startTime) / 1000 + tof
