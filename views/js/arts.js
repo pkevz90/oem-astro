@@ -3754,41 +3754,20 @@ function rmoeToRic(rmoes = {ae: 0, x: 0, y: 0, b: 0, z: 0, m: 0}, time = mainWin
     let origPeriod = 2 * Math.PI / mainWindow.mm;
     let initMm = mainWindow.mm + (rmoes.x * Math.PI  / 180) / origPeriod;
     let originOrbit = {...mainWindow.originOrbit}
-    // originOrbit.raan = 0
-    // originOrbit.arg = 0
-    // originOrbit.i = 0
-    originOrbit.tA = propTrueAnomaly(origPeriod.tA, originOrbit.a, originOrbit.e, time)
-    // originOrbit.tA = 0
-    let oldE = originOrbit.e + 0
     originOrbit.e = 0
-    let findZeroPhaseOutOfPlane = function(rmoesIn) {
-        let delta = 0.1
-        let rmoes1 = {...rmoesIn}
-        let rmoes2 = {...rmoesIn}
-        let m = 0
-        for (let index = 0; index < 10; index++) {
-            rmoes1.m = m
-            rmoes2.m = m + delta
-            let state1 = rmoeToRic(rmoes1, time, false)
-            let state2 = rmoeToRic(rmoes2, time, false)
-            let del = (state2.rHcw[2] - state1.rHcw[2]) / delta
-            // console.log(state1, state2, m, del);
-            m += (0 - state1.rHcw[2]) / del
-        }
-        let state1 = rmoeToRic(rmoes1, time, false)
-        m = state1.drHcw[2] < 0 ? m + 180 : m
-        return m
-    }
-    if (top && rmoes.z > 1e-6) rmoes.m += findZeroPhaseOutOfPlane(rmoes, time)
-    let coeInit = Object.values(Coe2PosVelObject({
+    originOrbit.raan = 0
+    originOrbit.arg = 0
+    originOrbit.i = 0
+    originOrbit.tA = 0
+    let rmoeCoes = {
         a: (398600.4418 / initMm ** 2)**(1/3),
-        e: rmoes.ae / 2 / origSemi + originOrbit.e,
-        i: rmoes.z *Math.PI / 180 + originOrbit.i,
-        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi+ originOrbit.raan,
-        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180 + originOrbit.arg + originOrbit.tA,
+        e: rmoes.ae / 2 / origSemi,
+        i: rmoes.z *Math.PI / 180,
+        raan: rmoes.y *Math.PI / 180 - rmoes.m * Math.PI / 180 + rmoes.ae * Math.sin(rmoes.b * Math.PI / 180) / origSemi,
+        arg: rmoes.m * Math.PI / 180 - rmoes.b * Math.PI / 180,
         tA: rmoes.b * Math.PI / 180
-    }))
-    originOrbit.e = oldE
+    }
+    let coeInit = Object.values(Coe2PosVelObject(rmoeCoes))
     let chief = Coe2PosVelObject(originOrbit)
     return Eci2Ric(Object.values(chief).slice(0,3), Object.values(chief).slice(3,6), coeInit.slice(0,3), coeInit.slice(3,6))
 }
