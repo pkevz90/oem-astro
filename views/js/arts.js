@@ -3000,14 +3000,15 @@ function changeSatelliteInputType(el) {
     switch (el.id) {
         case 'eci-sat-input':
             let date = new Date(mainWindow.startDate)
+            let originJ2000 = Coe2PosVelObject(mainWindow.originOrbit)
             date = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
             satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">`
-            satInputs[1].innerHTML = `X <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[2].innerHTML = `Y <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[3].innerHTML = `Z <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
-            satInputs[4].innerHTML = `dX <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km/s</div>`
-            satInputs[5].innerHTML = `dY <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km/s</div>`
-            satInputs[6].innerHTML = `dZ <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km/s</div>`
+            satInputs[1].innerHTML = `X <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.x.toFixed(2)}"> km</div>`
+            satInputs[2].innerHTML = `Y <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.y.toFixed(2)}"> km</div>`
+            satInputs[3].innerHTML = `Z <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.z.toFixed(2)}"> km</div>`
+            satInputs[4].innerHTML = `dX <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.vx.toFixed(2)}"> km/s</div>`
+            satInputs[5].innerHTML = `dY <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.vy.toFixed(2)}"> km/s</div>`
+            satInputs[6].innerHTML = `dZ <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.vz.toFixed(2)}"> km/s</div>`
             break
         case 'ric-sat-input':
             satInputs[0].innerHTML = ``
@@ -3028,7 +3029,7 @@ function changeSatelliteInputType(el) {
             satInputs[6].innerHTML = `Out-of-Plane <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
             break
     }
-
+    document.querySelectorAll('.sat-input')[1].focus()
 }
 
 function checkJ200StringValid(string) {
@@ -3216,10 +3217,15 @@ function parseState(button) {
 function openPanel(button) {
     document.getElementById('context-menu')?.remove();
     let screenAlert = document.getElementsByClassName('screen-alert');
+    
     if (screenAlert.length > 0) screenAlert[0].remove();
     if (button.id === 'edit-select') return;
     mainWindow.panelOpen = true;
     if (button.id === 'add-satellite' || button.id === 'add-satellite-2') {
+        document.getElementsByName('sat-input-radio')[0].checked = true
+        changeSatelliteInputType({
+            id: 'ric-sat-input'
+        })
         let selectEl = document.getElementById('edit-select');
         selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = '';
         document.getElementById('parse-text').value = "";
