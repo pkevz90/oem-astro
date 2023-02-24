@@ -640,23 +640,27 @@ class windowCanvas {
         }
     }
     showData() {
-        let ctx = this.getContext();
-        let oldWidth = ctx.lineWidth;
-        ctx.lineWidth = 1;
-        ctx.fillStyle = this.colors.foregroundColor
-        this.relativeData.fontSize = this.relativeData.fontSize || 20
-        ctx.textAlign = 'left';
-        if (this.relativeData.dataReqs.length > mainWindow.relDataDivs.length) resetDataDivs()
-        this.relativeData.dataReqs.forEach((req,ii) => {
-            let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0, req.interceptTime);
-            mainWindow.relDataDivs[ii].forEach(span => {
-                let type = span.getAttribute('type')
-                span.innerText = type === 'interceptData' ? relDataIn[span.getAttribute('type')] : relDataIn[span.getAttribute('type')].toFixed(2)
+        try {
+            let ctx = this.getContext();
+            let oldWidth = ctx.lineWidth;
+            ctx.lineWidth = 1;
+            ctx.fillStyle = this.colors.foregroundColor
+            this.relativeData.fontSize = this.relativeData.fontSize || 20
+            ctx.textAlign = 'left';
+            if (this.relativeData.dataReqs.length > mainWindow.relDataDivs.length) resetDataDivs()
+            this.relativeData.dataReqs.forEach((req,ii) => {
+                let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0, req.interceptTime);
+                mainWindow.relDataDivs[ii].forEach(span => {
+                    let type = span.getAttribute('type')
+                    span.innerText = type === 'interceptData' ? relDataIn[span.getAttribute('type')] : relDataIn[span.getAttribute('type')].toFixed(2)
+                })
             })
-        })
-        ctx.textAlign = 'left'
-        ctx.lineWidth = oldWidth;
-        this.relativeData.time = this.relativeData.time > 1 ? 0 : this.relativeData.time + 0.03;
+            ctx.textAlign = 'left'
+            ctx.lineWidth = oldWidth;
+            this.relativeData.time = this.relativeData.time > 1 ? 0 : this.relativeData.time + 0.03;
+        } catch (error) {
+            console.error(error)
+        }
         
     }
     showTime() {
@@ -2826,7 +2830,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             if (!mainWindow.currentTarget) return;
             lastHiddenSatClicked = false
             let defaultTranTime = 2*Math.PI / mainWindow.mm / 12
-            let targetStateEci = Object.values(getCurrentInertial(mainWindow.currentTarget.sat))
+            let targetStateEci = Object.values(getCurrentInertial(mainWindow.currentTarget.sat, mainWindow.scenarioTime+defaultTranTime))
             let satLocation = mainWindow.satellites[mainWindow.currentTarget.sat].currentPosition({
                 time: mainWindow.desired.scenarioTime
             });
@@ -2873,10 +2877,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
                 burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
                 frame: Object.keys(check)[0]
             }
-            if (burnType === 'waypoint' && mainWindow.currentTarget.frame === 'ri' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) {
-                mainWindow.desired.scenarioTime += defaultTranTime;
-                document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
-            };
+            if (burnType === 'waypoint' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) mainWindow.changeTime(mainWindow.desired.scenarioTime + defaultTranTime)
         }, 250)
     }
     else if (mainWindow.currentTarget.type === 'burn') {
@@ -2897,7 +2898,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             frame: mainWindow.currentTarget.frame
         }
         console.log({...mainWindow.burnStatus});
-        if (burnType === 'waypoint' && mainWindow.burnStatus.frame === 'ri') {
+        if (burnType === 'waypoint') {
             if (mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint === false) {
                 let newTranTime = mainWindow.desired.scenarioTime - mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time
                 newTranTime = newTranTime < (2*Math.PI / mainWindow.mm) / 12 ? (2*Math.PI / mainWindow.mm) / 12 : newTranTime
@@ -2906,8 +2907,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
                     target: Object.values(mainWindow.satellites[mainWindow.burnStatus.sat].curPos).slice(0,3)
                 }
             }
-            mainWindow.desired.scenarioTime = mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime;
-            document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime;
+            mainWindow.changeTime(mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime)
         }
     }
     else if (ricCoor.ri || ricCoor.ci) {
@@ -3702,13 +3702,13 @@ function calcBurns() {
     if (!this.mousePosition) return;
     let mousePosition = this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
-    if (mainWindow.burnStatus.type === 'waypoint' && !cross && sat.a > 0.000001) {
+    if (mainWindow.burnStatus.type === 'waypoint' && sat.a > 0.000001) {
         let originAtTime = propToTimeAnalytic(mainWindow.originOrbit, sat.burns[this.burnStatus.burn].time+sat.burns[this.burnStatus.burn].waypoint.tranTime)
         let target= Eci2Ric(originAtTime.slice(0,3), originAtTime.slice(3,6), sat.burns[this.burnStatus.burn].waypoint.target.slice(0,3), [0,0,0])
         target = [
-            mousePosition[this.burnStatus.frame].r,
-            mousePosition[this.burnStatus.frame].i,
-            target.rHcw[2][0]
+            cross ? target.rHcw[0][0] : mousePosition[this.burnStatus.frame].r,
+            cross ? target.rHcw[1][0] : mousePosition[this.burnStatus.frame].i,
+            cross ? mousePosition[this.burnStatus.frame].c : target.rHcw[2][0]
         ]
         target = Ric2Eci(target, [0,0,0], originAtTime.slice(0,3), originAtTime.slice(3,6)).rEcci
         sat.burns[this.burnStatus.burn].waypoint.target = target
