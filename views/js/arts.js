@@ -2902,9 +2902,10 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             if (mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint === false) {
                 let newTranTime = mainWindow.desired.scenarioTime - mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time
                 newTranTime = newTranTime < (2*Math.PI / mainWindow.mm) / 12 ? (2*Math.PI / mainWindow.mm) / 12 : newTranTime
+                let eciPos = getCurrentInertial(mainWindow.burnStatus.sat)
                 mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint = {
                     tranTime: newTranTime,
-                    target: Object.values(mainWindow.satellites[mainWindow.burnStatus.sat].curPos).slice(0,3)
+                    target: Object.values(eciPos).slice(0,3)
                 }
             }
             mainWindow.changeTime(mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime)
@@ -3702,7 +3703,7 @@ function calcBurns() {
     if (!this.mousePosition) return;
     let mousePosition = this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
-    if (mainWindow.burnStatus.type === 'waypoint' && sat.a > 0.000001) {
+    if (mainWindow.burnStatus.type === 'waypoint' && sat.a > 0.000001 && mainWindow.originOrbit, sat.burns[this.burnStatus.burn].waypoint !== false) {
         let originAtTime = propToTimeAnalytic(mainWindow.originOrbit, sat.burns[this.burnStatus.burn].time+sat.burns[this.burnStatus.burn].waypoint.tranTime)
         let target= Eci2Ric(originAtTime.slice(0,3), originAtTime.slice(3,6), sat.burns[this.burnStatus.burn].waypoint.target.slice(0,3), [0,0,0])
         target = [
