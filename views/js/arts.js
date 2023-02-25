@@ -885,7 +885,8 @@ class Satellite {
         ctx.lineWidth = mainWindow.trajSize * 2
         let state = mainWindow.getState();
         let fC = mainWindow.frameCenter;
-        let burns = this.burns.filter(b => b.time < mainWindow.scenarioTime)
+        let filterTime = mainWindow.burnStatus.type !== false ? mainWindow.scenarioLength*3600 : mainWindow.scenarioTime;
+        let burns = this.burns.filter(b => b.time < filterTime)
         mainWindow.drawCurve(burns.map(b => b.location), {color: this.color, size: mainWindow.trajSize * 3});
         ctx.font = 'bold 15px serif';
         ctx.strokeStyle = this.color;
