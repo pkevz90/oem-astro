@@ -1,3 +1,92 @@
+let apogeeRatio = 1
+let ricFrame = 'ri'
+
+function changeFlyoutPercent(el) {
+    let curApogeeRatio = apogeeRatio * 100
+    curApogeeRatio += el.innerText === '+' ? 1 : -1
+    apogeeRatio = curApogeeRatio / 100
+    document.getElementById('flyout-percent').innerText = curApogeeRatio.toFixed(0)
+}
+
+function findApogeeRendezvous(siteEci, targetStart, estimateTof) {
+    
+    // let crossVector = math.cross(siteEci.slice(0,3),targetStart.slice(0,3))
+    // let long = crossVector[2] > 0
+    let tof1 = estimateTof - 100
+    let tof2 = estimateTof
+    let tof3 = estimateTof + 100
+    let target1 = propToTime(targetStart, tof1)
+    let target2 = propToTime(targetStart, tof2)
+    let target3 = propToTime(targetStart, tof3)
+    let solution1 = solveLambertsProblem(siteEci, target1.slice(0,3), tof1, 0, true)
+    let solution2 = solveLambertsProblem(siteEci, target2.slice(0,3), tof2, 0, true)
+    let solution3 = solveLambertsProblem(siteEci, target3.slice(0,3), tof3, 0, true)
+    let dot1 = math.dot(solution1.v2, target1.slice(0,3))
+    let dot2 = math.dot(solution2.v2, target2.slice(0,3))
+    let dot3 = math.dot(solution3.v2, target3.slice(0,3))
+    let dotPoly = lagrangePolyCalc([tof1, tof2, tof3], [dot1, dot2, dot3]);
+    let dDotPoly = derivateOfPolynomial(dotPoly)
+    let ddDotPoly = derivateOfPolynomial(dDotPoly)
+    // tof2 -= answerPolynomial(dotPoly, tof2) / answerPolynomial(dDotPoly, tof2)
+    tof2 -= 2*answerPolynomial(dotPoly, tof2)*answerPolynomial(dDotPoly, tof2) / (2*answerPolynomial(dDotPoly, tof2)**2-answerPolynomial(dotPoly, tof2)*answerPolynomial(ddDotPoly, tof2))
+    
+    // if (tof2 < 0) {
+    //     console.log('saved');
+    //     return estimateTof
+    // }
+    console.log(tof2);
+    return tof2
+}
+
+function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
+    let answerLength = x.length
+    let answer = math.zeros([answerLength])
+    for (let ii = 0; ii < x.length; ii++) {
+        let subAnswer = [], subAnswerDen = 1
+        for (let jj = 0; jj < x.length; jj++) {
+            if (ii === jj) continue
+            subAnswer.push([1, -x[jj]])
+            subAnswerDen *= x[ii] - x[jj]
+        }
+        subAnswer = subAnswer.slice(1).reduce((a,b) => {
+            return multiplyPolynomial(a,b)
+        }, subAnswer[0])
+        answer = math.add(answer, math.dotMultiply(y[ii] / subAnswerDen, subAnswer))
+    }
+    return answer
+}
+function multiplyPolynomial(a = [1,3,1], b = [0,2,1]) {
+    let aL = a.length, bL = b.length
+    let minLength = aL < bL ? bL : aL
+    while (a.length < minLength) a.unshift(0)
+    while (b.length < minLength) b.unshift(0)
+    let answerLength = (minLength - 1) * 2 + 1
+    let answer = math.zeros([answerLength])
+    for (let index = 0; index < minLength; index++) {
+        let subAnswer = math.zeros([answerLength])
+        let indexAnswer = math.dotMultiply(a[index], b)
+        subAnswer.splice(index, minLength, ...indexAnswer)
+        answer = math.add(answer, subAnswer)
+    }
+    while (answer[0] === 0) answer.shift()
+    return answer
+}
+
+function answerPolynomial(poly = [1,-1,2], x = 4) {
+    let p = poly.slice()
+    return p.reverse().reduce((a,b,ii) => {
+        return a + b * x ** ii
+    },0)
+}
+
+function derivateOfPolynomial(poly = [3,2,1]) {
+    let ddp = poly.slice()
+    ddp.pop()
+    ddp = ddp.map((p, ii) => {
+        return p * (ddp.length - ii)
+    })
+    return ddp
+}
 function loopStartTime() {
     let hpop = new Propagator()
     let hpopNoAtm = new Propagator({
@@ -35,7 +124,9 @@ function loopStartTime() {
         console.log(`${time}/${searchDuration}`);
         let siteEci = astro.ecef2eci(site.ecef, state.date)
         let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
-        let tof = estTof(siteEci, state.state)
+        let tof = estTof(siteEci, state.state)*apogeeRatio
+        // tof = findApogeeRendezvous(siteEci, state.state, tof)*apogeeRatio
+        // console.log(tof);
         let targetEndState = hpop.propToTime(state.state, state.date, tof, {
             maxError: 1e-4
         }).state
@@ -46,6 +137,7 @@ function loopStartTime() {
             let dV = vOptions.map(s => math.norm(math.subtract(s, siteVel)))
             let minIndex = dV.findIndex(s => s === math.min(dV))
             vOptions = vOptions[minIndex]
+            // console.log(vOptions);
             let elevationAngle = 90-math.acos(math.dot(siteEci, vOptions) / math.norm(siteEci) / math.norm(vOptions))*180/Math.PI
             if (elevationAngle > site.elMask) {
                 // Calculate sun angle at rendezvous
@@ -58,11 +150,12 @@ function loopStartTime() {
                 if (cats < catsLimit && !earthBlock) {
                     // CATS within limit and lighting source not blocked (if boxes checked) add to results div
                     options.push(`
-                    <div style="font-size: 1.5em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" onclick="displayLaunch(this)" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
+                    <div style="font-size: 1.5em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
                         <div>${dateToDateTimeInput(state.date).split('T').join(' ')}z</div>
                         <div>Launch &#916V: ${dV[minIndex].toFixed(3)} km/s</div>
                         <div>TOF: ${(tof/60).toFixed(2)} mins</div>
                         <div>CATS: ${cats.toFixed(1)}<sup>o</sup></div>
+                        <div><button onclick="displayLaunch(this)">Ground Track</button><button onclick="displayRic(this)">RIC</button></div>
                     </div>
                     `)  
                 }
@@ -86,6 +179,7 @@ function lineSphereIntercetionBool(line = [-0.45, 0, 0.45], lineOrigin = [282.75
 } 
 
 function displayLaunch(el) {
+    el = el.parentElement.parentElement
     let hpop = new Propagator()
     let hpopNoAtm = new Propagator({
         atmDrag: false
@@ -103,7 +197,6 @@ function displayLaunch(el) {
     let tof = Number(el.getAttribute('tof'))
 
     let targetPropTime = (launchTime - startTime) / 1000 + tof
-
     let targetHistory = hpop.propToTimeHistory(targetState, startTime, targetPropTime, 1e-5) 
     targetHistory = targetHistory.map(s => {
         let coor = astro.eci2latlong(s.state.slice(0,3), s.date)
@@ -130,6 +223,8 @@ function displayLaunch(el) {
     cnvs.style.top = '15%'
     cnvs.width = 800
     cnvs.height = 450
+    cnvs.style.border = '3px solid black'
+    cnvs.style.boxShadow = 'gray 7px 6px 9px'
     cnvs.onclick = el => el.target.remove()
     document.getElementsByTagName('body')[0].append(cnvs)
     let ctx = cnvs.getContext('2d')
@@ -164,22 +259,184 @@ function displayLaunch(el) {
     }
 }
 
+function displayRic(el) {
+    // Search parent elements for launch information
+    while (el.getAttribute('launch') === null) {
+        el = el.parentElement
+        if (el === null) return
+    }
+    let hpop = new Propagator()
+    let hpopNoAtm = new Propagator({
+        atmDrag: false,
+        order: 0,
+        solarRad: false,
+        thirdBody: false
+    })
+    console.log(el.getAttribute('launchstate'));
+    let launchState = el.getAttribute('launchstate').split('x').map(s => Number(s))
+    let targetState = el.getAttribute('target').split('x').map(s => Number(s))
+    let launchTime = new Date(el.getAttribute('launch'))
+    let startTime = new Date(el.getAttribute('start'))
+    let tof = Number(el.getAttribute('tof'))
+
+    targetState = hpop.propToTime(targetState, startTime, (launchTime - startTime) / 1000, {
+        maxError: 1e-5
+    }).state
+
+    let trajHistory = [[targetState.slice(), launchState.slice(), astro.sunEciFromTime(launchTime)]]
+    let timeStep = tof / 80, time = 0
+    while ((time + timeStep) < tof) {
+        targetState = hpop.propToTime(targetState, new Date(launchTime - (-time*1000)), timeStep, {
+            maxError: 1e-5
+        }).state
+        launchState = hpopNoAtm.propToTime(launchState, new Date(launchTime - (-time*1000)), timeStep, {
+            maxError: 1e-5
+        }).state
+        trajHistory.push([targetState, launchState, astro.sunEciFromTime(new Date(launchTime - (-time*1000) - (-timeStep*1000)))])
+        time += timeStep
+    }
+    let remainingTime = tof - time
+    targetState = hpop.propToTime(targetState, new Date(launchTime - (-time*1000)), remainingTime, {
+        maxError: 1e-5
+    }).state
+    launchState = hpopNoAtm.propToTime(launchState, new Date(launchTime - (-time*1000)), remainingTime, {
+        maxError: 1e-5
+    }).state
+    trajHistory.push([targetState,launchState, astro.sunEciFromTime(new Date(launchTime - (-time*1000) - (-remainingTime*1000)))])
+    trajHistory = trajHistory.map(s => [astro.Eci2Ric(s[0], s[1]), astro.Eci2Ric(s[0], [...s[2],0,0,0]).slice(0,3)])
+    // Remove any canvas that already exists
+    let existingCanvas = [...document.querySelectorAll('canvas')]
+    existingCanvas.forEach(c => c.remove())
+
+    let cnvs = document.createElement('canvas')
+    cnvs.style.position = 'fixed'
+    cnvs.style.width = '60%'
+    cnvs.style.height = '70%'
+    cnvs.style.left = '20%'
+    cnvs.style.top = '15%'
+    cnvs.style.border = '3px solid black'
+    cnvs.style.boxShadow = 'gray 7px 6px 9px'
+    cnvs.width = 0.6*window.innerWidth
+    cnvs.height = 0.7*window.innerHeight
+    cnvs.onclick = el => {
+        console.log(el);
+        el.target.remove()
+        document.querySelector('.ric-button').remove()
+    }
+    cnvs.classList.add('ric-canvas')    
+    // Remove any ric-buttons that already exists
+    let existingRicButtons = [...document.querySelectorAll('.ric-button')]
+    existingRicButtons.forEach(c => c.remove())
+    let button = document.createElement('button')
+    button.style.position = 'fixed'
+    button.style.bottom = '5%'
+    button.style.width = '30%'
+    button.style.left = '35%'
+    button.style.fontSize = '5vh'
+    button.addEventListener('click', switchRicFrame)
+    button.setAttribute('launchState', el.getAttribute('launchstate'))
+    button.setAttribute('target', el.getAttribute('target'))
+    button.setAttribute('launch',el.getAttribute('launch'))
+    button.setAttribute('start',el.getAttribute('start'))
+    button.setAttribute('tof',el.getAttribute('tof'))
+    button.innerText = ricFrame.toUpperCase(this)
+    button.title = 'Click to switch from RI to CI frame'
+    button.classList.add('ric-button')
+    document.body.append(button)
+    document.getElementsByTagName('body')[0].append(cnvs)
+    drawRicCnvs(trajHistory.slice(trajHistory.length-40), ricFrame)
+}
+
+function switchRicFrame(el) {
+    ricFrame = ricFrame === 'ri' ? 'ci' : 'ri'
+    displayRic(el.target)
+}
+
+function drawRicCnvs(traj, plot='ri') {
+    let convertToPixels = function(input = [0, 0, 0, 0, 0, 0], plotWidth = 8000, ratio=0.5, inCnvs) {
+        let plotHeight = plotWidth*ratio
+        if (Array.isArray(input)) {
+            input = math.squeeze(input);
+            input = {
+                r:  input[0],
+                i:  input[1],
+                c:  input[2]
+            };
+        }
+        return{
+            ri: {
+                x: -(input.i) * inCnvs.width  / plotWidth+cnvs.width/2,
+                y: cnvs.height/2- input.r * inCnvs.height / plotHeight
+            },
+            ci: {
+                x: -(input.i) * inCnvs.width / plotWidth+cnvs.width/2,
+                y: cnvs.height/2- input.c * inCnvs.height/ plotHeight
+            }
+        }
+    }
+    let sunVectors = traj.map(s => math.dotDivide(s[1], math.norm(s[1])))
+    traj = traj.map(s => s[0])
+    let maxIt = math.max(traj.map(s => Math.abs(s[1])))
+    sunVectors = sunVectors.map(s => math.dotMultiply(s, maxIt*0.2))
+    let cnvs = document.querySelector('.ric-canvas')
+    if (cnvs === null) return
+    let ratio = cnvs.height / cnvs.width
+    let width = cnvs.width
+    let ctx = cnvs.getContext('2d')
+    ctx.fillStyle = 'rgb(200,150,150)'
+    ctx.strokeStyle = 'black'
+    ctx.fillRect(0,0,cnvs.width, cnvs.height)
+    ctx.lineWidth = 5
+    ctx.beginPath()
+    ctx.moveTo(cnvs.width/2,cnvs.height/2)
+    ctx.lineTo(cnvs.width/2,cnvs.height/4)
+    ctx.moveTo(cnvs.width/2,cnvs.height/2)
+    ctx.lineTo(cnvs.width/2 - cnvs.height / 4,cnvs.height/2)
+    ctx.stroke()
+    // drawSun
+    sunVectors = sunVectors.map(s => convertToPixels(s, maxIt*2, ratio, cnvs)[plot])
+    ctx.fillStyle = 'orange'
+    ctx.strokeStyle = 'orange'
+    ctx.beginPath()
+    ctx.moveTo(cnvs.width/2, cnvs.height/2)
+    sunVectors.forEach(s => {
+        ctx.lineTo(s.x, s.y)
+    })
+    ctx.lineTo(cnvs.width/2, cnvs.height/2)
+    ctx.fill()
+    ctx.stroke()
+
+    traj = traj.map(s => convertToPixels(s, maxIt*2, ratio, cnvs)[plot])
+    ctx.fillStyle = 'blue'
+    ctx.beginPath()
+    ctx.arc(cnvs.width/2,cnvs.height/2,8,0,2*Math.PI)
+    ctx.fill()
+    ctx.fillStyle = 'red'
+    traj.forEach(t => {
+        ctx.beginPath()
+        ctx.arc(t.x,t.y,4,0,2*Math.PI)
+        ctx.fill()
+    })
+}
+
 function estTof(siteECI, satECI) {
     function True2Eccentric(e, ta) {
         return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
     }
     let range = math.norm(math.subtract(siteECI, satECI.slice(0,3)))
-    siteECI = math.norm(siteECI.slice(0,3))
-    satECI = math.norm(satECI.slice(0,3))
-    let per = (siteECI+range) * 0.0147
-    let estA = (satECI + per) / 2
-    let estE = (satECI - per) / (satECI + per)
+    siteECIn = math.norm(siteECI.slice(0,3))
+    satECIn = math.norm(satECI.slice(0,3))
+    // let ang = math.dot(siteECI, satECI.slice(0,3)) / siteECIn / satECIn
+    let per = (siteECIn+range) * 0.01
+    let estA = (satECIn + per) / 2 
+    let estE = (range+satECIn - per) / (range+satECIn + per)
     let n = (398600.4418 / estA ** 3) ** 0.5
     let p = estA * (1 - estE ** 2)
-    let nu = math.acos((p / siteECI - 1) / estE)
+    let nu = math.acos((p / siteECIn - 1) / estE)
     let eccA = True2Eccentric(estE, nu)
     let meanA = eccA - estE * Math.sin(eccA)
     let tof = (Math.PI - meanA) / n
+    // console.log({estE, estA, n,p,nu,eccA, meanA, tof});
     return tof
 }
 
@@ -548,6 +805,7 @@ function newStateToInputs(newCoe, epoch) {
     let coeInputs = document.getElementsByClassName('coe')
     let vectorInputs = document.getElementsByClassName('vector')
     coeInputs[0].value = dateToDateTimeInput(epoch)
+    document.querySelector('#search-start-time').value = dateToDateTimeInput(epoch)
     coeInputs[1].value = newCoe.a.toFixed(2)
     coeInputs[2].value = newCoe.e.toFixed(5)
     coeInputs[3].value = (newCoe.i*180 / Math.PI).toFixed(2)

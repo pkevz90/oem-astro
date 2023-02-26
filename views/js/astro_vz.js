@@ -283,6 +283,25 @@ class astro {
             ...math.squeeze(math.add(math.multiply(Cd, math.transpose([math.subtract(rD, rC)])), math.multiply(C, math.transpose([math.subtract(drD, drC)]))))
         ]
     }
+    static Eci2Ric(chief, deputy) {
+        let rC = chief.slice(0,3), drC = chief.slice(3,6)
+        let rD = deputy.slice(0,3), drD = deputy.slice(3,6)
+        let h = math.cross(rC, drC);
+        let ricX = math.dotDivide(rC, math.norm(rC));
+        let ricZ = math.dotDivide(h, math.norm(h));
+        let ricY = math.cross(ricZ, ricX);
+    
+        let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+        let ricYd = math.cross(ricZ, ricXd);
+        let ricZd = [0,0,0];
+    
+        let C = [ricX, ricY, ricZ];
+        let Cd = [ricXd, ricYd, ricZd];
+        return math.squeeze([
+            ...math.multiply(C, math.transpose([math.subtract(rD, rC)])),
+            ...math.add(math.multiply(Cd, math.transpose([math.subtract(rD, rC)])), math.multiply(C, math.transpose([math.subtract(drD, drC)])))
+        ])
+    }
 }
 
 class Propagator {
