@@ -78,10 +78,10 @@
             <div><span class="state-label"><em>Time Step</em></span><input style="width: 5ch;"  class="search" type="number" value="5"/>min</div>
         </div>
         <div style="display: flex; justify-content: space-around;">
-            <div title="CATS must be less than this value"><label class="state-label" for="cats-limit"><em>CATS Limit</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="cats-limit"><input style="width: 5ch;" type="Number" value="90"/> deg</div>
-            <div title="If checked omits if Earth blocking sunlight"><label class="state-label" for="earth-block"><em>Earth Block</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="earth-block"></div>
+            <div title="CATS must be less than this value"><label class="state-label" for="cats-limit"><em>Sun Angle Limit</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="cats-limit"><input style="width: 5ch;" type="Number" value="90"/> deg</div>
+            <div title="If checked omits if Earth blocking sunlight"><label class="state-label" for="earth-block"><em>Target in Sunlight</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="earth-block"></div>
             <div title="Percent of nominal tof to apogee fly-out will take"><label class="state-label" for="earth-block">
-                <button onclick="changeFlyoutPercent(this)">-</button><span id="flyout-percent">100</span>%<button onclick="changeFlyoutPercent(this)">+</button>
+                Apogee Adjustment <button onclick="changeFlyoutPercent(this)">-</button><span id="flyout-percent">100</span>%<button onclick="changeFlyoutPercent(this)">+</button>
             </div>
         </div>
         <div><button style="width: 100%; padding: 10px; cursor: pointer;" onclick="loopStartTime()">Calculate</button></div>

@@ -9,33 +9,36 @@ function changeFlyoutPercent(el) {
 }
 
 function findApogeeRendezvous(siteEci, targetStart, estimateTof) {
+    try {
+        // let crossVector = math.cross(siteEci.slice(0,3),targetStart.slice(0,3))
+        // let long = crossVector[2] > 0
+        let tof1 = estimateTof - 100
+        let tof2 = estimateTof
+        let tof3 = estimateTof + 100
+        let target1 = propToTime(targetStart, tof1)
+        let target2 = propToTime(targetStart, tof2)
+        let target3 = propToTime(targetStart, tof3)
+        let solution1 = solveLambertsProblem(siteEci, target1.slice(0,3), tof1, 0, true)
+        let el = 90-math.acos(math.dot(siteEci, solution1.v1) / math.norm(siteEci) / math.norm(solution1.v1))*180/Math.PI
+        if (el < 0) {
+            return false
+        }
+        let solution2 = solveLambertsProblem(siteEci, target2.slice(0,3), tof2, 0, true)
+        let solution3 = solveLambertsProblem(siteEci, target3.slice(0,3), tof3, 0, true)
     
-    // let crossVector = math.cross(siteEci.slice(0,3),targetStart.slice(0,3))
-    // let long = crossVector[2] > 0
-    let tof1 = estimateTof - 100
-    let tof2 = estimateTof
-    let tof3 = estimateTof + 100
-    let target1 = propToTime(targetStart, tof1)
-    let target2 = propToTime(targetStart, tof2)
-    let target3 = propToTime(targetStart, tof3)
-    let solution1 = solveLambertsProblem(siteEci, target1.slice(0,3), tof1, 0, true)
-    let solution2 = solveLambertsProblem(siteEci, target2.slice(0,3), tof2, 0, true)
-    let solution3 = solveLambertsProblem(siteEci, target3.slice(0,3), tof3, 0, true)
-    let dot1 = math.dot(solution1.v2, target1.slice(0,3))
-    let dot2 = math.dot(solution2.v2, target2.slice(0,3))
-    let dot3 = math.dot(solution3.v2, target3.slice(0,3))
-    let dotPoly = lagrangePolyCalc([tof1, tof2, tof3], [dot1, dot2, dot3]);
-    let dDotPoly = derivateOfPolynomial(dotPoly)
-    let ddDotPoly = derivateOfPolynomial(dDotPoly)
-    // tof2 -= answerPolynomial(dotPoly, tof2) / answerPolynomial(dDotPoly, tof2)
-    tof2 -= 2*answerPolynomial(dotPoly, tof2)*answerPolynomial(dDotPoly, tof2) / (2*answerPolynomial(dDotPoly, tof2)**2-answerPolynomial(dotPoly, tof2)*answerPolynomial(ddDotPoly, tof2))
-    
-    // if (tof2 < 0) {
-    //     console.log('saved');
-    //     return estimateTof
-    // }
-    console.log(tof2);
-    return tof2
+        let dot1 = math.dot(solution1.v2, target1.slice(0,3))
+        let dot2 = math.dot(solution2.v2, target2.slice(0,3))
+        let dot3 = math.dot(solution3.v2, target3.slice(0,3))
+        let dotPoly = lagrangePolyCalc([tof1, tof2, tof3], [dot1, dot2, dot3]);
+        let dDotPoly = derivateOfPolynomial(dotPoly)
+        let ddDotPoly = derivateOfPolynomial(dDotPoly)
+        // tof2 -= answerPolynomial(dotPoly, tof2) / answerPolynomial(dDotPoly, tof2)
+        tof2 -= 2*answerPolynomial(dotPoly, tof2)*answerPolynomial(dDotPoly, tof2) / (2*answerPolynomial(dDotPoly, tof2)**2-answerPolynomial(dotPoly, tof2)*answerPolynomial(ddDotPoly, tof2))
+        return tof2
+    } catch (error) {
+        console.error('Error on finding solution, serving estimated TOF')
+        return estimateTof
+    }
 }
 
 function lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
@@ -124,8 +127,16 @@ function loopStartTime() {
         console.log(`${time}/${searchDuration}`);
         let siteEci = astro.ecef2eci(site.ecef, state.date)
         let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
-        let tof = estTof(siteEci, state.state)*apogeeRatio
-        // tof = findApogeeRendezvous(siteEci, state.state, tof)*apogeeRatio
+        let tof = estTof(siteEci, state.state)
+        tof = findApogeeRendezvous(siteEci, state.state, tof)
+        if (tof === false) {
+            state = hpop.propToTime(state.state, state.date, searchStep, {
+                maxError: 1e-4
+            })
+            time += searchStep
+            continue
+        }
+        tof *= apogeeRatio
         // console.log(tof);
         let targetEndState = hpop.propToTime(state.state, state.date, tof, {
             maxError: 1e-4
@@ -146,23 +157,27 @@ function loopStartTime() {
                 let sunEci = astro.sunEciFromTime(new Date(state.date - (-tof*1000)))
                 let relativeVel = math.subtract(endState.slice(3), targetEndState.slice(3)).map(s => -s)
                 let cats = math.acos(math.dot(relativeVel, sunEci) / math.norm(relativeVel) / math.norm(sunEci))*180/Math.PI
-                let earthBlock = earthIntercept ? lineSphereIntercetionBool(math.subtract(endState.slice(0,3), sunEci), sunEci, [0,0,0], 6371) : false
-                if (cats < catsLimit && !earthBlock) {
+                let illuminated = earthIntercept ? isSatIlluminated(endState, sunEci) : true
+                if (cats < catsLimit && illuminated) {
                     // CATS within limit and lighting source not blocked (if boxes checked) add to results div
                     options.push(`
-                    <div style="font-size: 1.5em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
+                    <div style="font-size: 1.25em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
                         <div>${dateToDateTimeInput(state.date).split('T').join(' ')}z</div>
                         <div>Launch &#916V: ${dV[minIndex].toFixed(3)} km/s</div>
                         <div>TOF: ${(tof/60).toFixed(2)} mins</div>
                         <div>CATS: ${cats.toFixed(1)}<sup>o</sup></div>
-                        <div><button onclick="displayLaunch(this)">Ground Track</button><button onclick="displayRic(this)">RIC</button></div>
+                        <div>
+                            <button onclick="displayLaunch(this)">Ground Track</button>
+                            <button onclick="displayRic(this)">RIC</button>
+                            </div>
                     </div>
                     `)  
                 }
             }
 
         }
-
+//<button onclick="copyStkSequence(this)">STK</button>
+                        
 
         state = hpop.propToTime(state.state, state.date, searchStep, {
             maxError: 1e-4
@@ -170,6 +185,16 @@ function loopStartTime() {
         time += searchStep
     }
     document.querySelector('#results-div').innerHTML = options.join('\n')
+}
+
+function copyStkSequence(el) {
+    // Function to copy to clipboard a string for the STK sequence which builds trajectory out in STK
+}
+
+function isSatIlluminated(satPos = [6900, 0, 0], sunPos = [6900000, 0,0]) {
+    let satSunAngle = math.acos(math.dot(satPos.slice(0,3), sunPos)/math.norm(satPos.slice(0,3))/math.norm(sunPos))
+    if (satSunAngle < Math.PI / 2) return true
+    return !lineSphereIntercetionBool(math.subtract(satPos.slice(0,3),sunPos), sunPos, [0,0,0], 6371)
 }
 
 function lineSphereIntercetionBool(line = [-0.45, 0, 0.45], lineOrigin = [282.75,0,0], sphereOrigin = [0,0,0], sphereRadius=200) {
@@ -374,6 +399,7 @@ function drawRicCnvs(traj, plot='ri') {
             }
         }
     }
+    let finalRelVel = math.norm(traj[traj.length-1][0].slice(3,6))
     let sunVectors = traj.map(s => math.dotDivide(s[1], math.norm(s[1])))
     traj = traj.map(s => s[0])
     let maxIt = math.max(traj.map(s => Math.abs(s[1])))
@@ -381,18 +407,28 @@ function drawRicCnvs(traj, plot='ri') {
     let cnvs = document.querySelector('.ric-canvas')
     if (cnvs === null) return
     let ratio = cnvs.height / cnvs.width
-    let width = cnvs.width
     let ctx = cnvs.getContext('2d')
     ctx.fillStyle = 'rgb(200,150,150)'
     ctx.strokeStyle = 'black'
     ctx.fillRect(0,0,cnvs.width, cnvs.height)
     ctx.lineWidth = 5
+    ctx.textBaseline = 'bottom'
+    ctx.fillStyle = 'black'
+    ctx.font = '20px sans-serif'
     ctx.beginPath()
     ctx.moveTo(cnvs.width/2,cnvs.height/2)
     ctx.lineTo(cnvs.width/2,cnvs.height/4)
     ctx.moveTo(cnvs.width/2,cnvs.height/2)
     ctx.lineTo(cnvs.width/2 - cnvs.height / 4,cnvs.height/2)
     ctx.stroke()
+    ctx.textAlign = 'right'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('I', cnvs.width/2-cnvs.height/4-5, cnvs.height/2)
+    ctx.textBaseline = 'bottom'
+    ctx.textAlign = 'center'
+    ctx.fillText(plot === 'ri' ? 'R' : 'C', cnvs.width/2, cnvs.height/4-5)
+    // Display rel vel
+    ctx.fillText(`Final Rel Vel: ${finalRelVel.toFixed(2)} km/s`, cnvs.width/2, cnvs.height-5)
     // drawSun
     sunVectors = sunVectors.map(s => convertToPixels(s, maxIt*2, ratio, cnvs)[plot])
     ctx.fillStyle = 'orange'
