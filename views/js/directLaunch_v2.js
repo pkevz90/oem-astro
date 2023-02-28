@@ -34,9 +34,11 @@ function findApogeeRendezvous(siteEci, targetStart, estimateTof) {
         let ddDotPoly = derivateOfPolynomial(dDotPoly)
         // tof2 -= answerPolynomial(dotPoly, tof2) / answerPolynomial(dDotPoly, tof2)
         tof2 -= 2*answerPolynomial(dotPoly, tof2)*answerPolynomial(dDotPoly, tof2) / (2*answerPolynomial(dDotPoly, tof2)**2-answerPolynomial(dotPoly, tof2)*answerPolynomial(ddDotPoly, tof2))
+        console.log(estimateTof, tof2, dot2, answerPolynomial(dotPoly, tof2));
+        if (dot2 < answerPolynomial(dotPoly, tof2)) throw Error('Apogee not found exact')
         return tof2
     } catch (error) {
-        console.error('Error on finding solution, serving estimated TOF')
+        console.error(error);
         return estimateTof
     }
 }
@@ -90,8 +92,9 @@ function derivateOfPolynomial(poly = [3,2,1]) {
     })
     return ddp
 }
+let hpop = new Propagator()
 function loopStartTime() {
-    let hpop = new Propagator()
+    console.clear()
     let hpopNoAtm = new Propagator({
         atmDrag: false
     })
@@ -105,7 +108,7 @@ function loopStartTime() {
     search = search.map(s => Number(s))
     let searchStep = search[1]*60, searchDuration = search[0]*3600
     state = hpop.propToTime(state, epoch, (searchStart - epoch)/1000, 1e-6)
-
+    // return
     let catsLimit = document.querySelector('#cats-limit').checked ? 90 : 180
     let earthIntercept = document.querySelector('#earth-block').checked
 
@@ -122,69 +125,88 @@ function loopStartTime() {
     site.ecef = astro.sensorGeodeticPosition(site.lat*180/Math.PI, site.long*180/Math.PI, site.alt)
     
 
-    let time = 0, options = []
-    while (time < searchDuration) {
-        console.log(`${time}/${searchDuration}`);
-        let siteEci = astro.ecef2eci(site.ecef, state.date)
-        let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
-        let tof = estTof(siteEci, state.state)
-        tof = findApogeeRendezvous(siteEci, state.state, tof)
-        if (tof === false) {
-            state = hpop.propToTime(state.state, state.date, searchStep, {
-                maxError: 1e-4
-            })
-            time += searchStep
-            continue
-        }
-        tof *= apogeeRatio
-        // console.log(tof);
-        let targetEndState = hpop.propToTime(state.state, state.date, tof, {
-            maxError: 1e-4
-        }).state
-        let vOptions = [solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, false).v1,solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, true).v1].filter(s => s !== undefined).filter(s => {
-            return s.filter(a => isNaN(a)).length === 0
-        })
-        if (vOptions.length > 0) {
-            let dV = vOptions.map(s => math.norm(math.subtract(s, siteVel)))
-            let minIndex = dV.findIndex(s => s === math.min(dV))
-            vOptions = vOptions[minIndex]
-            // console.log(vOptions);
-            let elevationAngle = 90-math.acos(math.dot(siteEci, vOptions) / math.norm(siteEci) / math.norm(vOptions))*180/Math.PI
-            if (elevationAngle > site.elMask) {
-                // Calculate sun angle at rendezvous
-                let startState = [...siteEci,...vOptions]
-                let endState = propToTime(startState, tof)
-                let sunEci = astro.sunEciFromTime(new Date(state.date - (-tof*1000)))
-                let relativeVel = math.subtract(endState.slice(3), targetEndState.slice(3)).map(s => -s)
-                let cats = math.acos(math.dot(relativeVel, sunEci) / math.norm(relativeVel) / math.norm(sunEci))*180/Math.PI
-                let illuminated = earthIntercept ? isSatIlluminated(endState, sunEci) : true
-                if (cats < catsLimit && illuminated) {
-                    // CATS within limit and lighting source not blocked (if boxes checked) add to results div
-                    options.push(`
-                    <div style="font-size: 1.25em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
-                        <div>${dateToDateTimeInput(state.date).split('T').join(' ')}z</div>
-                        <div>Launch &#916V: ${dV[minIndex].toFixed(3)} km/s</div>
-                        <div>TOF: ${(tof/60).toFixed(2)} mins</div>
-                        <div>CATS: ${cats.toFixed(1)}<sup>o</sup></div>
-                        <div>
-                            <button onclick="displayLaunch(this)">Ground Track</button>
-                            <button onclick="displayRic(this)">RIC</button>
-                            </div>
-                    </div>
-                    `)  
-                }
-            }
+    runRendezvousOptions(0, searchDuration, site, state, [], {
+        searchStep, catsLimit, earthIntercept, origState, searchStart
+    })
+    
+}
 
-        }
-//<button onclick="copyStkSequence(this)">STK</button>
-                        
-
+function runRendezvousOptions(time, searchDuration, site, state, output = [], options = {}) {
+    let {searchStep, catsLimit, earthIntercept, origState, searchStart} = options
+    // console.log(`${time}/${searchDuration}`);
+    let siteEci = astro.ecef2eci(site.ecef, state.date)
+    let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
+    let tof = estTof(siteEci, state.state)
+    tof = findApogeeRendezvous(siteEci, state.state, tof)
+    if (tof === false) {
         state = hpop.propToTime(state.state, state.date, searchStep, {
             maxError: 1e-4
         })
         time += searchStep
+        document.querySelector('#calc-button').innerText = `Calculating...${(time/searchDuration*100).toFixed()}%`
+        if (time < searchDuration) setTimeout(runRendezvousOptions,0.1,time, searchDuration, site, state, output, options)
+        else {
+            console.log('finished');
+            document.querySelector('#calc-button').innerText = `Calculate`
+        
+            document.querySelector('#results-div').innerHTML = output.join('\n')
+        }
+        return
     }
-    document.querySelector('#results-div').innerHTML = options.join('\n')
+    tof *= apogeeRatio
+    // console.log(tof);
+    let targetEndState = hpop.propToTime(state.state, state.date, tof, {
+        maxError: 1e-4
+    }).state
+    let vOptions = [solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, false).v1,solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, true).v1].filter(s => s !== undefined).filter(s => {
+        return s.filter(a => isNaN(a)).length === 0
+    })
+    if (vOptions.length > 0) {
+        console.log(state.date);
+        let dV = vOptions.map(s => math.norm(math.subtract(s, siteVel)))
+        let minIndex = dV.findIndex(s => s === math.min(dV))
+        vOptions = vOptions[minIndex]
+        // console.log(vOptions);
+        let elevationAngle = 90-math.acos(math.dot(siteEci, vOptions) / math.norm(siteEci) / math.norm(vOptions))*180/Math.PI
+        if (elevationAngle > site.elMask) {
+            // Calculate sun angle at rendezvous
+            let startState = [...siteEci,...vOptions]
+            let endState = propToTime(startState, tof)
+            let sunEci = astro.sunEciFromTime(new Date(state.date - (-tof*1000)))
+            let relativeVel = math.subtract(endState.slice(3), targetEndState.slice(3)).map(s => -s)
+            let cats = math.acos(math.dot(relativeVel, sunEci) / math.norm(relativeVel) / math.norm(sunEci))*180/Math.PI
+            let illuminated = earthIntercept ? isSatIlluminated(endState, sunEci) : true
+            if (cats < catsLimit && illuminated) {
+                // CATS within limit and lighting source not blocked (if boxes checked) add to results div
+                output.push(`
+                <div style="font-size: 1.25em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
+                    <div>${dateToDateTimeInput(state.date).split('T').join(' ')}z</div>
+                    <div>Launch &#916V: ${dV[minIndex].toFixed(3)} km/s</div>
+                    <div>TOF: ${(tof/60).toFixed(2)} mins</div>
+                    <div>CATS: ${cats.toFixed(1)}<sup>o</sup></div>
+                    <div>
+                        <button onclick="displayLaunch(this)">Ground Track</button>
+                        <button onclick="displayRic(this)">RIC</button>
+                        </div>
+                </div>
+                `)  
+            }
+        }
+
+    }
+                    
+    state = hpop.propToTime(state.state, state.date, searchStep, {
+        maxError: 1e-4
+    })
+    time += searchStep
+    document.querySelector('#calc-button').innerText = `Calculating...${(time/searchDuration*100).toFixed()}%`
+    if (time < searchDuration) setTimeout(runRendezvousOptions,0.1,time, searchDuration, site, state, output, options)
+    else {
+        console.log('finished');
+        document.querySelector('#calc-button').innerText = `Calculate`
+    
+        document.querySelector('#results-div').innerHTML = output.join('\n')
+    }
 }
 
 function copyStkSequence(el) {
@@ -297,11 +319,11 @@ function displayRic(el) {
         solarRad: false,
         thirdBody: false
     })
-    console.log(el.getAttribute('launchstate'));
     let launchState = el.getAttribute('launchstate').split('x').map(s => Number(s))
     let targetState = el.getAttribute('target').split('x').map(s => Number(s))
     let launchTime = new Date(el.getAttribute('launch'))
     let startTime = new Date(el.getAttribute('start'))
+    console.log(startTime);
     let tof = Number(el.getAttribute('tof'))
 
     targetState = hpop.propToTime(targetState, startTime, (launchTime - startTime) / 1000, {

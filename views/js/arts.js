@@ -8503,3 +8503,7 @@ function displayHpopTraj(update = false) {
         mainWindow.satellites[ii].stateHistory = hist
     })
 }
+let filteringWindow
+function openFilteringWindow() {
+
+}

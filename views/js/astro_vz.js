@@ -551,10 +551,10 @@ class Propagator {
     }
     propToTime(state, date, tf = 86400, options = {}) {
         let {maxError = 1e-9, a = [0,0,0]} = options
-        let h = 500
-        h = h > tf ? tf : h
+        let h = tf > 0 ? 500 : -500
+        h = Math.abs(h) > Math.abs(tf) ? tf : h
         let t = 0
-        while ((t+h) <= tf) {
+        while (Math.abs(t+h) <= Math.abs(tf)) {
             let rkResult = this.rkf45(state, new Date(date - (-1000*t)), h, maxError, {a})
             state = rkResult.y
             h = rkResult.hnew
