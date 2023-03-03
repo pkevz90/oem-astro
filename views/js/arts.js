@@ -316,7 +316,21 @@ class windowCanvas {
             ctx.stroke()
         })
         for (let index = 0; index < mainWindow.satellites.length; index++) {
-            if (mainWindow.satellites[index].stateHistory === undefined) continue
+            if (mainWindow.satellites[index].stateHistory === undefined) {
+                // If satellite hasn't been initialize, initialize before continuing
+                mainWindow.satellites[index].calcTraj()
+                let curPos = mainWindow.satellites[index].currentPosition()
+                mainWindow.satellites[index].curPos = {
+                    r: curPos[0],
+                    i: curPos[1],
+                    c: curPos[2],
+                    rd: curPos[3],
+                    id: curPos[4],
+                    cd: curPos[5]
+                }
+
+            }
+        
             if (mainWindow.satellites[index].latLong === undefined) {
                 mainWindow.satellites[index].latLong = mainWindow.satellites[index].stateHistory.map(state => {
                     let time = new Date(mainWindow.startDate - (-state.t*1000))
