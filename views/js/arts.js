@@ -73,6 +73,16 @@ class windowCanvas {
     extraAcc = [0,0,0]
     normalizeDirection = true;
     frameMove = undefined;
+    latLongMode = false;
+    groundTrackLimits = {
+        center: 0,
+        latCenter: 0,
+        left: -180,
+        top: 90,
+        width: 360,
+        zoom: 1,
+        focus: undefined
+    }
     initSun = [1, 0, 0];
     nLane = 1
     desired = { 
@@ -280,6 +290,72 @@ class windowCanvas {
             ctx.stroke();
         }
     }
+    drawEarthFeatures() {
+        let ctx = this.getContext()
+        ctx.strokeStyle = mainWindow.colors.foregroundColor
+        ctx.lineWidth = 1
+        coastlines.forEach(array => {
+            let lastPoint = 0
+            ctx.beginPath()
+            array.forEach((point,ii) => {
+                // let pixelPoint = [
+                //     (point[0]+180)/360*this.cnvs.width,
+                //     (90-point[1])/180*this.cnvs.height
+                // ]
+                let pixelPoint = this.latLong2Pixel({
+                    long: point[0], lat: point[1]
+                })
+                if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
+                else if (math.abs(pixelPoint[0]-lastPoint) > this.cnvs.width/2) {
+                    ctx.moveTo(pixelPoint[0], pixelPoint[1])
+                }
+                else ctx.lineTo(pixelPoint[0], pixelPoint[1])
+                lastPoint = pixelPoint[0]
+                // ctx.fillRect(pixelPoint[0]-3, pixelPoint[1]-3, 6,6)
+            })
+            ctx.stroke()
+        })
+        for (let index = 0; index < mainWindow.satellites.length; index++) {
+            if (mainWindow.satellites[index].stateHistory === undefined) continue
+            if (mainWindow.satellites[index].latLong === undefined) {
+                mainWindow.satellites[index].latLong = mainWindow.satellites[index].stateHistory.map(state => {
+                    let time = new Date(mainWindow.startDate - (-state.t*1000))
+                    let eciState = Object.values(getCurrentInertial(index, state.t))
+                    let latLong = astro.eci2latlong(eciState.slice(0,3), time)
+                    return {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI}
+                })
+            }
+            ctx.fillStyle = mainWindow.satellites[index].color
+            mainWindow.satellites[index].latLong.forEach(point => {
+                // let pixelPoint = [
+                //     (point.long+180)/360*this.cnvs.width,
+                //     (90-point.lat)/180*this.cnvs.height
+                // ]
+                let pixelPoint = this.latLong2Pixel(point)
+                ctx.fillRect(pixelPoint[0]-1, pixelPoint[1]-1,2,2)
+            })
+            let curEci = Object.values(getCurrentInertial(index, mainWindow.scenarioTime))
+            let time = new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000))
+            let latLong = astro.eci2latlong(curEci.slice(0,3), time)
+            latLong = {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI}
+            
+            // let  = [
+            //     (latLong.long+180)/360*this.cnvs.width,
+            //     (90-latLong.lat)/180*this.cnvs.height
+            // ]
+            let pixelPosition = this.latLong2Pixel(latLong)
+            drawSatellite({
+                pixelPosition,
+                shape: mainWindow.satellites[index].shape,
+                color: mainWindow.satellites[index].color,
+                name: mainWindow.satellites[index].name,
+                size: mainWindow.satellites[index].size,
+                cnvs: this.cnvs,
+                ctx: ctx
+            })
+        }
+
+    }
     getCurrentSun(t = this.scenarioTime) {
         let curSunIndex = this.originSun.findIndex(s => s[0] > t)
         if (curSunIndex === -1) {
@@ -408,6 +484,41 @@ class windowCanvas {
                 y: this.cnvs.height * this.frameCenter.rc.y - input.c * this.cnvs.height / this.plotHeight
             }
         }
+    }
+    pixel2LatLong(pixel = [100,100]) {
+        pixel[0] = (pixel[0]-this.cnvs.width/2) / this.groundTrackLimits.zoom+this.cnvs.width/2
+        pixel[1] = (pixel[1]-this.cnvs.height/2) / this.groundTrackLimits.zoom+this.cnvs.height/2
+        let center = this.groundTrackLimits.center
+        let long = pixel[0] * 360 / this.cnvs.width
+        let lat = 90-pixel[1]*180/this.cnvs.height
+        long += center-180
+        lat += this.groundTrackLimits.latCenter
+        return {
+            long, lat
+        }
+    }
+    latLong2Pixel(coordinates ={lat: 0, long: 0}) {
+        let center = this.groundTrackLimits.center
+        let {lat, long} = coordinates
+        while (center < -180) {
+            center += 360
+        }
+        long = long - center
+        lat -= this.groundTrackLimits.latCenter
+        if (long < -180) {
+            long += 360
+        }
+        else if (long > 180) {
+            long -= 360
+        }
+        let pixels = [
+            (long+180)/360*this.cnvs.width,
+            (90-lat)/180*this.cnvs.height
+        ]
+        pixels[0] = (pixels[0]-this.cnvs.width/2)*this.groundTrackLimits.zoom+this.cnvs.width/2
+        pixels[1] = (pixels[1]-this.cnvs.height/2)*this.groundTrackLimits.zoom+this.cnvs.height/2
+        return pixels
+
     }
     drawAxes() {
         let ctx = this.getContext();
@@ -1124,10 +1235,17 @@ function sleep(milliseconds) {
 let threeD = false
 let timeFunction = false;
 (function animationLoop() {
-    mainWindow.cnvs.getContext('2d').globalAlpha = 1 
+    try {
+        mainWindow.cnvs.getContext('2d').globalAlpha = 1 
         if (timeFunction) console.time()
         mainWindow.clear();
         mainWindow.updateSettings();
+        if (mainWindow.latLongMode) {
+            mainWindow.drawEarthFeatures()
+
+            mainWindow.showTime();
+            return window.requestAnimationFrame(animationLoop)
+        }
         if (threeD) {
             mainWindow.satellites.forEach(sat => sat.checkInBurn())
             draw3dScene()
@@ -1140,7 +1258,6 @@ let timeFunction = false;
         mainWindow.drawInertialOrbit(); 
         mainWindow.drawAxes();
         mainWindow.drawPlot();
-        
         mainWindow.showTime();
         mainWindow.showData();
         mainWindow.drawEllipses()
@@ -1166,27 +1283,26 @@ let timeFunction = false;
             lastSaveTime = Date.now()
         }
         return window.requestAnimationFrame(animationLoop)
-    // try {
-        
-    // } catch (error) {
-    //     console.log(mainWindow.satellites[0].burns[0]);
-    //     console.log(error.stack);
-    //     errorList.push(error)
-    //     let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
-    //     mainWindow = new windowCanvas(document.getElementById('main-plot'));
-    //     mainWindow.loadDate(autosavedScen);
-    //     mainWindow.setAxisWidth('set', mainWindow.plotWidth);
-    //     animationLoop()
-    //     mainWindow.desired.scenarioTime = Number(document.getElementById('time-slider-range').value)
-    //     mainWindow.scenarioTime = Number(document.getElementById('time-slider-range').value)
-    //     showScreenAlert('System crash recovering to last autosave');
-    // }
+    } catch (error) {
+        console.log(mainWindow.satellites[0].burns[0]);
+        console.log(error.stack);
+        errorList.push(error)
+        let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
+        mainWindow = new windowCanvas(document.getElementById('main-plot'));
+        mainWindow.loadDate(autosavedScen);
+        mainWindow.setAxisWidth('set', mainWindow.plotWidth);
+        animationLoop()
+        mainWindow.desired.scenarioTime = Number(document.getElementById('time-slider-range').value)
+        mainWindow.scenarioTime = Number(document.getElementById('time-slider-range').value)
+        showScreenAlert('System crash recovering to last autosave');
+    }
 })()
 //------------------------------------------------------------------
 // Adding event listeners for window objects
 //------------------------------------------------------------------
 function keydownFunction(key) {
-    if (document.getElementById('context-menu') !== null) return
+    // Ignore unless given a object key which says to continue (only applies to ground track context menu)
+    if (key.ignoreContext !== true && document.getElementById('context-menu') !== null) return
     key.key = key.key.toLowerCase();
     if (key.key === 'Control') {
         let buttons = document.getElementsByClassName('ctrl-switch');
@@ -1211,6 +1327,27 @@ function keydownFunction(key) {
     if (key.key === ' ') {
         if (threeD) {
             threeD = false
+            return
+        }
+        if (mainWindow.latLongMode) {
+            mainWindow.latLongMode = false
+            for (let index = 0; index < mainWindow.satellites.length; index++) {
+                mainWindow.satellites[index].latLong = undefined
+            }
+            mainWindow.setState('ri');
+            mainWindow.desired.plotCenter = 0
+            mainWindow.desired.plotWidth = mainWindow.originOrbit.a*2*Math.PI / 180
+            mainWindow.setFrameCenter({
+                ri: {
+                    x: 0.5, y: 0.5, w: 1, h: 1
+                },
+                ci: {
+                    x: 0.5, y: 1, w: 1, h: 0
+                },
+                rc: {
+                    x: 0, y: 1, w: 0, h: 0
+                }
+            })
             return
         }
         switch (mainWindow.getState()) {
@@ -1334,7 +1471,8 @@ function keydownFunction(key) {
                 })
                 break;
             case 'ci': 
-                threeD = true
+                // threeD = true
+                mainWindow.latLongMode = true
                 mainWindow.setState('ri');
                 mainWindow.setFrameCenter({
                     ri: {
@@ -1496,6 +1634,11 @@ function wheelFunction(event) {
         updateWhiteCellTimeAndErrors()
         return;
     }
+
+    if(mainWindow.latLongMode) {
+        mainWindow.groundTrackLimits.zoom *= event.deltaY > 0 ? 1/1.1 : 1.1
+        mainWindow.groundTrackLimits.zoom = mainWindow.groundTrackLimits.zoom < 1 ? 1 : mainWindow.groundTrackLimits.zoom 
+    }
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
 }
 window.addEventListener('wheel', event => {
@@ -1555,6 +1698,9 @@ function startContextClick(event) {
         return false;
     }
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY])
+    // Check equivalent lat long of click if on ground track
+
+    let latLongClick = mainWindow.pixel2LatLong([event.clientX , event.clientY])
     // Check if clicked on satellite
     let checkProxSats
     if (threeD) {
@@ -1564,13 +1710,34 @@ function startContextClick(event) {
         checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, false)).findIndex(sat => sat.ri || sat.rc || sat.ci)
     }
     let activeSat = checkProxSats === -1 ? false : checkProxSats
+    // If ctrl key held, ignore satellites over burns to click
     activeSat = event.ctrlKey ? false : activeSat
+    // If in ground track mode, ignore click prox based on ric coordinates
+    activeSat = mainWindow.latLongMode ? false : activeSat
+    // If in ground track mode, check current lat long vs clicked lat long
+    if (mainWindow.latLongMode) {
+        let currentTime = new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000))
+        let latLongs = mainWindow.satellites.map((s,ii) => Object.values(getCurrentInertial(ii, mainWindow.scenarioTime)))
+        latLongs = latLongs.map(s => astro.eci2latlong(s.slice(0,3), currentTime))
+        latLongs = latLongs.map(s => {
+            return {
+                lat: s.lat * 180/Math.PI,
+                long: s.long * 180/Math.PI,
+            }
+        })
+        activeSat = latLongs.findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 2/mainWindow.groundTrackLimits.zoom)
+        activeSat = activeSat === -1 ? false : activeSat
+    }
 
     // Check if clicked on burn
     checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, true))
     // Find index of satellite burn clicked on
     let burnIndexSat = checkProxSats.findIndex(sat => sat !== false)
     let activeBurn = burnIndexSat === -1 ? false : {sat: burnIndexSat, burn: checkProxSats[burnIndexSat]}
+    // If in ground track mode, can't select burns
+    activeBurn = mainWindow.latLongMode ? false : activeBurn
+
+
     let ctxMenu;
     if (document.getElementById('context-menu') === null) {
         ctxMenu = document.createElement('div');
@@ -1667,6 +1834,29 @@ function startContextClick(event) {
                 <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">
                     ${mainWindow.satellites[activeSat].cov !== undefined ? mainWindow.satellites[activeSat].cov : ''}
                 </div> 
+            `
+            : mainWindow.latLongMode ? `
+            <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
+                <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
+                <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
+                <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+                <datalist id="sat-color-picker2">
+                    <option>#ff0000</option>
+                    <option>#0000ff</option>
+                </datalist>
+                <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
+                    <option value=""></option>
+                    <option value="delta">Delta</option>
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="diamond">Diamond</option>
+                    <option value="4-star">4-Point Star</option>
+                    <option value="star">5-Point Star</option>
+                </select>
+                <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
+            </div>
+            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+            <div sat="${activeSat}" class="context-item" onclick="handleContextClick(this)" id="zoom-to-sat">Zoom To</div>
             `
             :`
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
@@ -1913,6 +2103,11 @@ function handleContextClick(button) {
             lockDiv.style.right = '1%'
         }
         else lockDiv.style.right = '-25%'
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'zoom-to-sat') {
+        changeOrigin(button.getAttribute('sat'))
+        keydownFunction({key: ' ', ignoreContext: true})
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'lock-sat-button') {
@@ -2777,6 +2972,7 @@ changePlanType = (box) => mainWindow.burnType = box.checked ? 'waypoint' : 'manu
 let lastHiddenSatClicked = false
 document.getElementById('main-plot').addEventListener('pointerdown', event => {
     event.preventDefault()
+    // If in ground track mode, don't track with clicked mouse
     if (event.button === 0) {
         // Close context and lock menu if open
         lockDiv.style.right = '-25%'
@@ -2804,9 +3000,10 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
     for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
     if (document.querySelectorAll('#context-menu').length > 0) return document.getElementById('context-menu')?.remove()
     
+    // if (mainWindow.latLongMode) return
     let sat = 0, check;
     if (ricCoor === undefined) return;
-    while (sat < mainWindow.satellites.length) {
+    while (sat < mainWindow.satellites.length && !mainWindow.latLongMode) {
         check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
         if (mainWindow.satellites[sat].locked) {
             sat++
@@ -2825,7 +3022,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         if (mainWindow.currentTarget) break
         sat++
     }
-    if (mainWindow.currentTarget.type === 'current') {
+    if (mainWindow.currentTarget.type === 'current' && !mainWindow.latLongMode) {
         if (mainWindow.ephemViewerMode) return
         setTimeout(() => {
             if (!mainWindow.currentTarget) return;
@@ -2881,7 +3078,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             if (burnType === 'waypoint' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) mainWindow.changeTime(mainWindow.desired.scenarioTime + defaultTranTime)
         }, 250)
     }
-    else if (mainWindow.currentTarget.type === 'burn') {
+    else if (mainWindow.currentTarget.type === 'burn' && !mainWindow.latLongMode) {
         pastActions.push({
             sat: mainWindow.currentTarget.sat,
             oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[mainWindow.currentTarget.sat].burns))
@@ -2911,6 +3108,17 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             }
             mainWindow.changeTime(mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime)
         }
+    }
+    else if (mainWindow.latLongMode) {
+        let {lat, long} = mainWindow.pixel2LatLong([event.clientX, event.clientY])
+        
+        mainWindow.frameMove = {
+            x: event.clientX,
+            y: event.clientY,
+            originLong: mainWindow.groundTrackLimits.center,
+            originLat: mainWindow.groundTrackLimits.latCenter,
+            pointId: event.pointerId
+        };
     }
     else if (ricCoor.ri || ricCoor.ci) {
         try {
@@ -2948,6 +3156,25 @@ document.getElementById('main-plot').addEventListener('pointermove', event => {
     else mainWindow.cnvs.style.cursor = ''
     if (mainWindow.frameMove) {
         if (event.pointerId === mainWindow.frameMove.pointId) {
+            if (mainWindow.latLongMode) {
+                mainWindow.groundTrackLimits.center = mainWindow.frameMove.originLong -( event.clientX - mainWindow.frameMove.x) * 360 / mainWindow.cnvs.width / mainWindow.groundTrackLimits.zoom
+                mainWindow.groundTrackLimits.latCenter = mainWindow.frameMove.originLat +( event.clientY - mainWindow.frameMove.y) * 180 / mainWindow.cnvs.height / mainWindow.groundTrackLimits.zoom
+                if (mainWindow.groundTrackLimits.center < -180) {
+                    mainWindow.groundTrackLimits.center += 360
+                }
+                if (mainWindow.groundTrackLimits.center > 180) {
+                    mainWindow.groundTrackLimits.center -= 360
+                }
+                if (mainWindow.groundTrackLimits.latCenter > 90){
+                    mainWindow.groundTrackLimits.latCenter = 90
+                }
+                if (mainWindow.groundTrackLimits.latCenter < -90){
+                    mainWindow.groundTrackLimits.latCenter = -90
+                }
+                // mainWindow.frameMove.long = long
+                // If in lat long mode only move center longitude and latitude
+                return
+            }
             let delX = event.clientX - mainWindow.frameMove.x;
             let delY = event.clientY - mainWindow.frameMove.y;
             if (threeD) {
@@ -5990,10 +6217,11 @@ function uploadTles(event) {
 
 function tellInputStateFileType(file) {
     // Tells if file is J2000 or TLE file
-    if (file.search(/^1 *\d*.*\n2 *\d*.*/) !== -1) {
+    if (file.search(/^1 *\d*.* *\d{5}\./) !== -1) {
         // Assume file is TLE
         return 'tle'
     }
+    console.log('j2000');
     return 'j2000'
     if (file.search(/1 \d{5}/) !== -1) {
         // Assume file is j2000
