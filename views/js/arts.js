@@ -3109,7 +3109,6 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             burn: check[mainWindow.currentTarget.frame],
             frame: mainWindow.currentTarget.frame
         }
-        console.log({...mainWindow.burnStatus});
         if (burnType === 'waypoint') {
             if (mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint === false) {
                 let newTranTime = mainWindow.desired.scenarioTime - mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time
@@ -3945,7 +3944,7 @@ function calcBurns() {
     if (!this.mousePosition) return;
     let mousePosition = this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
-    if (mainWindow.burnStatus.type === 'waypoint' && sat.a > 0.000001 && mainWindow.originOrbit, sat.burns[this.burnStatus.burn].waypoint !== false) {
+    if (mainWindow.burnStatus.type === 'waypoint' && sat.a > 0.000001 && sat.burns[this.burnStatus.burn].waypoint !== false) {
         let originAtTime = propToTimeAnalytic(mainWindow.originOrbit, sat.burns[this.burnStatus.burn].time+sat.burns[this.burnStatus.burn].waypoint.tranTime)
         let target= Eci2Ric(originAtTime.slice(0,3), originAtTime.slice(3,6), sat.burns[this.burnStatus.burn].waypoint.target.slice(0,3), [0,0,0])
         target = [
