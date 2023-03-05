@@ -117,6 +117,59 @@ class astro {
         let lat = math.atan2(r[2], math.norm(r.slice(0,2)))
         return {lat, long, rot: overallR, r_ecef: r}
     }
+    static eci2ecef(r=[5102.508958, 6123.011401, 6378.136928], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
+        // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
+        // ECI to ECEF
+        let jd_TT = astro.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()+date.getMilliseconds()/1000) 
+        let t_TT = (jd_TT - 2451545) / 36525
+        let zeta = 2306.2181 * t_TT + 0.30188 * t_TT ** 2 + 0.017998 * t_TT ** 3
+        zeta /= 3600
+        let theta = 2004.3109 * t_TT - 0.42665 * t_TT ** 2 - 0.041833 * t_TT ** 3
+        theta /= 3600
+        let z = 2306.2181 * t_TT + 1.09468 * t_TT ** 2 + 0.018203 * t_TT ** 3
+        z /= 3600
+        let p = math.multiply(astro.rot(zeta, 3), astro.rot(-theta, 2), astro.rot(z, 3))
+
+        let thetaGmst = astro.siderealTime(jd_TT)
+        let w = astro.rot(-thetaGmst, 3)
+        let overallR = math.multiply(math.transpose(w), math.transpose(p))
+        return math.squeeze(math.multiply(overallR, math.transpose([r])))
+    }
+    static groundGeodeticPosition(lat = 39.586667, long = -105.64, h = 4.347667) {
+        lat *= Math.PI / 180
+    
+        // let eEarth = 0.081819221
+        let eEarth = 0.006694385 ** 0.5
+        let rEarth = 6378.1363
+        let rFocus = eEarth * rEarth
+    
+        let cEarth = rEarth / (1 - eEarth ** 2 * Math.sin(lat) ** 2) ** 0.5
+        let sEarth = rEarth * (1 - eEarth ** 2) / (1 - eEarth ** 2 * Math.sin(lat) ** 2) ** 0.5
+        
+        let rSigma = (cEarth + h) * Math.cos(lat)
+        let rk = (sEarth + h) * Math.sin(lat)
+        // console.log(rSigma, rk / math.tan(lat));
+        let r = math.squeeze(math.multiply(rotationMatrices(long, 3),math.transpose([[rSigma, 0, rk]])));
+        let rij = math.dotDivide(r.slice(0,2) , math.norm(r.slice(0,2)) /(rk / math.tan(lat)))
+        // console.log(rij, r);
+        return {r, vert: [...rij, r[2]]};
+        
+    }
+    static rAzEl(r_eci=[-5505.504883, 56.449170, 3821.871726], date=new Date(1995, 4, 20, 3, 17, 2), lat=39.007, long=-104.883, h = 2.187) {
+        let r_ecef = astro.eci2ecef(r_eci, date)
+        let r_site_ecef = astro.groundGeodeticPosition(lat, long, h).r
+        let rho = math.transpose([math.subtract(r_ecef, r_site_ecef)])
+        lat *= Math.PI / 180
+        long*= Math.PI / 180
+        let r = [[Math.sin(lat) * Math.cos(long), -Math.sin(long), Math.cos(lat) * Math.cos(long)],
+                 [Math.sin(lat) * Math.sin(long), Math.cos(long), Math.cos(lat) * Math.sin(long)],
+                 [-Math.cos(lat), 0, Math.sin(lat)]]
+        rho = math.squeeze(math.multiply(math.transpose(r), rho))
+        let el = Math.asin(rho[2] / math.norm(rho)) * 180 / Math.PI
+        let az = Math.atan2(rho[1], -rho[0]) * 180 / Math.PI
+        r = math.norm(rho)
+        return {el, az, r}
+    }
     static ecef2eci(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28,328)) {
         // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
         // ECI to ECEF

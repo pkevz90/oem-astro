@@ -1,6 +1,7 @@
 let appAcr = 'ROTS 2.0'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '3 Feb 2023'
+let cao = '6 Mar 2023'
+document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
@@ -81,8 +82,18 @@ class windowCanvas {
         top: 90,
         width: 360,
         zoom: 1,
-        focus: undefined
+        focus: 0
     }
+    groundSites = [
+        // {
+        //     name: 'Baton Rouge',
+        //     coordinates: {
+        //         lat: 30.43333,
+        //         long: -91.16667
+        //     },
+        //     color: 'rgb(0,0,255)'
+        // }
+    ]
     initSun = [1, 0, 0];
     nLane = 1
     desired = { 
@@ -292,7 +303,34 @@ class windowCanvas {
     }
     drawEarthFeatures() {
         let ctx = this.getContext()
-        ctx.strokeStyle = mainWindow.colors.foregroundColor
+        // If focus isn't undefined, follow focused satellite on map
+        // console.time()
+        if (this.groundTrackLimits.focus !== undefined && this.satellites.length > this.groundTrackLimits.focus) {
+            if (this.satellites[this.groundTrackLimits.focus].stateHistory === undefined) {
+                this.satellites[this.groundTrackLimits.focus].calcTraj(true)
+            }
+            let curTime = new Date(this.startDate - (-1000*this.scenarioTime))
+            let curEci = Object.values(getCurrentInertial(this.groundTrackLimits.focus))
+            let ecef = astro.eci2ecef(curEci.slice(0,3), curTime)
+            let long = math.atan2(ecef[1], ecef[0])
+            this.groundTrackLimits.center = long*180/Math.PI 
+            this.groundTrackLimits.latCenter = 0
+            ctx.textAlign = 'right'
+            ctx.textBaseline = 'bottom'
+            ctx.font = '20px sans-serif'
+            ctx.fillStyle = this.colors.foregroundColor
+            let textBaselinePixel = 5
+            this.groundSites.map(site => {
+                return {name: site.name, ...astro.rAzEl(curEci.slice(0,3), curTime, site.coordinates.lat, site.coordinates.long,0)}
+            }).filter(s => s.el > 0).forEach(vis => {
+                ctx.fillText(`${vis.name} Az: ${vis.az.toFixed(1)} El: ${vis.el.toFixed(1)} deg R: ${vis.r.toFixed(0)} km`, this.cnvs.width-5, this.cnvs.height-textBaselinePixel)
+                textBaselinePixel += 30
+            })
+
+        }
+        // console.timeEnd()
+        // console.time()
+        ctx.strokeStyle = this.colors.foregroundColor
         ctx.lineWidth = 1
         coastlines.forEach(array => {
             let lastPoint = 0
@@ -315,10 +353,26 @@ class windowCanvas {
             })
             ctx.stroke()
         })
-        for (let index = 0; index < mainWindow.satellites.length; index++) {
+        // console.timeEnd()
+        // console.time()
+        this.groundSites.forEach(site => {
+            let pixelPos = this.latLong2Pixel(site.coordinates)
+            ctx.fillStyle = site.color
+            let size = 8
+            ctx.fillRect(pixelPos[0]-size/2, pixelPos[1]-size/2, size,size)
+            ctx.textBaseline = 'top'
+            ctx.textAlign = 'center'
+            ctx.font = `${7*(this.groundTrackLimits.zoom)**0.5}px sans-serif`
+            ctx.fillText(site.name, pixelPos[0], pixelPos[1]+size/2+2)
+        })
+        // console.timeEnd()
+        // console.time()
+        for (let index = 0; index < this.satellites.length; index++) {
             if (mainWindow.satellites[index].stateHistory === undefined) {
+                mainWindow.satellites[index].calcTraj(true)
+            }
+            if (mainWindow.satellites[index].curPos === undefined) {
                 // If satellite hasn't been initialize, initialize before continuing
-                mainWindow.satellites[index].calcTraj()
                 let curPos = mainWindow.satellites[index].currentPosition()
                 mainWindow.satellites[index].curPos = {
                     r: curPos[0],
@@ -368,6 +422,7 @@ class windowCanvas {
                 ctx: ctx
             })
         }
+        // console.timeEnd()
 
     }
     getCurrentSun(t = this.scenarioTime) {
@@ -1499,6 +1554,7 @@ function keydownFunction(key) {
                         x: 0, y: 1, w: 0, h: 0
                     }
                 })
+                mainWindow.satellites.forEach(sat => sat.calcTraj(true))
                 break;
             default:  
                 mainWindow.setState('ri');
@@ -1871,6 +1927,7 @@ function startContextClick(event) {
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             <div sat="${activeSat}" class="context-item" onclick="handleContextClick(this)" id="zoom-to-sat">Zoom To</div>
+            <div sat="${activeSat}" class="context-item" onclick="changeOrigin(${activeSat})">Focus</div>
             `
             :`
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
@@ -1956,7 +2013,7 @@ function startContextClick(event) {
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
             ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
-            <div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>
+            ${mainWindow.latLongMode ? `<div lat="${latLongClick.lat}" long="${latLongClick.long}" class="context-item" id="add-ground-site" onclick="handleContextClick(this)">Add Ground Site</div>` : `<div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>`}
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import States</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadTles(event)"></div>
             <div class="context-item" onclick="openInstructionWindow()" id="instructions">Instructions</div>
             `
@@ -2122,6 +2179,29 @@ function handleContextClick(button) {
     else if (button.id === 'zoom-to-sat') {
         changeOrigin(button.getAttribute('sat'))
         keydownFunction({key: ' ', ignoreContext: true})
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'add-ground-site') {
+        let numCurrentGroundSides = mainWindow.groundSites.length
+        button.parentElement.innerHTML = `
+            <div style="color: white; padding: 5px">Name <input style="width: 20ch;" placeholder="Ground Site #${numCurrentGroundSides+1}"/> deg</div>
+            <div style="color: white; padding: 5px">Longitude <input style="width: 8ch;" type="number" placeholder="${button.getAttribute("long")}"/> deg</div>
+            <div style="color: white; padding: 5px">Latitude <input style="width: 8ch;" type="number" placeholder="${button.getAttribute("lat")}"/> deg</div>
+            <div class="context-item" tabindex="0" onclick="handleContextClick(this)" id="add-ground-site-execute">Add Site</div>
+        `
+    }
+    else if (button.id === 'add-ground-site-execute') {
+        let inputs = [...button.parentElement.querySelectorAll('input')].map(s => {
+            return s.value === '' ? s.placeholder : s.value
+        })
+        mainWindow.groundSites.push({
+            name: inputs[0],
+            coordinates: {
+                long: Number(inputs[1]),
+                lat: Number(inputs[2])
+            },
+            color: 'rgb(150,150,150)'
+        })
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'lock-sat-button') {
@@ -2540,7 +2620,6 @@ function handleContextClick(button) {
     else if (button.id === 'execute-change-origin') {
         let sat = button.getAttribute('target')
         changeOrigin(sat)
-        document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'multi-maneuver') {
         let sat = button.parentElement.sat;
@@ -3124,7 +3203,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
     }
     else if (mainWindow.latLongMode) {
         let {lat, long} = mainWindow.pixel2LatLong([event.clientX, event.clientY])
-        
+        mainWindow.groundTrackLimits.focus = undefined
         mainWindow.frameMove = {
             x: event.clientX,
             y: event.clientY,
@@ -3270,8 +3349,18 @@ function changeSatelliteInputType(el) {
             satInputs[5].innerHTML = `Z-Max <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
             satInputs[6].innerHTML = `Out-of-Plane <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
             break
+        case 'geo-sat-input':
+            satInputs[1].innerHTML = ``
+            satInputs[0].innerHTML = `Longitude <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
+            satInputs[2].innerHTML = ``
+            satInputs[3].innerHTML = ``
+            satInputs[4].innerHTML = ``
+            satInputs[5].innerHTML = ``
+            satInputs[6].innerHTML = ``
+            
+            break
     }
-    document.querySelectorAll('.sat-input')[1].focus()
+    document.querySelectorAll('.sat-input[type="number"]')[0].focus()
 }
 
 function checkJ200StringValid(string) {
@@ -4087,6 +4176,9 @@ function initStateFunction(el) {
                 eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
                 eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
                 eciState = [...eciState.rEcci, ...eciState.drEci]
+                break
+            case 'geo-sat-input':
+                eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(Number(inputs[0].value))))
                 break
         }
         let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
@@ -6009,6 +6101,7 @@ function randn_bm() {
 }
 
 function changeOrigin(sat = 1, currentState = false) {
+    document.getElementById('context-menu')?.remove();
     if (currentState === true) {
         let curPos = Object.values(getCurrentInertial(sat))
         console.log(curPos);
@@ -6018,6 +6111,7 @@ function changeOrigin(sat = 1, currentState = false) {
         mainWindow.updateOrigin(curPos)
         return
     }
+    mainWindow.groundTrackLimits.focus = sat
     mainWindow.updateOrigin(mainWindow.satellites[sat].position)
 }
 
@@ -6230,7 +6324,7 @@ function uploadTles(event) {
 
 function tellInputStateFileType(file) {
     // Tells if file is J2000 or TLE file
-    if (file.search(/^1 *\d*.* *\d{5}\./) !== -1) {
+    if (file.search(/1 *\d*.* *\d{5}\./) !== -1) {
         // Assume file is TLE
         return 'tle'
     }
@@ -8747,4 +8841,26 @@ function displayHpopTraj(update = false) {
 let filteringWindow
 function openFilteringWindow() {
 
+}
+
+function geoSatelliteAtLongitude(long = 0) {
+    let date = mainWindow.startDate
+    let sidAngle = astro.siderealTime(astro.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds()))
+    let a = 42164.140100123965
+    let tA = sidAngle * Math.PI / 180 + long * Math.PI / 180
+
+    for (let index = 0; index < 10; index++) {
+        let tA2 = tA + 0.01
+        let state1 = astro.eci2latlong(Object.values(Coe2PosVelObject({
+            a, e: 0, i: 0, raan: 0, arg: 0, tA
+        })).slice(0,3), mainWindow.startDate).long
+        let state2 = astro.eci2latlong(Object.values(Coe2PosVelObject({
+            a, e: 0, i: 0, raan: 0, arg: 0, tA: tA2
+        })).slice(0,3), mainWindow.startDate).long
+        let del = (state2 - state1) / 0.01
+        tA += (long*Math.PI / 180 - state1) / del
+    }
+    return {
+        a, e: 0, i: 0, raan: 0, arg: 0, tA
+    }
 }
