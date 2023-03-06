@@ -1073,7 +1073,9 @@ class Satellite {
         ctx.textBaseline = 'middle'
         ctx.textAlign = 'center'
         let textHeight = 20;
-        burns.filter(b => b.time < mainWindow.scenarioTime).forEach(burn => {
+        let burnFilterTime = mainWindow.hpop ? mainWindow.scenarioLength*3600 : mainWindow.scenarioTime
+        // console.log(burnFilterTime);
+        burns.filter(b => b.time < burnFilterTime).forEach(burn => {
             timeDelta = mainWindow.scenarioTime - burn.time;
             let mag = math.norm(burn.direction);
             let dispDist = timeDelta > (mag / this.a) ? dist : dist * timeDelta * this.a / mag;
@@ -8741,6 +8743,7 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
                 maxError: 1e-6
             }).state
             tProp = burns[burnIndex].time
+            burns[burnIndex].location = position.slice(0,3)
             burnIndex++
             // Prop to next time step
             let timeToNextTimeStep = tD - timeToBurn
@@ -8813,14 +8816,22 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
     return stateHistory
 }
 
-function displayHpopTraj(update = false) {
+function displayHpopTraj(update = false, sat = false) {
     if (mainWindow.hpop && !update) {
         mainWindow.ephemViewerMode = false
         mainWindow.hpop = false
-        mainWindow.satellites.forEach(sat => sat.calcTraj())
+        mainWindow.updateOrigin(mainWindow.originOrbit)
+        mainWindow.satellites.forEach(sat => {
+            sat.calcTraj(true)
+            sat.calcTraj()
+        })
         return
     }
     let origin = createHpopStateHistory({...mainWindow.originOrbit}, [])
+    mainWindow.originHistory = origin
+    mainWindow.rotHistory = origin.map(ori => {
+        return ConvEciToRic(ori.position, [0,0,0,0,0,0], true)
+    })      
     let satHists = mainWindow.satellites.map(sat => createHpopStateHistory(sat.position, sat.burns, sat.a))
     satHists = satHists.map(sat => {
         return sat.map((point, ii) => {
@@ -8831,11 +8842,22 @@ function displayHpopTraj(update = false) {
             }
         })
     })
-    
+    let hpop = new Propagator()
     mainWindow.ephemViewerMode = true
     mainWindow.hpop = true
     satHists.forEach((hist,ii) => {
         mainWindow.satellites[ii].stateHistory = hist
+        // Calc new burn location
+        mainWindow.satellites[ii].burns.forEach(b => {
+            let eciLoc = b.location
+            let time = b.time
+            let prevTimeStepOrigin = origin.findIndex(s => s.t > time)
+            prevTimeStepOrigin = prevTimeStepOrigin === -1 ? origin.length-1 : prevTimeStepOrigin - 1
+            let originAtBurnTime = hpop.propToTime(origin[prevTimeStepOrigin].position, new Date(mainWindow.startDate - (-1000*origin[prevTimeStepOrigin].t)),time - origin[prevTimeStepOrigin].t, {
+                maxError: 1e-5
+            }).state
+            b.location = math.squeeze(Eci2Ric(originAtBurnTime.slice(0,3), originAtBurnTime.slice(3,6), eciLoc.slice(0,3), [0,0,0]).rHcw)
+        })
     })
 }
 let filteringWindow
