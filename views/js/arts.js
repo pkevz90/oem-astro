@@ -313,6 +313,25 @@ class windowCanvas {
             let curEci = Object.values(getCurrentInertial(this.groundTrackLimits.focus))
             let ecef = astro.eci2ecef(curEci.slice(0,3), curTime)
             let long = math.atan2(ecef[1], ecef[0])
+            let lat = math.atan2(ecef[2], math.norm(ecef.slice(0,2)))
+            let satPoints = getGroundSwatchCircleCoordinates(curEci, lat*180/Math.PI, long*180/Math.PI)
+            satPoints = satPoints.map(s => this.latLong2Pixel({
+                lat: s[0],
+                long: s[1]
+            }))
+            ctx.strokeStyle = this.satellites[this.groundTrackLimits.focus].color
+            let lastPoint = 0
+            ctx.beginPath()
+            satPoints.forEach((pixelPoint,ii) => {
+                
+                if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
+                else if (math.abs(pixelPoint[0]-lastPoint) > this.cnvs.width/2) {
+                    ctx.moveTo(pixelPoint[0], pixelPoint[1])
+                }
+                else ctx.lineTo(pixelPoint[0], pixelPoint[1])
+                lastPoint = pixelPoint[0]
+            })
+            ctx.stroke()
             this.groundTrackLimits.center = long*180/Math.PI 
             this.groundTrackLimits.latCenter = 0
             ctx.textAlign = 'right'
@@ -353,6 +372,8 @@ class windowCanvas {
             })
             ctx.stroke()
         })
+        
+        
         // console.timeEnd()
         // console.time()
         this.groundSites.forEach(site => {
@@ -422,6 +443,34 @@ class windowCanvas {
                 ctx: ctx
             })
         }
+        // Draw Sun
+        let sunEci = astro.sunEciFromTime(new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        let sunCoordinates = astro.eci2latlong(sunEci, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        sunCoordinates = {
+            lat: sunCoordinates.lat * 180 / Math.PI,
+            long: sunCoordinates.long * 180 / Math.PI,
+        }
+        let sunPoints = getGroundSwatchCircleCoordinates(sunEci, sunCoordinates.lat, sunCoordinates.long)
+        sunCoordinates = this.latLong2Pixel(sunCoordinates)
+        ctx.fillStyle = 'rgb(225,112,0)'
+        ctx.beginPath()
+        ctx.arc(sunCoordinates[0], sunCoordinates[1], 6, 0, 2*Math.PI)
+        ctx.fill()
+        ctx.strokeStyle = 'rgb(225,112,0)'
+        let lastPoint = 0
+        ctx.beginPath()
+        sunPoints.map(s => this.latLong2Pixel({
+            lat: s[0], long: s[1]
+        })).forEach((pixelPoint,ii) => {
+            
+            if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
+            else if (math.abs(pixelPoint[0]-lastPoint) > this.cnvs.width/2) {
+                ctx.moveTo(pixelPoint[0], pixelPoint[1])
+            }
+            else ctx.lineTo(pixelPoint[0], pixelPoint[1])
+            lastPoint = pixelPoint[0]
+        })
+        ctx.stroke()
         // console.timeEnd()
 
     }
@@ -4128,7 +4177,7 @@ function initStateFunction(el) {
     else if (el.id === 'add-satellite-button') {
         let inputs = document.querySelectorAll('.sat-input')
         let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-        let eciState, ricState, eciOrigin
+        let eciState, ricState, eciOrigin, startDate
         switch (radioId) {
             case 'ric-sat-input':
                 ricState = [
@@ -4146,6 +4195,10 @@ function initStateFunction(el) {
                 break
             case 'eci-sat-input':
                 let date = new Date(inputs[0].value)
+                if (mainWindow.satellites.length === 0) {
+                    mainWindow.startDate = date
+                }
+                startDate = date
                 eciState = [
                     inputs[1].value,
                     inputs[2].value,
@@ -4184,6 +4237,9 @@ function initStateFunction(el) {
                 break
         }
         let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
+        if (mainWindow.satellites.length === 0) {
+            mainWindow.updateOrigin(position)
+        }
         let styleInputs = document.querySelectorAll('.sat-style-input')
         mainWindow.satellites.push(new Satellite({
             position,
@@ -8885,4 +8941,15 @@ function geoSatelliteAtLongitude(long = 0) {
     return {
         a, e: 0, i: 0, raan: 0, arg: 0, tA
     }
+}
+function getGroundSwatchCircleCoordinates(rEci = [42164, 0, 0], lat = 0, long = 0) {
+    let rN = math.norm(rEci.slice(0,3))
+    let angGround = astro.groundSwath(rN)
+    
+    let nPoints = 100, points = []
+    for (let index = 0; index < nPoints+1; index++) {
+        let bearing = 360*index/nPoints
+        points.push(astro.pointRadialDistance(lat, long, bearing, angGround))
+    }
+    return points
 }

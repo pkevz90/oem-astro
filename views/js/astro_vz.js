@@ -355,6 +355,39 @@ class astro {
             ...math.add(math.multiply(Cd, math.transpose([math.subtract(rD, rC)])), math.multiply(C, math.transpose([math.subtract(drD, drC)])))
         ])
     }
+    static pointRadialDistance(lat1 = 0,lon1 = 0,bearing = 10,rdistance = 5) {
+        // Assumes degrees
+        let rlat1 = lat1*Math.PI/180;
+        let rlon1 = lon1*Math.PI/180;
+        let rbearing = bearing*Math.PI/180;
+        rdistance = rdistance*Math.PI/180;
+        let rlat = Math.asin( Math.sin(rlat1) * Math.cos(rdistance) + Math.cos(rlat1) * Math.sin(rdistance) * Math.cos(rbearing) );
+        let rlon
+        if (Math.cos(rlat) == 0 || Math.abs(Math.cos(rlat)) < 0.000001) {
+            rlon=rlon1;
+        }
+        else{
+            rlon = rlon1 + Math.atan2(Math.sin(rbearing)*Math.sin(rdistance)*Math.cos(rlat1),Math.cos(rdistance)-Math.sin(rlat1)*Math.sin(rlat));
+        }
+        let lat = rlat*180/Math.PI;
+        let lon = rlon*180/Math.PI;
+        // console.log(lon)
+        if (lon < -180) {
+            lon += 360;
+        }
+        else if (lon > 180) {
+            lon -= 360;
+        }
+        return [lat,lon];
+    }
+    static groundSwath(radius,deg = true) {
+        if (deg){
+            return Math.acos(6371/radius)*180/Math.PI;
+        }
+        else {
+            return Math.acos(6371/radius);
+        }
+    }
 }
 
 class Propagator {
