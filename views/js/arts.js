@@ -991,6 +991,7 @@ class windowCanvas {
             plotWidth: this.plotWidth,
             relativeData: this.relativeData,
             satellites,
+            groundSites: this.groundSites,
             mm: this.mm,
             timeDelta: this.timeDelta,
             scenarioLength: this.scenarioLength,
@@ -1007,16 +1008,18 @@ class windowCanvas {
             plotWidth = this.plotWidth, 
             relativeData = this.relativeData,
             satellites,
+            groundSites = [],
             scenarioLength = this.scenarioLength,
             startDate = this.startDate,
             originOrbit = this.originOrbit
         } = data
         this.startDate = new Date(startDate)
+        this.scenarioLength = scenarioLength
         this.updateOrigin(originOrbit)
         this.plotWidth = plotWidth;
         this.relativeData = relativeData;
+        this.groundSites = groundSites
         this.satellites = [];
-        this.scenarioLength = scenarioLength;
         satellites.forEach(sat =>{
             this.satellites.push(
                 new Satellite({
@@ -3383,7 +3386,17 @@ function changeSatelliteInputType(el) {
             satInputs[6].innerHTML = `dZ <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.vz.toFixed(2)}"> km/s</div>`
             break
         case 'ric-sat-input':
-            satInputs[0].innerHTML = ``
+            satInputs[0].innerHTML = `
+                <label>Rel Origin</label><select id="sat-input-origin">
+                    <option value="-1">Current Origin</option>
+                    ${mainWindow.satellites.map((s,ii) => {
+                        return `
+                            <option value="${ii}">${s.name}</option>
+                        `
+                    }).join('')}
+                </select>
+            
+                                        `
             satInputs[1].innerHTML = `R <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
             satInputs[2].innerHTML = `I <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
             satInputs[3].innerHTML = `C <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> km</div>`
@@ -3392,7 +3405,17 @@ function changeSatelliteInputType(el) {
             satInputs[6].innerHTML = `dC <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="0"> m/s</div>`
             break
         case 'rmoe-sat-input':
-            satInputs[0].innerHTML = ``
+            satInputs[0].innerHTML = `
+            <label>Rel Origin</label><select id="sat-input-origin">
+                <option value="-1">Current Origin</option>
+                ${mainWindow.satellites.map((s,ii) => {
+                    return `
+                        <option value="${ii}">${s.name}</option>
+                    `
+                }).join('')}
+            </select>
+        
+                                    `
             satInputs[1].innerHTML = `A <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> km</div>`
             satInputs[2].innerHTML = `Drift <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg/rev</div>`
             satInputs[3].innerHTML = `Rel Long <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
@@ -4177,9 +4200,10 @@ function initStateFunction(el) {
     else if (el.id === 'add-satellite-button') {
         let inputs = document.querySelectorAll('.sat-input')
         let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-        let eciState, ricState, eciOrigin, startDate
+        let eciState, ricState, eciOrigin, startDate, relOrigin
         switch (radioId) {
             case 'ric-sat-input':
+                relOrigin = Number(document.querySelector('#sat-input-origin').value)
                 ricState = [
                     Number(inputs[0].value),
                     Number(inputs[1].value),
@@ -4188,8 +4212,8 @@ function initStateFunction(el) {
                     Number(inputs[4].value) / 1000,
                     Number(inputs[5].value) / 1000,
                 ]
-                
-                eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+                relOrigin = relOrigin > -1 ? mainWindow.satellites[relOrigin].position : mainWindow.originOrbit
+                eciOrigin = Object.values(Coe2PosVelObject(relOrigin))
                 eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
                 eciState = [...eciState.rEcci, ...eciState.drEci]
                 break
@@ -4211,6 +4235,8 @@ function initStateFunction(el) {
                 eciState = propToTime(eciState, dt)
                 break
             case 'rmoe-sat-input':
+                relOrigin = Number(document.querySelector('#sat-input-origin').value)
+                relOrigin = relOrigin > -1 ? mainWindow.satellites[relOrigin].position : mainWindow.originOrbit
                 let rmoes = [
                     inputs[0].value,
                     inputs[1].value,
@@ -4228,7 +4254,7 @@ function initStateFunction(el) {
                     m: rmoes[5]
                 })
                 ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
-                eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
+                eciOrigin = Object.values(Coe2PosVelObject(relOrigin))
                 eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
                 eciState = [...eciState.rEcci, ...eciState.drEci]
                 break
@@ -6382,7 +6408,9 @@ function uploadTles(event) {
 
 function tellInputStateFileType(file) {
     // Tells if file is J2000 or TLE file
-    if (file.search(/1 *\d*.* *\d{5}\./) !== -1) {
+    console.log(file);
+    if (file.search(/1 *\d*.* *\d{5}\./) !== -1 && file.search(/^2 *\d*/m) !== -1) {
+        console.log('tle');
         // Assume file is TLE
         return 'tle'
     }
@@ -6435,11 +6463,20 @@ function handleTleFile(file) {
         // if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
         if (file[index].search(/1\s\d{5}[\sU]/) !== -1) {
             // Get tle data
+            let inputName
+            if (index > 0) {
+                if (file[index-1].slice(0,1) === '0') {
+                    inputName = file[index-1].slice(2);
+                }
+                else {
+                    console.log('No Name');
+                }
+            }
             let line2 = file[index+1].split(/\s+/)
             let epoch = file[index].match(/\d{5}.\d{8}/)[0]
             let sat = {
                 epoch: new Date(`20` + epoch.slice(0,2),0,epoch.slice(2,5),0,0,Number(epoch.slice(5))*86400),
-                name: line2[1],
+                name: inputName || line2[1],
                 orbit: {
                     a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3),
                     e: Number('0.' + line2[4]),
@@ -6449,6 +6486,7 @@ function handleTleFile(file) {
                     tA: Number(line2[6]) * Math.PI / 180
                 }
             }
+            console.log(sat);
             tleRawStates.push(sat)
             // Check if tle already uploaded, if so see if tle from past
             let otherSat = tleState.findIndex(el => el.name === sat.name)
@@ -7721,10 +7759,11 @@ function openBurnsWindow(sat) {
 let tleWindow
 function openTleWindow(tleSatellites) {
     document.getElementById('context-menu')?.remove();
-    if (tleWindow === undefined) {
-        tleWindow = window.open('', 'tle', "width=600px,height=600px")
-        setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
+    if (tleWindow !== undefined) {
+        tleWindow.close()
     }
+    tleWindow = window.open('', 'tle', "width=600px,height=600px")
+    setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
     tleWindow.importTleChoices = (el) => {
         function True2Eccentric(e, ta) {
             return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
@@ -7794,7 +7833,7 @@ function openTleWindow(tleSatellites) {
     let defaultEpoch = convertTimeToDateTimeInput(tleSatellites[0].epoch)
     console.log(defaultEpoch);
     tleWindow.document.body.innerHTML = `
-        <div>ARTS TLE Import Tool</div>
+        <div style="text-align: center; font-size: 2em; margin-bottom: 10px; width: 100%;">ARTS TLE Import Tool</div>
         <div style="width: 100%; text-align: center;">Import Time <input onchange="changeImportTime(this)" id="tle-import-time" type="datetime-local" value=${defaultEpoch}></div>
         
         <div class="no-scroll" style="max-height: 90%; overflow: scroll">
@@ -7802,6 +7841,9 @@ function openTleWindow(tleSatellites) {
             let outHt = `<div class="tle-sat-div"><div class="import-name">${satName}</div>`
             tleSatellites.filter(sat => sat.name === satName).sort((a,b)=>a.epoch-b.epoch).forEach((matchSat, ii, arr) => {
                 outHt += `<div class="tle-option-div" orbit="${Object.values(matchSat.orbit).join('x')}"style="margin-left: 20px"><input ${ii === 0 ? 'checked' : ''} name="${matchSat.name}-tle-radio" type="radio"/><span class="tle-epoch">${toStkFormat(matchSat.epoch.toString())}</span></div>`
+                let eciOrbit = Object.values(Coe2PosVelObject(matchSat.orbit))
+                let latLongOrbit = astro.eci2latlong(eciOrbit.slice(0,3), matchSat.epoch)
+                outHt += `<div style="font-size: 0.75em; margin-left: 30px">Lat: ${(latLongOrbit.lat*180/Math.PI).toFixed(1)} deg, Long: ${(latLongOrbit.long*180/Math.PI).toFixed(1)} deg, SMA: ${matchSat.orbit.a.toFixed(1)} km</div>`
             })
             outHt += '</div>'
             return outHt
