@@ -301,6 +301,24 @@ class windowCanvas {
             ctx.stroke();
         }
     }
+    fixGroundTrackCenter(newLatCenter, newLongCenter, zoom) {
+        if (newLongCenter < -180) {
+            newLongCenter += 360
+        }
+        if (newLongCenter > 180) {
+            newLongCenter -= 360
+        }
+        let latLimit = 90/mainWindow.groundTrackLimits.zoom
+        if ((newLatCenter+latLimit) > 90){
+            newLatCenter = 90 - latLimit
+        }
+        if ((newLatCenter-latLimit) < -90){
+            newLatCenter = -90 + latLimit
+        }
+        return {
+            newLatCenter, newLongCenter
+        }
+    }
     drawEarthFeatures() {
         let ctx = this.getContext()
         // If focus isn't undefined, follow focused satellite on map
@@ -312,9 +330,9 @@ class windowCanvas {
             let curTime = new Date(this.startDate - (-1000*this.scenarioTime))
             let curEci = Object.values(getCurrentInertial(this.groundTrackLimits.focus))
             let ecef = astro.eci2ecef(curEci.slice(0,3), curTime)
-            let long = math.atan2(ecef[1], ecef[0])
-            let lat = math.atan2(ecef[2], math.norm(ecef.slice(0,2)))
-            let satPoints = getGroundSwatchCircleCoordinates(curEci, lat*180/Math.PI, long*180/Math.PI)
+            let long = math.atan2(ecef[1], ecef[0])*180/Math.PI
+            let lat = math.atan2(ecef[2], math.norm(ecef.slice(0,2)))*180/Math.PI
+            let satPoints = getGroundSwatchCircleCoordinates(curEci, lat, long)
             satPoints = satPoints.map(s => this.latLong2Pixel({
                 lat: s[0],
                 long: s[1]
@@ -332,8 +350,9 @@ class windowCanvas {
                 lastPoint = pixelPoint[0]
             })
             ctx.stroke()
-            this.groundTrackLimits.center = long*180/Math.PI 
-            this.groundTrackLimits.latCenter = 0
+            let newCenters = this.fixGroundTrackCenter(lat, long, this.groundTrackLimits.zoom)
+            this.groundTrackLimits.center = newCenters.newLongCenter
+            this.groundTrackLimits.latCenter = newCenters.newLatCenter
             ctx.textAlign = 'right'
             ctx.textBaseline = 'bottom'
             ctx.font = '20px sans-serif'
@@ -349,8 +368,32 @@ class windowCanvas {
         }
         // console.timeEnd()
         // console.time()
-        ctx.strokeStyle = this.colors.foregroundColor
         ctx.lineWidth = 1
+        ctx.strokeStyle = 'rgb(150,150,150)'
+        math.range(0,360,15)._data.forEach(long => {
+            let pixelLong = this.latLong2Pixel({
+                long,
+                lat: 0
+            })
+            ctx.lineWidth = long === 0 ? 2 : 0.5
+            ctx.beginPath()
+            ctx.moveTo(pixelLong[0], 0)
+            ctx.lineTo(pixelLong[0], this.cnvs.height)
+            ctx.stroke()
+        })
+        math.range(-90,90,15, true)._data.forEach(lat => {
+            let pixelLat = this.latLong2Pixel({
+                long: 0,
+                lat
+            })
+            ctx.lineWidth = lat === 0 ? 2 : 0.5
+            ctx.beginPath()
+            ctx.moveTo(0, pixelLat[1])
+            ctx.lineTo(this.cnvs.width, pixelLat[1])
+            ctx.stroke()
+        })
+        ctx.lineWidth = 1
+        ctx.strokeStyle = this.colors.foregroundColor
         coastlines.forEach(array => {
             let lastPoint = 0
             ctx.beginPath()
@@ -1760,8 +1803,14 @@ function wheelFunction(event) {
     }
 
     if(mainWindow.latLongMode) {
-        mainWindow.groundTrackLimits.zoom *= event.deltaY > 0 ? 1/1.1 : 1.1
-        mainWindow.groundTrackLimits.zoom = mainWindow.groundTrackLimits.zoom < 1 ? 1 : mainWindow.groundTrackLimits.zoom 
+        
+        if (math.abs(event.deltaY) < 1) return
+        let newZoom = mainWindow.groundTrackLimits.zoom *( event.deltaY > 0 ? 1/1.1 : 1.1)
+        newZoom = newZoom < 1 ? 1 : newZoom 
+        mainWindow.groundTrackLimits.zoom = newZoom
+        let newLimits = mainWindow.fixGroundTrackCenter(mainWindow.groundTrackLimits.latCenter, mainWindow.groundTrackLimits.center, mainWindow.groundTrackLimits.zoom)
+        mainWindow.groundTrackLimits.latCenter = newLimits.newLatCenter
+        mainWindow.groundTrackLimits.center = newLimits.newLongCenter
     }
     mainWindow.setAxisWidth(event.deltaY > 0 ? 'increase' : 'decrease')
 }
@@ -3291,7 +3340,10 @@ document.getElementById('main-plot').addEventListener('pointerup', event => {
     mainWindow.frameMove = undefined;
 })
 
-document.getElementById('main-plot').addEventListener('pointerleave', () => mainWindow.mousePosition = undefined)
+document.getElementById('main-plot').addEventListener('pointerleave', () => {
+    mainWindow.frameMove = false
+    mainWindow.mousePosition = undefined
+})
 
 document.getElementById('main-plot').addEventListener('pointermove', event => {
     mainWindow.mousePosition = [event.clientX, event.clientY];
@@ -3303,20 +3355,12 @@ document.getElementById('main-plot').addEventListener('pointermove', event => {
     if (mainWindow.frameMove) {
         if (event.pointerId === mainWindow.frameMove.pointId) {
             if (mainWindow.latLongMode) {
-                mainWindow.groundTrackLimits.center = mainWindow.frameMove.originLong -( event.clientX - mainWindow.frameMove.x) * 360 / mainWindow.cnvs.width / mainWindow.groundTrackLimits.zoom
-                mainWindow.groundTrackLimits.latCenter = mainWindow.frameMove.originLat +( event.clientY - mainWindow.frameMove.y) * 180 / mainWindow.cnvs.height / mainWindow.groundTrackLimits.zoom
-                if (mainWindow.groundTrackLimits.center < -180) {
-                    mainWindow.groundTrackLimits.center += 360
-                }
-                if (mainWindow.groundTrackLimits.center > 180) {
-                    mainWindow.groundTrackLimits.center -= 360
-                }
-                if (mainWindow.groundTrackLimits.latCenter > 90){
-                    mainWindow.groundTrackLimits.latCenter = 90
-                }
-                if (mainWindow.groundTrackLimits.latCenter < -90){
-                    mainWindow.groundTrackLimits.latCenter = -90
-                }
+                let newLongCenter = mainWindow.frameMove.originLong -( event.clientX - mainWindow.frameMove.x) * 360 / mainWindow.cnvs.width / mainWindow.groundTrackLimits.zoom
+                let newLatCenter = mainWindow.frameMove.originLat +( event.clientY - mainWindow.frameMove.y) * 180 / mainWindow.cnvs.height / mainWindow.groundTrackLimits.zoom
+                let fixedCenters = mainWindow.fixGroundTrackCenter(newLatCenter, newLongCenter, mainWindow.groundTrackLimits.zoom)
+                mainWindow.groundTrackLimits.center = fixedCenters.newLongCenter
+                mainWindow.groundTrackLimits.latCenter = fixedCenters.newLatCenter
+
                 // mainWindow.frameMove.long = long
                 // If in lat long mode only move center longitude and latitude
                 return
@@ -6408,8 +6452,7 @@ function uploadTles(event) {
 
 function tellInputStateFileType(file) {
     // Tells if file is J2000 or TLE file
-    console.log(file);
-    if (file.search(/1 *\d*.* *\d{5}\./) !== -1 && file.search(/^2 *\d*/m) !== -1) {
+    if (file.search(/^1 *\d*.* *\d{5}\./m) !== -1 && file.search(/^2 *\d*/m) !== -1) {
         console.log('tle');
         // Assume file is TLE
         return 'tle'
