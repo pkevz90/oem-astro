@@ -1893,12 +1893,16 @@ function startContextClick(event) {
         let latLongs = mainWindow.satellites.map((s,ii) => Object.values(getCurrentInertial(ii, mainWindow.scenarioTime)))
         latLongs = latLongs.map(s => astro.eci2latlong(s.slice(0,3), currentTime))
         latLongs = latLongs.map(s => {
+            s.long += s.long < 0 ? 2 * Math.PI : 0
+            s.long -= s.long > 2*Math.PI ? -2 * Math.PI : 0
             return {
                 lat: s.lat * 180/Math.PI,
                 long: s.long * 180/Math.PI,
             }
         })
-        activeSat = latLongs.findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 2/mainWindow.groundTrackLimits.zoom)
+        latLongClick.long += latLongClick.long < 0 ? 360 : 0
+        latLongClick.long -= latLongClick.long > 360 ? -360 : 0
+        activeSat = latLongs.findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 4/mainWindow.groundTrackLimits.zoom)
         activeSat = activeSat === -1 ? false : activeSat
     }
 
@@ -1977,6 +1981,9 @@ function startContextClick(event) {
         // User clicked on satellite, generate satellite option menu
         ctxMenu.sat = activeSat;
         let dispPosition = event.altKey ? getCurrentInertial(activeSat) : mainWindow.satellites[activeSat].curPos
+        
+        
+        navigator.clipboard.writeText(toStkFormat((new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))).toString())+'x'+Object.values(getCurrentInertial(activeSat)).join('x'))
         ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
             `
                 <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
@@ -5940,12 +5947,13 @@ function generateJ2000FileTruth() {
     mainWindow.satellites.forEach((sat, satii) => {
         fileText += `\n\n${startEphem}`
         let propTime = 0
+        let timeDelta = 2*Math.PI/24 * (mainWindow.originOrbit.a ** 3 / 398600.4418) ** 0.5
         while (propTime < mainWindow.scenarioLength*3600) {
             let eciState = Object.values(getCurrentInertial(satii, propTime))
             let pointTime = new Date(mainWindow.startDate - (-propTime*1000))
             pointTime = toStkFormat(pointTime.toString())
             fileText += `${pointTime}     ${eciState.map(n => n.toFixed(5)).join('     ')}\n`
-            propTime += 3600
+            propTime += timeDelta
         }
     })
     downloadFile(`artsEphem.txt`, fileText)
@@ -6452,20 +6460,14 @@ function uploadTles(event) {
 
 function tellInputStateFileType(file) {
     // Tells if file is J2000 or TLE file
-    if (file.search(/^1 *\d*.* *\d{5}\./m) !== -1 && file.search(/^2 *\d*/m) !== -1) {
+    if (file.search(/ -?\d*\.\d* {1,}-?\d*\.\d* {1,}-?\d*\.\d* {1,}-?\d*\.\d* {1,}-?\d*\.\d* {1,}-?\d*\.\d*/m) !== -1) return 'j2000'
+    if (file.search(/^1 {1,}\d*.* {1,}\d{5}\./m) !== -1 && file.search(/^2 {1,}\d*/m) !== -1) {
         console.log('tle');
         // Assume file is TLE
         return 'tle'
     }
     console.log('j2000');
     return 'j2000'
-    if (file.search(/1 \d{5}/) !== -1) {
-        // Assume file is j2000
-        return 'j2000'
-    }
-
-    let testString = 'J2000 Position & Velocity'
-    return file.search(testString) !== -1
 }
 
 function setSun(time=mainWindow.startDate, origin = mainWindow.originOrbit) {
@@ -6506,20 +6508,11 @@ function handleTleFile(file) {
         // if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
         if (file[index].search(/1\s\d{5}[\sU]/) !== -1) {
             // Get tle data
-            let inputName
-            if (index > 0) {
-                if (file[index-1].slice(0,1) === '0') {
-                    inputName = file[index-1].slice(2);
-                }
-                else {
-                    console.log('No Name');
-                }
-            }
             let line2 = file[index+1].split(/\s+/)
             let epoch = file[index].match(/\d{5}.\d{8}/)[0]
             let sat = {
                 epoch: new Date(`20` + epoch.slice(0,2),0,epoch.slice(2,5),0,0,Number(epoch.slice(5))*86400),
-                name: inputName || line2[1],
+                name: line2[1],
                 orbit: {
                     a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3),
                     e: Number('0.' + line2[4]),
@@ -6529,7 +6522,7 @@ function handleTleFile(file) {
                     tA: Number(line2[6]) * Math.PI / 180
                 }
             }
-            console.log(sat);
+            // console.log(sat);
             tleRawStates.push(sat)
             // Check if tle already uploaded, if so see if tle from past
             let otherSat = tleState.findIndex(el => el.name === sat.name)
@@ -6547,15 +6540,11 @@ function handleTleFile(file) {
     
 }
 
-function importStates(states, time) {
+function importStates(states, time,  options = {}) {
+    let {colors, shapes, names, origin = 0} = options
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
-    let findOrigin = mainWindow.satellites.findIndex(sat => {
-        let originEci = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-        let satEci = Object.values(Coe2PosVelObject(sat.position))
-        return math.norm(math.subtract(originEci, satEci)) < 1e-3
-    })
-    let originII = findOrigin !== -1 ? findOrigin : 0
-    
+    let originII = origin
+    mainWindow.groundTrackLimits.focus = origin
     // Copy old burns to re-implement if satellite still exists
     let timeDelta = (time - mainWindow.startDate) / 1000
     let oldBurns = mainWindow.satellites.map(s => s.burns.map(b => {
@@ -6565,10 +6554,6 @@ function importStates(states, time) {
             waypoint: b.waypoint
         }
     }).filter(b => b.time >= 0))
-    if (findOrigin !== -1) {
-        let originIndex = states.findIndex(sat => states[findOrigin].name.match(sat.name))
-        originII = originIndex !== -1 ? originIndex : originII
-    }
     let oldReqs = mainWindow.relativeData.dataReqs.map(req => {
         return {
             data: req.data,
@@ -6611,7 +6596,7 @@ function importStates(states, time) {
         }
     }))
     mainWindow.satellites = []
-    states.forEach(st => {
+    states.forEach((st, iiSt) => {
         let position = PosVel2CoeNew(st.orbit.slice(0,3), st.orbit.slice(3,6))
         let existingSat = satCopies.filter(sat => sat.name.match(st.name) !== null)
         let color, shape, side, a, name, burns
@@ -6626,10 +6611,10 @@ function importStates(states, time) {
         }
         mainWindow.satellites.push(new Satellite({
             position,
-            name: name === undefined ? st.name : name,
-            color,
+            name: names !== undefined ? names[iiSt] : name === undefined ? st.name : name,
+            color: colors !== undefined ? colors[iiSt] : color,
             a,
-            shape,
+            shape: shapes !== undefined ? shapes[iiSt] : shape,
             side,
             burns
         }))
@@ -7723,6 +7708,7 @@ window.addEventListener('beforeunload', function() {
     if (instructionWindow !== undefined) instructionWindow.close()
     if (tleWindow !== undefined) tleWindow.close()
     if (saveWindow !== undefined) saveWindow.close()
+    if (j2000Window !== undefined) j2000Window.close()
     burnWindows.forEach(w => w.close())
 })
 
@@ -7808,9 +7794,6 @@ function openTleWindow(tleSatellites) {
     tleWindow = window.open('', 'tle', "width=600px,height=600px")
     setTimeout(() => tleWindow.document.title = 'TLE Import Tool', 1000)
     tleWindow.importTleChoices = (el) => {
-        function True2Eccentric(e, ta) {
-            return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
-        }
         function Eccentric2True(e,E) {
             return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
         }
@@ -7826,7 +7809,7 @@ function openTleWindow(tleSatellites) {
         let states = []
         let els = el.parentElement.parentElement.querySelectorAll('.tle-sat-div')
         for (let index = 0; index < els.length; index++) {
-            let name = els[index].querySelector('.import-name').innerText
+            let name = els[index].querySelector('.sat-name-span').innerText
             let tleOptions = els[index].querySelectorAll('.tle-option-div')
             tleOptions = [...tleOptions]
             let option = tleOptions.find(opt => {
@@ -7847,8 +7830,37 @@ function openTleWindow(tleSatellites) {
                 epoch
             })
         }
+        let importCheckboxes = [...tleWindow.document.querySelectorAll('.import-checkbox')].map(s => s.checked)
+        let importColors = [...tleWindow.document.querySelectorAll('.import-color')].map(s => s.value)
+        let importShapes = [...tleWindow.document.querySelectorAll('.import-shape')].map(s => s.value)
+        let importNames = [...tleWindow.document.querySelectorAll('.import-name-input')].map((s, nameIi) => {
+            let val = s.value
+            if (val.length > 0) {
+                val = val + '-' + states[nameIi].name
+            }
+            else {
+                val = states[nameIi].name
+            }
+            return val
+        })
         let importTime = new Date(el.parentElement.parentElement.querySelector('#tle-import-time').value)
-        importStates(states, importTime)
+        console.log(importCheckboxes);
+        states = states.filter((s, filterIi) => importCheckboxes[filterIi])
+        importNames = importNames.filter((s, filterIi) => importCheckboxes[filterIi])
+        importShapes = importShapes.filter((s, filterIi) => importCheckboxes[filterIi])
+        importColors = importColors.filter((s, filterIi) => importCheckboxes[filterIi])
+        let originRadio = [...tleWindow.document.querySelectorAll('.import-radio')].map(s => s.checked)
+        originRadio = originRadio.filter((s, filterIi) => importCheckboxes[filterIi])
+        if (originRadio.filter(s => s).length === 0) {
+            originRadio[0] = true
+        }
+        let origin = originRadio.findIndex(s => s)
+        importStates(states, importTime, {
+            names: importNames,
+            shapes: importShapes,
+            colors: importColors,
+            origin
+        })
     }
     tleWindow.changeImportTime = (el) => {
         let importDate = new Date(el.value)
@@ -7879,9 +7891,30 @@ function openTleWindow(tleSatellites) {
         <div style="text-align: center; font-size: 2em; margin-bottom: 10px; width: 100%;">ARTS TLE Import Tool</div>
         <div style="width: 100%; text-align: center;">Import Time <input onchange="changeImportTime(this)" id="tle-import-time" type="datetime-local" value=${defaultEpoch}></div>
         
-        <div class="no-scroll" style="max-height: 90%; overflow: scroll">
-        ${uniqueSats.map(satName => {
-            let outHt = `<div class="tle-sat-div"><div class="import-name">${satName}</div>`
+        <div class="no-scroll" style="max-height: 85%; overflow-y: scroll">
+        ${uniqueSats.map((satName, satIi) => {
+            let existingShape = 'delta', existingColor = '#ff5555', existingName = ''
+            let existingSat = mainWindow.satellites.findIndex(s => s.name.search(satName) !== -1)
+            if (existingSat !== -1) {
+                existingShape = mainWindow.satellites[existingSat].shape
+                existingColor = mainWindow.satellites[existingSat].color
+                existingName = mainWindow.satellites[existingSat].name === satName ? '' : mainWindow.satellites[existingSat].name.split('-'+satName).join('').split(satName).join('')
+            }
+            let outHt = `<div class="tle-sat-div" style="margin-bottom: 10px;"><div class="import-name">
+                <input title="Select origin of the initial RIC frame displayed" name="coe-origin" class="import-radio" type="radio" ${satIi === 0 ? 'checked' : ''}/>
+                <input class="import-checkbox" type="checkbox" checked/>
+                <span class="sat-name-span">${satName}</span>
+                <input value="${existingColor}" class="import-color" style="height: 20px;" type="color" value="${existingColor}"/>
+                <input value="${existingName}" class="import-name-input" style="width: 15ch;" type="text" placeholder="Name"/>
+                <select class="import-shape" class="import-shape">   
+                    <option ${existingShape === 'delta' ? 'selected' : ''} value="delta">Delta</option>
+                    <option ${existingShape === 'triangle' ? 'selected' : ''} value="triangle">Triangle</option>
+                    <option ${existingShape === 'square' ? 'selected' : ''} value="square">Square</option>
+                    <option ${existingShape === 'diamond' ? 'selected' : ''} value="diamond">Diamond</option>
+                    <option ${existingShape === '4-star' ? 'selected' : ''} value="4-star">4-Point Star</option>
+                    <option ${existingShape === 'star' ? 'selected' : ''} value="star">5-Point Star</option>
+                </select>
+            </div>`
             tleSatellites.filter(sat => sat.name === satName).sort((a,b)=>a.epoch-b.epoch).forEach((matchSat, ii, arr) => {
                 outHt += `<div class="tle-option-div" orbit="${Object.values(matchSat.orbit).join('x')}"style="margin-left: 20px"><input ${ii === 0 ? 'checked' : ''} name="${matchSat.name}-tle-radio" type="radio"/><span class="tle-epoch">${toStkFormat(matchSat.epoch.toString())}</span></div>`
                 let eciOrbit = Object.values(Coe2PosVelObject(matchSat.orbit))
@@ -7925,7 +7958,24 @@ function openJ2000Window(j2000Satellites = [], km) {
                 }
             }
         })
-        importStates(coes, time)
+        let importCheckboxes = [...j2000Window.document.querySelectorAll('.import-checkbox')].map(s => s.checked)
+        let importColors = [...j2000Window.document.querySelectorAll('.import-color')].map(s => s.value)
+        let importShapes = [...j2000Window.document.querySelectorAll('.import-shape')].map(s => s.value)
+        let originRadio = [...j2000Window.document.querySelectorAll('.import-radio')].map(s => s.checked)
+
+        coes = coes.filter((coe,ii) => importCheckboxes[ii])
+        importShapes = importShapes.filter((s, filterIi) => importCheckboxes[filterIi])
+        importColors = importColors.filter((s, filterIi) => importCheckboxes[filterIi])
+        originRadio = originRadio.filter((s, filterIi) => importCheckboxes[filterIi])
+        if (originRadio.filter(s => s).length === 0) {
+            originRadio[0] = true
+        }
+        let origin = originRadio.findIndex(s => s)
+        importStates(coes, time, {
+            colors: importColors,
+            shapes: importShapes,
+            origin
+        })
     }
     j2000Window.importAsViewer = (el) => {
         mainWindow.ephemViewerMode = true
@@ -7936,9 +7986,29 @@ function openJ2000Window(j2000Satellites = [], km) {
         <div style="width: 100%; text-align: center; margin: 10px 0px;">Import Time <input onchange="updateWindow(this)" id="tle-import-time" type="datetime-local" value=${convertTimeToDateTimeInput(new Date(time))}></div>
         
         <div class="no-scroll" style="max-height: 90%; overflow: scroll">
-            ${j2000Satellites.map(sat => {
+            ${j2000Satellites.map((sat, satIi) => {
+                // Add ability to see if satellite already exists and pull colors
+                let existingSat = mainWindow.satellites.findIndex(s => sat.name.search(s.name) !== -1)
+                let existingShape = 'delta', existingColor = '#ff5555'
+                if (existingSat !== -1) {
+                    existingShape = mainWindow.satellites[existingSat].shape
+                    existingColor = mainWindow.satellites[existingSat].color
+                }
                 return `<div>
-                    <div>${sat.name}</div>
+                    <div>
+                        <input title="Select origin of the initial RIC frame displayed" name="j2000-origin" class="import-radio" type="radio" ${satIi === 0 ? 'checked' : ''}/>
+                        <input class="import-checkbox" type="checkbox" checked/>
+                        ${sat.name} 
+                        <input class="import-color" style="height: 20px;" type="color" value="${existingColor}">
+                        <select class="import-shape">   
+                            <option ${existingShape === 'delta' ? 'selected' : ''} value="delta">Delta</option>
+                            <option ${existingShape === 'triangle' ? 'selected' : ''} value="triangle">Triangle</option>
+                            <option ${existingShape === 'square' ? 'selected' : ''} value="square">Square</option>
+                            <option ${existingShape === 'diamond' ? 'selected' : ''} value="diamond">Diamond</option>
+                            <option ${existingShape === '4-star' ? 'selected' : ''} value="4-star">4-Point Star</option>
+                            <option ${existingShape === 'star' ? 'selected' : ''} value="star">5-Point Star</option>
+                        </select>
+                    </div>
                     <div style="margin-left: 30px" class="eci-state-div"></div>
                     <div style="margin-left: 30px" class="coe-state-div"></div>
                 </div>`
@@ -9037,4 +9107,82 @@ function getGroundSwatchCircleCoordinates(rEci = [42164, 0, 0], lat = 0, long = 
         points.push(astro.pointRadialDistance(lat, long, bearing, angGround))
     }
     return points
+}
+
+function launchEom(state = [42164, 0, 0, 0, 3.074, 0], options = {}) {
+    let {a = [0.001,0,0]} = options
+    let mu_r3 = 398600.4418 / (math.norm(state.slice(0,3)) ** 3)
+    return [
+        state[3],
+        state[4],
+        state[5],
+        -mu_r3 * state[0] + a[0],
+        -mu_r3 * state[1] + a[1],
+        -mu_r3 * state[2] + a[2]
+    ]
+}
+
+function estimateEciVelocityToTarget(r1, r2, dt) {
+    let long = Math.floor(dt / (Math.PI / mainWindow.mm))
+    let n = Math.floor(long / 2) 
+    // console.log(r1,r2);
+    let crossVector = math.cross(r1.slice(0,3),r2)
+    let h1 = math.cross(r1.slice(0,3), r1.slice(3,6))
+    long = crossVector[2] * h1[2] > 0
+    option = n < 1 ? 1 : long ? -1 : 1
+    let lamResults = solveLambertsProblem(r1.slice(0,3), r2, dt, n, long, 0)
+    // console.log(lamResults.v1);
+    return lamResults.v1
+        
+}
+
+
+function launchRocket(lat = 0, long = 0, a = .025, date = new Date(), targetLong = 0, tof = 4*3600, isp = 300, g0 = 9.81) {
+    // propPosition = runge_kutta4(launchEom, propPosition, burnDuration-burnedTime, burns[burnIndex-1].direction.map(s => s * a / mag))
+    let hpop = new Propagator({
+
+    })
+    let targetState = astro.sensorGeodeticPosition(0, targetLong, 42164-6378)
+    targetState = astro.ecef2eci(targetState, new Date(date - (-1000*tof)))
+    let ecefPosition = astro.sensorGeodeticPosition(lat, long)
+    let eciPosition = astro.ecef2eci(ecefPosition, date)
+    let eciVel = math.cross([0,0,2*Math.PI / 86164], eciPosition)
+    let position = [...eciPosition, ...eciVel]
+    let r = 0, t = 0, tStep = 0.5
+    console.log(position);
+    while (r < 30) {
+        console.log(a, t,r);
+        let timeAcc = position.slice(0,3).map(s => a * s / math.norm(position.slice(0,3)))
+        let atmDrag = hpop.atmosphericDragEffect(position)
+        position = runge_kutta4(launchEom, position, tStep, timeAcc)
+        position = math.add(position, [0,0,0,...atmDrag].map(s => s*tStep))
+        t += tStep
+        r = math.norm(position.slice(0,3)) - 6371
+        a = a*math.exp(a*tStep*1000 / g0 / isp)
+        // console.log(r, math.norm(position.slice(3)));
+    }
+    return t
+    // Continue with first state roll
+    let tRoll = 0
+    while (tRoll < 300) {
+        console.log(position);
+        let v1 = estimateEciVelocityToTarget(position, targetState, tof-t)
+        let delV1 = math.subtract(v1, position.slice(3))
+        let aStep = math.norm(delV1) < a*tStep ? math.norm(delV1)/tStep : a
+        delV1 = delV1.map(s => s*aStep/math.norm(delV1))
+        // console.log(position, tStep, delV1);
+        if (aStep < 1e-9) break
+        let atmDrag = hpop.atmosphericDragEffect(position)
+        position = runge_kutta4(launchEom, position, tStep, delV1)
+        position = math.add(position, [0,0,0,...atmDrag].map(s => s*tStep))
+        console.log(aStep);
+        a = a*math.exp(aStep*tStep*1000 / g0 / isp)
+        tRoll += tStep
+        t += tStep
+    }
+    console.log(position, propToTimeAnalytic(PosVel2CoeNew(position.slice(0,3), position.slice(3)),tof - t));
+
+    console.log(targetState);
+    console.log(t / 60);
+    console.log(hpop.getAtmosphereDensity(math.norm(position.slice(0,3))-6378));
 }
