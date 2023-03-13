@@ -212,7 +212,7 @@ function runRendezvousOptions(time, searchDuration, site, state, output = [], op
 
 function copyStkSequence(el) {
     // Function to copy to clipboard a string for the STK sequence which builds trajectory out in STK
-    let startTime = el.parentElement.parentElement.getAttribute('start')
+    let startTime = el.parentElement.parentElement.getAttribute('launch')
     let launchState = el.parentElement.parentElement.getAttribute('launchstate')
     let tof = el.parentElement.parentElement.getAttribute('tof')
     navigator.clipboard.writeText(startTime+'x'+launchState+'x'+tof)
