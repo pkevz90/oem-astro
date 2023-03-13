@@ -188,6 +188,7 @@ function runRendezvousOptions(time, searchDuration, site, state, output = [], op
                         <button onclick="displayLaunch(this)">Ground Track</button>
                         <button onclick="displayRic(this)">RIC</button>
                         <button onclick="copyStkSequence(this)">STK</button>
+                        <button data-launchendstate="${endState.join('x')}" data-targetendstate="${targetEndState.join('x')}" onclick="generateDebrisPiece(this)">Debris</button>
                         </div>
                 </div>
                 `)  
@@ -210,12 +211,39 @@ function runRendezvousOptions(time, searchDuration, site, state, output = [], op
     }
 }
 
-function copyStkSequence(el) {
+function toStkFormat(time) {
+    time = time.split('GMT')[0].substring(4, time.split('GMT')[0].length - 1) + '.000';
+    time = time.split(' ');
+    return time[1] + ' ' + time[0] + ' ' + time[2] + ' ' + time[3];
+}
+
+function randn_bm() {
+    var u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+}
+
+function generateDebrisPiece(el) {
     // Function to copy to clipboard a string for the STK sequence which builds trajectory out in STK
     let startTime = el.parentElement.parentElement.getAttribute('launch')
+    let rendStateTarget = el.dataset.targetendstate.split('x').map(s => Number(s))
+    let tof = el.parentElement.parentElement.getAttribute('tof')
+    // Mass Multiplier
+    console.log(rendStateTarget);
+    let velSigma = 1 //m/s
+    let debrisState = math.add(rendStateTarget, [0,0,0,velSigma, velSigma, velSigma].map(s => s*randn_bm()/1000))
+    let rendTime = new Date((new Date(startTime))-(-1000*tof))
+    console.log(rendTime, debrisState);
+    navigator.clipboard.writeText(toStkFormat(rendTime.toString())+'x'+debrisState.join('x'))
+}
+
+function copyStkSequence(el) {
+    // Function to copy to clipboard a string for the STK sequence which builds trajectory out in STK
+    let startTime = new Date(el.parentElement.parentElement.getAttribute('launch'))
     let launchState = el.parentElement.parentElement.getAttribute('launchstate')
     let tof = el.parentElement.parentElement.getAttribute('tof')
-    navigator.clipboard.writeText(startTime+'x'+launchState+'x'+tof)
+    navigator.clipboard.writeText(toStkFormat(startTime.toString())+'x'+launchState+'x'+tof)
 }
 
 function isSatIlluminated(satPos = [6900, 0, 0], sunPos = [6900000, 0,0]) {
