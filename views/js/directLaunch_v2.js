@@ -187,6 +187,7 @@ function runRendezvousOptions(time, searchDuration, site, state, output = [], op
                     <div>
                         <button onclick="displayLaunch(this)">Ground Track</button>
                         <button onclick="displayRic(this)">RIC</button>
+                        <button onclick="copyStkSequence(this)">STK</button>
                         </div>
                 </div>
                 `)  
@@ -211,6 +212,10 @@ function runRendezvousOptions(time, searchDuration, site, state, output = [], op
 
 function copyStkSequence(el) {
     // Function to copy to clipboard a string for the STK sequence which builds trajectory out in STK
+    let startTime = el.parentElement.parentElement.getAttribute('start')
+    let launchState = el.parentElement.parentElement.getAttribute('launchstate')
+    let tof = el.parentElement.parentElement.getAttribute('tof')
+    navigator.clipboard.writeText(startTime+'x'+launchState+'x'+tof)
 }
 
 function isSatIlluminated(satPos = [6900, 0, 0], sunPos = [6900000, 0,0]) {
