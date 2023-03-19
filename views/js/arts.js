@@ -464,7 +464,7 @@ class windowCanvas {
                 //     (90-point.lat)/180*this.cnvs.height
                 // ]
                 let pixelPoint = this.latLong2Pixel(point)
-                ctx.fillRect(pixelPoint[0]-1, pixelPoint[1]-1,2,2)
+                ctx.fillRect(pixelPoint[0]-this.trajSize, pixelPoint[1]-this.trajSize,this.trajSize*2,this.trajSize*2)
             })
             let curEci = Object.values(getCurrentInertial(index, mainWindow.scenarioTime))
             let time = new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000))
@@ -1728,11 +1728,20 @@ function sliderFunction(slider) {
     
     updateWhiteCellTimeAndErrors()
     if (monteCarloData !== null) {
+        // console.log('hey');
         let td = mainWindow.desired.scenarioTime - monteCarloData.time
         td = mainWindow.desired.scenarioTime < monteCarloData.minTime ? monteCarloData.minTime - monteCarloData.time : td
-        console.log(td);
+        // console.log(td);
         monteCarloData.points = monteCarloData.points.map(p => {
-            return oneBurnFiniteHcw(p, 0, 0, 0, td, monteCarloData.time, 0)
+            let newState = runge_kutta(twoBodyRpo, Object.values(p), td)
+            return {
+                x: newState[0],
+                y: newState[1],
+                z: newState[2],
+                xd: newState[3],
+                yd: newState[4],
+                zd: newState[5]
+            }
         })
         monteCarloData.time += td //mainWindow.desired.scenarioTime
         let covData = findCovariance(monteCarloData.points)
@@ -3485,6 +3494,7 @@ function changeSatelliteInputType(el) {
             
             break
     }
+    document.getElementById(el.id).checked = true
     document.querySelectorAll('.sat-input[type="number"]')[0].focus()
 }
 
@@ -3610,61 +3620,65 @@ function parseArtsText(text) {
 }
 
 function parseState(button) {
-    let values = document.getElementById('parse-text').value
-    values = checkJ200StringValid(values)
-    if (!values) return showScreenAlert('J200 string from STK not valid')
-    document.getElementById('parse-text').value = ''
-    switch (button.id) {
-        case 'parse-to-ric':
-            let eciOrigin = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-            let dt = (mainWindow.startDate - values.date) / 1000
-            values.state = propToTime(values.state, dt, false)
-            if (math.abs(dt) > 2 * 86164) return showScreenAlert(`Epoch difference too big: ${(math.abs(dt) / 86164).toFixed(1)} days`)
-            let ric = Eci2Ric(eciOrigin.slice(0,3), eciOrigin.slice(3,6), values.state.slice(0,3), values.state.slice(3,6))
-            ric = math.squeeze([...ric.rHcw, ...ric.drHcw])
-            document.querySelector('#ric-sat-input').checked = true
-            changeSatelliteInputType({id: 'ric-sat-input'})
-            let ricInputs = document.querySelectorAll('.sat-input')
-            ricInputs[0].value = ric[0].toFixed(4)
-            ricInputs[1].value = ric[1].toFixed(4)
-            ricInputs[2].value = ric[2].toFixed(4)
-            ricInputs[3].value = (ric[3]*1000).toFixed(4)
-            ricInputs[4].value = (ric[4]*1000).toFixed(4)
-            ricInputs[5].value = (ric[5]*1000).toFixed(4)
-
-            break
-        case 'parse-set-origin':
-            if (mainWindow.satellites.length > 0) {
-                let a = confirm("Reseting origin will delete existing satellites");
-                if (!a) return
-                mainWindow.satellites = []
-            }
-            mainWindow.startDate = values.date
-            let originOrbit = PosVel2CoeNew(values.state.slice(0,3), values.state.slice(3,6))
-            mainWindow.mm = (398600.4418 / originOrbit.a ** 3) ** 0.5
-            let sun = sunFromTime(values.date) 
-            sun = math.squeeze(Eci2Ric(values.state.slice(0,3), values.state.slice(3,6), sun, [0,0,0]).rHcw)
-            sun = math.dotDivide(sun, math.norm(sun))
-            mainWindow.initSun = sun
-            mainWindow.originOrbit = originOrbit
-            mainWindow.satellites.push(new Satellite({
-                name: 'Origin',
-                position: {
-                    r: 0,
-                    i: 0,
-                    c: 0,
-                    rd: 0,
-                    id: 0,
-                    cd: 0,
-                }
-            }))
-            updateWhiteCellWindow()
-            break
-        
+    function Eccentric2True(e,E) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
     }
+    
+    function solveKeplersEquation(M,e) {
+        let E = M;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+            E -= del;
+        }
+        return E;
+    }
+    let inputValue = document.getElementById('parse-text').value
+    document.getElementById('parse-text').value = ''
+    let tleCheck = inputValue.search(/^1 {1,}\d{1,5}/) !== -1
+    let eciValues
+    if (tleCheck) {
+        // parse tle
+        try {
+            let date = inputValue.slice(inputValue.search(/\d{5}.\d{4,}/)).split(/ {1,}/)[0]
+            inputValue = inputValue.slice(inputValue.search(/2 {1,}\d{5}/)).split(/ {1,}/)
+            inputValue = {
+                a: Number(inputValue[7]),
+                e: Number('0.'+inputValue[4]),
+                i: Number(inputValue[2])*Math.PI/180,
+                raan: Number(inputValue[3])*Math.PI/180,
+                arg: Number(inputValue[5])*Math.PI/180,
+                tA: Number(inputValue[6])*Math.PI/180,
+            }
+            inputValue.a = 86400 / inputValue.a
+            inputValue.a = (398600.4418*(inputValue.a / 2 / Math.PI)**2)**(1/3)
+            inputValue.tA = solveKeplersEquation(inputValue.tA, inputValue.e)
+            inputValue.tA = Eccentric2True(inputValue.e, inputValue.tA)
+            inputValue = Object.values(Coe2PosVelObject(inputValue))
+            date = new Date('20'+date.slice(0,2), 0, date.slice(2,5), 0,0,86400*Number(date.slice(5)))
+            eciValues = {
+                date, state: inputValue
+            }
+        } catch (error) {
+            return showScreenAlert('Input not valid as a J2000 or TLE')
+        }
+    }
+    else {
+        eciValues = checkJ200StringValid(inputValue)
+        if (!eciValues) return showScreenAlert('Input not valid as a J2000 or TLE')
+    }
+    changeSatelliteInputType({id: 'eci-sat-input'})
+    let satInputs = document.querySelectorAll('.sat-input')
+    satInputs[0].value = convertTimeToDateTimeInput(eciValues.date)
+    satInputs[1].value = eciValues.state[0].toFixed(3)
+    satInputs[2].value = eciValues.state[1].toFixed(3)
+    satInputs[3].value = eciValues.state[2].toFixed(3)
+    satInputs[4].value = eciValues.state[3].toFixed(6)
+    satInputs[5].value = eciValues.state[4].toFixed(6)
+    satInputs[6].value = eciValues.state[5].toFixed(6)
     document.getElementById('parse-text').placeholder = 'State Accepted!'
     setTimeout(() => {
-        document.getElementById('parse-text').placeholder = 'ECI State'
+        document.getElementById('parse-text').placeholder = 'ECI State or TLE'
     }, 3000)
 }
 //------------------------------------------------------------------
@@ -4315,6 +4329,9 @@ function initStateFunction(el) {
         }
         let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
         if (mainWindow.satellites.length === 0) {
+            if (radioId === 'eci-sat-input') {
+                mainWindow.startDate = new Date(document.querySelector('.sat-input').value)
+            }
             mainWindow.updateOrigin(position)
         }
         let styleInputs = document.querySelectorAll('.sat-style-input')
@@ -6143,32 +6160,31 @@ function moveBurnTime(sat = 0, burn = 0, dt = 3600) {
     mainWindow.satellites[sat].calcTraj(true)
 }
 
-function startMonteCarlo(sat = 0, burn = 0, options= {}) {
+function startBurnMonteCarlo(sat = 0, options= {}) {
     let {n = 200, stdR =  0.1, stdAng =  1.5*Math.PI / 180} = options
+    let burn = mainWindow.satellites[sat].burns.filter(b => b.time < mainWindow.scenarioTime)
+    if (burn.length === 0) return null
+    burn = burn.length - 1
+    console.log(`Running Monte Carlo Sim for ${mainWindow.satellites[sat].name}'s burn occuring at ${toStkFormat((new Date(mainWindow.startDate - (-1000*mainWindow.satellites[sat].burns[burn].time))).toString())}`);
     let burnSat = mainWindow.satellites[sat].burns[burn]
     let state = mainWindow.satellites[sat].currentPosition({time: burnSat.time})
     state = {
-        x: state.r[0],
-        y: state.i[0],
-        z: state.c[0],
-        xd: state.rd[0],
-        yd: state.id[0],
-        zd: state.cd[0]
+        x: state[0],
+        y: state[1],
+        z: state[2],
+        xd: state[3],
+        yd: state[4],
+        zd: state[5]
     }
     let direction = {
-        mag: math.norm(Object.values(burnSat.direction)),
-        az: math.atan2(burnSat.direction.i, burnSat.direction.r),
-        el: math.atan2(burnSat.direction.c, math.norm(Object.values(burnSat.direction).slice(0,2)))
+        mag: math.norm(burnSat.direction),
+        az: math.atan2(burnSat.direction[1], burnSat.direction[0]),
+        el: math.atan2(burnSat.direction[2], math.norm(burnSat.direction.slice(0,2)))
     }
     let a = mainWindow.satellites[sat].a
     let dur = direction.mag * (1 + 10 * stdR) / a
     let propTime = dur < (mainWindow.scenarioTime - burnSat.time) ? mainWindow.scenarioTime - burnSat.time : dur
     let corruptBurn = (burn) => {
-        // return {
-        //     mag: burn.mag + stdR * burn.mag * 2*(Math.random()-0.5),
-        //     az: burn.az + stdAng * 2*(Math.random()-0.5),
-        //     el: burn.el + stdAng * 2*(Math.random()-0.5)
-        // }
         return {
             mag: burn.mag + stdR * burn.mag * randn_bm(),
             az: burn.az + stdAng * randn_bm(),
@@ -9071,8 +9087,8 @@ function displayHpopTraj(update = false, sat = false) {
         })
     })
 }
-let filteringWindow
-function openFilteringWindow() {
+let goundSiteWindow
+function openGroundSiteWindow() {
 
 }
 
