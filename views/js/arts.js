@@ -470,7 +470,6 @@ class windowCanvas {
             let time = new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000))
             let latLong = astro.eci2latlong(curEci.slice(0,3), time)
             latLong = {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI}
-            
             // let  = [
             //     (latLong.long+180)/360*this.cnvs.width,
             //     (90-latLong.lat)/180*this.cnvs.height
@@ -3670,12 +3669,12 @@ function parseState(button) {
     changeSatelliteInputType({id: 'eci-sat-input'})
     let satInputs = document.querySelectorAll('.sat-input')
     satInputs[0].value = convertTimeToDateTimeInput(eciValues.date)
-    satInputs[1].value = eciValues.state[0].toFixed(3)
-    satInputs[2].value = eciValues.state[1].toFixed(3)
-    satInputs[3].value = eciValues.state[2].toFixed(3)
-    satInputs[4].value = eciValues.state[3].toFixed(6)
-    satInputs[5].value = eciValues.state[4].toFixed(6)
-    satInputs[6].value = eciValues.state[5].toFixed(6)
+    satInputs[1].value = eciValues.state[0].toFixed(8)
+    satInputs[2].value = eciValues.state[1].toFixed(8)
+    satInputs[3].value = eciValues.state[2].toFixed(8)
+    satInputs[4].value = eciValues.state[3].toFixed(8)
+    satInputs[5].value = eciValues.state[4].toFixed(8)
+    satInputs[6].value = eciValues.state[5].toFixed(8)
     document.getElementById('parse-text').placeholder = 'State Accepted!'
     setTimeout(() => {
         document.getElementById('parse-text').placeholder = 'ECI State or TLE'
@@ -6520,12 +6519,19 @@ function handleTleFile(file) {
     file = file.split(/\n/)
     let tleState = []
     let tleRawStates = []
+    let outNames = {}
     for (let index = 0; index < file.length; index++) {
         // if (file[index].search(/\b\d{5}[A-Z]\b/) !== -1) {
         if (file[index].search(/1\s\d{5}[\sU]/) !== -1) {
             // Get tle data
             let line2 = file[index+1].split(/\s+/)
             let epoch = file[index].match(/\d{5}.\d{8}/)[0]
+            let threeLEname
+            if (index !== 0) {
+                if (file[index-1][0] === '0') {
+                    threeLEname = file[index-1].slice(2)
+                }
+            }
             let sat = {
                 epoch: new Date(`20` + epoch.slice(0,2),0,epoch.slice(2,5),0,0,Number(epoch.slice(5))*86400),
                 name: line2[1],
@@ -6538,6 +6544,7 @@ function handleTleFile(file) {
                     tA: Number(line2[6]) * Math.PI / 180
                 }
             }
+            outNames[sat.name] = outNames[sat.name] === undefined ? threeLEname : outNames[sat.name]
             // console.log(sat);
             tleRawStates.push(sat)
             // Check if tle already uploaded, if so see if tle from past
@@ -6551,7 +6558,7 @@ function handleTleFile(file) {
         }
         
     }
-    openTleWindow(tleRawStates)
+    openTleWindow(tleRawStates, outNames)
     return
     
 }
@@ -7356,7 +7363,7 @@ function convertTimeToDateTimeInput(timeIn = mainWindow.startDate, seconds = tru
     timeIn = new Date(timeIn)
     if (timeIn == 'Invalid Date') return
     if (seconds) {
-        return `${timeIn.getFullYear()}-${padNumber(timeIn.getMonth()+1)}-${padNumber(timeIn.getDate())}T${padNumber(timeIn.getHours())}:${padNumber(timeIn.getMinutes())}`
+        return `${timeIn.getFullYear()}-${padNumber(timeIn.getMonth()+1)}-${padNumber(timeIn.getDate())}T${padNumber(timeIn.getHours())}:${padNumber(timeIn.getMinutes())}:${padNumber(timeIn.getSeconds())}`
     }
     return `${timeIn.getFullYear()}-${padNumber(timeIn.getMonth()+1)}-${padNumber(timeIn.getDate())}T${padNumber(timeIn.getHours())}:${padNumber(timeIn.getMinutes())}:${padNumber(timeIn.getSeconds())}`
 }
@@ -7802,7 +7809,7 @@ function openBurnsWindow(sat) {
 
 }
 let tleWindow
-function openTleWindow(tleSatellites) {
+function openTleWindow(tleSatellites, tleNames = {}) {
     document.getElementById('context-menu')?.remove();
     if (tleWindow !== undefined) {
         tleWindow.close()
@@ -7909,7 +7916,7 @@ function openTleWindow(tleSatellites) {
         
         <div class="no-scroll" style="max-height: 85%; overflow-y: scroll">
         ${uniqueSats.map((satName, satIi) => {
-            let existingShape = 'delta', existingColor = '#ff5555', existingName = ''
+            let existingShape = 'delta', existingColor = '#ff5555', existingName = tleNames[satName] === undefined ? '' : tleNames[satName]
             let existingSat = mainWindow.satellites.findIndex(s => s.name.search(satName) !== -1)
             if (existingSat !== -1) {
                 existingShape = mainWindow.satellites[existingSat].shape
