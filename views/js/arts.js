@@ -6476,12 +6476,12 @@ function uploadTles(event) {
 function tellInputStateFileType(file) {
     // Tells if file is J2000 or TLE file
     if (file.search(/ -?\d*\.\d* {1,}-?\d*\.\d* {1,}-?\d*\.\d* {1,}-?\d*\.\d* {1,}-?\d*\.\d* {1,}-?\d*\.\d*/m) !== -1) return 'j2000'
-    if (file.search(/^1 {1,}\d*.* {1,}\d{5}\./m) !== -1 && file.search(/^2 {1,}\d*/m) !== -1) {
+    else if (file.search(/^1 {1,}\d*.* {1,}\d{5}\./m) !== -1 && file.search(/^2 {1,}\d*/m) !== -1) {
         console.log('tle');
         // Assume file is TLE
         return 'tle'
     }
-    console.log('j2000');
+    else if (file.search('EphemerisTimePosVel') !== -1) return 'ephem'
     return 'j2000'
 }
 
@@ -8842,7 +8842,9 @@ function artsDropHandler(event) {
     event.preventDefault()
     if (event.type === 'dragover') return
     reader = new FileReader()
-    reader.onload = (event) => handleImportTextFile(event.target.result)
+    reader.onload = (event) => {
+        handleImportTextFile(event.target.result)
+    }
 
     reader.readAsText(event.dataTransfer.items[0].getAsFile())
 }
@@ -8862,11 +8864,47 @@ function handleImportTextFile(inText) {
         let fileType = tellInputStateFileType(inText)
         
         if (fileType === 'j2000') return handleStkJ200File(inText)
+        if (fileType === 'ephem') return handleEphemFile(inText)
         else return handleTleFile(inText)
     }
     else {
         mainWindow.loadDate(objectFromText)
     }
+}
+
+function handleEphemFile(text) {
+    text = text.split(/\n{1,}/)
+    let baseDate = new Date(text.find(s => s.search('ScenarioEpoch') !== -1).split(/ {2,}/)[1])
+    let ephemStart = text.findIndex(s => s.search('EphemerisTimePosVel') !== -1) + 1
+    let ephemEnd = text.findIndex(s => s.search('END Ephemeris') !== -1)
+    ephemEnd = ephemEnd === -1 ? text.length : ephemEnd
+    let states = text.slice(ephemStart, ephemEnd).filter(s => s !== '\r').map(s => s.split(/ {1,}/).map(r => Number(r)))
+    states = states.map(s => {
+        let newDate = new Date(baseDate - (-1000*s[0]))
+        return [newDate, ...s.slice(1)] 
+    })
+    // Find closest time
+    minStateIndex = 0
+    if (mainWindow.satellites.length > 0) {
+        let timeArray = states.map(s => math.abs(s[0]-mainWindow.startDate))
+        minStateIndex = timeArray.findIndex(s => s === math.min(timeArray))
+        minStateIndex = minStateIndex === -1 ? 0 : minStateIndex
+    }
+    let chosenState = states[minStateIndex]
+    
+    openPanel({
+        id: 'add-satellite'
+    })
+    changeSatelliteInputType({
+        id: 'eci-sat-input'
+    })
+
+    let inputs = document.querySelectorAll('.sat-input')
+    inputs[0].value = convertTimeToDateTimeInput(chosenState.shift())
+    chosenState.forEach((s, stateii) => {
+        inputs[stateii+1].value = s.toFixed(6)
+    })
+
 }
 
 function testCodeTime(sat = 0) {
