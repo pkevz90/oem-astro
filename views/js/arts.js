@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.0'
+let appAcr = 'ROTS 2.1'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '6 Mar 2023'
+let cao = '4 Apr 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -1793,7 +1793,7 @@ function wheelFunction(event) {
         let currentOrigin = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + currentTranTime)
         let curCrossStateEci = Ric2Eci(curCrossState.slice(0,3), curCrossState.slice(3,6), currentOrigin.slice(0,3), currentOrigin.slice(3,6))
         mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.target = [...curCrossStateEci.rEcci, ...curCrossStateEci.drEci]
-        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime = currentTranTime 
+        mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime = currentTranTime > 900 / 86164 * (2*Math.PI / mainWindow.mm) ? currentTranTime : 900 / 86164 * (2*Math.PI / mainWindow.mm)
         mainWindow.changeTime(mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].time + mainWindow.satellites[mainWindow.burnStatus.sat].burns[mainWindow.burnStatus.burn].waypoint.tranTime,true);
         
         updateWhiteCellTimeAndErrors()
@@ -1895,6 +1895,7 @@ function startContextClick(event) {
     activeSat = event.ctrlKey ? false : activeSat
     // If in ground track mode, ignore click prox based on ric coordinates
     activeSat = mainWindow.latLongMode ? false : activeSat
+    let activeSite = false
     // If in ground track mode, check current lat long vs clicked lat long
     if (mainWindow.latLongMode) {
         let currentTime = new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000))
@@ -1912,8 +1913,10 @@ function startContextClick(event) {
         latLongClick.long -= latLongClick.long > 360 ? -360 : 0
         activeSat = latLongs.findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 4/mainWindow.groundTrackLimits.zoom)
         activeSat = activeSat === -1 ? false : activeSat
+        activeSite = mainWindow.groundSites.map(s => s.coordinates).findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 4/mainWindow.groundTrackLimits.zoom)
+        activeSite = activeSite === -1 ? false : activeSite
+        
     }
-
     // Check if clicked on burn
     checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, true))
     // Find index of satellite burn clicked on
@@ -1964,6 +1967,7 @@ function startContextClick(event) {
         console.error('Error on right click path')
         pathIndex = -1
     }
+    console.log(activeSite);
     if (pathIndex !== -1) {
         let dataDiv = eventPath[pathIndex]
         let origin = dataDiv.getAttribute('origin')
@@ -1985,101 +1989,135 @@ function startContextClick(event) {
         <div>
         `
     }
+    else if (activeSite !== false) {
+        let {lat, long} = mainWindow.groundSites[activeSite].coordinates
+        long  = long > 180 ? long - 360 : long
+        ctxMenu.innerHTML = `
+            <div site="${activeSite}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
+                <span>${mainWindow.groundSites[activeSite].name}</span>
+            </div>
+            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+            
+            <div site="${activeSite}" class="context-item" onclick="handleContextClick(this)" id="delete-site">Delete Site</div>
+            <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
+                Lat: ${lat.toFixed(2)} Long: ${long.toFixed(2)}
+            </div>
+        `
+    }
     else if (activeSat !== false) {
         // User clicked on satellite, generate satellite option menu
         ctxMenu.sat = activeSat;
-        let dispPosition = event.altKey ? getCurrentInertial(activeSat) : mainWindow.satellites[activeSat].curPos
-        
-        
-        navigator.clipboard.writeText(toStkFormat((new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))).toString())+'x'+Object.values(getCurrentInertial(activeSat)).join('x'))
-        ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
-            `
-                <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
-                    <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
-                    <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
-                    <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
-                    <datalist id="sat-color-picker2">
-                        <option>#ff0000</option>
-                        <option>#0000ff</option>
-                    </datalist>
-                    <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
-                        <option value=""></option>
-                        <option value="delta">Delta</option>
-                        <option value="square">Square</option>
-                        <option value="triangle">Triangle</option>
-                        <option value="diamond">Diamond</option>
-                        <option value="4-star">4-Point Star</option>
-                        <option value="star">5-Point Star</option>
-                    </select>
-                    <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
-                </div>
-                <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+        let ricPosition = mainWindow.satellites[activeSat].curPos
+        let coePosition = astro.eci2latlong(Object.values(getCurrentInertial(activeSat)).slice(0,3), new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        console.log(coePosition);
+        coePosition = `Lat: ${(coePosition.lat*180/Math.PI).toFixed(1)}<sup>o</sup>, Long: ${(coePosition.long*180/Math.PI).toFixed(1)}<sup>o</sup>, <abbr title="Distance to Earth's Center">R</abbr>: ${math.norm(coePosition.r_ecef).toFixed(1)} km`
+        let newInnerHTML = `
+            <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
+                <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
+                <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
+                <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+                <datalist id="sat-color-picker2">
+                    <option>#ff0000</option>
+                    <option>#0000ff</option>
+                </datalist>
+                <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
+                    <option value=""></option>
+                    <option value="delta">Delta</option>
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="diamond">Diamond</option>
+                    <option value="4-star">4-Point Star</option>
+                    <option value="star">5-Point Star</option>
+                </select>
+                <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
+            </div>
+            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+        `
+        if (!mainWindow.latLongMode) {
+            newInnerHTML += `
+                <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
                 <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
                 ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
-                <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
-                    ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
-                </div>
-                <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">
-                    ${mainWindow.satellites[activeSat].cov !== undefined ? mainWindow.satellites[activeSat].cov : ''}
-                </div> 
+                ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
             `
-            : mainWindow.latLongMode ? `
-            <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
-                <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
-                <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
-                <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
-                <datalist id="sat-color-picker2">
-                    <option>#ff0000</option>
-                    <option>#0000ff</option>
-                </datalist>
-                <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
-                    <option value=""></option>
-                    <option value="delta">Delta</option>
-                    <option value="square">Square</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="diamond">Diamond</option>
-                    <option value="4-star">4-Point Star</option>
-                    <option value="star">5-Point Star</option>
-                </select>
-                <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
+        }
+        newInnerHTML += `
+            <div style="font-size: 0.4em; padding: 2.5px 15px 0px; margin-top: 5px; color: white; cursor: default;">
+                RIC Position To Origin
             </div>
-            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
-            <div sat="${activeSat}" class="context-item" onclick="handleContextClick(this)" id="zoom-to-sat">Zoom To</div>
-            <div sat="${activeSat}" class="context-item" onclick="changeOrigin(${activeSat})">Focus</div>
-            `
-            :`
-            <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
-                <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
-                <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
-                <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
-                <datalist id="sat-color-picker2">
-                    <option>#ff0000</option>
-                    <option>#0000ff</option>
-                </datalist>
-                <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
-                    <option value=""></option>
-                    <option value="delta">Delta</option>
-                    <option value="square">Square</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="diamond">Diamond</option>
-                    <option value="4-star">4-Point Star</option>
-                    <option value="star">5-Point Star</option>
-                </select>
-                <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
+            <div style="font-size: 0.75em; padding: 0px 15px 1px; color: white; cursor: default;">
+                ${Object.values(ricPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(ricPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
             </div>
-            <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
-            <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
-            <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
-            ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
-            ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
-            <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
-                ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
+            <div style="font-size: 0.4em; padding: 1px 15px 0px; margin-top: 5px; color: white; cursor: default;">
+                Ground Position
             </div>
-            <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">
-                ${mainWindow.satellites[activeSat].cov !== undefined ? mainWindow.satellites[activeSat].cov : ''}
-            </div> 
-            `
-        //             <div class="context-item">Export Burns</div><div class="context-item" onclick="generateEphemFile(${activeSat})" id="state-options">Gen .e File</div>
+            <div style="margin-top: -4px; font-size: 0.75em; padding: 0px 15px 5px; color: white; cursor: default;">
+                ${coePosition}
+            </div>
+        `
+
+        navigator.clipboard.writeText(toStkFormat((new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))).toString())+'x'+Object.values(getCurrentInertial(activeSat)).join('x'))
+        ctxMenu.innerHTML = newInnerHTML
+        //     : mainWindow.latLongMode ? `
+        //     <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
+        //         <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
+        //         <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
+        //         <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+        //         <datalist id="sat-color-picker2">
+        //             <option>#ff0000</option>
+        //             <option>#0000ff</option>
+        //         </datalist>
+        //         <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
+        //             <option value=""></option>
+        //             <option value="delta">Delta</option>
+        //             <option value="square">Square</option>
+        //             <option value="triangle">Triangle</option>
+        //             <option value="diamond">Diamond</option>
+        //             <option value="4-star">4-Point Star</option>
+        //             <option value="star">5-Point Star</option>
+        //         </select>
+        //         <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
+        //     </div>
+        //     <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+        //     <div sat="${activeSat}" class="context-item" onclick="handleContextClick(this)" id="zoom-to-sat">Zoom To</div>
+        //     <div sat="${activeSat}" class="context-item" onclick="changeOrigin(${activeSat})">Focus</div>
+        //     `
+        //     :`
+        //     <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
+        //         <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
+        //         <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
+        //         <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+        //         <datalist id="sat-color-picker2">
+        //             <option>#ff0000</option>
+        //             <option>#0000ff</option>
+        //         </datalist>
+        //         <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
+        //             <option value=""></option>
+        //             <option value="delta">Delta</option>
+        //             <option value="square">Square</option>
+        //             <option value="triangle">Triangle</option>
+        //             <option value="diamond">Diamond</option>
+        //             <option value="4-star">4-Point Star</option>
+        //             <option value="star">5-Point Star</option>
+        //         </select>
+        //         <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
+        //     </div>
+        //     <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
+        //     <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
+        //     <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
+        //     ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
+        //     ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
+        //     <div style="font-size: 0.25em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
+        //         RIC Position
+        //     </div>  
+        //     <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
+        //         ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
+        //     </div>
+        //     <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">
+        //         ${mainWindow.satellites[activeSat].cov !== undefined ? mainWindow.satellites[activeSat].cov : ''}
+        //     </div> 
+        //     `
+        // //             <div class="context-item">Export Burns</div><div class="context-item" onclick="generateEphemFile(${activeSat})" id="state-options">Gen .e File</div>
             
     }
     else if (activeBurn !== false) {
@@ -2257,6 +2295,39 @@ function handleContextClick(button) {
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
     }
+    if (button.id === 'launch-options') {
+        let site = button.getAttribute('site')
+        let siteEci = astro.latlong2eci(mainWindow.groundSites[site].coordinates.lat, mainWindow.groundSites[site].coordinates.long, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        let targets = mainWindow.satellites.map((s,satii) => Object.values(getCurrentInertial(satii, mainWindow.scenarioTime)))
+        let launchDate = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
+        targets.forEach(satEci => {
+            let launchData = Launch.calculateLaunch(siteEci, satEci, launchDate)
+            if (launchData !== false) {
+                let startOfScenarioState = propToTime(launchData.launchState, (mainWindow.startDate - launchDate) / 1000)
+                startOfScenarioState = PosVel2CoeNew(startOfScenarioState.slice(0,3), startOfScenarioState.slice(3))
+                mainWindow.satellites.push(new Satellite({
+                    position: startOfScenarioState
+                }))
+            }
+        })
+        console.log(siteEci, targets);
+
+        button.parentElement.innerHTML = `
+            <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
+        `
+        //<div class="context-item" onclick="handleContextClick(this)" id="multi-maneuver">Multi-Burn</div>
+        // <div class="context-item" onclick="handleContextClick(this)" id="rmoes-maneuver">Target RMOE's</div>
+            // ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="poca-maneuver">Maximize POCA</div>' : ''}
+        let cm = document.getElementById('context-menu')
+        let elHeight = cm.offsetHeight
+        let elTop =  Number(cm.style.top.split('p')[0])
+        cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'delete-site') {
+        let site = button.getAttribute('site')
+        mainWindow.groundSites.splice(site,1)
+        document.getElementById('context-menu').remove()
+    }
     if (button.id === 'exit-ephem-viewer') {
         document.getElementById('context-menu')?.remove();
         if (mainWindow.hpop) return displayHpopTraj()
@@ -2303,8 +2374,8 @@ function handleContextClick(button) {
         let numCurrentGroundSides = mainWindow.groundSites.length
         button.parentElement.innerHTML = `
             <div style="color: white; padding: 5px">Name <input style="width: 20ch;" placeholder="Ground Site #${numCurrentGroundSides+1}"/> deg</div>
-            <div style="color: white; padding: 5px">Longitude <input style="width: 8ch;" type="number" placeholder="${button.getAttribute("long")}"/> deg</div>
             <div style="color: white; padding: 5px">Latitude <input style="width: 8ch;" type="number" placeholder="${button.getAttribute("lat")}"/> deg</div>
+            <div style="color: white; padding: 5px">Longitude <input style="width: 8ch;" type="number" placeholder="${button.getAttribute("long")}"/> deg</div>
             <div class="context-item" tabindex="0" onclick="handleContextClick(this)" id="add-ground-site-execute">Add Site</div>
         `
     }
@@ -2315,10 +2386,10 @@ function handleContextClick(button) {
         mainWindow.groundSites.push({
             name: inputs[0],
             coordinates: {
-                long: Number(inputs[1]),
-                lat: Number(inputs[2])
+                long: Number(inputs[2]),
+                lat: Number(inputs[1])
             },
-            color: 'rgb(150,150,150)'
+            color: 'rgb(225,125,100)'
         })
         document.getElementById('context-menu')?.remove();
     }
@@ -3953,10 +4024,6 @@ function eciJacobianOneBurn(state, a, alpha, phi, tB, tF, m1) {
     return mC;
 }
 
-function runLambertSolution(r1 = [42164, 0, 0, 0, 3.0147, 0], r2, dt = 18*3600, start = mainWindow.desired.scenarioTime) {
-
-}
-
 function curve2linear(state = [0, 1000, 0,0,0,0], origin = mainWindow.originOrbit) {
     state[0] += origin.a
     let r = math.norm(state)
@@ -5015,7 +5082,8 @@ function getCurrentPosition(options = {}) {
         tProp = burnsWithin[b].burnEnd
     }
     // position = propRelMotionTwoBodyAnalytic(position, time-tProp, tProp)
-    position = runge_kutta(twoBodyRpo, position, time-tProp, [0,0,0], tProp)
+    // position = runge_kutta(twoBodyRpo, position, time-tProp, [0,0,0], tProp)
+    position = propRelMotionTwoBodyAnalytic(position, time-tProp, tProp)
     return position
 }
 
@@ -5915,7 +5983,9 @@ function calcSatelliteEccentricity(position = [10,0,0,0,0,0]) {
 }
 
 function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
-    let inertChief = propToTimeAnalytic(mainWindow.originOrbit, time)
+    let inertChief = mainWindow.originHistory.filter(s => s.t <= time)
+    inertChief = inertChief[inertChief.length-1]
+    inertChief = propToTime(inertChief.position, time-inertChief.t, false)
     let satPos = mainWindow.satellites[sat].currentPosition({time})
     satPos = Ric2Eci(satPos.slice(0,3), satPos.slice(3,6), inertChief.slice(0,3), inertChief.slice(3,6))
     return {
@@ -6482,6 +6552,7 @@ function tellInputStateFileType(file) {
         return 'tle'
     }
     else if (file.search('EphemerisTimePosVel') !== -1) return 'ephem'
+    else if (file.search(/[l|L]at/) !== -1 && file.search(/[l|L]on/) !== -1) return 'site'
     return 'j2000'
 }
 
@@ -6513,6 +6584,31 @@ function handleStkJ200File(file) {
     openJ2000Window(file.map((s,ii) => {
         return {name: satNames[ii], state: s}
     }), km)
+}
+
+function handleSiteFile(file) {
+    // Check if distance units are in km or meters
+    let siteNames = file.split('\n').find(line => line.search(/[Place|Facility]/) !== -1).split(/[Place|Facility]/)[1].split(':  L')[0].split(',').map(name => name.trim())
+    
+    file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2)).filter(row => row !== '')
+    console.log(file);
+    file = file.map(siteSection => {
+        let newSection = siteSection.map(row => {
+            let items = row.split(/ {2,}/).filter(s => s !== '').map(s => Number(s))
+            return items
+        })
+        return newSection
+    })
+    file.forEach((site, siteIi) => {
+        mainWindow.groundSites.push({
+            name: siteNames[siteIi],
+            coordinates: {
+                lat: site[0][0],
+                long: site[0][1],
+            },
+            color: 'rgb(250,125,100)'
+        })
+    })
 }
 
 function handleTleFile(file) {
@@ -7512,15 +7608,15 @@ function openInstructionWindow() {
         <li>
             Hot Keys
             <ul>
-                <li>Cntrl + h - Run sim with HPOP</li>
-                <li>Shit + S or L - Open save window</li>
-                <li>W - Move Origin to the West</li>
-                <li>E - Move Origin to the East</li>
-                <li>Alt + W - Open White Cell Window</li>
-                <li>D - Switch between dark and light mode</li>
-                <li>N - Add random perched satellite</li>
-                <li>Cntrl + <> - Change satellite display size</li>
-                <li><> - Change trajectory dot size</li>
+                <li><kbd>Ctrl</kbd> + <kbd>h</kbd> - Run sim with HPOP</li>
+                <li><kbd>Shift</kbd> + <kbd>S</kbd> or <kbd>L</kbd> - Open save window</li>
+                <li><kbd>W</kbd> - Move Origin to the West</li>
+                <li><kbd>E</kbd> - Move Origin to the East</li>
+                <li><kbd>Alt</kbd> + <kbd>W</kbd> - Open White Cell Window</li>
+                <li><kbd>D</kbd> - Switch between dark and light mode</li>
+                <li><kbd>N</kbd> - Add random perched satellite</li>
+                <li><kbd>Ctrl</kbd> + <kbd><></kbd> - Change satellite display size</li>
+                <li><kbd><></kbd> - Change trajectory dot size</li>
             </ul>
         </li>
     </ul>
@@ -8002,7 +8098,19 @@ function openJ2000Window(j2000Satellites = [], km) {
     }
     j2000Window.importAsViewer = (el) => {
         mainWindow.ephemViewerMode = true
-        loadEphemFileInViewer(j2000Window.j2000Satellites);
+        let origin = [...j2000Window.document.querySelectorAll('.import-radio')].findIndex(s => s.checked)
+        let exist = [...j2000Window.document.querySelectorAll('.import-checkbox')].map(s => s.checked)
+        let colors = [...j2000Window.document.querySelectorAll('.import-color')].map(s => s.value)
+        let shapes = [...j2000Window.document.querySelectorAll('.import-shape')].map(s => s.value)
+        let satellites = j2000Window.j2000Satellites.map((s,ii) => {
+            return {
+                name: s.name,
+                state: s.state,
+                color: colors[ii],
+                shape: shapes[ii]
+            }
+        }).filter((s,ii) => exist[ii])
+        loadEphemFileInViewer(satellites, origin);
     }
     j2000Window.document.body.innerHTML = `
         <div style="font-size: 1.75em; font-weight: bolder; text-align: center;">ARTS J2000 Import Tool</div>
@@ -8022,7 +8130,15 @@ function openJ2000Window(j2000Satellites = [], km) {
                         <input title="Select origin of the initial RIC frame displayed" name="j2000-origin" class="import-radio" type="radio" ${satIi === 0 ? 'checked' : ''}/>
                         <input class="import-checkbox" type="checkbox" checked/>
                         ${sat.name} 
-                        <input class="import-color" style="height: 20px;" type="color" value="${existingColor}">
+                        <input class="import-color" style="height: 20px;" type="color" list="sat-input-color-picker-${satIi}" value="${existingColor}">
+                        <datalist id="sat-input-color-picker-${satIi}">
+                            <option value="#c86464"></option>
+                            <option value="#64c864"></option>
+                            <option value="#6464c8"></option>
+                            <option value="#c864c8"></option>
+                            <option value="#969696"></option>
+                            <option value="#000000"></option>
+                        </datalist>
                         <select class="import-shape">   
                             <option ${existingShape === 'delta' ? 'selected' : ''} value="delta">Delta</option>
                             <option ${existingShape === 'triangle' ? 'selected' : ''} value="triangle">Triangle</option>
@@ -8146,6 +8262,7 @@ function generateTleHistory() {
         for (let ii = 0; ii < satTleTimes[index].length; ii++) {
             let time = satTleTimes[index][ii]
             let ricState = mainWindow.satellites[index].currentPosition({time})
+            out += `0 ${mainWindow.satellites[index].name}\n`
             out += tleFromState(ricState, time, index+1) + '\n'
         }
     }
@@ -8865,6 +8982,7 @@ function handleImportTextFile(inText) {
         
         if (fileType === 'j2000') return handleStkJ200File(inText)
         if (fileType === 'ephem') return handleEphemFile(inText)
+        if (fileType === 'site') return handleSiteFile(inText)
         else return handleTleFile(inText)
     }
     else {
@@ -8922,23 +9040,19 @@ function testCodeTime(sat = 0) {
     console.timeEnd('calcwburns')
 }
 
-function loadEphemFileInViewer(satellites, originSat = 0, km = true) {
+function loadEphemFileInViewer(satellites, originSat = 0, options = {}) {
+    let {km = true} = options
     mainWindow.satellites = []
     
     let originStatej2000 = {
         epoch: satellites[originSat].state[0][0],
         state: satellites[originSat].state[0].slice(1)
     }
-    satellites.map(sat => sat.name).forEach((sat, satii) => {
-        let colors = [
-            '#aa3333',
-            '#33aa33',
-            '#3333aa',
-            '#aa33aa',
-        ]
+    satellites.forEach((sat, satii) => {
         mainWindow.satellites.push(new Satellite({
-            name: sat,
-            color: colors[satii % 4]
+            name: sat.name,
+            color: sat.color,
+            shape: sat.shape
         }))
     })
     mainWindow.startDate = originStatej2000.epoch

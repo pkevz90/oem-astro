@@ -12,9 +12,9 @@ function findApogeeRendezvous(siteEci, targetStart, estimateTof) {
     try {
         // let crossVector = math.cross(siteEci.slice(0,3),targetStart.slice(0,3))
         // let long = crossVector[2] > 0
-        let tof1 = estimateTof - 100
+        let tof1 = estimateTof - estimateTof*0.1
         let tof2 = estimateTof
-        let tof3 = estimateTof + 100
+        let tof3 = estimateTof + estimateTof*0.1
         let target1 = propToTime(targetStart, tof1)
         let target2 = propToTime(targetStart, tof2)
         let target3 = propToTime(targetStart, tof3)

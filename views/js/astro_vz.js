@@ -117,6 +117,10 @@ class astro {
         let lat = math.atan2(r[2], math.norm(r.slice(0,2)))
         return {lat, long, rot: overallR, r_ecef: r}
     }
+    static latlong2eci(lat = 0, long = 0, date = new Date()) {
+        let rEcef = astro.sensorGeodeticPosition(lat, long, 0)
+        return astro.ecef2eci(rEcef, date)
+    }
     static eci2ecef(r=[5102.508958, 6123.011401, 6378.136928], date=new Date(2004, 3, 6, 7, 51, 28, 386)) {
         // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
         // ECI to ECEF
@@ -678,6 +682,160 @@ class Propagator {
             this.c[row[0]][row[1]] = row[2]/normalizingFactor
             this.s[row[0]][row[1]] = row[3]/normalizingFactor
         })
+    }
+}
+
+class Launch {
+    static estTofToApogee(siteECI, satECI) {
+        function True2Eccentric(e, ta) {
+            return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
+        }
+        let range = math.norm(math.subtract(siteECI, satECI.slice(0,3)))
+        let siteECIn = math.norm(siteECI.slice(0,3))
+        let satECIn = math.norm(satECI.slice(0,3))
+        // let ang = math.dot(siteECI, satECI.slice(0,3)) / siteECIn / satECIn
+        let per = (siteECIn+range) * 0.01
+        let estA = (satECIn + per) / 2 
+        let estE = (range+satECIn - per) / (range+satECIn + per)
+        let n = (398600.4418 / estA ** 3) ** 0.5
+        let p = estA * (1 - estE ** 2)
+        let nu = math.acos((p / siteECIn - 1) / estE)
+        let eccA = True2Eccentric(estE, nu)
+        let meanA = eccA - estE * Math.sin(eccA)
+        let tof = (Math.PI - meanA) / n
+        // console.log({estE, estA, n,p,nu,eccA, meanA, tof});
+        return tof
+    }
+    static findApogeeRendezvous(siteEci, targetStart, estimateTof = 7200) {
+        try {
+            // let crossVector = math.cross(siteEci.slice(0,3),targetStart.slice(0,3))
+            // let long = crossVector[2] > 0
+            let tof1 = estimateTof - estimateTof*0.1
+            let tof2 = estimateTof
+            let tof3 = estimateTof + estimateTof*0.1
+            let target1 = propToTime(targetStart, tof1)
+            let target2 = propToTime(targetStart, tof2)
+            let target3 = propToTime(targetStart, tof3)
+            let solution1 = solveLambertsProblem(siteEci, target1.slice(0,3), tof1, 0, true)
+            let el = 90-math.acos(math.dot(siteEci, solution1.v1) / math.norm(siteEci) / math.norm(solution1.v1))*180/Math.PI
+            if (el < 0) {
+                return false
+            }
+            let solution2 = solveLambertsProblem(siteEci, target2.slice(0,3), tof2, 0, true)
+            let solution3 = solveLambertsProblem(siteEci, target3.slice(0,3), tof3, 0, true)
+        
+            let dot1 = math.dot(solution1.v2, target1.slice(0,3))
+            let dot2 = math.dot(solution2.v2, target2.slice(0,3))
+            let dot3 = math.dot(solution3.v2, target3.slice(0,3))
+            let dotPoly = Launch.lagrangePolyCalc([tof1, tof2, tof3], [dot1, dot2, dot3]);
+            let dDotPoly = Launch.derivateOfPolynomial(dotPoly)
+            let ddDotPoly = Launch.derivateOfPolynomial(dDotPoly)
+            // tof2 -= answerPolynomial(dotPoly, tof2) / answerPolynomial(dDotPoly, tof2)
+            tof2 -= 2*Launch.answerPolynomial(dotPoly, tof2)*Launch.answerPolynomial(dDotPoly, tof2) / (2*Launch.answerPolynomial(dDotPoly, tof2)**2-Launch.answerPolynomial(dotPoly, tof2)*Launch.answerPolynomial(ddDotPoly, tof2))
+            console.log(estimateTof, tof2, dot2, Launch.answerPolynomial(dotPoly, tof2));
+            if (dot2 < Launch.answerPolynomial(dotPoly, tof2)) throw Error('Apogee not found exact')
+            return tof2
+        } catch (error) {
+            console.error(error);
+            return estimateTof
+        }
+    }
+    static lagrangePolyCalc(x = [0,1,3], y = [1,-2,4]) {
+        let answerLength = x.length
+        let answer = math.zeros([answerLength])
+        for (let ii = 0; ii < x.length; ii++) {
+            let subAnswer = [], subAnswerDen = 1
+            for (let jj = 0; jj < x.length; jj++) {
+                if (ii === jj) continue
+                subAnswer.push([1, -x[jj]])
+                subAnswerDen *= x[ii] - x[jj]
+            }
+            subAnswer = subAnswer.slice(1).reduce((a,b) => {
+                return multiplyPolynomial(a,b)
+            }, subAnswer[0])
+            answer = math.add(answer, math.dotMultiply(y[ii] / subAnswerDen, subAnswer))
+        }
+        return answer
+    }
+    static multiplyPolynomial(a = [1,3,1], b = [0,2,1]) {
+        let aL = a.length, bL = b.length
+        let minLength = aL < bL ? bL : aL
+        while (a.length < minLength) a.unshift(0)
+        while (b.length < minLength) b.unshift(0)
+        let answerLength = (minLength - 1) * 2 + 1
+        let answer = math.zeros([answerLength])
+        for (let index = 0; index < minLength; index++) {
+            let subAnswer = math.zeros([answerLength])
+            let indexAnswer = math.dotMultiply(a[index], b)
+            subAnswer.splice(index, minLength, ...indexAnswer)
+            answer = math.add(answer, subAnswer)
+        }
+        while (answer[0] === 0) answer.shift()
+        return answer
+    }
+    static answerPolynomial(poly = [1,-1,2], x = 4) {
+        let p = poly.slice()
+        return p.reverse().reduce((a,b,ii) => {
+            return a + b * x ** ii
+        },0)
+    }  
+    static derivateOfPolynomial(poly = [3,2,1]) {
+        let ddp = poly.slice()
+        ddp.pop()
+        ddp = ddp.map((p, ii) => {
+            return p * (ddp.length - ii)
+        })
+        return ddp
+    }
+    static isSatIlluminated(satPos = [6900, 0, 0], sunPos = [6900000, 0,0]) {
+        let satSunAngle = math.acos(math.dot(satPos.slice(0,3), sunPos)/math.norm(satPos.slice(0,3))/math.norm(sunPos))
+        if (satSunAngle < Math.PI / 2) return true
+        return !Launch.lineSphereIntercetionBool(math.subtract(satPos.slice(0,3),sunPos), sunPos, [0,0,0], 6371)
+    }
+    static lineSphereIntercetionBool(line = [-0.45, 0, 0.45], lineOrigin = [282.75,0,0], sphereOrigin = [0,0,0], sphereRadius=200) {
+        line = math.dotDivide(line, math.norm(line))
+        let check = math.dot(line, math.subtract(lineOrigin, sphereOrigin)) ** 2 - (math.norm(math.subtract(lineOrigin, sphereOrigin)) ** 2 - sphereRadius ** 2)
+        return check > 0
+    } 
+    static calculateLaunch(siteEci = [6700, 0, 0], targetEci = [42164, 0, 0, 0, 3.014, 0], launchDate = new Date()) {
+        let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
+        let tof = Launch.estTofToApogee(siteEci, targetEci)
+        tof = Launch.findApogeeRendezvous(siteEci, targetEci, tof)
+        if (tof === false) {
+            return false
+        }
+        // tof *= apogeeRatio
+        // console.log(tof);
+        let targetEndState = propToTime(targetEci, tof, false)
+        let vOptions = [solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, false).v1,solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, true).v1].filter(s => s !== undefined).filter(s => {
+            return s.filter(a => isNaN(a)).length === 0
+        })
+        if (vOptions.length > 0) {
+            let dV = vOptions.map(s => math.norm(math.subtract(s, siteVel)))
+            let minIndex = dV.findIndex(s => s === math.min(dV))
+            vOptions = vOptions[minIndex]
+            // console.log(vOptions);
+            let elevationAngle = 90-math.acos(math.dot(siteEci, vOptions) / math.norm(siteEci) / math.norm(vOptions))*180/Math.PI
+            
+                // Calculate sun angle at rendezvous
+            let startState = [...siteEci,...vOptions]
+            let endState = propToTime(startState, tof)
+            let sunEci = astro.sunEciFromTime(new Date(launchDate - (-tof*1000)))
+            let relativeVel = math.subtract(endState.slice(3), targetEndState.slice(3)).map(s => -s)
+            let cats = math.acos(math.dot(relativeVel, sunEci) / math.norm(relativeVel) / math.norm(sunEci))*180/Math.PI
+            let illuminated = Launch.isSatIlluminated(endState, sunEci)
+            return {
+                launchState: [...siteEci, ...vOptions],
+                elevationAngle,
+                tof,
+                targetEndState,
+                cats,
+                illuminated
+            }
+            // }
+    
+        }
+        return false
     }
 }
 
