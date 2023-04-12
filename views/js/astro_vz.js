@@ -416,7 +416,7 @@ class Propagator {
         this.solarRad = solarRad
         this.thirdBody = thirdBody
     }
-    highPrecisionProp(position = [42164, 0, 0, 0, 3.074, 0], date = new Date(), burnAcc = [0,0,0]) {
+    highPrecisionProp(position = [6371, 0, 0, 0, 7.909, 0], date = new Date(), burnAcc = [0,0,0]) {
         let r = math.norm(position.slice(0,3))
         let a = math.dotMultiply(-398600.4415 /r/r/r, position.slice(0,3))
         // console.time('geo')
@@ -447,20 +447,6 @@ class Propagator {
         rot = math.transpose(rot)
         let re = 6378.1363, r = math.norm(state.slice()), x = r_ecef[0], y=r_ecef[1], z=r_ecef[2]
         let cosLat = Math.cos(lat), sinLat = Math.sin(lat)
-        // let p = [[1],[sinLat, cosLat]]
-        // for (let order = 2; order <= this.order; order++) {
-        //     let row = []
-        //     for (let rowNum = 0; rowNum <= order; rowNum++) {
-        //         if (rowNum === 0) row.push(((2*order-1)*sinLat*p[order-1][0] - (order-1)*p[order-2][0])/order)
-        //         else if (rowNum === order) row.push((2*order-1)*cosLat*p[order-1][order-1])
-        //         else {
-        //             let po_2m = rowNum > (order-2) ? 0 : p[order-2][rowNum]
-        //             row.push(po_2m + (2*order-1)*cosLat*p[order-1][rowNum-1])
-        //         }
-        //     }
-        //     p.push(row)
-        // }
-        // console.log(long * 180/Math.PI);
         let cosLong = Math.cos(long)
         let sinArray = [0,Math.sin(long)]
         let cosArray = [1,cosLong]
@@ -468,7 +454,7 @@ class Propagator {
         let mTanArray = [0, tanLat]
         let re_r = re/r
         let rArray = [1, re_r]
-        for (let index = 2; index <= 70; index++) {
+        for (let index = 2; index <= this.order; index++) {
             sinArray.push(2*cosLong*sinArray[index-1]-sinArray[index-2])
             cosArray.push(2*cosLong*cosArray[index-1]-cosArray[index-2])  
             mTanArray.push((index-1)*tanLat+tanLat)
@@ -639,8 +625,8 @@ class Propagator {
         })
         return stateReturn
     }
-    propToTime(state, date, tf = 86400, options = {}) {
-        let {maxError = 1e-9, a = [0,0,0]} = options
+    propToTime(state = [6371,0,0,0,(398600.4418/6371)**0.5,0], date = new Date(2022,0,0), tf = 7200, options = {}) {
+        let {maxError = 1e-7, a = [0,0,0]} = options
         let h = tf > 0 ? 500 : -500
         h = Math.abs(h) > Math.abs(tf) ? tf : h
         let t = 0

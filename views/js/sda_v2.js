@@ -1,3 +1,11 @@
+// Add scaling function
+let scalingSpan = document.createElement('span')
+scalingSpan.innerHTML = `
+    Scaling Factor
+    <input style="width: 5ch;" id="cov-scale-input" type="number" value="100"/>%
+`
+document.querySelector('#upload-button').parentElement.append(scalingSpan)
+
 let mainWindow = {
     planet: {
         mu: 398600.4418,
@@ -79,10 +87,18 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
 }
 
 function estimateCovariance(sat = 0, returnDecomp = false) {
+    let scale = Number(document.querySelector('#cov-scale-input').value)/100
+    if (scale < 0) {scale = 1}
+    scale = scale ** 2
+    // Create jacobian based on expected observations
     let blsMatrices = createJacobian(sat)
+    // Convert jacobian into matrix that contains covariance information along with sensor noise data
     let a = math.inv(math.multiply(math.transpose(blsMatrices.jac), blsMatrices.w, blsMatrices.jac))
+    // Convert to RIC frame
     let r = Eci2Ric()
     a = math.multiply(math.transpose(r), a, r)
+    // Scale with value (defaults to 100% but user can make as high or low as possible)
+    a = a.map(row => row.map(val => val*scale))
     lastCov = a
     console.log(a, choleskyDecomposition(a));
     if (returnDecomp) return choleskyDecomposition(a)
@@ -667,6 +683,7 @@ function updateSensors(sensors) {
             </label> 
             <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> 
             <span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showAvailability(${realIndex})">Availablity</span>
+            ${mainWindow.sensors[realIndex].type === 'space' ? `<span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showStateUpdate(${ii})">Update State</span>`: ''}
         `
         div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
         sensDiv.append(div)
@@ -680,6 +697,7 @@ function updateSensors(sensors) {
             </label> 
             <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> 
             <span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showAvailability(${ii})">Availablity</span>
+            ${s.type === 'space' ? `<span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showStateUpdate(${ii})">Update State</span>`: ''}
         `
         div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3,6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
         sensDiv.append(div)
@@ -1344,6 +1362,79 @@ function showAvailability(sensor = 0) {
     div.style.minHeight = '50%'
     div.classList.add('div-shadow')
     document.getElementsByTagName('body')[0].append(div)
+}
+
+function convertTimeToDateTimeInput(timeIn = mainWindow.startDate, seconds = true) {
+    let padNumber = function(n) {
+        return n < 10 ? '0' + n : n
+    }
+    timeIn = new Date(timeIn)
+    if (timeIn == 'Invalid Date') return
+    if (seconds) {
+        return `${timeIn.getFullYear()}-${padNumber(timeIn.getMonth()+1)}-${padNumber(timeIn.getDate())}T${padNumber(timeIn.getHours())}:${padNumber(timeIn.getMinutes())}:${padNumber(timeIn.getSeconds())}`
+    }
+    return `${timeIn.getFullYear()}-${padNumber(timeIn.getMonth()+1)}-${padNumber(timeIn.getDate())}T${padNumber(timeIn.getHours())}:${padNumber(timeIn.getMinutes())}:${padNumber(timeIn.getSeconds())}`
+}
+
+function showStateUpdate(sensor = 0) {
+    console.log(sensor);
+    let div = document.createElement('div')
+    let epoch = convertTimeToDateTimeInput(new Date(mainWindow.sensors[sensor].epoch))
+    div.innerHTML = `
+        <div style="display: flex; flex-direction: column;">
+            <div style="font-size: 2em; margin-bottom: 20px">${mainWindow.sensors[sensor].name} J2000 State</div>
+            <div><input type="datetime-local" value="${epoch}"/></div>
+            <div>
+                ${mainWindow.sensors[sensor].state.map(s => {
+                    return `<input type="number" style="width: 10ch; text-align: center" value="${s.toFixed(2)}"/>`
+                }).join('')}
+            </div>
+            <div style="margin-top: 15px;"><input id="state-update-input" oninput="handleStateUpdate(this)" style="width: 70%; text-align: center;" placeholder="J2000 State from STK"/></div>
+            <div style="margin-top: 15px;">
+                <button id="state-update-confirm" sensor="${sensor}" onclick="handleStateUpdate(this)">Confirm</button>
+                <button id="state-update-cancel" onclick="handleStateUpdate(this)">Cancel</button>
+            <div>
+        <div>
+    `
+
+    div.id = 'avail-div'
+    div.style.position = 'fixed'
+    div.style.width = '75%'
+    div.style.top = '10%'
+    div.style.left = '12.5%'
+    div.style.zIndex = 20
+    div.style.backgroundColor = 'white'
+    div.style.textAlign = 'center'
+    // div.style.border = '1px solid black'
+    div.style.borderRadius = '20px'
+    div.style.minHeight = '50%'
+    div.classList.add('div-shadow')
+    document.getElementsByTagName('body')[0].append(div)
+}
+
+function handleStateUpdate(el) { 
+    if (el.id === 'state-update-cancel' || el.id === 'state-update-confirm') {
+        el.parentElement.parentElement.parentElement.remove()
+        if (el.id === 'state-update-cancel') return
+        let inputs = [...el.parentElement.parentElement.parentElement.querySelectorAll('input')]
+        let sensor = el.getAttribute('sensor')
+        let date = new Date(inputs.shift().value)
+        inputs = inputs.map(s => Number(s.value))
+        console.log(date, inputs);
+        mainWindow.sensors[sensor].epoch = date
+        mainWindow.sensors[sensor].state = inputs
+        return
+    }
+    let inputs = [...el.parentElement.parentElement.parentElement.querySelectorAll('input')]
+    let states = el.value.split(/ {2,}/)
+    el.value = ''
+    if (states.length < 7) return alert('ivalid input: not enough data')
+    let epoch = convertTimeToDateTimeInput(new Date(states.shift()))
+    states = states.map(s => Number(s))
+    console.log(epoch, states)
+    if (epoch == 'Invalid Date' || states.filter(s => isNaN(s)).length > 0) return alert('ivalid input: data not in correct format')
+    inputs[0].value = epoch
+    states.forEach((s,ii) => inputs[ii+1].value = s.toFixed(3))
 }
 
 function availHandlerFunction(el) {

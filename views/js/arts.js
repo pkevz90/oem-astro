@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.1'
+let appAcr = 'ROTS 2.1.2'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '4 Apr 2023'
+let cao = '12 Apr 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -55,6 +55,7 @@ class windowCanvas {
     stringLimit = [0,8];
     ephemViewerMode = false;
     hpop = false;
+    originSaves = {}
     error = { // at right after manuever while generating J2000 states, halves every hour
         neutral: {p: 25.6, v: 36.158, cp: 1.5, cv: 3.5}, // Full Error
         friendly: {p: 25.6 / 3, v: 36.158 / 3, cp: 1.5, cv: 3.5}, // reduced error
@@ -229,6 +230,7 @@ class windowCanvas {
         this.satellites.forEach(sat => sat.calcTraj(true))
     }
     changeTime(newTime = 3600, immediate = false) {
+        if (newTime < 0) return
         this.desired.scenarioTime = newTime
         document.querySelector('#time-slider-range').value = newTime
         if (immediate) {
@@ -1487,7 +1489,6 @@ function keydownFunction(key) {
     }
     else if ((key.key === 'z' || key.key === 'Z') && key.ctrlKey) reverseLastAction()
     else if ((key.key === 'y' || key.key === 'Y') && key.ctrlKey) redoLastAction()
-
     if (mainWindow.panelOpen) return;
     if (key.key === ' ') {
         if (threeD) {
@@ -1669,6 +1670,18 @@ function keydownFunction(key) {
                 break;       
         }
     }
+    else if (!isNaN(Number(key.key))) {
+        if (key.altKey) {
+            let originIndex = mainWindow.satellites.findIndex(s => math.norm(s.stateHistory[0].position) < 1e-6)
+            if (originIndex === -1) return
+            mainWindow.originSaves[key.key] = originIndex
+            showScreenAlert('Current origin saved as hotkey ' + key.key)
+            return
+        }
+        if (mainWindow.originSaves[key.key] === undefined) return
+        changeOrigin(mainWindow.originSaves[key.key])
+        return
+    }
     else if ('zx'.search(key.key) !== -1 && mainWindow.burnStatus.type !== false) {
         wheelFunction({
             deltaY: 'x'.search(key.key) !== -1 ? -1 : 1,
@@ -1716,6 +1729,12 @@ function keydownFunction(key) {
     else if (key.key === '>' && key.shiftKey && key.altKey) mainWindow.plotSize += 0.05
     else if (key.key === '<' && key.shiftKey) mainWindow.trajSize = mainWindow.trajSize > 0.5 ? mainWindow.trajSize - 0.1 : mainWindow.trajSize
     else if (key.key === '>' && key.shiftKey) mainWindow.trajSize += 0.1
+    else if (key.key === '.') {
+        mainWindow.changeTime(mainWindow.scenarioTime + 120, true)
+    }
+    else if (key.key === ',') {
+        mainWindow.changeTime(mainWindow.scenarioTime - 120, true)
+    }
     else if (key.key === 'E' && key.shiftKey && key.altKey) downloadFile('error_file.txt', errorList.map(e => e.stack).join('\n'))
     else if (key.key === 'w' && key.altKey) openWhiteCellWindow()
     else if (key.key === 'w') moveTrueAnomaly(-0.1, false)
@@ -1869,6 +1888,14 @@ function alterEditableSatChar(action) {
     document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
 }
 
+function alterEditableSiteChar(action) {
+    let parElement = action.parentElement
+    let element = action.getAttribute('element')
+    let site = parElement.getAttribute('site')
+    let newEl = element === 'name' ? action.innerText : action.value
+    mainWindow.groundSites[site][element] = newEl
+}
+
 function startContextClick(event) {
     if (event.pointerType === 'touch' && mainWindow.aciveTouches.length > 1) return event.preventDefault()
     if (event.clientX === undefined) {
@@ -1994,7 +2021,12 @@ function startContextClick(event) {
         long  = long > 180 ? long - 360 : long
         ctxMenu.innerHTML = `
             <div site="${activeSite}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
-                <span>${mainWindow.groundSites[activeSite].name}</span>
+                <span contentEditable="true" element="name" site="${activeSite}" oninput="alterEditableSiteChar(this)">${mainWindow.groundSites[activeSite].name}</span>
+                <input list="sat-color-picker3" title="Edit Satellite Color" site="${activeSite}" element="color" oninput="alterEditableSiteChar(this)" style="" type="color" value="${mainWindow.groundSites[activeSite].color}"/>
+                <datalist id="sat-color-picker2">
+                    <option>#ff0000</option>
+                    <option>#0000ff</option>
+                </datalist>
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             
@@ -2008,9 +2040,8 @@ function startContextClick(event) {
         // User clicked on satellite, generate satellite option menu
         ctxMenu.sat = activeSat;
         let ricPosition = mainWindow.satellites[activeSat].curPos
-        let coePosition = astro.eci2latlong(Object.values(getCurrentInertial(activeSat)).slice(0,3), new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
-        console.log(coePosition);
-        coePosition = `Lat: ${(coePosition.lat*180/Math.PI).toFixed(1)}<sup>o</sup>, Long: ${(coePosition.long*180/Math.PI).toFixed(1)}<sup>o</sup>, <abbr title="Distance to Earth's Center">R</abbr>: ${math.norm(coePosition.r_ecef).toFixed(1)} km`
+        let groundPosition = astro.eci2latlong(Object.values(getCurrentInertial(activeSat)).slice(0,3), new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        groundPosition = `Lat: ${(groundPosition.lat*180/Math.PI).toFixed(1)}<sup>o</sup>, Long: ${(groundPosition.long*180/Math.PI).toFixed(1)}<sup>o</sup>, <abbr title="Distance to Earth's Center">R</abbr>: ${math.norm(groundPosition.r_ecef).toFixed(1)} km`
         let newInnerHTML = `
             <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
@@ -2041,6 +2072,12 @@ function startContextClick(event) {
                 ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
             `
         }
+        else {
+            newInnerHTML += `
+                <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="zoom-to-sat">Zoom To</div>
+                <div class="context-item" onclick="changeOrigin(${activeSat})" id="prop-options">Focus</div>
+            `
+        }
         newInnerHTML += `
             <div style="font-size: 0.4em; padding: 2.5px 15px 0px; margin-top: 5px; color: white; cursor: default;">
                 RIC Position To Origin
@@ -2052,73 +2089,12 @@ function startContextClick(event) {
                 Ground Position
             </div>
             <div style="margin-top: -4px; font-size: 0.75em; padding: 0px 15px 5px; color: white; cursor: default;">
-                ${coePosition}
+                ${groundPosition}
             </div>
         `
 
         navigator.clipboard.writeText(toStkFormat((new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))).toString())+'x'+Object.values(getCurrentInertial(activeSat)).join('x'))
         ctxMenu.innerHTML = newInnerHTML
-        //     : mainWindow.latLongMode ? `
-        //     <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
-        //         <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
-        //         <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
-        //         <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
-        //         <datalist id="sat-color-picker2">
-        //             <option>#ff0000</option>
-        //             <option>#0000ff</option>
-        //         </datalist>
-        //         <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
-        //             <option value=""></option>
-        //             <option value="delta">Delta</option>
-        //             <option value="square">Square</option>
-        //             <option value="triangle">Triangle</option>
-        //             <option value="diamond">Diamond</option>
-        //             <option value="4-star">4-Point Star</option>
-        //             <option value="star">5-Point Star</option>
-        //         </select>
-        //         <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
-        //     </div>
-        //     <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
-        //     <div sat="${activeSat}" class="context-item" onclick="handleContextClick(this)" id="zoom-to-sat">Zoom To</div>
-        //     <div sat="${activeSat}" class="context-item" onclick="changeOrigin(${activeSat})">Focus</div>
-        //     `
-        //     :`
-        //     <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
-        //         <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
-        //         <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
-        //         <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
-        //         <datalist id="sat-color-picker2">
-        //             <option>#ff0000</option>
-        //             <option>#0000ff</option>
-        //         </datalist>
-        //         <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
-        //             <option value=""></option>
-        //             <option value="delta">Delta</option>
-        //             <option value="square">Square</option>
-        //             <option value="triangle">Triangle</option>
-        //             <option value="diamond">Diamond</option>
-        //             <option value="4-star">4-Point Star</option>
-        //             <option value="star">5-Point Star</option>
-        //         </select>
-        //         <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
-        //     </div>
-        //     <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
-        //     <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
-        //     <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
-        //     ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
-        //     ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
-        //     <div style="font-size: 0.25em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
-        //         RIC Position
-        //     </div>  
-        //     <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
-        //         ${Object.values(dispPosition).slice(0,3).map(p => p.toFixed(2)).join(', ')} km  ${Object.values(dispPosition).slice(3,6).map(p => (1000*p).toFixed(2)).join(', ')} m/s
-        //     </div>
-        //     <div style="font-size: 0.5em; padding: 0px 15px; margin-bottom: 5px; color: white; cursor: default;">
-        //         ${mainWindow.satellites[activeSat].cov !== undefined ? mainWindow.satellites[activeSat].cov : ''}
-        //     </div> 
-        //     `
-        // //             <div class="context-item">Export Burns</div><div class="context-item" onclick="generateEphemFile(${activeSat})" id="state-options">Gen .e File</div>
-            
     }
     else if (activeBurn !== false) {
         // User clicked on burn, generate burn option menu
@@ -2163,6 +2139,7 @@ function startContextClick(event) {
         ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
         `
             ${mainWindow.hpop ? '' : `<div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Seed Regular Scenario</div>`}
+            ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
             <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Exit ${mainWindow.hpop ? 'HPOP ' : ''}Ephemeris View</div>
         `
         : `
@@ -2172,8 +2149,7 @@ function startContextClick(event) {
             ${mainWindow.latLongMode ? `<div lat="${latLongClick.lat}" long="${latLongClick.long}" class="context-item" id="add-ground-site" onclick="handleContextClick(this)">Add Ground Site</div>` : `<div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>`}
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import States</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadTles(event)"></div>
             <div class="context-item" onclick="openInstructionWindow()" id="instructions">Instructions</div>
-            `
-
+        `
     }
     //<div class="context-item" onclick="handleContextClick(this)" id="state-options">Update State</div>
             
@@ -2389,7 +2365,7 @@ function handleContextClick(button) {
                 long: Number(inputs[2]),
                 lat: Number(inputs[1])
             },
-            color: 'rgb(225,125,100)'
+            color: '#E17D64'
         })
         document.getElementById('context-menu')?.remove();
     }
@@ -4399,6 +4375,7 @@ function initStateFunction(el) {
                 mainWindow.startDate = new Date(document.querySelector('.sat-input').value)
             }
             mainWindow.updateOrigin(position)
+            showScreenAlert('RIC frame centered on initial satellite')
         }
         let styleInputs = document.querySelectorAll('.sat-style-input')
         mainWindow.satellites.push(new Satellite({
@@ -6323,6 +6300,49 @@ function randn_bm() {
 
 function changeOrigin(sat = 1, currentState = false) {
     document.getElementById('context-menu')?.remove();
+    if (mainWindow.ephemViewerMode) {
+        console.log('hey');
+        let satHists = mainWindow.satellites.map(s => {
+            let hist = s.stateHistory
+            return hist.map((row, rowIi) => {
+                let originEci = mainWindow.originHistory[rowIi].position
+                let rowRic = row.position
+                let rowEci = Ric2Eci(rowRic.slice(0,3), rowRic.slice(3), originEci.slice(0,3), originEci.slice(3))
+                return {
+                    t: row.t,
+                    position: [...rowEci.rEcci, ...rowEci.drEci]
+                }
+            })
+        })
+        mainWindow.originHistory = satHists[sat]
+        mainWindow.originSun = mainWindow.originHistory.map(s => {
+            let sunRic = sunFromTime(new Date(mainWindow.startDate - (-1000*s.t)))
+            sunRic = Eci2Ric(s.position.slice(0,3), s.position.slice(3), sunRic, [0,0,0])
+            sunRic = math.squeeze(sunRic.rHcw)
+            sunRic = sunRic.map(s => s/math.norm(sunRic))
+            return [
+                s.t, sunRic
+            ]
+        })
+        let startOrbit = mainWindow.originHistory[0].position
+        startOrbit = PosVel2CoeNew(startOrbit.slice(0,3), startOrbit.slice(3))
+    
+        mainWindow.mm = (398600.4418 / startOrbit.a**3)**0.5
+        satHists.forEach((hist, histIi) => {
+            hist = hist.map((row, rowIi) => {
+                let rowEci = row.position
+                let originEci = mainWindow.originHistory[rowIi].position
+                let rowRic = Eci2Ric(originEci.slice(0,3), originEci.slice(3), rowEci.slice(0,3), rowEci.slice(3))
+                console.log(rowRic.rHcw)
+                return {
+                    t: row.t,
+                    position: math.squeeze([...rowRic.rHcw, ...rowRic.drHcw])
+                }
+            })
+            mainWindow.satellites[histIi].stateHistory = hist
+        })
+        return
+    }
     if (currentState === true) {
         let curPos = Object.values(getCurrentInertial(sat))
         console.log(curPos);
@@ -6333,6 +6353,7 @@ function changeOrigin(sat = 1, currentState = false) {
         return
     }
     mainWindow.groundTrackLimits.focus = sat
+    console.log(sat);
     mainWindow.updateOrigin(mainWindow.satellites[sat].position)
 }
 
@@ -6588,7 +6609,7 @@ function handleStkJ200File(file) {
 
 function handleSiteFile(file) {
     // Check if distance units are in km or meters
-    let siteNames = file.split('\n').find(line => line.search(/[Place|Facility]/) !== -1).split(/[Place|Facility]/)[1].split(':  L')[0].split(',').map(name => name.trim())
+    let siteNames = file.split('\n').find(line => line.search(/[Place|Facility]-/) !== -1).split(/[Place|Facility]-/)[1].split(':  L')[0].split(',').map(name => name.trim())
     
     file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2)).filter(row => row !== '')
     console.log(file);
@@ -6604,7 +6625,7 @@ function handleSiteFile(file) {
             name: siteNames[siteIi],
             coordinates: {
                 lat: site[0][0],
-                long: site[0][1],
+                long: site[0][1] > 180 ? site[0][1] - 360 : site[0][1],
             },
             color: 'rgb(250,125,100)'
         })
@@ -7616,7 +7637,9 @@ function openInstructionWindow() {
                 <li><kbd>D</kbd> - Switch between dark and light mode</li>
                 <li><kbd>N</kbd> - Add random perched satellite</li>
                 <li><kbd>Ctrl</kbd> + <kbd><></kbd> - Change satellite display size</li>
-                <li><kbd><></kbd> - Change trajectory dot size</li>
+                <li><kbd>Shift</kbd> + <kbd><></kbd> - Change trajectory dot size</li>
+                <li><kbd><></kbd> - Move time +/- 2 minutes</li>
+                <li><kbd>Alt</kbd> + <kbd>Number</kbd> - Set Origin Hotkey</li>
             </ul>
         </li>
     </ul>
@@ -9041,57 +9064,71 @@ function testCodeTime(sat = 0) {
 }
 
 function loadEphemFileInViewer(satellites, originSat = 0, options = {}) {
-    let {km = true} = options
-    mainWindow.satellites = []
-    
-    let originStatej2000 = {
-        epoch: satellites[originSat].state[0][0],
-        state: satellites[originSat].state[0].slice(1)
+    let stateFromArray = function(inArray, time) {
+        let minTime = inArray.filter(s => s[0] <= time)
+        minTime = minTime.length === 0 ? inArray[0] : inArray[minTime.length-1]
+        return propToTime(minTime.slice(1), (time-minTime[0])/1000)
     }
-    satellites.forEach((sat, satii) => {
-        mainWindow.satellites.push(new Satellite({
-            name: sat.name,
-            color: sat.color,
-            shape: sat.shape
-        }))
+    let {km = true} = options
+    // console.log(stateFromArray(satellites[0].state, new Date(satellites[0].state[0][0] - (-20000*1000))))
+    mainWindow.satellites = []
+    let startOrbit = satellites[originSat].state[0].slice(1)
+    startOrbit = PosVel2CoeNew(startOrbit.slice(0,3), startOrbit.slice(3))
+    let startPeriod = 2*Math.PI*(startOrbit.a**3/398600.4418)**0.5
+
+    let startEpoch = satellites[originSat].state[0][0]
+    let endEpoch = satellites[originSat].state[satellites[originSat].state.length-1][0]
+    let viewLength = (endEpoch-startEpoch)/1000
+    let satStates = satellites.map(sat => {
+        let stateHistory = []
+        let t = 0
+        while (t < viewLength) {
+            let viewDate = new Date(startEpoch - (-1000*t))
+            let state = stateFromArray(sat.state, viewDate)
+            stateHistory.push({
+                t, position: state
+            })
+            t += startPeriod / 80
+        }
+        return stateHistory
+
     })
-    mainWindow.startDate = originStatej2000.epoch
-    mainWindow.updateOrigin(PosVel2CoeNew(originStatej2000.state.slice(0,3), originStatej2000.state.slice(3,6)))
+    mainWindow.originHistory = satStates[originSat]
+    mainWindow.originOrbit = startOrbit
+    mainWindow.startDate = startEpoch
+    mainWindow.mm = 2*Math.PI / startPeriod
+    mainWindow.originSun = mainWindow.originHistory.map(s => {
+        let sunRic = sunFromTime(new Date(mainWindow.startDate - (-1000*s.t)))
+        sunRic = Eci2Ric(s.position.slice(0,3), s.position.slice(3), sunRic, [0,0,0])
+        sunRic = math.squeeze(sunRic.rHcw)
+        sunRic = sunRic.map(s => s/math.norm(sunRic))
+        return [
+            s.t, sunRic
+        ]
+    })
+    satStates = satStates.map((state, satIi) => {
+        mainWindow.satellites.push(new Satellite({
+            name: satellites[satIi].name,
+            shape: satellites[satIi].shape,
+            color: satellites[satIi].color
+        }))
+        return state.map((timeState, stateIi) => {
+            let ricState = Eci2Ric(mainWindow.originHistory[stateIi].position.slice(0,3), mainWindow.originHistory[stateIi].position.slice(3), timeState.position.slice(0,3), timeState.position.slice(3))
+            return {t: timeState.t, position: math.squeeze([...ricState.rHcw, ...ricState.drHcw])}
+        })
+    })
     setTimeout(() => {
-        satellites.forEach((sat, satii) => {
-            let history = []
-            for (let time = 0; time < 86400*2; time+= mainWindow.timeDelta) {
-                // console.log(originState.epoch);
-                let epochTime = new Date(originStatej2000.epoch - (-time*1000))
-                let closestTimeState = sat.state.findIndex(stateIndex => {
-                    return stateIndex[0] >= epochTime
-                })
-                if (closestTimeState === -1) {
-                    closestTimeState = sat.state[sat.state.length - 1].slice()
-                }
-                else {
-                    closestTimeState = sat.state[closestTimeState].slice()
-                }
-                let stateTime = closestTimeState.shift()
-                closestTimeState = propToTime(closestTimeState.map(s => s / (km ? 1 : 1000)), (epochTime - stateTime) / 1000, false)
-                let originStateEci = propToTime(originStatej2000.state.map(s => s / (km ? 1 : 1000)), (epochTime - originStatej2000.epoch) / 1000, false)
-                let ricState = Eci2Ric(originStateEci.slice(0,3), originStateEci.slice(3,6), closestTimeState.slice(0,3), closestTimeState.slice(3,6))
-                ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
-                history.push({
-                    t: time,
-                    position: ricState
-                })
-            }
-            mainWindow.satellites[satii].stateHistory = history
+        satStates.forEach((state, satii) => {
+             mainWindow.satellites[satii].stateHistory = state
         })
     }, 1000)
 }
 
 function createHpopStateHistory(startPosition = mainWindow.satellites[0].position, burns = mainWindow.satellites[0].burns, a = 0.001) {
-    let prop
+    let prop, defaultError = 1e-4
     try {
         prop = new Propagator({
-            order: 30
+            order: 8
         })
     } catch (error) {
         return
@@ -9126,7 +9163,7 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
             let acc = burns[burnIndex].direction.map(s => s * a / burnMagnitude)
             console.log(burnDuration, acc, a);
             position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), timeToBurn, {
-                maxError: 1e-6
+                maxError: defaultError
             }).state
             tProp = burns[burnIndex].time
             burns[burnIndex].location = position.slice(0,3)
@@ -9183,7 +9220,7 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
                 tProp += burnDuration
                 timeToNextTimeStep = tD - timeToBurn - burnDuration
                 position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), timeToNextTimeStep, {
-                    maxError: 1e-6
+                    maxError: defaultError
                 }).state
                 tProp += timeToNextTimeStep
                 stateHistory.push({
@@ -9195,7 +9232,7 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
             
         }
         position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), tD, {
-            maxError: 1e-6
+            maxError: defaultError
         }).state
         tProp += tD
     }
@@ -9213,13 +9250,19 @@ function displayHpopTraj(update = false, sat = false) {
         })
         return
     }
+    console.log('Calculating HPOP Origin...');
     let origin = createHpopStateHistory({...mainWindow.originOrbit}, [])
     mainWindow.originHistory = origin
+    console.log('Calucting origin rotation matrices...');
     mainWindow.rotHistory = origin.map(ori => {
         return ConvEciToRic(ori.position, [0,0,0,0,0,0], true)
     })      
-    let satHists = mainWindow.satellites.map(sat => createHpopStateHistory(sat.position, sat.burns, sat.a))
-    satHists = satHists.map(sat => {
+    let satHists = mainWindow.satellites.map((sat, satIi) => {
+        console.log('Calculating HPOP Trajetories...'+(1+satIi)+'/'+mainWindow.satellites.length);
+        return createHpopStateHistory(sat.position, sat.burns, sat.a)
+    })
+    satHists = satHists.map((sat, satIi) => {
+    
         return sat.map((point, ii) => {
             let ric = Eci2Ric(origin[ii].position.slice(0,3), origin[ii].position.slice(3,6), point.position.slice(0,3), point.position.slice(3,6))
             return {
@@ -9231,6 +9274,7 @@ function displayHpopTraj(update = false, sat = false) {
     let hpop = new Propagator()
     mainWindow.ephemViewerMode = true
     mainWindow.hpop = true
+    console.log('Recalculating Burn Locations...');
     satHists.forEach((hist,ii) => {
         mainWindow.satellites[ii].stateHistory = hist
         // Calc new burn location

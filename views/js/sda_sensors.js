@@ -233,6 +233,32 @@ let sensors = [
     },
     {
         type: 'space',
+        name: 'Geo-3',
+        noise: {
+            angle: 0.0025, //deg
+        },
+        epoch: new Date('21 Jun 2022 08:00:00.000'),
+        elAngle: 0, // angle from radial vector along orbit path
+        state: [40727.296540,    -10912.846218,       0.000000,       0.795661,       2.969447,       -0.053660],
+        elMask: [-50,90],
+        maxRange: 60000,
+        active: false
+    },
+    {
+        type: 'space',
+        name: 'Geo-4',
+        noise: {
+            angle: 0.0025, //deg
+        },
+        epoch: new Date('21 Jun 2022 02:00:00.000'),
+        elAngle: 0, // angle from radial vector along orbit path
+        state: [40727.296540,    -10912.846218,       0.000000,       0.795661,       2.969447,       -0.053660],
+        elMask: [-50,90],
+        maxRange: 60000,
+        active: false
+    },
+    {
+        type: 'space',
         name: 'Polar-2',
         noise: {
             angle: 0.01, //deg
