@@ -10,8 +10,9 @@ document.getElementsByTagName('input')[16].setAttribute('list','name-list');
 // Div to lock and unlock
 const lockDiv = document.createElement("div")
 lockDiv.style.position = 'fixed'
-lockDiv.style.top = '5%'
-lockDiv.style.right = '-25%'
+lockDiv.style.top = '7%'
+lockDiv.style.left = '110%'
+lockDiv.style.color = 'black'
 lockDiv.innerText = 'test'
 lockDiv.style.transition = 'right 0.5s'
 document.getElementsByTagName('body')[0].append(lockDiv)
@@ -327,6 +328,10 @@ class windowCanvas {
         // console.time()
         if (this.groundTrackLimits.focus !== undefined && this.satellites.length > this.groundTrackLimits.focus) {
             if (this.satellites[this.groundTrackLimits.focus].stateHistory === undefined) {
+                // If state history doesn't exist while in ephem viewer mode, assume calculations are 
+                // Happening and will be recitified when done, until then don't display anything
+                if (mainWindow.ephemViewerMode) return
+                // Otherwise, create a state history
                 this.satellites[this.groundTrackLimits.focus].calcTraj(true)
             }
             let curTime = new Date(this.startDate - (-1000*this.scenarioTime))
@@ -1694,11 +1699,26 @@ function keydownFunction(key) {
         if (mainWindow.colors.backgroundColor === '#111122') {
             mainWindow.colors.backgroundColor = 'white'
             mainWindow.colors.foregroundColor = 'black'
+            lockDiv.style.color = 'black'
         }
         else {
             mainWindow.colors.backgroundColor = '#111122'
             mainWindow.colors.foregroundColor = 'white'
+            lockDiv.style.color = 'white'
         }
+    }
+    else if (key.key === 'g' || key.key === 'G') {
+        if (mainWindow.latLongMode) {
+            keydownFunction({key: ' '})
+            return
+        }
+        mainWindow.latLongMode = true
+    }
+    else if (key.key === 's' || key.key === 'S') {
+        if (mainWindow.satellites.length < 1) return
+        updateLockScreen()
+        lockDiv.style.left = lockDiv.style.left === '110%' ? '' : '110%'
+        lockDiv.style.right = lockDiv.style.right === '1%' ? '' : '1%'
     }
     else if (key.key === 'n' || key.key === 'N') {
         let newSat = mainWindow.satellites.length === 0 ?  new Satellite({
@@ -1994,7 +2014,6 @@ function startContextClick(event) {
         console.error('Error on right click path')
         pathIndex = -1
     }
-    console.log(activeSite);
     if (pathIndex !== -1) {
         let dataDiv = eventPath[pathIndex]
         let origin = dataDiv.getAttribute('origin')
@@ -2135,11 +2154,12 @@ function startContextClick(event) {
         navigator.clipboard.writeText(outText)
     }
     else {
-        let lockScreenStatus = lockDiv.style.right === '-25%' ? false : true
+        let lockScreenStatus = lockDiv.style.left === '110%' ? false : true
         ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
         `
             ${mainWindow.hpop ? '' : `<div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Seed Regular Scenario</div>`}
             ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
+            ${mainWindow.latLongMode ? `<div lat="${latLongClick.lat}" long="${latLongClick.long}" class="context-item" id="add-ground-site" onclick="handleContextClick(this)">Add Ground Site</div>` : ''}
             <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Exit ${mainWindow.hpop ? 'HPOP ' : ''}Ephemeris View</div>
         `
         : `
@@ -2334,11 +2354,15 @@ function handleContextClick(button) {
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'lock-screen') {
-        if (lockDiv.style.right === '-25%') {
+        if (lockDiv.style.left === '110%') {
             updateLockScreen()
             lockDiv.style.right = '1%'
+            lockDiv.style.left = ''
         }
-        else lockDiv.style.right = '-25%'
+        else {
+            lockDiv.style.left = '110%'
+            lockDiv.style.right = ''
+        }
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'zoom-to-sat') {
@@ -3233,7 +3257,8 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
     // If in ground track mode, don't track with clicked mouse
     if (event.button === 0) {
         // Close context and lock menu if open
-        lockDiv.style.right = '-25%'
+        lockDiv.style.right = ''
+        lockDiv.style.left = '110%'
     }
     else return startContextClick(event)
     // Check if clicked on time
@@ -6300,6 +6325,8 @@ function randn_bm() {
 
 function changeOrigin(sat = 1, currentState = false) {
     document.getElementById('context-menu')?.remove();
+    if (mainWindow.satellites.length <= sat) return
+    mainWindow.groundTrackLimits.focus = sat
     if (mainWindow.ephemViewerMode) {
         console.log('hey');
         let satHists = mainWindow.satellites.map(s => {
@@ -6352,7 +6379,6 @@ function changeOrigin(sat = 1, currentState = false) {
         mainWindow.updateOrigin(curPos)
         return
     }
-    mainWindow.groundTrackLimits.focus = sat
     console.log(sat);
     mainWindow.updateOrigin(mainWindow.satellites[sat].position)
 }
