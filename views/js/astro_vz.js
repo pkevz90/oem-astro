@@ -402,6 +402,7 @@ class Propagator {
             solarRad = true,
             thirdBody = true,
             mass = 850,
+            srbarea = 1,
             cd = 2.2,
             cr = 1.8,
             area = 15
@@ -411,6 +412,7 @@ class Propagator {
         this.cd = cd
         this.cr = cr
         this.area = area
+        this.srparea = srbarea
         this.order = order
         this.atmDrag = atmDrag
         this.solarRad = solarRad
@@ -550,6 +552,7 @@ class Propagator {
     }
     getAtmosphereDensity(h = 747.2119) {
         // Based off of Table 8-4 in Fundamentals of Astrodynamics by Vallado 2nd Ed.
+        h = h < 85 ? 85 : h
         let atData = [
             [0,1.225,7.249],
             [25,3.899e-2,6.349],
@@ -588,7 +591,7 @@ class Propagator {
         return atData[dataRow][1]*Math.exp(-(h - atData[dataRow][0])/atData[dataRow][2])   
     }
     solarRadiationPressure(state = state1_init, date = state1_init_Epoch, options = {}) {
-        let {mass = 850, area = 1, cr = this.cr} = options
+        let {mass = this.mass, area = this.srparea, cr = this.cr} = options
         let sunEci = astro.sunEciFromTime(date)
         let p_srp = 4.57e-6
         let rSunSat = math.subtract(sunEci, state.slice(0,3))
@@ -626,7 +629,7 @@ class Propagator {
         return stateReturn
     }
     propToTime(state = [6371,0,0,0,(398600.4418/6371)**0.5,0], date = new Date(2022,0,0), tf = 7200, options = {}) {
-        let {maxError = 1e-7, a = [0,0,0]} = options
+        let {maxError = 1e-3, a = [0,0,0]} = options
         let h = tf > 0 ? 500 : -500
         h = Math.abs(h) > Math.abs(tf) ? tf : h
         let t = 0

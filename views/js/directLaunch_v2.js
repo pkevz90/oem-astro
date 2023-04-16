@@ -1,5 +1,7 @@
 let apogeeRatio = 1
 let ricFrame = 'ri'
+let ctrlKeyDown = false
+let launchOptions = []
 
 function changeFlyoutPercent(el) {
     let curApogeeRatio = apogeeRatio * 100
@@ -95,14 +97,20 @@ function derivateOfPolynomial(poly = [3,2,1]) {
 let hpop = new Propagator()
 function loopStartTime() {
     console.clear()
-    let hpopNoAtm = new Propagator({
-        atmDrag: false
-    })
-
+    launchOptions = []
     // Starting status for target at search start time
-    let state = [...document.querySelectorAll('.vector')]
+    let state = [...document.querySelectorAll('.coe-inputs')]
     let epoch = new Date(state.shift().value)
     state = state.map(s => Number(s.value))
+    state = {
+        a: state[0],
+        e: state[1],
+        i: state[2]*Math.PI / 180,
+        raan: state[3]*Math.PI / 180,
+        arg: state[4]*Math.PI / 180,
+        tA: state[5]*Math.PI / 180,
+    }
+    state = astro.coe2J2000(state)
     let search = [...document.querySelectorAll('.search')].map(s => s.value)
     let searchStart = new Date(search.shift())
     search = search.map(s => Number(s))
@@ -115,54 +123,41 @@ function loopStartTime() {
     let origState = state.state.slice()
 
     // Site targeting from
-    let site = [...document.querySelectorAll('.site')].map(s => Number(s.value))
-    site = {
-        lat: site[0]*Math.PI / 180,
-        long: site[1]*Math.PI / 180,
-        alt: site[2],
-        elMask: site[3]
-    }
-    site.ecef = astro.sensorGeodeticPosition(site.lat*180/Math.PI, site.long*180/Math.PI, site.alt)
+    let sitesSelected = [...document.querySelector('select').options].filter(s => s.selected).map(opt => {
+        return {
+            name: opt.innerText,
+            lat: Number(opt.getAttribute('lat')),
+            long: Number(opt.getAttribute('long')),
+            alt: 0,
+            elMask: 0
+        }
+    })
+    sitesSelected = sitesSelected.map(site => {
+        return {...site, ecef: astro.sensorGeodeticPosition(site.lat, site.long, site.alt)}
+    })
     
-
-    runRendezvousOptions(0, searchDuration, site, state, [], {
+    runRendezvousOptions(0, searchDuration, sitesSelected, state, [], {
         searchStep, catsLimit, earthIntercept, origState, searchStart
     })
     
 }
 
-function runRendezvousOptions(time, searchDuration, site, state, output = [], options = {}) {
-    let {searchStep, catsLimit, earthIntercept, origState, searchStart} = options
-    // console.log(`${time}/${searchDuration}`);
-    let siteEci = astro.ecef2eci(site.ecef, state.date)
+function evaluateSite(site, launchTime, targetState, options = {}) {
+    let {catsLimit, earthIntercept, searchStart, origState} = options
+    let siteEci = astro.ecef2eci(site.ecef, launchTime)
     let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
-    let tof = estTof(siteEci, state.state)
-    tof = findApogeeRendezvous(siteEci, state.state, tof)
-    if (tof === false) {
-        state = hpop.propToTime(state.state, state.date, searchStep, {
-            maxError: 1e-4
-        })
-        time += searchStep
-        document.querySelector('#calc-button').innerText = `Calculating...${(time/searchDuration*100).toFixed()}%`
-        if (time < searchDuration) setTimeout(runRendezvousOptions,0.1,time, searchDuration, site, state, output, options)
-        else {
-            console.log('finished');
-            document.querySelector('#calc-button').innerText = `Calculate`
-        
-            document.querySelector('#results-div').innerHTML = output.join('\n')
-        }
-        return
-    }
+    let tof = estTof(siteEci, targetState)
+    tof = findApogeeRendezvous(siteEci, targetState, tof)
+    if (tof === false) return false
     tof *= apogeeRatio
     // console.log(tof);
-    let targetEndState = hpop.propToTime(state.state, state.date, tof, {
+    let targetEndState = hpop.propToTime(targetState, launchTime, tof, {
         maxError: 1e-4
     }).state
     let vOptions = [solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, false).v1,solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, true).v1].filter(s => s !== undefined).filter(s => {
         return s.filter(a => isNaN(a)).length === 0
     })
     if (vOptions.length > 0) {
-        console.log(state.date);
         let dV = vOptions.map(s => math.norm(math.subtract(s, siteVel)))
         let minIndex = dV.findIndex(s => s === math.min(dV))
         vOptions = vOptions[minIndex]
@@ -172,43 +167,116 @@ function runRendezvousOptions(time, searchDuration, site, state, output = [], op
             // Calculate sun angle at rendezvous
             let startState = [...siteEci,...vOptions]
             let endState = propToTime(startState, tof)
-            let sunEci = astro.sunEciFromTime(new Date(state.date - (-tof*1000)))
+            let slantRange = math.norm(math.subtract(siteEci, targetEndState.slice(0,3)))
+            let sunEci = astro.sunEciFromTime(new Date(launchTime - (-tof*1000)))
             let relativeVel = math.subtract(endState.slice(3), targetEndState.slice(3)).map(s => -s)
             let cats = math.acos(math.dot(relativeVel, sunEci) / math.norm(relativeVel) / math.norm(sunEci))*180/Math.PI
             let illuminated = earthIntercept ? isSatIlluminated(endState, sunEci) : true
             if (cats < catsLimit && illuminated) {
                 // CATS within limit and lighting source not blocked (if boxes checked) add to results div
-                output.push(`
-                <div style="font-size: 1.25em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" target="${origState.join('x')}">
-                    <div>${dateToDateTimeInput(state.date).split('T').join(' ')}z</div>
-                    <div>Launch &#916V: ${dV[minIndex].toFixed(3)} km/s</div>
-                    <div>TOF: ${(tof/60).toFixed(2)} mins</div>
-                    <div>CATS: ${cats.toFixed(1)}<sup>o</sup></div>
-                    <div>
-                        <button onclick="displayLaunch(this)">Ground Track</button>
-                        <button onclick="displayRic(this)">RIC</button>
-                        <button onclick="copyStkSequence(this)">STK</button>
-                        <button data-launchendstate="${endState.join('x')}" data-targetendstate="${targetEndState.join('x')}" onclick="generateDebrisPiece(this)">Debris</button>
-                        </div>
-                </div>
-                `)  
+                launchOptions.push({
+                    site: site.name,
+                    coordinates: {
+                      lat: site.lat,
+                      long: site.long,
+                      alt: 0
+                    },
+                    launchState: startState,
+                    targetState,
+                    launchTime,
+                    tof,
+                    searchStart,
+                    cats,
+                    relativeVel,
+                    slantRange,
+                    targetEndState,
+                    endState,
+                    origState
+                })
+                // output.push(`
+                // <div style="font-size: 1.25em; border-bottom: solid; border-color: #777; cursor: pointer; display: flex; justify-content: space-around;" launchstate="${[...siteEci, ...vOptions].join('x')}" start="${dateToDateTimeInput(searchStart)}" site="${Object.values(site).join('x')}" tof="${tof}" launch="${dateToDateTimeInput(state.date)}" targetend="${targetEndState.join('x')}" target="${origState.join('x')}">
+                //     <div>${dateToDateTimeInput(state.date).split('T').join(' ')}z</div>
+                //     <div>Launch &#916V: ${dV[minIndex].toFixed(3)} km/s</div>
+                //     <div>TOF: ${(tof/60).toFixed(2)} mins</div>
+                //     <div>CATS: ${cats.toFixed(1)}<sup>o</sup></div>
+                //     <div>
+                //         <button onclick="displayLaunch(this)">Ground Track</button>
+                //         <button onclick="displayRic(this)">RIC</button>
+                //         <button onclick="copyStkSequence(this)">STK</button>
+                //         <button data-launchendstate="${endState.join('x')}" data-targetendstate="${targetEndState.join('x')}" onclick="generateDebrisPiece(this)">Debris</button>
+                //         </div>
+                // </div>
+                // `)  
             }
         }
 
     }
-                    
+
+}
+
+function runRendezvousOptions(time, searchDuration, sites, state, output = [], options = {}) {
+    let {searchStep, catsLimit, earthIntercept, origState, searchStart} = options
+    let site = sites[0]
+    console.log(site.ecef, site);
+    sites.forEach(site => {
+        evaluateSite(site, state.date, state.state, options)
+    })      
     state = hpop.propToTime(state.state, state.date, searchStep, {
         maxError: 1e-4
     })
     time += searchStep
     document.querySelector('#calc-button').innerText = `Calculating...${(time/searchDuration*100).toFixed()}%`
-    if (time < searchDuration) setTimeout(runRendezvousOptions,0.1,time, searchDuration, site, state, output, options)
+    if (time < searchDuration) setTimeout(runRendezvousOptions,0.1,time, searchDuration, sites, state, output, options)
     else {
+        console.log(launchOptions);
+        displayLaunchOptions()
         console.log('finished');
         document.querySelector('#calc-button').innerText = `Calculate`
-    
-        document.querySelector('#results-div').innerHTML = output.join('\n')
     }
+}
+
+function displayLaunchOptions(sortTerm) {
+    let outOptions = [...launchOptions]
+    if (outOptions.length === 0)
+    document.querySelector('#results-div').innerHTML = `<div>No Solutions Found</div>`
+    if (launchOptions[0][sortTerm] !== undefined) {
+        outOptions = launchOptions.sort((a,b) => {
+            if (a[sortTerm] < b[sortTerm]) {
+                return -1;
+            }
+            if (a[sortTerm] > b[sortTerm]) {
+                return 1;
+            }
+            return 0;
+        })
+    }
+    let outputs = []
+    outOptions.forEach(option => {
+        console.log(option);
+        let newDiv = `<tr style="font-size: 1.25em; border-bottom: solid; border-color: #777;" launchstate="${option.launchState.join('x')}" site="${Object.values(option.coordinates).join('x')}" launchtime="${dateToDateTimeInput(option.launchTime)}" start="${dateToDateTimeInput(option.searchStart)}" site="${option.site}" tof="${option.tof}" targetend="${option.targetEndState.join('x')}" target="${option.origState.join('x')}">
+            <td style="width: 15%;">${option.site}</td>
+            <td style="width: 24%;">${dateToDateTimeInput(option.launchTime).split('T').join(' ')}z</td>
+            <td style="width: 15%;">Range: ${option.slantRange.toFixed()} km</td>
+            <td style="width: 15%;">TOF: ${(option.tof/60).toFixed(2)} mins</td>
+            <td style="width: 14%;">CATS: ${option.cats.toFixed(1)}<sup>o</sup></td>
+            <td style="width: 17%;">
+                <button onclick="displayLaunch(this)">Ground Track</button>
+                <button onclick="copyStkSequence(this)">STK</button>
+            </td>
+        </tr>`
+        outputs.push(newDiv)
+    })
+    document.querySelector('#results-div').innerHTML = `<table style="table-layout: fixed; width: 100%;">
+    <tr style="font-size: 1.25em; font-weight: 900; border-bottom: solid; border-color: #777;">
+            <td style="width: 15%; cursor: pointer;" resortvalue="site" onclick="resortTable(this)">Site</td>
+            <td style="width: 24%; cursor: pointer;" resortvalue="launchTime" onclick="resortTable(this)">Launch Time</td>
+            <td style="width: 15%; cursor: pointer;" resortvalue="slantRange" onclick="resortTable(this)">Range</td>
+            <td style="width: 15%; cursor: pointer;" resortvalue="tof" onclick="resortTable(this)">TOF</td>
+            <td style="width: 14%; cursor: pointer;" resortvalue="cats" onclick="resortTable(this)">CATS</td>
+            <td style="width: 17%; cursor: pointer;">Display</td>
+        </tr>
+        ${outputs.join('\n')}
+    </table>`
 }
 
 function toStkFormat(time) {
@@ -216,7 +284,9 @@ function toStkFormat(time) {
     time = time.split(' ');
     return time[1] + ' ' + time[0] + ' ' + time[2] + ' ' + time[3];
 }
-
+function resortTable(el) {
+    displayLaunchOptions(el.getAttribute('resortvalue'))
+}
 function randn_bm() {
     var u = 0, v = 0;
     while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
@@ -240,9 +310,20 @@ function generateDebrisPiece(el) {
 
 function copyStkSequence(el) {
     // Function to copy to clipboard a string for the STK sequence which builds trajectory out in STK
-    let startTime = new Date(el.parentElement.parentElement.getAttribute('launch'))
+    let startTime = new Date(el.parentElement.parentElement.getAttribute('launchtime'))
     let launchState = el.parentElement.parentElement.getAttribute('launchstate')
     let tof = el.parentElement.parentElement.getAttribute('tof')
+    let targetend = el.parentElement.parentElement.getAttribute('targetend')
+    console.log(launchState);
+    if (ctrlKeyDown) {
+        let newVel = accountForFullPhysics(launchState.split('x').map(s => Number(s)), startTime, targetend.split('x').slice(0,3).map(s=>Number(s)),Number(tof))
+        launchState = launchState.split('x').map(s => Number(s))
+        if (newVel !== false && newVel.filter(s => isNaN(s)).length === 0) {
+            launchState = [...launchState.slice(0,3), ...newVel]
+        }
+        launchState = launchState.join('x')
+        console.log(launchState);
+    }
     navigator.clipboard.writeText(toStkFormat(startTime.toString())+'x'+launchState+'x'+tof)
 }
 
@@ -266,12 +347,13 @@ function displayLaunch(el) {
     })
     let launchState = el.getAttribute('launchstate').split('x').map(s => Number(s))
     let targetState = el.getAttribute('target').split('x').map(s => Number(s))
+    console.log(targetState);
     let site = el.getAttribute('site').split('x').map(s => Number(s))
     site = {
-        lat: site[0]*180/Math.PI,
-        long: site[1]*180/Math.PI
+        lat: site[0],
+        long: site[1]
     }
-    let launchTime = new Date(el.getAttribute('launch'))
+    let launchTime = new Date(el.getAttribute('launchtime'))
     let startTime = new Date(el.getAttribute('start'))
     navigator.clipboard.writeText(dateToDateTimeInput(launchTime) + '    ' + launchState.join('   '))
     let tof = Number(el.getAttribute('tof'))
@@ -515,8 +597,8 @@ function estTof(siteECI, satECI) {
         return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
     }
     let range = math.norm(math.subtract(siteECI, satECI.slice(0,3)))
-    siteECIn = math.norm(siteECI.slice(0,3))
-    satECIn = math.norm(satECI.slice(0,3))
+    let siteECIn = math.norm(siteECI.slice(0,3))
+    let satECIn = math.norm(satECI.slice(0,3))
     // let ang = math.dot(siteECI, satECI.slice(0,3)) / siteECIn / satECIn
     let per = (siteECIn+range) * 0.01
     let estA = (satECIn + per) / 2 
@@ -893,8 +975,7 @@ function importState(el) {
 }
 
 function newStateToInputs(newCoe, epoch) {
-    let coeInputs = document.getElementsByClassName('coe')
-    let vectorInputs = document.getElementsByClassName('vector')
+    let coeInputs = document.getElementsByClassName('coe-inputs')
     coeInputs[0].value = dateToDateTimeInput(epoch)
     document.querySelector('#search-start-time').value = dateToDateTimeInput(epoch)
     coeInputs[1].value = newCoe.a.toFixed(2)
@@ -903,13 +984,6 @@ function newStateToInputs(newCoe, epoch) {
     coeInputs[4].value = (newCoe.raan*180 / Math.PI).toFixed(2)
     coeInputs[5].value = (newCoe.arg*180 / Math.PI).toFixed(2)
     coeInputs[6].value = (newCoe.tA*180 / Math.PI).toFixed(2)
-    let inputValue = Object.values(Coe2PosVelObject(newCoe))
-    vectorInputs[1].value = inputValue[0].toFixed(3)
-    vectorInputs[2].value = inputValue[1].toFixed(3)
-    vectorInputs[3].value = inputValue[2].toFixed(3)
-    vectorInputs[4].value = inputValue[3].toFixed(5)
-    vectorInputs[5].value = inputValue[4].toFixed(5)
-    vectorInputs[6].value = inputValue[5].toFixed(5)
 }
 
 function dateToDateTimeInput(date) {
@@ -933,13 +1007,68 @@ function selectSite(el) {
 function importSites() {
     let sel = document.getElementsByTagName('select')[0]
     sel.style.fontSize = '1.5em'
-    sites.forEach(s => {
-        let opt = document.createElement('option')
-        opt.innerText = s.name
-        sel.append(opt)
+    let countries = new Set(sites.map(s => s.country))
+    countries
+    countries.forEach(coun => {
+        let optGroup = document.createElement('optgroup')
+        optGroup.label = coun
+        sites.filter(s => s.country === coun).forEach(site => {
+            let opt = document.createElement('option')
+            opt.innerText = site.name
+            opt.title = `Latitude: ${site.lat}, Longitude: ${site.long}`
+            opt.setAttribute('lat', site.lat)
+            opt.setAttribute('long', site.long)
+            optGroup.append(opt)
+        })
+        sel.append(optGroup)
     })
-    selectSite(sel)
+
+    // selectSite(sel)
 }
 
+function accountForFullPhysics(launchState, launchEpoch, targetState, tof) {
+    let h = new Propagator({order: 70})
+    let velGuess = launchState.slice(3)
+    for (let index = 0; index < 5; index++) {
+        let velDelX = [...velGuess]
+        velDelX[0] += 0.1
+        let velDelY = [...velGuess]
+        velDelY[1] += 0.1
+        let velDelZ = [...velGuess]
+        velDelZ[2] += 0.1
+        let maxError = 1/10**(index+3)
+        let state = h.propToTime([...launchState.slice(0,3), ...velGuess], launchEpoch, tof, {
+            maxError
+        }).state.slice(0,3)
+        let stateDelX = h.propToTime([...launchState.slice(0,3), ...velDelX], launchEpoch, tof, {
+            maxError
+        }).state.slice(0,3)
+        stateDelX = math.subtract(stateDelX, state).map(s => s/0.1)
+        let stateDelY = h.propToTime([...launchState.slice(0,3), ...velDelY], launchEpoch, tof, {
+            maxError
+        }, ).state.slice(0,3)
+        stateDelY = math.subtract(stateDelY, state).map(s => s/0.1)
+        let stateDelZ = h.propToTime([...launchState.slice(0,3), ...velDelZ], launchEpoch, tof, {
+            maxError
+        }).state.slice(0,3)
+        stateDelZ = math.subtract(stateDelZ, state).map(s => s/0.1)
+        let jac = math.transpose([stateDelX, stateDelY, stateDelZ])
+        let del = math.transpose([math.subtract(state, targetState)])
+        
+        console.log(math.norm(velGuess), math.norm(math.squeeze(del)), maxError);
+        velGuess = math.subtract(velGuess, math.squeeze(math.multiply(math.inv(jac), del)))
+    }
+    return velGuess
+}
+
+document.body.addEventListener('keydown', key => {
+    if (key.key === 'Control') {
+        ctrlKeyDown = true
+    }
+})
+document.body.addEventListener('keyup', key => {
+    if (key.key === 'Control') {
+        ctrlKeyDown = false
+    }
+})
 importSites()
-handleInputs()
