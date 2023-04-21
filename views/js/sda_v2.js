@@ -5,6 +5,11 @@ scalingSpan.innerHTML = `
     <input style="width: 5ch;" id="cov-scale-input" type="number" value="100"/>%
 `
 document.querySelector('#upload-button').parentElement.append(scalingSpan)
+// Add issp button
+let isspButton = document.createElement('button')
+isspButton.innerHTML = `ISSP`
+isspButton.onclick = generateIssp
+document.querySelector('#upload-button').parentElement.append(isspButton)
 
 let mainWindow = {
     planet: {
@@ -32,6 +37,61 @@ function runge_kutta(state, dt) {
     let k1 = eom(state);
     let k2 = eom(math.add(state, math.dotMultiply(dt/2, k1)));
     return math.squeeze(math.add(state, math.dotMultiply(dt, k2)));
+}
+
+function generateIssp() {
+    let pn = function(x,y=2) {
+        x = ''+x
+        while(x.length < y) {
+            x = '0' + x
+        }
+        return x
+    }
+    let timeDelta = prompt('Enter time increments in minutes', 15)*60
+    if (timeDelta === null) return
+    let totalTime = document.querySelector('#track-time-input').value*3600
+    let startTime = new Date(mainWindow.startTime - (totalTime*1000))
+    startTime = new Date(startTime.getFullYear(), startTime.getMonth(), startTime.getDate(), startTime.getHours())
+    let hoursLine = 'Type,Name,'
+    let rowObs = []
+    out = ''
+    for (let curTime = 0; curTime <= (totalTime+3600); curTime+= timeDelta) {
+        let rowTime = new Date(startTime - (-curTime*1000))
+        let propTime1 = (rowTime - mainWindow.startTime) / 1000
+        let propTime2 = propTime1 + timeDelta/3
+        let propTime3 = propTime2 + timeDelta/3
+        let propState1 = propToTime(mainWindow.satellites[0].origState, propTime1)
+        let propState2 = propToTime(mainWindow.satellites[0].origState, propTime2)
+        let propState3 = propToTime(mainWindow.satellites[0].origState, propTime3)
+        let checkedObs = [...checkSensors(propState1, propTime1).map(s => mainWindow.sensors[s.sensor].name), ...checkSensors(propState2, propTime2).map(s => mainWindow.sensors[s.sensor].name), ...checkSensors(propState3, propTime3).map(s => mainWindow.sensors[s.sensor].name)]
+        rowObs.push(mainWindow.sensors.map(s => {
+            return [s.name, checkedObs.filter(ob => ob === s.name).length]
+        }))
+        hoursLine += `${pn(rowTime.getHours())}${pn(rowTime.getMinutes())}z,`
+    }
+    out += hoursLine+'\n'
+    out += mainWindow.sensors.filter(s => s.active).map((sens, ii) => {
+        let sensOut = `${sens.type}, ${sens.name},`
+        console.log(rowObs.map(row => row[row.findIndex(ob => ob[0] === sens.name)]));
+        sensOut += rowObs.map(row => row[row.findIndex(ob => ob[0] === sens.name)][1] > 0 ? 'X' : '').join(',')
+        return sensOut
+    }).join('\n')
+
+    downloadFile('issp.csv', out)
+}
+
+function downloadFile(filename, text) {
+    var pom = document.createElement('a');
+    pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    pom.setAttribute('download', filename);
+
+    if (document.createEvent) {
+        var event = document.createEvent('MouseEvents');
+        event.initEvent('click', true, true);
+        pom.dispatchEvent(event);
+    } else {
+        pom.click();
+    }
 }
 
 function orbitalDynamics(position = [42164, 0, 0, 0, 3.074, 0], j2Eff = false) {
@@ -1742,19 +1802,19 @@ function animationFunction() {
     // lat += 0.1
     window.requestAnimationFrame(animationFunction)
 }
-let coastlines 
-fetch('./Media/coastline.geojson').then(s => s.json()).then(s => {
-    coastlines = s.features.map(s => s.geometry.coordinates)
-    coastlines = coastlines.map(s => {
-        return s.map(a => {
-            return [math.cos(a[0]*Math.PI / 180) * math.cos(a[1]*Math.PI / 180), math.sin(a[0]*Math.PI / 180) * math.cos(a[1]*Math.PI / 180), math.sin(a[1]*Math.PI / 180)]
-        })
-    })
-    // .forEach(element => {
-    //     drawCoordinateOnCanvas(element)
+// let coastlines 
+// fetch('./Media/coastline.geojson').then(s => s.json()).then(s => {
+//     coastlines = s.features.map(s => s.geometry.coordinates)
+//     coastlines = coastlines.map(s => {
+//         return s.map(a => {
+//             return [math.cos(a[0]*Math.PI / 180) * math.cos(a[1]*Math.PI / 180), math.sin(a[0]*Math.PI / 180) * math.cos(a[1]*Math.PI / 180), math.sin(a[1]*Math.PI / 180)]
+//         })
+//     })
+//     // .forEach(element => {
+//     //     drawCoordinateOnCanvas(element)
         
-    // });
-})
+//     // });
+// })
 function showLogo() {
     let cnvs = document.createElement('canvas')
     document.getElementsByTagName('body')[0].append(cnvs)
