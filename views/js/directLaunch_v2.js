@@ -36,7 +36,7 @@ function findApogeeRendezvous(siteEci, targetStart, estimateTof) {
         let ddDotPoly = derivateOfPolynomial(dDotPoly)
         // tof2 -= answerPolynomial(dotPoly, tof2) / answerPolynomial(dDotPoly, tof2)
         tof2 -= 2*answerPolynomial(dotPoly, tof2)*answerPolynomial(dDotPoly, tof2) / (2*answerPolynomial(dDotPoly, tof2)**2-answerPolynomial(dotPoly, tof2)*answerPolynomial(ddDotPoly, tof2))
-        console.log(estimateTof, tof2, dot2, answerPolynomial(dotPoly, tof2));
+        // console.log(estimateTof, tof2, dot2, answerPolynomial(dotPoly, tof2));
         if (dot2 < answerPolynomial(dotPoly, tof2)) throw Error('Apogee not found exact')
         return tof2
     } catch (error) {
@@ -117,7 +117,8 @@ function loopStartTime() {
     let searchStep = search[1]*60, searchDuration = search[0]*3600
     state = hpop.propToTime(state, epoch, (searchStart - epoch)/1000, 1e-6)
     // return
-    let catsLimit = document.querySelector('#cats-limit').checked ? 90 : 180
+    let catsLimit = document.querySelector('#cats-limit').checked ? Number(document.querySelector('#cats-limit-input').value) : 180
+    let rangeLimit = document.querySelector('#range-limit').checked ? Number(document.querySelector('#range-limit-input').value) : 1000000
     let earthIntercept = document.querySelector('#earth-block').checked
 
     let origState = state.state.slice()
@@ -137,13 +138,13 @@ function loopStartTime() {
     })
     
     runRendezvousOptions(0, searchDuration, sitesSelected, state, [], {
-        searchStep, catsLimit, earthIntercept, origState, searchStart
+        searchStep, catsLimit, earthIntercept, origState, searchStart, rangeLimit
     })
     
 }
 
 function evaluateSite(site, launchTime, targetState, options = {}) {
-    let {catsLimit, earthIntercept, searchStart, origState} = options
+    let {catsLimit, earthIntercept, searchStart, origState, rangeLimit} = options
     let siteEci = astro.ecef2eci(site.ecef, launchTime)
     let siteVel = math.cross([0,0,2*Math.PI / 86164], siteEci)
     let tof = estTof(siteEci, targetState)
@@ -154,6 +155,8 @@ function evaluateSite(site, launchTime, targetState, options = {}) {
     let targetEndState = hpop.propToTime(targetState, launchTime, tof, {
         maxError: 1e-4
     }).state
+    console.log(math.norm(math.subtract(siteEci, targetEndState.slice(0,3))), rangeLimit);
+    if (math.norm(math.subtract(siteEci, targetEndState.slice(0,3))) > rangeLimit) return
     let vOptions = [solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, false).v1,solveLambertsProblem(siteEci, targetEndState.slice(0,3), tof, 0, true).v1].filter(s => s !== undefined).filter(s => {
         return s.filter(a => isNaN(a)).length === 0
     })
@@ -166,6 +169,7 @@ function evaluateSite(site, launchTime, targetState, options = {}) {
         if (elevationAngle > site.elMask) {
             // Calculate sun angle at rendezvous
             let startState = [...siteEci,...vOptions]
+            let velAz = astro.v2az(vOptions, launchTime, site.lat, site.long)
             let endState = propToTime(startState, tof)
             let slantRange = math.norm(math.subtract(siteEci, targetEndState.slice(0,3)))
             let sunEci = astro.sunEciFromTime(new Date(launchTime - (-tof*1000)))
@@ -181,12 +185,14 @@ function evaluateSite(site, launchTime, targetState, options = {}) {
                       long: site.long,
                       alt: 0
                     },
+                    velAz,
                     launchState: startState,
                     targetState,
                     launchTime,
                     tof,
                     searchStart,
                     cats,
+                    velDot: -math.abs(math.dot(endState.slice(3), targetEndState.slice(3)) / math.norm(endState.slice(3)) / math.norm(targetEndState.slice(3))),
                     relativeVel,
                     slantRange,
                     targetEndState,
@@ -217,7 +223,7 @@ function evaluateSite(site, launchTime, targetState, options = {}) {
 function runRendezvousOptions(time, searchDuration, sites, state, output = [], options = {}) {
     let {searchStep, catsLimit, earthIntercept, origState, searchStart} = options
     let site = sites[0]
-    console.log(site.ecef, site);
+    // console.log(site.ecef, site);
     sites.forEach(site => {
         evaluateSite(site, state.date, state.state, options)
     })      
@@ -228,7 +234,7 @@ function runRendezvousOptions(time, searchDuration, sites, state, output = [], o
     document.querySelector('#calc-button').innerText = `Calculating...${(time/searchDuration*100).toFixed()}%`
     if (time < searchDuration) setTimeout(runRendezvousOptions,0.1,time, searchDuration, sites, state, output, options)
     else {
-        console.log(launchOptions);
+        // console.log(launchOptions);
         displayLaunchOptions()
         console.log('finished');
         document.querySelector('#calc-button').innerText = `Calculate`
@@ -252,14 +258,16 @@ function displayLaunchOptions(sortTerm) {
     }
     let outputs = []
     outOptions.forEach(option => {
-        console.log(option);
+        // console.log(option);
         let newDiv = `<tr style="font-size: 1.25em; border-bottom: solid; border-color: #777;" launchstate="${option.launchState.join('x')}" site="${Object.values(option.coordinates).join('x')}" launchtime="${dateToDateTimeInput(option.launchTime)}" start="${dateToDateTimeInput(option.searchStart)}" site="${option.site}" tof="${option.tof}" targetend="${option.targetEndState.join('x')}" target="${option.origState.join('x')}">
             <td style="width: 15%;">${option.site}</td>
             <td style="width: 24%;">${dateToDateTimeInput(option.launchTime).split('T').join(' ')}z</td>
-            <td style="width: 15%;">Range: ${option.slantRange.toFixed()} km</td>
-            <td style="width: 15%;">TOF: ${(option.tof/60).toFixed(2)} mins</td>
-            <td style="width: 14%;">CATS: ${option.cats.toFixed(1)}<sup>o</sup></td>
-            <td style="width: 17%;">
+            <td style="width: 9.75%;">${option.slantRange.toFixed()} km</td>
+            <td style="width: 9.75%;">${(option.tof/60).toFixed(2)} mins</td>
+            <td style="width: 9.75%;">${option.cats.toFixed(1)}<sup>o</sup></td>
+            <td style="width: 9.75%;">${option.velAz.toFixed(1)}<sup>o</sup></td>
+            <td style="width: 7%;">${(-option.velDot).toFixed(3)}</td>
+            <td style="width: 15%;">
                 <button onclick="displayLaunch(this)">Ground Track</button>
                 <button onclick="copyStkSequence(this)">STK</button>
             </td>
@@ -267,14 +275,6 @@ function displayLaunchOptions(sortTerm) {
         outputs.push(newDiv)
     })
     document.querySelector('#results-div').innerHTML = `<table style="table-layout: fixed; width: 100%;">
-    <tr style="font-size: 1.25em; font-weight: 900; border-bottom: solid; border-color: #777;">
-            <td style="width: 15%; cursor: pointer;" resortvalue="site" onclick="resortTable(this)">Site</td>
-            <td style="width: 24%; cursor: pointer;" resortvalue="launchTime" onclick="resortTable(this)">Launch Time</td>
-            <td style="width: 15%; cursor: pointer;" resortvalue="slantRange" onclick="resortTable(this)">Range</td>
-            <td style="width: 15%; cursor: pointer;" resortvalue="tof" onclick="resortTable(this)">TOF</td>
-            <td style="width: 14%; cursor: pointer;" resortvalue="cats" onclick="resortTable(this)">CATS</td>
-            <td style="width: 17%; cursor: pointer;">Display</td>
-        </tr>
         ${outputs.join('\n')}
     </table>`
 }
@@ -379,10 +379,10 @@ function displayLaunch(el) {
     })
     let cnvs = document.createElement('canvas')
     cnvs.style.position = 'fixed'
-    cnvs.style.width = '60%'
-    cnvs.style.height = '70%'
-    cnvs.style.left = '20%'
-    cnvs.style.top = '15%'
+    cnvs.style.width = '80%'
+    cnvs.style.height = '80%'
+    cnvs.style.left = '10%'
+    cnvs.style.top = '10%'
     cnvs.width = 800
     cnvs.height = 450
     cnvs.style.border = '3px solid black'
@@ -423,10 +423,12 @@ function displayLaunch(el) {
 
 function displayRic(el) {
     // Search parent elements for launch information
-    while (el.getAttribute('launch') === null) {
+    while (el.getAttribute('launchtime') === null) {
         el = el.parentElement
+        console.log(el);
         if (el === null) return
     }
+    console.log(el);
     let hpop = new Propagator()
     let hpopNoAtm = new Propagator({
         atmDrag: false,
@@ -436,7 +438,7 @@ function displayRic(el) {
     })
     let launchState = el.getAttribute('launchstate').split('x').map(s => Number(s))
     let targetState = el.getAttribute('target').split('x').map(s => Number(s))
-    let launchTime = new Date(el.getAttribute('launch'))
+    let launchTime = new Date(el.getAttribute('launchtime'))
     let startTime = new Date(el.getAttribute('start'))
     console.log(startTime);
     let tof = Number(el.getAttribute('tof'))
@@ -496,9 +498,9 @@ function displayRic(el) {
     button.style.left = '35%'
     button.style.fontSize = '5vh'
     button.addEventListener('click', switchRicFrame)
-    button.setAttribute('launchState', el.getAttribute('launchstate'))
+    button.setAttribute('launchstate', el.getAttribute('launchstate'))
     button.setAttribute('target', el.getAttribute('target'))
-    button.setAttribute('launch',el.getAttribute('launch'))
+    button.setAttribute('launchtime',el.getAttribute('launchtime'))
     button.setAttribute('start',el.getAttribute('start'))
     button.setAttribute('tof',el.getAttribute('tof'))
     button.innerText = ricFrame.toUpperCase(this)
@@ -1029,7 +1031,7 @@ function importSites() {
 function accountForFullPhysics(launchState, launchEpoch, targetState, tof) {
     let h = new Propagator({order: 70})
     let velGuess = launchState.slice(3)
-    for (let index = 0; index < 5; index++) {
+    for (let index = 0; index < 10; index++) {
         let velDelX = [...velGuess]
         velDelX[0] += 0.1
         let velDelY = [...velGuess]
@@ -1037,6 +1039,7 @@ function accountForFullPhysics(launchState, launchEpoch, targetState, tof) {
         let velDelZ = [...velGuess]
         velDelZ[2] += 0.1
         let maxError = 1/10**(index+3)
+        maxError = maxError < 1e-8 ? 1e-8 : maxError
         let state = h.propToTime([...launchState.slice(0,3), ...velGuess], launchEpoch, tof, {
             maxError
         }).state.slice(0,3)

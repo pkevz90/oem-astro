@@ -955,6 +955,11 @@ class windowCanvas {
             ctx.font = 'bold ' + fontSize/2+ 'px serif'
             ctx.fillText('HPOP', 10, this.cnvs.height - 5 - fontSize);
         }
+        else if (mainWindow.ephemViewerMode) {
+            ctx.font = 'bold ' + fontSize/2+ 'px serif'
+            ctx.fillText('Viewer Mode', 10, this.cnvs.height - 5 - fontSize);
+
+        }
     }
     showLocation() {
         try {
@@ -2083,7 +2088,13 @@ function startContextClick(event) {
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
         `
-        if (!mainWindow.latLongMode) {
+        if (mainWindow.ephemViewerMode) {
+            newInnerHTML += `
+                <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
+                ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
+            `
+        }
+        else if (!mainWindow.latLongMode) {
             newInnerHTML += `
                 <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
                 <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
@@ -2157,9 +2168,10 @@ function startContextClick(event) {
         let lockScreenStatus = lockDiv.style.left === '110%' ? false : true
         ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
         `
-            ${mainWindow.hpop ? '' : `<div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Seed Regular Scenario</div>`}
+            ${mainWindow.hpop ? '' : `<div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Seed Planning Scenario</div>`}
             ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
             ${mainWindow.latLongMode ? `<div lat="${latLongClick.lat}" long="${latLongClick.long}" class="context-item" id="add-ground-site" onclick="handleContextClick(this)">Add Ground Site</div>` : ''}
+            <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Exit ${mainWindow.hpop ? 'HPOP ' : ''}Ephemeris View</div>
         `
         : `
@@ -2327,7 +2339,7 @@ function handleContextClick(button) {
     if (button.id === 'exit-ephem-viewer') {
         document.getElementById('context-menu')?.remove();
         if (mainWindow.hpop) return displayHpopTraj()
-        if (button.innerText === 'Seed Regular Scenario') {
+        if (button.innerText === 'Seed Planning Scenario') {
             let originOrbit = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime)
             console.log(originOrbit);
             let satellites = mainWindow.satellites
@@ -2335,12 +2347,19 @@ function handleContextClick(button) {
                     let ricPos = Object.values(s.curPos)
                     let eciPos = Ric2Eci(ricPos.slice(0,3), ricPos.slice(3,6), originOrbit.slice(0,3), originOrbit.slice(3,6))
                     eciPos = PosVel2CoeNew(eciPos.rEcci, eciPos.drEci)
-                    return eciPos
+                    return {
+                        pos: eciPos,
+                        color: s.color,
+                        name: s.name,
+                        shape: s.shape
+                    }
                 })
             mainWindow.satellites = satellites.map((s,ii) => {
                 return new Satellite({
-                    position: s,
-                    color: mainWindow.satellites[ii].color
+                    position: s.pos,
+                    color: s.color,
+                    name: s.name,
+                    shape: s.shape
                 })
             })
             mainWindow.ephemViewerMode = false
@@ -3782,6 +3801,8 @@ function openPanel(button) {
         })
     }
     else if (button.id === 'options') {
+        let optionDivs = [...document.querySelector('#options-panel').querySelectorAll('div')].slice(2,13).forEach(optDiv => optDiv.style.display = mainWindow.ephemViewerMode ? 'none' : '')
+        console.log(optionDivs);
         document.getElementById('coe-radio').checked = true
         changeOriginInput({id: 'coe-radio'})
         document.querySelector('#scen-length-input').value = ''

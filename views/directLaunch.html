@@ -70,11 +70,12 @@
         <div class="info-label">Search Information</div>
         <div style="display: flex; justify-content: space-around;">
             <div><span class="state-label"><em>Start Time</em></span><input id="search-start-time" class="search" type="datetime-local" value="2022-06-24T14:00:00">z</div>
-            <div><span class="state-label"><em>Duration</em></span><input  style="width: 5ch;" class="search" type="number" value="24"/>hrs</div>
+            <div><span class="state-label"><em>Duration</em></span><input  style="width: 5ch;" class="search" type="number" value="2"/>hrs</div>
             <div><span class="state-label"><em>Time Step</em></span><input style="width: 5ch;"  class="search" type="number" value="5"/>min</div>
         </div>
         <div style="display: flex; justify-content: space-around;">
-            <div title="CATS must be less than this value"><label class="state-label" for="cats-limit"><em>Sun Angle Limit</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="cats-limit"><input style="width: 5ch;" type="Number" value="90"/> deg</div>
+            <div title="CATS must be less than this value"><label class="state-label" for="cats-limit"><em>Sun Angle Limit</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="cats-limit"><input id="cats-limit-input" style="width: 5ch;" type="Number" value="90"/> deg</div>
+            <div title="Range to target must be less than this"><label class="state-label" for="range-limit"><em>Range Limit</em></label><input style="transform: scale(1.5); margin-left: 10px;" type="checkbox" id="range-limit"><input id="range-limit-input" style="width: 8ch;" type="Number" value="100000"/> km</div>
             <div title="If checked omits if Earth blocking sunlight"><label class="state-label" for="earth-block"><em>Target in Sunlight</em></label><input style="transform: scale(1.5); margin-left: 10px;" checked type="checkbox" id="earth-block"></div>
             <div title="Percent of nominal tof to apogee fly-out will take"><label class="state-label" for="earth-block">
                 Apogee Adjustment <button onclick="changeFlyoutPercent(this)">-</button><span id="flyout-percent">100</span>%<button onclick="changeFlyoutPercent(this)">+</button>
@@ -82,6 +83,20 @@
         </div>
         <div><button id="calc-button" style="width: 100%; padding: 10px; cursor: pointer;" onclick="loopStartTime()">Calculate</button></div>
         <div class="info-label">Results</div>
+        <div style="position: sticky; top: 0; background-color: rgb(240, 150, 150); border-bottom: 1px solid black">
+            <table style="table-layout: fixed; width: 100%;">
+                <tr style="font-size: 1.25em; font-weight: 900; border-bottom: solid; border-color: #777;">
+                        <td title="Site launch is from" style="width: 15%; cursor: pointer;" resortvalue="site" onclick="resortTable(this)">Site</td>
+                        <td title="UTC time of launch" style="width: 24%; cursor: pointer;" resortvalue="launchTime" onclick="resortTable(this)">Launch Time</td>
+                        <td title="Range of rendezvous from launch site" style="width: 9.75%; cursor: pointer;" resortvalue="slantRange" onclick="resortTable(this)">Range</td>
+                        <td title="TOF to rendezvous point" style="width: 9.75%; cursor: pointer;" resortvalue="tof" onclick="resortTable(this)">TOF</td>
+                        <td title="CATS angle at rendezvous" style="width: 9.75%; cursor: pointer;" resortvalue="cats" onclick="resortTable(this)">CATS</td>
+                        <td title="Azimuth of launch" style="width: 9.75%; cursor: pointer;" resortvalue="velAz" onclick="resortTable(this)">Azimuth</td>
+                        <td title="Dot product of final launch velocity and target velocity" style="width: 7%; cursor: pointer;" resortvalue="velDot" onclick="resortTable(this)">DOT</td>
+                        <td title="" style="width: 15%; cursor: pointer;">Display</td>
+                    </tr>
+                </table>
+        </div>
         <div id="results-div"></div>
     </div>
 </body>

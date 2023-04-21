@@ -174,6 +174,18 @@ class astro {
         r = math.norm(rho)
         return {el, az, r}
     }
+    static v2az(v = [7, 0, 0], date = new Date(1995, 4, 20, 3, 17, 2), lat = 0, long = 0) {
+        let v_ecef = astro.eci2ecef(v, date)
+        lat *= Math.PI / 180
+        long*= Math.PI / 180
+        let r = [[Math.sin(lat) * Math.cos(long), -Math.sin(long), Math.cos(lat) * Math.cos(long)],
+                 [Math.sin(lat) * Math.sin(long), Math.cos(long), Math.cos(lat) * Math.sin(long)],
+                 [-Math.cos(lat), 0, Math.sin(lat)]]
+        let v_topo = math.squeeze(math.multiply(math.transpose(r), v_ecef))
+        // console.log(v_topo);
+        let az = Math.atan2(v_topo[1], -v_topo[0]) * 180 / Math.PI
+        return az
+    }
     static ecef2eci(r=[-1033.479383, 7901.2952754, 6380.3565958], date=new Date(2004, 3, 6, 7, 51, 28,328)) {
         // Based on Vallado "Fundamentals of Astrodyanmics and Applications" algorithm 24, p. 228 4th edition
         // ECI to ECEF
@@ -405,7 +417,8 @@ class Propagator {
             srbarea = 1,
             cd = 2.2,
             cr = 1.8,
-            area = 15
+            area = 15,
+            minAtDrag = 85
         } = options
         this.storeCoefficients()
         this.mass = mass,
@@ -417,6 +430,7 @@ class Propagator {
         this.atmDrag = atmDrag
         this.solarRad = solarRad
         this.thirdBody = thirdBody
+        this.minAtDrag = minAtDrag
     }
     highPrecisionProp(position = [6371, 0, 0, 0, 7.909, 0], date = new Date(), burnAcc = [0,0,0]) {
         let r = math.norm(position.slice(0,3))
@@ -552,7 +566,7 @@ class Propagator {
     }
     getAtmosphereDensity(h = 747.2119) {
         // Based off of Table 8-4 in Fundamentals of Astrodynamics by Vallado 2nd Ed.
-        h = h < 85 ? 85 : h
+        h = h < this.minAtDrag ? this.minAtDrag : h
         let atData = [
             [0,1.225,7.249],
             [25,3.899e-2,6.349],
