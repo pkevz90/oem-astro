@@ -11,6 +11,9 @@ isspButton.innerHTML = `ISSP`
 isspButton.onclick = generateIssp
 document.querySelector('#upload-button').parentElement.append(isspButton)
 
+let obversationLimit = 86164/900
+
+
 let mainWindow = {
     planet: {
         mu: 398600.4418,
@@ -20,7 +23,7 @@ let mainWindow = {
     },
     initSun: [-94309.749762,    139482969.590637,    60466737.314102],
     maxTime: 24 * 3600, //seconds
-    propTime: 60,
+    propTime: 30,
     startTime: new Date(new Date() - (-21600000)),
     satellites: [
         {
@@ -302,7 +305,10 @@ function checkSensors(sat = [], time, options ={}) {
                 continue
             }
             let el = 90-math.acos(math.dot(vertVec, relativeSatState) / math.norm(relativeSatState)) * 180 / Math.PI
-            if (el < mainWindow.sensors[index].elMask[0] & mask) continue
+            if (el < mainWindow.sensors[index].elMask[0] & mask) {
+                console.log('el mask')
+                continue
+            }
             let ra = math.atan2(relativeSatState[1], relativeSatState[0])
             let dec = math.atan2(relativeSatState[2], math.norm(relativeSatState.slice(0,2)))
             if (mainWindow.sensors[index].type === 'space' ) {
@@ -330,7 +336,7 @@ function getObHistory(e) {
     while (timeOb < mainWindow.maxTime) {
         propState = propToTime(mainWindow.satellites[sat].origState.slice(), -timeOb)
         let r = math.norm(propState.slice(0,3))
-        let obLimit = 2 * Math.PI * (r ** 3 / 398600.4418) ** 0.5 * 0.010445
+        let obLimit = 2 * Math.PI * (r ** 3 / 398600.4418) ** 0.5 / obversationLimit
         let obs = checkSensors(propState, -timeOb, {pastObs: satObs, obLimit})
         // propState =  runge_kutta(propState, -mainWindow.propTime)
         satObs.push(...obs)
@@ -432,8 +438,17 @@ function lineSphereIntercetionBool(line = [-0.45, 0, 0.45], lineOrigin = [282.75
     return check > 0
 }   
 
+function isSatIlluminated(satPos = [6900, 0, 0], sunPos = [6900000, 0,0]) {
+    let satSunAngle = math.acos(math.dot(satPos.slice(0,3), sunPos)/math.norm(satPos.slice(0,3))/math.norm(sunPos))
+    if (satSunAngle < Math.PI / 2) return true
+    return !lineSphereIntercetionBool(math.subtract(satPos.slice(0,3),sunPos), sunPos, [0,0,0], 6371)
+}
+
 function importState(t) {
     let tV = t.value.split(/ {2,}/)
+    if (tV.length < 2) {
+        tV = t.value.split('x')
+    }
     let time = tV[0]
     let newDate = new Date(time)
     if (newDate == 'Invalid Date') {
@@ -1477,6 +1492,7 @@ function handleStateUpdate(el) {
         el.parentElement.parentElement.parentElement.remove()
         if (el.id === 'state-update-cancel') return
         let inputs = [...el.parentElement.parentElement.parentElement.querySelectorAll('input')]
+        inputs.pop()
         let sensor = el.getAttribute('sensor')
         let date = new Date(inputs.shift().value)
         inputs = inputs.map(s => Number(s.value))
@@ -1487,6 +1503,10 @@ function handleStateUpdate(el) {
     }
     let inputs = [...el.parentElement.parentElement.parentElement.querySelectorAll('input')]
     let states = el.value.split(/ {2,}/)
+    if (states.length < 2) {
+        states = el.value.split('x')
+    }
+    console.log(states);
     el.value = ''
     if (states.length < 7) return alert('ivalid input: not enough data')
     let epoch = convertTimeToDateTimeInput(new Date(states.shift()))
