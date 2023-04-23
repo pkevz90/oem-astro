@@ -6697,7 +6697,7 @@ function handleTleFile(file) {
                 }
             }
             let sat = {
-                epoch: new Date(`20` + epoch.slice(0,2),0,epoch.slice(2,5),0,0,Number(epoch.slice(5))*86400),
+                epoch: new Date(`20` + epoch.slice(0,2),0,epoch.slice(2,5),0,0,Number(epoch.slice(5))*86400+72),
                 name: line2[1],
                 orbit: {
                     a: (((86400 / Number(line2[7])) / 2 / Math.PI) ** 2 * 398600.4418) ** (1/3),
@@ -8276,7 +8276,7 @@ function tleFromState(ricState = [0,0,0,0,0,0], time = mainWindow.scenarioTime, 
     function True2Eccentric(e, ta) {
         return Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(ta / 2)) * 2;
     }
-    let epoch = new Date(mainWindow.startDate - (-time*1000))
+    let epoch = new Date(mainWindow.startDate - (-(time-72)*1000))
     let year = epoch.getFullYear()
     let month = epoch.getMonth()
     let leapYear = !((year % 4 !== 0) || ((year % 100 === 0) && (year % 400 !== 0)))
