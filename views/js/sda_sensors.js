@@ -227,7 +227,7 @@ let sensors = [
         epoch: new Date('21 Jun 2022 18:00:00.000'),
         elAngle: 0, // angle from radial vector along orbit path
         state: [40727.296540,    -10912.846218,       0.000000,       0.795661,       2.969447,       -0.053660],
-        elMask: [-50,90],
+        elMask: [-90,90],
         maxRange: 60000,
         active: false
     },
@@ -240,7 +240,7 @@ let sensors = [
         epoch: new Date('21 Jun 2022 08:00:00.000'),
         elAngle: 0, // angle from radial vector along orbit path
         state: [40727.296540,    -10912.846218,       0.000000,       0.795661,       2.969447,       -0.053660],
-        elMask: [-50,90],
+        elMask: [-90,90],
         maxRange: 60000,
         active: false
     },
@@ -253,7 +253,7 @@ let sensors = [
         epoch: new Date('14 Apr 2023 00:00:00.000'),
         elAngle: 0, // angle from radial vector along orbit path
         state: [-11370.456837412303,40724.74046790423,1504.2007858649608,-2.946822659742991,-0.831047857543873,0.21636006764523982],
-        elMask: [-50,90],
+        elMask: [-90,90],
         maxRange: 60000,
         active: false
     },

@@ -153,7 +153,7 @@ class astro {
         let rSigma = (cEarth + h) * Math.cos(lat)
         let rk = (sEarth + h) * Math.sin(lat)
         // console.log(rSigma, rk / math.tan(lat));
-        let r = math.squeeze(math.multiply(rotationMatrices(long, 3),math.transpose([[rSigma, 0, rk]])));
+        let r = math.squeeze(math.multiply(astro.rot(-long, 3),math.transpose([[rSigma, 0, rk]])));
         let rij = math.dotDivide(r.slice(0,2) , math.norm(r.slice(0,2)) /(rk / math.tan(lat)))
         // console.log(rij, r);
         return {r, vert: [...rij, r[2]]};
