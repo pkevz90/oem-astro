@@ -230,12 +230,11 @@ function createSigmaPoints(state, cov, dt = 0, n = 2000) {
 function checkSensors(sat = [], time, options ={}) {
     let {noise = false, mask = true, pastObs = [], obLimit = 900, sensors = math.range(0, mainWindow.sensors.length)._data} = options
     let propSatState = sat.slice()
-    let curSidTime = mainWindow.planet.sidAngle + time * mainWindow.planet.w
-    let sidRot = rotationMatrices(curSidTime * 180 / Math.PI, 3)
-    let sunPos = math.subtract(math.squeeze(math.multiply(rotationMatrices(360 * time / 31556952 , 3), math.transpose([mainWindow.initSun]))), sat.slice(0,3))
+    let obDate = new Date((new Date(mainWindow.startTime)) - (-time*1000))
+    let sunPos = sunFromTime(julianDate(obDate.getFullYear(), obDate.getMonth()+1, obDate.getDate(), obDate.getHours(), obDate.getMinutes(), obDate.getSeconds()))
+    sunPos = math.subtract(sunPos, sat.slice(0,3))
     let sunPosUnit = math.dotDivide(sunPos, math.norm(sunPos))
     let obs = []
-    let obDate = new Date((new Date(mainWindow.startTime)) - (-time*1000))
     for (let ii = 0; ii < sensors.length; ii++) {
         let index = sensors[ii]
         if (!mainWindow.sensors[index].active) continue
@@ -258,8 +257,9 @@ function checkSensors(sat = [], time, options ={}) {
             let cats = math.acos(math.dot(relativeSatState, sunPosUnit) / math.norm(relativeSatState)) * 180 / Math.PI
             if (cats < 90 && mainWindow.sensors[index].type === 'optical' && mask) continue
             // Check if satellite in direct sunlight
-            let check = lineSphereIntercetionBool(sunPosUnit, sat.slice(0,3), [0,0,0], sphereRadius=6500)
-            if (check && mask && mainWindow.sensors[index].type === 'optical') continue
+            // let check = lineSphereIntercetionBool(sunPosUnit, sat.slice(0,3), [0,0,0], sphereRadius=6500)
+            let check = isSatIlluminated(sat.slice(0,3), sunPos)
+            if (!check && mask && mainWindow.sensors[index].type === 'optical') continue
             let {az, el, r} = razel(propSatState.slice(0,3), obDate, mainWindow.sensors[index].lat, mainWindow.sensors[index].long, 0)
             // Check if above horizon
             if (el < mainWindow.sensors[index].elMask[0] && mask) continue
@@ -441,7 +441,7 @@ function lineSphereIntercetionBool(line = [-0.45, 0, 0.45], lineOrigin = [282.75
 function isSatIlluminated(satPos = [6900, 0, 0], sunPos = [6900000, 0,0]) {
     let satSunAngle = math.acos(math.dot(satPos.slice(0,3), sunPos)/math.norm(satPos.slice(0,3))/math.norm(sunPos))
     if (satSunAngle < Math.PI / 2) return true
-    return !lineSphereIntercetionBool(math.subtract(satPos.slice(0,3),sunPos), sunPos, [0,0,0], 6371)
+    return !lineSphereIntercetionBool(math.subtract(satPos.slice(0,3),sunPos), sunPos, [0,0,0], 6400)
 }
 
 function importState(t) {
