@@ -226,6 +226,7 @@ class windowCanvas {
         this.originHistory = results.stateHistory
         this.originRot = results.rotHistory
         this.originSun = results.sunHistory
+        this.originMoon = results.moonHistory
         this.burnType = newOrigin.a < 15000 ? 'manual' : this.burnType
         if (!updateSats) return
         this.satellites.forEach(sat => sat.calcTraj(true))
@@ -241,7 +242,7 @@ class windowCanvas {
     generateOriginHistory() {
         let position = this.originOrbit
         let calcPosition
-        let tProp = 0, tFinal = this.scenarioLength*3600, stateHistory = [], rotHistory = [], sunHistory = []
+        let tProp = 0, tFinal = this.scenarioLength*3600, stateHistory = [], rotHistory = [], sunHistory = [], moonHistory = []
         while ((tProp+this.timeDelta) < tFinal) {
             calcPosition = propToTimeAnalytic(position, tProp, this.j2)
             stateHistory.push({
@@ -254,10 +255,12 @@ class windowCanvas {
             let calcPosition2 = propToTimeAnalytic(position, tProp2, this.j2)
             sunHistory.push([tProp, this.ricSunFromEciState([new Date(this.startDate - (-1000*tProp)), ...calcPosition.slice()])])
             sunHistory.push([tProp2, this.ricSunFromEciState([new Date(this.startDate - (-1000*tProp2)), ...calcPosition2.slice()])])
+            moonHistory.push([tProp, this.ricMoonFromEciState([new Date(this.startDate - (-1000*tProp)), ...calcPosition.slice()])])
+            moonHistory.push([tProp2, this.ricMoonFromEciState([new Date(this.startDate - (-1000*tProp2)), ...calcPosition2.slice()])])
             // position = runge_kutta4(inertialEom, position, this.timeDelta)
             tProp += this.timeDelta
         }
-        return {stateHistory, rotHistory, sunHistory}
+        return {stateHistory, rotHistory, sunHistory, moonHistory}
     }
     ricSunFromEciState(state = [new Date(), 42164, 0, 0, 0, 3.014, 0]) {
         // console.log(state);
@@ -265,6 +268,13 @@ class windowCanvas {
         sun = math.squeeze(Eci2Ric(state.slice(0,3), state.slice(3,6), sun, [0,0,0]).rHcw)
         sun = math.dotDivide(sun, math.norm(sun))
         return sun
+    }
+    ricMoonFromEciState(state = [new Date(), 42164, 0, 0, 0, 3.014, 0]) {
+        // console.log(state);
+        let moon = astro.moonEciFromTime(state.shift())  
+        moon = math.squeeze(Eci2Ric(state.slice(0,3), state.slice(3,6), moon, [0,0,0]).rHcw)
+        moon = math.dotDivide(moon, math.norm(moon))
+        return moon
     }
     getWidth() {
         return this.cnvs.width;
@@ -520,6 +530,17 @@ class windowCanvas {
             lastPoint = pixelPoint[0]
         })
         ctx.stroke()
+        ctx.fillStyle = 'rgb(100,100,100)'
+        let moonEci = astro.moonEciFromTime(new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        let moonCoordinates = astro.eci2latlong(moonEci, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        moonCoordinates = {
+            lat: moonCoordinates.lat * 180 / Math.PI,
+            long: moonCoordinates.long * 180 / Math.PI,
+        }
+        moonCoordinates = this.latLong2Pixel(moonCoordinates)
+        ctx.beginPath()
+        ctx.arc(moonCoordinates[0], moonCoordinates[1], 6, 0, 2*Math.PI)
+        ctx.fill()
         // console.timeEnd()
 
     }
@@ -540,6 +561,16 @@ class windowCanvas {
         // let initSunWithCrossComponent = this.initSun.slice()
         // initSunWithCrossComponent[2] = maxCt * Math.sin(freq * (daySinceWinterSolstice + t / 86164))
         // return math.squeeze(math.multiply(rotationMatrices(-t * (this.mm * 180 / Math.PI - 360 / 365 / 86164), 3), math.transpose([initSunWithCrossComponent])));
+    }
+    getCurrentMoon(t = this.scenarioTime) {
+        let curMoonIndex = this.originMoon.findIndex(s => s[0] > t)
+        if (curMoonIndex === -1) {
+            return this.originMoon[this.originMoon.length-1][1]
+        }
+        let leadMoon = this.originMoon[curMoonIndex]
+        let trailMoon = this.originMoon[curMoonIndex-1]
+        let moon = math.add(math.subtract(leadMoon[1], trailMoon[1]).map(s => s*(t-trailMoon[0])/(leadMoon[0]-trailMoon[0])), trailMoon[1])
+        return moon
     }
     setInitSun(sun) {
         this.initSun = sun;
@@ -694,6 +725,7 @@ class windowCanvas {
         let axesLength = this.plotSize * 0.5;
         let sunLength = this.plotSize * 0.4 * this.plotHeight / 2 * Math.max(this.frameCenter.ri.h, this.frameCenter.ci.h, this.frameCenter.rc.h);
         let sunCoor = this.convertToPixels(math.dotMultiply(sunLength, this.getCurrentSun()));
+        let moonCoor = this.convertToPixels(math.dotMultiply(sunLength, this.getCurrentMoon()));
         let origin = this.convertToPixels([0, 0, 0]);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -711,6 +743,11 @@ class windowCanvas {
             ctx.beginPath()
             ctx.moveTo(origin.ri.x, origin.ri.y);
             ctx.lineTo(sunCoor.ri.x , sunCoor.ri.y);
+            ctx.stroke();
+            ctx.strokeStyle = 'gray';
+            ctx.beginPath()
+            ctx.moveTo(origin.ri.x, origin.ri.y);
+            ctx.lineTo(moonCoor.ri.x , moonCoor.ri.y);
             ctx.stroke();
             ctx.strokeStyle = this.colors.foregroundColor;
             ctx.fillText('R', origin.ri.x, origin.ri.y - this.cnvs.height * axesLength * this.frameCenter.ri.h / 2 - this.plotSize * this.cnvs.height * this.frameCenter.ri.h / 20)
@@ -757,6 +794,11 @@ class windowCanvas {
                 ctx.moveTo(origin.ci.x, origin.ci.y);
                 ctx.lineTo(sunCoor.ci.x, sunCoor.ci.y);
                 ctx.stroke();
+                ctx.strokeStyle = 'gray';
+                ctx.beginPath()
+                ctx.moveTo(origin.ci.x, origin.ci.y);
+                ctx.lineTo(moonCoor.ci.x, moonCoor.ci.y);
+                ctx.stroke();
             }
             ctx.strokeStyle = this.colors.foregroundColor;
             
@@ -784,6 +826,11 @@ class windowCanvas {
             ctx.beginPath()
             ctx.moveTo(origin.rc.x, origin.rc.y);
             ctx.lineTo(sunCoor.rc.x, sunCoor.rc.y);
+            ctx.stroke();
+            ctx.strokeStyle = 'gray';
+            ctx.beginPath()
+            ctx.moveTo(origin.rc.x, origin.rc.y);
+            ctx.lineTo(moonCoor.rc.x, moonCoor.rc.y);
             ctx.stroke();
             ctx.strokeStyle = this.colors.foregroundColor;
             ctx.fillText('C', origin.rc.x, origin.rc.y - this.cnvs.height * axesLength * this.frameCenter.rc.h / 2 - this.plotSize * this.cnvs.height * this.frameCenter.rc.h / 20)
@@ -1963,9 +2010,15 @@ function startContextClick(event) {
         })
         latLongClick.long += latLongClick.long < 0 ? 360 : 0
         latLongClick.long -= latLongClick.long > 360 ? -360 : 0
+        console.log(latLongClick);
         activeSat = latLongs.findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 4/mainWindow.groundTrackLimits.zoom)
         activeSat = activeSat === -1 ? false : activeSat
-        activeSite = mainWindow.groundSites.map(s => s.coordinates).findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 4/mainWindow.groundTrackLimits.zoom)
+        activeSite = mainWindow.groundSites.map(s => s.coordinates).map(s => {
+            return {
+                lat: s.lat,
+                long: s.long < 0 ? s.long + 360 : s.long
+            }
+        }).findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 4/mainWindow.groundTrackLimits.zoom)
         activeSite = activeSite === -1 ? false : activeSite
         
     }
@@ -2020,6 +2073,7 @@ function startContextClick(event) {
         pathIndex = -1
     }
     if (pathIndex !== -1) {
+        // Clicked on data div, give options to change data shown
         let dataDiv = eventPath[pathIndex]
         let origin = dataDiv.getAttribute('origin')
         let target = dataDiv.getAttribute('target')
@@ -2035,6 +2089,7 @@ function startContextClick(event) {
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'relativeVelocity') ? 'checked' : ''} id="relativeVelocity" type="checkbox"/> <label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'poca') ? 'checked' : ''} id="poca" type="checkbox"/> <label style="cursor: pointer" for="poca">POCA</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'sunAngle') ? 'checked' : ''} id="sunAngle" type="checkbox"/> <label style="cursor: pointer" for="sunAngle">CATS</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'moonAngle') ? 'checked' : ''} id="moonAngle" type="checkbox"/> <label style="cursor: pointer" for="moonAngle">CATM</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'interceptData') ? 'checked' : ''} id="interceptData" type="checkbox"/> <label style="cursor: pointer" for="interceptData"><input placeholder="${intTime}" type="number" class="intercept-time-input" style="width: 4em; font-size: 22px;"/>-hr Intercept</label></div>
             <div onclick="changeData(this)" style="border: 1px solid black; border-radius: 10px; margin-top: 5px; cursor: pointer; width: 100%; text-align: center;" origin="${origin}" target="${target}">Confirm</div>
         <div>
@@ -2463,8 +2518,9 @@ function handleContextClick(button) {
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="range"/><label style="cursor: pointer" for="range">Range</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="rangeRate"/><label style="cursor: pointer" for="rangeRate">Range Rate</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="relativeVelocity"/><label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
-           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="poca"/><label style="cursor: pointer" for="poca">POCA</label></div>
-           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="sunAngle"/><label style="cursor: pointer" for="sunAngle">CATS</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="poca"/><label title="Point of Closest Approach" style="cursor: pointer" for="poca">POCA</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="sunAngle"/><label title="Camera-Angle-Target-Sun" style="cursor: pointer" for="sunAngle">CATS</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="moonAngle"/><label title="Camera-Angle-Target-Moon" style="cursor: pointer" for="moonAngle">CATM</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="interceptData"/><label style="cursor: pointer" for="interceptData">1-hr Intercept</label></div>
         `
 
@@ -4789,7 +4845,7 @@ function drawSatellite(satellite = {}) {
 }
 
 function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
-    let sunAngle, rangeRate, range, poca, toca, tanRate, rangeStd, relPos, relVel, relPosHis, interceptData;
+    let sunAngle, moonAngle, rangeRate, range, poca, toca, tanRate, rangeStd, relPos, relVel, relPosHis, interceptData;
     try {
         let relState = math.subtract(Object.values(mainWindow.satellites[n_origin].curPos), Object.values(mainWindow.satellites[n_target].curPos))
         relPos = relState.slice(0,3)
@@ -4805,6 +4861,9 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
         sunAngle = mainWindow.getCurrentSun()
         sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
         sunAngle = 180 - sunAngle; // Appropriate for USSF
+        moonAngle = mainWindow.getCurrentMoon()
+        moonAngle = math.acos(math.dot(relPos, moonAngle) / range / math.norm(moonAngle)) * 180 / Math.PI;
+        moonAngle = 180 - moonAngle; // Appropriate for USSF
         rangeRate = math.dot(relVel, relPos) * 1000 / range;
         // tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
         relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
@@ -4874,6 +4933,7 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
     
     return {
         sunAngle,
+        moonAngle,
         rangeRate,
         range,
         rangeStd,
@@ -6370,6 +6430,15 @@ function changeOrigin(sat = 1, currentState = false) {
             sunRic = sunRic.map(s => s/math.norm(sunRic))
             return [
                 s.t, sunRic
+            ]
+        })
+        mainWindow.originMoon = mainWindow.originHistory.map(s => {
+            let moonRic = astro.moonEciFromTime(new Date(mainWindow.startDate - (-1000*s.t)))
+            moonRic = Eci2Ric(s.position.slice(0,3), s.position.slice(3), moonRic, [0,0,0])
+            moonRic = math.squeeze(moonRic.rHcw)
+            moonRic = moonRic.map(s => s/math.norm(moonRic))
+            return [
+                s.t, moonRic
             ]
         })
         let startOrbit = mainWindow.originHistory[0].position
@@ -8603,6 +8672,7 @@ function openDataDiv(options = {}) {
         range: {name: 'Range', units: 'km'},
         relativeVelocity: {name: 'Rel Vel', units: 'm/s'},
         sunAngle: {name: 'CATS', units: 'deg'},
+        moonAngle: {name: 'CATM', units: 'deg'},
         poca: {name: 'POCA', units: 'km'},
         rangeRate: {name: 'Range Rate', units: 'm/s'},
         interceptData: {name: `<span onclick="changeInterceptTime(this)" style="margin: 2px 1px; padding: 2px; border: 1px solid black; border-radius: 10px; cursor: pointer;">+</span>${(interceptTime*60).toFixed(0)}<span onclick="changeInterceptTime(this)" style="margin: 2px; padding: 2px 1px; border: 1px solid black; border-radius: 10px; cursor: pointer;">-</span>min Intercept <button onclick="executeDataIntercept(this)">Execute</button>`, units:''}
@@ -9151,6 +9221,15 @@ function loadEphemFileInViewer(satellites, originSat = 0, options = {}) {
         sunRic = sunRic.map(s => s/math.norm(sunRic))
         return [
             s.t, sunRic
+        ]
+    })
+    mainWindow.originMoon = mainWindow.originHistory.map(s => {
+        let moonRic = astro.moonEciFromTime(new Date(mainWindow.startDate - (-1000*s.t)))
+        moonRic = Eci2Ric(s.position.slice(0,3), s.position.slice(3), moonRic, [0,0,0])
+        moonRic = math.squeeze(moonRic.rHcw)
+        moonRic = moonRic.map(s => s/math.norm(moonRic))
+        return [
+            s.t, moonRic
         ]
     })
     satStates = satStates.map((state, satIi) => {
