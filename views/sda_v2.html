@@ -19,7 +19,8 @@
             <div>
                 <input type="text" placeholder="SDA Report Input" oninput="importState(this)"> -or- <input style="width: 12ch;" type="Number" placeholder="Longitude" id="long-input"> <button onclick="addSatellite(this)">Create GEO Sat</button>
             </div>
-            <div><button onclick="showMap()">Display Map</button><button onclick="saveCurrentSensors()">Save Sensors</button><button id="upload-button" for="file-input" onclick="uploadSensors()">Load Sensors</button><input onchange="uploadSensors()" accept=".sassda, .txt" style="display: none;" id="file-input" type="file"></div>
+            <div id="tasking-buttons"><button onclick="showMap()">Display Map</button><button onclick="saveCurrentTasking(this)">Save Tasking</button><input type="text" style="width: 10ch;" placeholder="Task Name"></div>
+            <div id="save-task-div"></div>
             <div id="coe-display"></div>
             <div>
                 <input type="Number" placeholder="6" value="6" id="track-time-input"> hrs
