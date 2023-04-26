@@ -1566,9 +1566,27 @@ function importEFile(el) {
     loadEFile(event.target.files[0])
 }
 
+function importTargetEFile(el) {
+    if (el.innerText === 'Import .e') {
+       document.querySelector('#import-target-e-file').click()
+       return
+    }
+    console.log(el);
+    if (event.target.files[0] === undefined) return
+    
+   loadTargetEFile(event.target.files[0])
+   event.target.value = ''
+}
+
 function loadEFile(fileToLoad) {
     var fileReader = new FileReader();
     fileReader.onload = (fileLoadedEvent) => handleEphemFile(fileLoadedEvent.target.result)
+    fileReader.readAsText(fileToLoad, "UTF-8");
+}
+
+function loadTargetEFile(fileToLoad) {
+    var fileReader = new FileReader();
+    fileReader.onload = (fileLoadedEvent) => handleTargetEphemFile(fileLoadedEvent.target.result)
     fileReader.readAsText(fileToLoad, "UTF-8");
 }
 
@@ -1600,6 +1618,37 @@ function handleEphemFile(text) {
     inputs[0].value = epoch
     chosenState.forEach((s, ii) => inputs[ii + 1].value = s.toFixed(5))
 
+}
+
+function handleTargetEphemFile(text) {
+    text = text.split(/\n{1,}/)
+    let baseDate = new Date(text.find(s => s.search('ScenarioEpoch') !== -1).split(/ {2,}/)[1])
+    let ephemStart = text.findIndex(s => s.search('EphemerisTimePosVel') !== -1) + 1
+    let ephemEnd = text.findIndex(s => s.search('END Ephemeris') !== -1)
+
+    ephemEnd = ephemEnd === -1 ? text.length : ephemEnd
+    let states = text.slice(ephemStart, ephemEnd).filter(s => s !== '\r').map(s => s.split(/ {2,}/).map(r => Number(r)))
+    states = states.map(s => {
+        let newDate = new Date(baseDate - (-1000*s[0]))
+        return [newDate, ...s.slice(1)] 
+    })
+    // Find closest time
+    minStateIndex = 0
+    
+    let cmpDate = mainWindow.startTime
+    if (mainWindow.satellites.length > 0) {
+        let timeArray = states.map(s => math.abs(s[0]-cmpDate))
+        minStateIndex = timeArray.findIndex(s => s === math.min(timeArray))
+        minStateIndex = minStateIndex === -1 ? 0 : minStateIndex
+    }
+    let chosenState = states[minStateIndex]
+    console.log(chosenState);
+    let epoch = new Date(chosenState.shift())
+    mainWindow.startTime = epoch
+    updateTime(epoch)
+    console.log(epoch, chosenState);
+    mainWindow.satellites[0].origState = chosenState
+    updateCoeDisplay()
 }
 
 function handleStateUpdate(el) {
