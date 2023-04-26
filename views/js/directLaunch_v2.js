@@ -2,7 +2,8 @@ let apogeeRatio = 1
 let ricFrame = 'ri'
 let ctrlKeyDown = false
 let launchOptions = []
-
+let title = 'Direct Ascent System'
+let acronym = 'DAS'
 function changeFlyoutPercent(el) {
     let curApogeeRatio = apogeeRatio * 100
     curApogeeRatio += el.innerText === '+' ? 1 : -1
@@ -1075,3 +1076,64 @@ document.body.addEventListener('keyup', key => {
     }
 })
 importSites()
+function showLogo() {
+    let cnvs = document.createElement('canvas')
+    document.getElementsByTagName('body')[0].append(cnvs)
+    cnvs.style.position = 'fixed'
+    cnvs.style.zIndex = 20
+    cnvs.style.top = 0
+    cnvs.style.left = 0
+    cnvs.style.width = '100vw'
+    cnvs.style.height = '100vh'
+    cnvs.style.transition = 'opacity 0.5s'
+    cnvs.onclick = el => {
+        el.target.style.opacity = 0
+        setTimeout(() => el.target.remove(), 500)
+    }
+    let ctx = cnvs.getContext('2d')
+    cnvs.width = window.innerWidth
+    cnvs.height = window.innerHeight
+    ctx.fillStyle = 'rgb(200,100,100)'
+    ctx.fillRect(0, 0, cnvs.width, cnvs.height)
+    ctx.globalAlpha = 0.5
+    ctx.strokeStyle = 'blue'
+    ctx.fillStyle = 'blue'
+    ctx.beginPath()
+    ctx.ellipse(cnvs.width / 2+90, cnvs.height / 2, 200, 700, 90 * Math.PI / 180, -Math.PI/2*1.75, Math.PI, true)
+    ctx.stroke()
+    
+    ctx.beginPath()
+    let base = [cnvs.width / 2+90, cnvs.height / 2-200]
+    ctx.moveTo(base[0], base[1])
+    ctx.lineTo(base[0] + 5, base[1]-5)
+    ctx.lineTo(base[0] - 10, base[1])
+    ctx.lineTo(base[0] + 5, base[1]+5)
+    ctx.lineTo(base[0], base[1])
+    ctx.fill()
+    ctx.strokeStyle = 'red'
+    ctx.fillStyle = 'red'
+    ctx.beginPath()
+    ctx.ellipse(cnvs.width / 2+120, cnvs.height / 2, 200, 100, 90 * Math.PI / 180, -Math.PI/2, Math.PI, true)
+    ctx.stroke()
+    ctx.beginPath()
+    base = [cnvs.width / 2+120, cnvs.height / 2-200]
+    ctx.moveTo(base[0], base[1])
+    ctx.lineTo(base[0] + 5, base[1]-5)
+    ctx.lineTo(base[0] - 10, base[1])
+    ctx.lineTo(base[0] + 5, base[1]+5)
+    ctx.lineTo(base[0], base[1])
+    ctx.fill()
+    ctx.globalAlpha = 1
+    ctx.fillStyle = 'black'
+    ctx.textBaseline = 'alphabetic'
+    ctx.textAlign = 'center'
+    ctx.font = '190px sans-serif'
+    ctx.fillText(acronym, cnvs.width / 2, cnvs.height / 2)
+    ctx.textBaseline = 'top'
+    ctx.font = '24px Courier New'
+    ctx.fillText(title, cnvs.width / 2, cnvs.height / 2 + 2)
+    ctx.fillText('CAO ' + cao, cnvs.width / 2, cnvs.height / 2 + 26)
+    ctx.textBaseline = 'alphabetic'
+    ctx.fillText('Click anywhere to begin...', cnvs.width / 2, cnvs.height - 30)
+}
+showLogo()
