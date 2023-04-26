@@ -7129,12 +7129,13 @@ function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime)
 function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites, origin = mainWindow.originOrbit) {
     nClusters = nClusters > sats.length ? sats.length : nClusters
     nClusters = math.floor(nClusters)
-    sats = sats.map(s => {
-        let satEci = Object.values(Coe2PosVelObject(s.position))
+    sats = sats.map((s,iiSat) => {
+        let satEci = Object.values(getCurrentInertial(iiSat, mainWindow.scenarioTime))
         let y = satEci[1]
         let x = satEci[0]
         return {long: Math.atan2(y,x) * 180 / Math.PI, cluster: undefined}
     })
+    console.log(sats);
     let maxLong = math.max(sats.map(s => s.long))
     let minLong = math.min(sats.map(s => s.long))
     let clusters = math.range(maxLong, minLong, -(maxLong - minLong) / (nClusters - 1), true)._data
@@ -9135,8 +9136,9 @@ function handleEphemFile(text) {
     let baseDate = new Date(text.find(s => s.search('ScenarioEpoch') !== -1).split(/ {2,}/)[1])
     let ephemStart = text.findIndex(s => s.search('EphemerisTimePosVel') !== -1) + 1
     let ephemEnd = text.findIndex(s => s.search('END Ephemeris') !== -1)
+
     ephemEnd = ephemEnd === -1 ? text.length : ephemEnd
-    let states = text.slice(ephemStart, ephemEnd).filter(s => s !== '\r').map(s => s.split(/ {1,}/).map(r => Number(r)))
+    let states = text.slice(ephemStart, ephemEnd).filter(s => s !== '\r').map(s => s.split(/ {2,}/).map(r => Number(r)))
     states = states.map(s => {
         let newDate = new Date(baseDate - (-1000*s[0]))
         return [newDate, ...s.slice(1)] 
@@ -9213,7 +9215,10 @@ function loadEphemFileInViewer(satellites, originSat = 0, options = {}) {
     mainWindow.originHistory = satStates[originSat]
     mainWindow.originOrbit = startOrbit
     mainWindow.startDate = startEpoch
+    mainWindow.scenarioLength = viewLength / 3600
+    document.querySelector('#time-slider-range').max = viewLength
     mainWindow.mm = 2*Math.PI / startPeriod
+
     mainWindow.originSun = mainWindow.originHistory.map(s => {
         let sunRic = sunFromTime(new Date(mainWindow.startDate - (-1000*s.t)))
         sunRic = Eci2Ric(s.position.slice(0,3), s.position.slice(3), sunRic, [0,0,0])

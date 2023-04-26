@@ -4,6 +4,7 @@ let ctrlKeyDown = false
 let launchOptions = []
 let title = 'Direct Ascent System'
 let acronym = 'DAS'
+document.title = acronym
 function changeFlyoutPercent(el) {
     let curApogeeRatio = apogeeRatio * 100
     curApogeeRatio += el.innerText === '+' ? 1 : -1
@@ -1093,7 +1094,7 @@ function showLogo() {
     let ctx = cnvs.getContext('2d')
     cnvs.width = window.innerWidth
     cnvs.height = window.innerHeight
-    ctx.fillStyle = 'rgb(200,100,100)'
+    ctx.fillStyle = 'rgb(225,150,150)'
     ctx.fillRect(0, 0, cnvs.width, cnvs.height)
     ctx.globalAlpha = 0.5
     ctx.strokeStyle = 'blue'
