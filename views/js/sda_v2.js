@@ -1533,7 +1533,7 @@ function showStateUpdate(sensor = 0) {
             <div style="margin-top: 15px;"><input id="state-update-input" oninput="handleStateUpdate(this)" style="width: 70%; text-align: center;" placeholder="J2000 State from STK"/></div>
             <div style="margin-top: 15px;">
                 <button id="state-update-confirm" sensor="${sensor}" onclick="handleStateUpdate(this)">Confirm</button>
-                <button id="state-update-confirm" sensor="${sensor}" onclick="importEFile(this)">Import .e</button>
+                <button id="state-update-confirm" title="Set epoch time above to the .e time you want to pull" sensor="${sensor}" onclick="importEFile(this)">Import .e</button>
                 <input type="file" style="display: none;" id="import-e-file" onchange="importEFile(this)"/>
                 <button id="state-update-cancel" onclick="handleStateUpdate(this)">Cancel</button>
             <div>
@@ -1586,15 +1586,17 @@ function handleEphemFile(text) {
     })
     // Find closest time
     minStateIndex = 0
+    
+    let inputs = document.querySelector('#sensor-state-update').querySelectorAll('input')
+    let cmpDate = new Date(inputs[0].value)
     if (mainWindow.satellites.length > 0) {
-        let timeArray = states.map(s => math.abs(s[0]-mainWindow.startTime))
+        let timeArray = states.map(s => math.abs(s[0]-cmpDate))
         minStateIndex = timeArray.findIndex(s => s === math.min(timeArray))
         minStateIndex = minStateIndex === -1 ? 0 : minStateIndex
     }
     let chosenState = states[minStateIndex]
     console.log(chosenState);
     let epoch = convertTimeToDateTimeInput(new Date(chosenState.shift()))
-    let inputs = document.querySelector('#sensor-state-update').querySelectorAll('input')
     inputs[0].value = epoch
     chosenState.forEach((s, ii) => inputs[ii + 1].value = s.toFixed(5))
 
