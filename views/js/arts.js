@@ -8203,6 +8203,9 @@ function openJ2000Window(j2000Satellites = [], km) {
         let sats = j2000Window.j2000Satellites.map(s => s.name)
         let time = new Date(j2000Window.document.querySelector('#tle-import-time').value)
         let coes = [...j2000Window.document.querySelectorAll('.coe-state-div')].map((div, ii) => {
+            if (div.innerText === '') {
+                return undefined
+            }
             let innerText = div.innerText.split(', ').map(s => Number(s))
             return {
                 epoch: time,
@@ -8217,6 +8220,7 @@ function openJ2000Window(j2000Satellites = [], km) {
                 }
             }
         })
+        coes = coes.filter(s => s !== undefined)
         let importCheckboxes = [...j2000Window.document.querySelectorAll('.import-checkbox')].map(s => s.checked)
         let importColors = [...j2000Window.document.querySelectorAll('.import-color')].map(s => s.value)
         let importShapes = [...j2000Window.document.querySelectorAll('.import-shape')].map(s => s.value)
@@ -8243,14 +8247,16 @@ function openJ2000Window(j2000Satellites = [], km) {
         let colors = [...j2000Window.document.querySelectorAll('.import-color')].map(s => s.value)
         let shapes = [...j2000Window.document.querySelectorAll('.import-shape')].map(s => s.value)
         let satellites = j2000Window.j2000Satellites.map((s,ii) => {
+            if (s.state.length === 0) return undefined
             return {
                 name: s.name,
                 state: s.state,
                 color: colors[ii],
-                shape: shapes[ii]
+                shape: shapes[ii],
+                origin: ii === origin ? true : false
             }
-        }).filter((s,ii) => exist[ii])
-        loadEphemFileInViewer(satellites, origin);
+        }).filter(s => s !== undefined).filter((s,ii) => exist[ii])
+        loadEphemFileInViewer(satellites);
     }
     j2000Window.document.body.innerHTML = `
         <div style="font-size: 1.75em; font-weight: bolder; text-align: center;">ARTS J2000 Import Tool</div>
@@ -8308,6 +8314,11 @@ function updateJ200Window() {
         let closestTimeState = sat.state.findIndex(stateIndex => {
             return stateIndex[0] >= time
         })
+        if (sat.state.length === 0) {
+            eciDivs[ii].innerText = 'No Data Present'
+            coeDivs[ii].innerText = ''
+            return
+        }
         if (closestTimeState === -1) {
             closestTimeState = sat.state[sat.state.length - 1].slice()
         }
@@ -9182,7 +9193,7 @@ function testCodeTime(sat = 0) {
     console.timeEnd('calcwburns')
 }
 
-function loadEphemFileInViewer(satellites, originSat = 0, options = {}) {
+function loadEphemFileInViewer(satellites, options = {}) {
     let stateFromArray = function(inArray, time) {
         let minTime = inArray.filter(s => s[0] <= time)
         minTime = minTime.length === 0 ? inArray[0] : inArray[minTime.length-1]
@@ -9191,6 +9202,8 @@ function loadEphemFileInViewer(satellites, originSat = 0, options = {}) {
     let {km = true} = options
     // console.log(stateFromArray(satellites[0].state, new Date(satellites[0].state[0][0] - (-20000*1000))))
     mainWindow.satellites = []
+    let originSat = satellites.findIndex(s => s.origin)
+    originSat = originSat === -1 ? 0 : originSat
     let startOrbit = satellites[originSat].state[0].slice(1)
     startOrbit = PosVel2CoeNew(startOrbit.slice(0,3), startOrbit.slice(3))
     let startPeriod = 2*Math.PI*(startOrbit.a**3/398600.4418)**0.5
