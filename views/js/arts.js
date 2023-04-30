@@ -8121,6 +8121,94 @@ function openTleWindow(tleSatellites, tleNames = {}) {
             origin
         })
     }
+    tleWindow.importTlesAsViewer = (el) => {
+        function Eccentric2True(e,E) {
+            return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(E/2))*2;
+        }
+        function solveKeplersEquation(M,e) {
+            let E = M;
+            let del = 1;
+            while (Math.abs(del) > 1e-6) {
+                del = (E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+                E -= del;
+            }
+            return E;
+        }
+        let satellites = []
+        let els = el.parentElement.parentElement.querySelectorAll('.tle-sat-div')
+        for (let index = 0; index < els.length; index++) {
+            let name = els[index].querySelector('.sat-name-span').innerText
+            let tleOptions = els[index].querySelectorAll('.tle-option-div')
+            tleOptions = [...tleOptions]
+            let state = tleOptions.map(opt => opt.getAttribute('orbit').split('x').map(s => Number(s)))
+            state = state.map(st => {
+                let coe = {
+                    a: st[0],
+                    e: st[1],
+                    i: st[2],
+                    raan: st[3],
+                    arg: st[4],
+                    tA: Eccentric2True(st[1], solveKeplersEquation(st[5], st[1]))
+                }
+                return Object.values(Coe2PosVelObject(coe))
+            })
+            let epochs = tleOptions.map(opt => new Date(opt.querySelector('.tle-epoch').innerText))
+            satellites.push({
+                name,
+                states: state.map((st, ii) => [epochs[ii], st]).sort((a,b) => a[0]-b[0]),
+                stateHistory: [],
+                origin: false
+            })
+        }
+        let startTimeCoe = math.min(satellites.map(s => s.states[0][0].getTime()))
+        for (let t = 0; t < 172800; t+=1800) {
+            let epochTime = new Date(startTimeCoe - (-1000*t))
+            for (let sat = 0; sat < satellites.length; sat++) {
+                let closestState = [satellites[sat].states[0], ...satellites[sat].states.filter(st => st[0] < epochTime)]
+                closestState = closestState[closestState.length-1];
+                satellites[sat].stateHistory.push([
+                    epochTime,
+                    ...propToTime(closestState[1], (epochTime-closestState[0])/1000)
+                ])
+            }
+        }
+        let importCheckboxes = [...tleWindow.document.querySelectorAll('.import-checkbox')].map(s => s.checked)
+        let importColors = [...tleWindow.document.querySelectorAll('.import-color')].map((s, nameIi) => {
+            let val = s.value
+            satellites[nameIi].color = val
+        })
+        let importShapes = [...tleWindow.document.querySelectorAll('.import-shape')].map((s, nameIi) => {
+            let val = s.value
+            satellites[nameIi].shape = val
+        })
+        let importNames = [...tleWindow.document.querySelectorAll('.import-name-input')].map((s, nameIi) => {
+            let val = s.value
+            console.log(nameIi);
+            if (val.length > 0) {
+                satellites[nameIi].name = val + '-' + satellites[nameIi].name
+            }
+        })
+        let originRadio = [...tleWindow.document.querySelectorAll('.import-radio')].map(s => s.checked)
+        originRadio = originRadio.filter((s, filterIi) => importCheckboxes[filterIi])
+        if (originRadio.filter(s => s).length === 0) {
+            originRadio[0] = true
+        }
+        let origin = originRadio.findIndex(s => s)
+        satellites[origin].origin = true
+        satellites = satellites.filter((s, filterIi) => importCheckboxes[filterIi])
+        for (let index = 0; index < satellites.length; index++) {
+            satellites[index].state = satellites[index].stateHistory
+        }
+        console.log(satellites);
+        mainWindow.ephemViewerMode = true
+        loadEphemFileInViewer(satellites)
+        // importStates(states, importTime, {
+        //     names: importNames,
+        //     shapes: importShapes,
+        //     colors: importColors,
+        //     origin
+        // })
+    }
     tleWindow.changeImportTime = (el) => {
         let importDate = new Date(el.value)
         let els = [...el.parentElement.parentElement.querySelectorAll('.tle-sat-div')]
@@ -8185,6 +8273,7 @@ function openTleWindow(tleSatellites, tleNames = {}) {
         }).join('')}
         </div>
         <div><button onclick="importTleChoices(this)">Import TLE States</button></div>
+        <div><button onclick="importTlesAsViewer(this)">Import TLE States As Viewer</button></div>
     `
 }
 let j2000Window
@@ -8256,6 +8345,7 @@ function openJ2000Window(j2000Satellites = [], km) {
                 origin: ii === origin ? true : false
             }
         }).filter(s => s !== undefined).filter((s,ii) => exist[ii])
+        console.log(satellites);
         loadEphemFileInViewer(satellites);
     }
     j2000Window.document.body.innerHTML = `
@@ -9194,6 +9284,7 @@ function testCodeTime(sat = 0) {
 }
 
 function loadEphemFileInViewer(satellites, options = {}) {
+    console.log(satellites);
     let stateFromArray = function(inArray, time) {
         let minTime = inArray.filter(s => s[0] <= time)
         minTime = minTime.length === 0 ? inArray[0] : inArray[minTime.length-1]
