@@ -2324,6 +2324,7 @@ function updateLockScreen(filter) {
         }
         
     }
+    console.log(lanes);
     lanes.forEach((lane, ii) => {
         if (lanes.length > 1) {
             outLanes += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
@@ -7127,41 +7128,46 @@ function propRelMotionTwoBodyAnalytic(r1Ric = [10,0,0,0,0,0], dt = 60, scenTime)
 }
 
 function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites, origin = mainWindow.originOrbit) {
-    nClusters = nClusters > sats.length ? sats.length : nClusters
-    nClusters = math.floor(nClusters)
-    sats = sats.map((s,iiSat) => {
-        let satEci = Object.values(getCurrentInertial(iiSat, mainWindow.scenarioTime))
-        let y = satEci[1]
-        let x = satEci[0]
-        return {long: Math.atan2(y,x) * 180 / Math.PI, cluster: undefined}
-    })
-    console.log(sats);
-    let maxLong = math.max(sats.map(s => s.long))
-    let minLong = math.min(sats.map(s => s.long))
-    let clusters = math.range(maxLong, minLong, -(maxLong - minLong) / (nClusters - 1), true)._data
-    for (let index = 0; index < 10; index++) {
-        // Assign points to clusters
-        sats = sats.map(s => {
-            let c = clusters.map(c => math.abs(c - s.long))
-            c = c.findIndex(n => n === math.min(c))
-
-            return {
-                long: s.long, cluster: c
-            }
+    try {
+        nClusters = nClusters > sats.length ? sats.length : nClusters
+        nClusters = math.floor(nClusters)
+        sats = sats.map((s,iiSat) => {
+            let satEci = Object.values(getCurrentInertial(iiSat, mainWindow.scenarioTime))
+            let y = satEci[1]
+            let x = satEci[0]
+            return {long: Math.atan2(y,x) * 180 / Math.PI, cluster: undefined}
         })
-        // Adjust clusters
-        for (let ii = 0; ii < clusters.length; ii++) {
-            if (sats.filter(s => s.cluster === ii).length === 0) continue
-            clusters[ii] = math.mean(sats.filter(s => s.cluster === ii).map(s => s.long))
+        console.log(sats);
+        let maxLong = math.max(sats.map(s => s.long))
+        let minLong = math.min(sats.map(s => s.long))
+        let clusters = math.range(maxLong, minLong, -(maxLong - minLong) / (nClusters - 1), true)._data
+        for (let index = 0; index < 10; index++) {
+            // Assign points to clusters
+            sats = sats.map(s => {
+                let c = clusters.map(c => math.abs(c - s.long))
+                c = c.findIndex(n => n === math.min(c))
+    
+                return {
+                    long: s.long, cluster: c
+                }
+            })
+            // Adjust clusters
+            for (let ii = 0; ii < clusters.length; ii++) {
+                if (sats.filter(s => s.cluster === ii).length === 0) continue
+                clusters[ii] = math.mean(sats.filter(s => s.cluster === ii).map(s => s.long))
+            }
         }
+        sats = sats.map((s, ii) => {return {cluster: s.cluster, sat: ii}})
+        let output = []
+        for (let index = 0; index < clusters.length; index++) {
+            output.push(sats.filter(s => s.cluster === index).map(s => s.sat))
+        }
+        output = output.filter(s => s.length > 0)
+        return output
+    } catch (error) {
+        let output = [math.range(0,mainWindow.satellites.length)._data]
+        return output
     }
-    sats = sats.map((s, ii) => {return {cluster: s.cluster, sat: ii}})
-    let output = []
-    for (let index = 0; index < clusters.length; index++) {
-        output.push(sats.filter(s => s.cluster === index).map(s => s.sat))
-    }
-    output = output.filter(s => s.length > 0)
-    return output
 }
 setSun()
 let focLen = 1, azD = 45, elD = 45
@@ -9524,10 +9530,6 @@ function displayHpopTraj(update = false, sat = false) {
             b.location = math.squeeze(Eci2Ric(originAtBurnTime.slice(0,3), originAtBurnTime.slice(3,6), eciLoc.slice(0,3), [0,0,0]).rHcw)
         })
     })
-}
-let goundSiteWindow
-function openGroundSiteWindow() {
-
 }
 
 function geoSatelliteAtLongitude(long = 0) {

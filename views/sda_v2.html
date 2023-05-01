@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDA</title>
     <script src="../SupportLibraries/math.js"></script>
-    <script src="./js/hpop_vz.js"></script>
+    <script src="./Media/coastline.js"></script>
+    <script src="./js/astro_vz.js"></script>
     <script src="./js/sda_sensors.js"></script>
     <script src="./js/sda_v2.js" defer></script>
 
@@ -19,7 +20,11 @@
             <div>
                 <input type="text" placeholder="SDA Report Input" style="width: 15ch;" oninput="importState(this)"> -or- <input style="width: 8ch;" type="Number" title="Input GEO satellite at given longitude in degrees" placeholder="Long" id="long-input"> <button onclick="addSatellite(this)">Create GEO Sat</button><button onclick="importTargetEFile(this)">Import .e</button><input onchange="importTargetEFile(this)" id="import-target-e-file" type="file" style="display: none;"/>
             </div>
-            <div id="tasking-buttons"><button onclick="showMap()">Display Map</button><button onclick="saveCurrentTasking(this)">Save Tasking</button><input type="text" style="width: 10ch;" placeholder="Task Name"></div>
+            <div id="tasking-buttons">
+                <button onclick="openMapWindow()">Display Map</button>
+                <button onclick="saveCurrentTasking(this)">Save Tasking</button>
+                <input type="text" style="width: 10ch;" placeholder="Task Name">
+            </div>
             <div id="save-task-div"></div>
             <div id="coe-display"></div>
             <div>

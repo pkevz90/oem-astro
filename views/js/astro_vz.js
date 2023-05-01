@@ -404,6 +404,24 @@ class astro {
             return Math.acos(6371/radius);
         }
     }
+    static eccentric2True(eccAnom, e) {
+        return Math.atan(Math.sqrt((1+e)/(1-e))*Math.tan(eccAnom/2))*2;
+    }
+    static solveKeplersEquation(meanAnom,e) {
+        let eccAnom = meanAnom;
+        let del = 1;
+        while (Math.abs(del) > 1e-6) {
+            del = (eccAnom-e*Math.sin(eccAnom)-meanAnom)/(1-e*Math.cos(eccAnom));
+            eccAnom -= del;
+        }
+        return eccAnom;
+    }
+    static toStkDateFormat(date) {
+        let time = date.toString()
+        time = time.split('GMT')[0].substring(4, time.split('GMT')[0].length - 1) + '.000';
+        time = time.split(' ');
+        return time[1] + ' ' + time[0] + ' ' + time[2] + ' ' + time[3];
+    }
 }
 
 class Propagator {

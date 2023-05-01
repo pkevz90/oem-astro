@@ -1716,239 +1716,9 @@ function availHandlerFunction(el) {
     }
 }
 
-let f = 1, zOffset = 3 //earth radii
-function produceEarthSphere(rot = { long: 0, lat: 0 }, points = 20000) {
-    function pos2pixels(pos, width) {
-        return [
-            0.5 + pos[0] / width,
-            0.5 - pos[1] / width,
-        ]
-    }
-    let positions
-    if (sphereData === undefined) {
-        positions = []
-        coastlines.forEach(sets => {
-            sets.forEach(s => {
-                // let theta = s[0]*Math.PI /180
-                // let phi = s[1] * Math.PI / 180
-                positions.push({
-                    pos: math.multiply(rotationMatrices(-90, 1), math.transpose(s)),
-                    color: `black`,
-                    size: 2
-                })
-            })
-        })
-        sphereData = positions
-    }
-    if (mainWindow.satellites[0].orbitHist === undefined) {
-        let hpop = new Propagator()
-        let tf = 21600
-        let hist = hpop.propToTimeHistory(mainWindow.satellites[0].origState, mainWindow.startTime, tf, 1e-5)
-        mainWindow.satellites[0].orbitHist = hist.map(s => {
-            let ecef = fk5ReductionTranspose(s.state.slice(0, 3), s.date)
-            ecef = ecef.slice(0, 3)
-            return ecef.map(s => s / 6371)
-        })
-    }
-    // console.time()
-    let realWidth = 3
-    let r = math.multiply(rotationMatrices(rot.lat, 1), rotationMatrices(rot.long, 2))
-    let sensData = mainWindow.sensors.filter(s => s.type !== 'space').map(s => {
-        let testLoc = [math.cos(-s.long * Math.PI / 180) * math.cos(s.lat * Math.PI / 180), math.sin(s.long * Math.PI / 180) * math.cos(s.lat * Math.PI / 180), math.sin(s.lat * Math.PI / 180)]
-        // console.log(testLoc);
-        return {
-            pos: math.multiply(rotationMatrices(-90, 1), math.transpose(testLoc).map(s => s * 1.001)),
-            color: s.type === 'radar' ? 'red' : 'blue',
-            size: 10
-        }
-    })
-    let orbitData = mainWindow.satellites[0].orbitHist.map(s => {
-        return {
-            pos: math.multiply(rotationMatrices(-90, 1), math.transpose(s)),
-            color: 'green',
-            size: 5
-        }
-    })
-    // console.log(sphereData);
-    let drawPosition = [...orbitData, ...sensData, ...sphereData].map(pos => {
-        // console.log(pos);
-        let rotPos = math.squeeze(math.multiply(r, pos.pos))
-        let z = rotPos[2]
-        rotPos = pos2pixels(math.dotMultiply(-f / (rotPos[2] - zOffset), rotPos.slice(0, 2)), realWidth)
-        return { color: pos.color, pos: rotPos, z, size: pos.size }
-    }).filter(pos => pos.z > filterLevel)
-        .sort(function (a, b) { return a.z - b.z })
-    if (cnvs3d === undefined) {
-        cnvs3d = document.createElement('canvas')
-        cnvs3d.style.position = 'fixed'
-        cnvs3d.style.top = 0
-        cnvs3d.style.left = 0
-        cnvs3d.style.width = '50vw'
-        cnvs3d.style.height = '50vw'
-        cnvs3d.style.zIndex = 50
-        document.getElementsByTagName('body')[0].append(cnvs3d)
-        cnvs3d.width = window.innerWidth / 2
-        cnvs3d.height = window.innerWidth / 2
-    }
-    let ctx = cnvs3d.getContext('2d')
-    ctx.fillStyle = 'white'
-    ctx.fillRect(0, 0, cnvs3d.width, cnvs3d.height)
-
-    // console.timeEnd()
-    // console.time()
-    ctx.strokeStyle = 'black'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.arc(cnvs3d.width / 2, cnvs3d.height / 2, cnvs3d.width * f / zOffset / 2.7, 0, 2 * Math.PI)
-    ctx.stroke()
-    ctx.fillStyle = 'black'
-    drawPosition.forEach(pos => {
-        ctx.fillStyle = pos.color
-        ctx.beginPath()
-        // ctx.arc(pos.pos[0] * cnvs3d.width, pos.pos[1] * cnvs3d.height, 6, 0, 2 * Math.PI)
-        let pixelSize = pos.size
-        ctx.rect(pos.pos[0] * cnvs3d.width - pixelSize / 2, pos.pos[1] * cnvs3d.height - pixelSize / 2, pixelSize, pixelSize)
-        ctx.fill()
-    })
-
-    // console.timeEnd()
-}
-
-let cnvsCov
-let ang = 0
-function showCovShape() {
-    let cnvs = document.createElement('canvas')
-    cnvs.classList.add('div-shadow')
-    cnvs.style.position = 'fixed'
-    cnvs.style.height = '40vw'
-    cnvs.style.left = '30%'
-    cnvs.style.width = '40vw'
-    cnvs.style.top = '30%'
-    cnvs.width = window.innerWidth * 0.4
-    cnvs.height = window.innerWidth * 0.4
-    cnvs.id = 'map-canvas'
-    cnvs.onclick = (el) => el.target.remove()
-    document.getElementsByTagName('body')[0].append(cnvs)
-    cnvsCov = cnvs
-
-    let covMatrix = [[1, 2, 0],
-    [2, 1, 0],
-    [0, 0, 1]]
-
-    drawCovShape(covMatrix)
 
 
-}
 
-function drawCovShape(matrix) {
-    let eig = math.eigs(matrix);
-    let val = eig.values
-    let vec = eig.vectors
-    let ellipse = { x: val[2], y: val[1], z: val[0] }
-    let rCov = math.transpose(vec).reverse()
-    let ctxCov = cnvsCov.getContext('2d')
-    let points = [], n = 500, l = 4
-    for (let index = 0; index < n; index++) {
-        let angle = index * 2 * Math.PI / n
-        points.push({
-            point: [
-                ellipse.x * Math.cos(angle),
-                ellipse.y * Math.sin(angle),
-                0
-            ], color: 'red', size: 1
-        })
-        points.push({
-            point: [
-                ellipse.x * Math.cos(angle),
-                0,
-                ellipse.z * Math.sin(angle)
-            ], color: 'red', size: 1
-        })
-        points.push({
-            point: [
-                0,
-                ellipse.y * Math.cos(angle),
-                ellipse.z * Math.sin(angle)
-            ], color: 'red', size: 1
-        })
-        points.push({
-            point: math.multiply(rotationMatrices(45, 1), [
-                ellipse.x * Math.cos(angle),
-                ellipse.y * Math.sin(angle),
-                0
-            ]), color: 'red', size: 1
-        })
-        points.push({
-            point: math.multiply(rotationMatrices(-45, 1), [
-                ellipse.x * Math.cos(angle),
-                ellipse.y * Math.sin(angle),
-                0
-            ]), color: 'red', size: 1
-        })
-        let midAngle = 30
-        x = ellipse.x * Math.sin(midAngle * Math.PI / 180)
-        points.push({
-            point: [
-                x,
-                ellipse.y * Math.cos(angle) * Math.cos(midAngle * Math.PI / 180),
-                ellipse.z * Math.sin(angle) * Math.cos(midAngle * Math.PI / 180)
-            ], color: 'red', size: 1
-        })
-        points.push({
-            point: [
-                -x,
-                ellipse.y * Math.cos(angle) * Math.cos(midAngle * Math.PI / 180),
-                ellipse.z * Math.sin(angle) * Math.cos(midAngle * Math.PI / 180)
-            ], color: 'red', size: 1
-        })
-
-    }
-    points = points.map(p => {
-        return { point: math.multiply(rCov, p.point), color: p.color, size: p.size }
-    })
-    for (let index = 0; index < n; index++) {
-        points.push({
-            point: [
-                l * index / n, 0, 0
-            ], color: 'black', size: 3
-        })
-        points.push({
-            point: [
-                0, l * index / n, 0
-            ], color: 'black', size: 3
-        })
-        points.push({
-            point: [
-                0, 0, l * index / n
-            ], color: 'black', size: 3
-        })
-    }
-
-    points = points.map(p => {
-        let r1 = rotationMatrices(-45, 2)
-        let r2 = rotationMatrices(ang, 3)
-        return { point: math.multiply(r1, r2, p.point), color: p.color, size: p.size }
-    })
-    points = points.sort((a, b) => a.point[2] - b.point[2])
-
-    let plotSize = 5
-    ctxCov.fillStyle = 'white'
-    ctxCov.fillRect(0, 0, cnvsCov.width, cnvsCov.height)
-    ctxCov.fillStyle = 'black'
-    let baseSize = 0.5
-    points.forEach(p => {
-        let pixel = [
-            cnvsCov.height / 2 - p.point[0] / plotSize / 2 * cnvsCov.height,
-            cnvsCov.width / 2 - p.point[1] / plotSize / 2 * cnvsCov.width,
-        ]
-        ctxCov.fillStyle = p.color
-        ctxCov.beginPath()
-        ctxCov.arc(pixel[1], pixel[0], p.size * baseSize, 0, 2 * Math.PI)
-        ctxCov.fill()
-    })
-    ang += 1
-    setTimeout(drawCovShape, 20, matrix)
-}
 
 function drawSatellite(options = {}) {
     let { size = 60, ratio = 0.25, angle = -45, body = 0.33, gap = 1.3 } = options
@@ -1989,35 +1759,6 @@ function drawSatellite(options = {}) {
     return points
 }
 
-let shadowCnvs = document.createElement('canvas')
-shadowCnvs.width = 10000
-shadowCnvs.height = 10000
-const context = shadowCnvs.getContext('2d');
-
-let cnvs3d
-let sphereData
-let angle = 0
-let lat = 30
-let filterLevel = 0
-function animationFunction() {
-    produceEarthSphere({ long: angle, lat })
-    angle += 1
-    // lat += 0.1
-    window.requestAnimationFrame(animationFunction)
-}
-// let coastlines 
-// fetch('./Media/coastline.geojson').then(s => s.json()).then(s => {
-//     coastlines = s.features.map(s => s.geometry.coordinates)
-//     coastlines = coastlines.map(s => {
-//         return s.map(a => {
-//             return [math.cos(a[0]*Math.PI / 180) * math.cos(a[1]*Math.PI / 180), math.sin(a[0]*Math.PI / 180) * math.cos(a[1]*Math.PI / 180), math.sin(a[1]*Math.PI / 180)]
-//         })
-//     })
-//     // .forEach(element => {
-//     //     drawCoordinateOnCanvas(element)
-
-//     // });
-// })
 function showLogo() {
     let cnvs = document.createElement('canvas')
     document.getElementsByTagName('body')[0].append(cnvs)
@@ -2076,3 +1817,127 @@ function getAccessTimes(sensor = mainWindow.sensors[0], satellite = mainWindow.s
     })
     return stateHistory
 }
+
+let mapWindow
+function openMapWindow() {
+    if (mapWindow === undefined) {
+        mapWindow = window.open('', 'map', "width=600px,height=600px")
+        setTimeout(() => {
+            mapWindow.document.title = 'SDA Map'
+            animateMap()
+        }, 500)
+    }
+    
+    mapWindow.document.body.innerHTML = `
+        <div style="width: 100%; height: 100%;">
+            <canvas style="width: 100%; height: 100%;"></canvas>
+        </div>
+    `
+    mapWindow.document.body.style.margin = 0
+    mapWindow.document.body.style.padding = 0
+}
+
+function animateMap() {
+    if (mapWindow === undefined) return
+    drawOnMapWindow()
+    window.requestAnimationFrame(animateMap)
+}
+
+function drawOnMapWindow(time = 0) {
+    let latLong2Pixel= function(coordinates ={lat: 0, long: 0}, cnvs) {
+        let center = 0, zoom = 1, latCenter = 0
+        let {lat, long} = coordinates
+        while (center < -180) {
+            center += 360
+        }
+        long = long - center
+        lat -= latCenter
+        if (long < -180) {
+            long += 360
+        }
+        else if (long > 180) {
+            long -= 360
+        }
+        let pixels = [
+            (long+180)/360*cnvs.width,
+            (90-lat)/180*cnvs.height
+        ]
+        pixels[0] = (pixels[0]-cnvs.width/2)*zoom+cnvs.width/2
+        pixels[1] = (pixels[1]-cnvs.height/2)*zoom+cnvs.height/2
+        return pixels
+
+    }
+    let foregroundColor = '#cccccc'
+    let backgroundColor = '#111144'
+    let cnvs = mapWindow.document.querySelector('canvas')
+    cnvs.width = mapWindow.innerWidth
+    cnvs.height = mapWindow.innerHeight
+    let ctx = cnvs.getContext('2d')
+
+    ctx.fillStyle = backgroundColor
+    ctx.clearRect(0, 0, cnvs.width, cnvs.height)
+    ctx.fillRect(0, 0, cnvs.width, cnvs.height)
+    ctx.lineWidth = 1
+    ctx.strokeStyle = foregroundColor
+    coastlines.forEach(array => {
+        let lastPoint = 0
+        ctx.beginPath()
+        array.forEach((point,ii) => {
+            let pixelPoint = latLong2Pixel({
+                long: point[0], lat: point[1]
+            }, cnvs)
+            if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
+            else if (math.abs(pixelPoint[0]-lastPoint) > cnvs.width/2) {
+                ctx.moveTo(pixelPoint[0], pixelPoint[1])
+            }
+            else ctx.lineTo(pixelPoint[0], pixelPoint[1])
+            lastPoint = pixelPoint[0]
+            // ctx.fillRect(pixelPoint[0]-3, pixelPoint[1]-3, 6,6)
+        })
+        ctx.stroke()
+    })
+    let sensorColors = '#ff9999'
+    ctx.fillStyle = sensorColors
+    mainWindow.sensors.filter(s => s.active).forEach(sens => {
+        let pixelPoint = latLong2Pixel({
+            long: sens.long, lat: sens.lat
+        }, cnvs)
+        // console.log(pixelPoint);
+        let sensWidth=  8
+        ctx.fillRect(pixelPoint[0]-sensWidth/2, pixelPoint[1]-sensWidth/2, sensWidth, sensWidth)
+    })
+    let state = mainWindow.satellites[0].origState.slice()
+    let coe = PosVel2CoeNew(state.slice(0,3), state.slice(3))
+    let period = 2*Math.PI*(coe.a**3/398600.4418) ** 0.5
+    let startDate = mainWindow.startTime
+    let timeStep = -period/160
+    let timeRange = math.range(0, -6*3600, timeStep,true)._data 
+    for (let index = 0; index < timeRange.length; index++) {
+        let propState = propToTime(state, timeRange[index])
+        let propTime = new Date(startDate - (-1000*timeRange[index]))
+        let coor = astro.eci2latlong(propState.slice(0,3), propTime)
+        let pixelPoint = latLong2Pixel({
+            lat: coor.lat*180/Math.PI,
+            long: coor.long*180/Math.PI,
+        }, cnvs)
+        let sensWidth=  2
+        ctx.fillRect(pixelPoint[0]-sensWidth/2, pixelPoint[1]-sensWidth/2, sensWidth, sensWidth)
+    }
+    
+    ctx.fillStyle = '#e9e'
+    ctx.strokeStyle = 'black'
+    let curSatPoints = drawSatellite({ size: 40 })
+    let curPropState = propToTime(mainWindow.satellites[0].origState.slice(), 0)
+    let curCoor = astro.eci2latlong(curPropState.slice(0,3), mainWindow.startTime)
+    // console.log(curCoor);
+    curSatPoints.forEach((p, ii) => {
+        if (ii === 0) {
+            ctx.beginPath()
+            ctx.moveTo(p[0] + cnvs.width * (curCoor.long*180/Math.PI+180) / 360, p[1] + cnvs.height * (-curCoor.lat*180/Math.PI+90) / 180)
+        }
+        else ctx.lineTo(p[0] + cnvs.width * (curCoor.long*180/Math.PI+180) / 360, p[1] + cnvs.height * (-curCoor.lat*180/Math.PI+90) / 180)
+    })
+    ctx.fill()
+    ctx.stroke()
+}
+
