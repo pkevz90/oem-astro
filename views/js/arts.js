@@ -1168,16 +1168,18 @@ class Satellite {
     constructor(options = {}) {
         let {
             position,
+            a, // km/s/s
             size = 4,
             color = '#aa4444',
             shape = 'delta',
-            a = 0.001,
             name = 'Sat',
             burns = [],
             locked = false,
             side = 'neutral',
             point = 'none',
             team = 1,
+            mass = 1000, //kilograms
+            thrust = 10000, // Newtons
             cov = undefined
         } = options; 
         if (position === undefined) {
@@ -1189,11 +1191,13 @@ class Satellite {
         this.point = point
         this.size = size;
         this.color = color;
+        this.mass = mass;
+        this.thrust = a === undefined ? thrust : mass * a * 1000;
         this.color = color;
         this.shape = shape;
         this.name = name;
-        this.side = side
-        this.a = Number(a);
+        this.side = side;
+        this.a = a === undefined ? this.thrust / this.mass / 1000 : Number(a); // km/s/s
         this.originDate = Date.now()
         this.locked = locked
         this.pixelPos = [0,0]
@@ -1778,12 +1782,10 @@ function keydownFunction(key) {
                 name: 'Chief',
                 position: {...mainWindow.originOrbit},
                 shape: 'diamond',
-                color: '#bb00bb',
-                a: 0.001
+                color: '#bb00bb'
             }) : 
             new Satellite({
-                name: 'Sat-' + (mainWindow.satellites.length + 1),
-                a: 0.001
+                name: 'Sat-' + (mainWindow.satellites.length + 1)
             })
 
         newSat.calcTraj();
@@ -2140,7 +2142,6 @@ function startContextClick(event) {
                     <option value="4-star">4-Point Star</option>
                     <option value="star">5-Point Star</option>
                 </select>
-                <span sat="${activeSat}" style="float: right"><span contentEditable="true" element="a" oninput="alterEditableSatChar(this)">${(mainWindow.satellites[activeSat].a * 1000).toFixed(4)}</span> m/s2</span>
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
         `
@@ -2153,6 +2154,7 @@ function startContextClick(event) {
         else if (!mainWindow.latLongMode) {
             newInnerHTML += `
                 <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
+                <div class="context-item" sat="${activeSat}" id="engine-set" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Set Engine</div>
                 <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
                 ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
                 ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
@@ -2359,6 +2361,31 @@ function handleContextClick(button) {
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'engine-set') {
+        let sat = button.getAttribute('sat')
+        button.parentElement.innerHTML = `
+            <div class="context-item" >Initial Mass: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].mass}"> kg</div>
+            <div class="context-item" >Thrust: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].thrust}"> N</div>
+            <div class="context-item" sat=${sat} onclick="handleContextClick(this)" id="engine-save">Save</div>
+        `
+        let cm = document.getElementById('context-menu')
+        let elHeight = cm.offsetHeight
+        let elTop =  Number(cm.style.top.split('p')[0])
+        cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'engine-save') {
+        let sat = button.getAttribute('sat')
+        let inputs = button.parentElement.getElementsByTagName('input');
+        let mass = Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value)
+        let thrust = Number(inputs[1].value === '' ? inputs[1].placeholder : inputs[1].value)
+        mainWindow.satellites[sat].mass = mass
+        mainWindow.satellites[sat].thrust = thrust
+        mainWindow.satellites[sat].a = thrust / mass / 1000
+        mainWindow.satellites[sat].calcTraj(true)
+        mainWindow.satellites[sat].calcTraj()
+        document.getElementById('context-menu')?.remove();
+        
     }
     if (button.id === 'launch-options') {
         let site = button.getAttribute('site')
@@ -2668,7 +2695,7 @@ function handleContextClick(button) {
                         position: {r: 0, i: 0, c: 0, rd: 0, id: 0, cd: 0},
                         color: '#f0f',
                         shape: 'diamond',
-                        a: 0.001
+                        a: 0.01
                     }))
                 }
             }
