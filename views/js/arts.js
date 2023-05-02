@@ -52,6 +52,7 @@ class windowCanvas {
     plotWidth = 200;
     plotHeight;
     plotCenter = 0;
+    zeroCatsGood = true;
     j2 = false;
     stringLimit = [0,8];
     ephemViewerMode = false;
@@ -3665,6 +3666,11 @@ document.getElementById('confirm-option-button').addEventListener('click', (clic
     let coe = document.getElementById('coe-radio').checked
     let state = [...stateInputs].map(s => Number(s.value === '' ? s.placeholder : s.value))
     let startDate = new Date(document.getElementById('start-time').value)
+    let catsRadio = [...document.querySelectorAll('.cats-radio')].filter(s => s.checked).map(s => s.value)[0]
+    catsRadio = catsRadio === undefined ? '0' : catsRadio
+    mainWindow.zeroCatsGood = catsRadio === '0'
+    console.log(catsRadio);
+
     if (!coe) {
         state = PosVel2CoeNew(state.slice(0,3), state.slice(3,6))
     }
@@ -3858,10 +3864,14 @@ function openPanel(button) {
         })
     }
     else if (button.id === 'options') {
+        // If ephem viewer is on, don't display origin orbit as it's based on the ephemeris
         let optionDivs = [...document.querySelector('#options-panel').querySelectorAll('div')].slice(2,13).forEach(optDiv => optDiv.style.display = mainWindow.ephemViewerMode ? 'none' : '')
         console.log(optionDivs);
         document.getElementById('coe-radio').checked = true
         changeOriginInput({id: 'coe-radio'})
+        // Set cats radio button to current setting
+        document.querySelector('#cats-good-'+(mainWindow.zeroCatsGood ? '0' : '180')).checked = true
+        // Reset scenario length input to planceholder of current
         document.querySelector('#scen-length-input').value = ''
         document.querySelector('#scen-length-input').placeholder = mainWindow.scenarioLength
         document.querySelector('#str-start-input').placeholder = mainWindow.stringLimit[0] + 1
@@ -4861,10 +4871,10 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
         }
         sunAngle = mainWindow.getCurrentSun()
         sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
-        sunAngle = 180 - sunAngle; // Appropriate for USSF
+        sunAngle = mainWindow.zeroCatsGood ? 180 - sunAngle : sunAngle;
         moonAngle = mainWindow.getCurrentMoon()
         moonAngle = math.acos(math.dot(relPos, moonAngle) / range / math.norm(moonAngle)) * 180 / Math.PI;
-        moonAngle = 180 - moonAngle; // Appropriate for USSF
+        moonAngle = mainWindow.zeroCatsGood ? 180 - moonAngle : moonAngle; // Appropriate for USSF
         rangeRate = math.dot(relVel, relPos) * 1000 / range;
         // tanRate = Math.sqrt(Math.pow(math.norm(relVel), 2) - Math.pow(rangeRate, 2)) * 1000;
         relPosHis = findMinDistance(mainWindow.satellites[n_origin].stateHistory, mainWindow.satellites[n_target].stateHistory);
