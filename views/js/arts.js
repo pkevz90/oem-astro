@@ -1180,6 +1180,7 @@ class Satellite {
             team = 1,
             mass = 1000, //kilograms
             thrust = 10000, // Newtons
+            isp = 200,
             cov = undefined
         } = options; 
         if (position === undefined) {
@@ -1193,6 +1194,7 @@ class Satellite {
         this.color = color;
         this.mass = mass;
         this.thrust = a === undefined ? thrust : mass * a * 1000;
+        this.isp = isp
         this.color = color;
         this.shape = shape;
         this.name = name;
@@ -1925,7 +1927,7 @@ let openInstructions = function() {
 }
 
 function alterEditableSatChar(action) {
-    let parElement = action.parentElement
+    let parElement = action.parentElement.parentElement
     let element = action.getAttribute('element')
     let sat = parElement.getAttribute('sat')
     let newEl = action.innerText
@@ -2126,8 +2128,10 @@ function startContextClick(event) {
         groundPosition = `Lat: ${(groundPosition.lat*180/Math.PI).toFixed(1)}<sup>o</sup>, Long: ${(groundPosition.long*180/Math.PI).toFixed(1)}<sup>o</sup>, <abbr title="Distance to Earth's Center">R</abbr>: ${math.norm(groundPosition.r_ecef).toFixed(1)} km`
         let newInnerHTML = `
             <div sat="${activeSat}" style="display: flex; justify-content: space-between; margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
-                <div contentEditable="true" element="name" oninput="alterEditableSatChar(this)">
-                    ${mainWindow.satellites[activeSat].name}
+                <div>
+                    <div contentEditable="true" element="name" oninput="alterEditableSatChar(this)">
+                        ${mainWindow.satellites[activeSat].name}
+                    </div>
                 </div>
                 <div>
                     <button title="Lock Satellite" sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
@@ -2374,6 +2378,7 @@ function handleContextClick(button) {
         button.parentElement.innerHTML = `
             <div class="context-item" >Initial Mass: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].mass}"> kg</div>
             <div class="context-item" >Thrust: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].thrust}"> N</div>
+            <div class="context-item" >Specific Impulse: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].isp}"> sec</div>
             <div class="context-item" sat=${sat} onclick="handleContextClick(this)" id="engine-save">Save</div>
         `
         let cm = document.getElementById('context-menu')
@@ -2386,8 +2391,10 @@ function handleContextClick(button) {
         let inputs = button.parentElement.getElementsByTagName('input');
         let mass = Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value)
         let thrust = Number(inputs[1].value === '' ? inputs[1].placeholder : inputs[1].value)
+        let isp = Number(inputs[2].value === '' ? inputs[2].placeholder : inputs[2].value)
         mainWindow.satellites[sat].mass = mass
         mainWindow.satellites[sat].thrust = thrust
+        mainWindow.satellites[sat].isp = isp
         mainWindow.satellites[sat].a = thrust / mass / 1000
         mainWindow.satellites[sat].calcTraj(true)
         mainWindow.satellites[sat].calcTraj()
@@ -9186,8 +9193,9 @@ function propToTimeAnalytic(state = mainWindow.originOrbit, dt = 86164, j2 = mai
 
 function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], options = {}) {
     // If recalcBurns is true, burn directions will be recalculated as appropriate times during propagation
-    let {timeDelta = mainWindow.timeDelta, recalcBurns = false, tFinal = mainWindow.scenarioLength*3600, a = 0.001, time = mainWindow.scenarioTime, startBurn = 0} = options
+    let {timeDelta = mainWindow.timeDelta, recalcBurns = false, tFinal = mainWindow.scenarioLength*3600, a = 0.001, mass = 1000, isp = 200, time = mainWindow.scenarioTime, startBurn = 0} = options
     let cutTime = recalcBurns ? mainWindow.scenarioLength*3600 : time
+    let g0 = 9.80665 // standard gravity for rocket equation
     let epochPosition = {...position}, epochTime = 0
     let propPosition, tProp = 0, stateHist = [], histIndex = 0, burnIndex = 0
     burns = burns.slice().filter(b => b.time < cutTime)
@@ -9263,6 +9271,10 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
                 propPosition = runge_kutta4(inertialEom, propPosition, burnDuration-burnedTime, burns[burnIndex-1].direction.map(s => s * a / mag))
                 epochPosition = PosVel2CoeNew(propPosition.slice(0,3), propPosition.slice(3,6))
                 epochTime = burns[burnIndex-1].time + burnDuration
+                let mo_mf = math.exp(mag*1000 / isp / g0)
+                a *= mo_mf // Accounting for lowering mass after every burn in acceleration
+                mass /= mo_mf
+                console.log(a, mass, mo_mf, isp);
             }
         }
         tProp += timeDelta
