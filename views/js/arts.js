@@ -7735,28 +7735,51 @@ function openInstructionWindow() {
         <li>
             Building a plan
             <ul>
+                <li>Instructions are not all-inclusive on features, please contact author for more specific use-cases</li>
                 <li>Importing satellites
                     <ul>
                         <li>Import J2000 report from STK
                             <ul>
                                 <li>Position and Vecocity Report from STK Report and Graph Manager</li>
                                 <li>Can contain any number of satellites</li>
-                                <li>Import with <em>Import State</em> button on right-click menu</li>
+                                <li>Drag file into ARTS screen or import with <em>Import State</em> button on right-click menu</li>
+                                <li>Once state is imported there are two import completion options:
+                                    <ul>
+                                        <li><em>Import J2000 States</em>: Import state at a specific time epoch</li>
+                                        <li><em>Load as Viewer</em>: Imports entire trajectory within the J2000 file to view, good for viewing the results of multiple burns. Can then seed planning scenario off of specific time on screen.</li>
+                                    </ul>
+                                </li>
                             </ul>
                         </li>
-                        <li>Import .tce TLE file with <em>Import State</em> button on right-click menu
+                        <li>Import .tce TLE file by dragging into ARTS window or with <em>Import State</em> button on right-click menu
                             <ul>
                                 <li>If satellite name contains 5 digit TLE number sat characteristics will be maintained</li>
+                                <liThree-line element sets will import satellite name</li>
+                                <li>Once TLE's are imported there are two import completion options:
+                                    <ul>
+                                        <li><em>Import TLE States</em>: Import state at a specific time epoch</li>
+                                        <li><em>Import TLE States as Viewer</em>: Imports entire trajectory based on data from multiple TLE's. Can then seed planning scenario off of specific time on screen.</li>
+                                    </ul>
+                                </li>
                             </ul>
                         </li>
-                        <li>Enter origin J2000 origin state manually under <em>Options</em>, then add satellites with <em>Satellite Menu</em></li>
+                        <li>Enter origin J2000 origin state manually under <em>Options</em>, then add satellites with <em>Satellite Menu</em>
+                            <ul>
+                                <li>RIC coordinates off of any on-screen asset's RIC frame</li>
+                                <li>ECI coordinates with an associated epoch</li>
+                                <li>Relative Motion Orbital Elements based off any on-screen asset's RIC frame</li>
+                                <li>Geo-Stationary satellite over a specified longitude</li>
+                            </ul>
+                        </li>
                         <li>Import .SAS file generated previously with ARTS
-                        <li>Drag and drop file into main window will open requisite data handler</li>
                     </ul>
                 </li>
-                <li>By default, all burns are computed with finite accelerations, goto for impulsive burns in 1000 mm/s<sup>2</sup></li>
-                <li>To insert a burn, click and hold current satellite position, use slider to change shown time</li>
-                <li>To delete a burn, hold the control key and right-click on the burn dot</li>
+                <li>By default, all burns are computed with finite accelerations
+                    <ul>
+                        <li>Can alter acceleration by right-clicking satellite and setting mass and thrust of satellite.</li>
+                        <li>Goto for impulsive burns in 10 m/s<sup>2</sup></li>
+                    </ul>
+                </li>
                 <li>Burn planning options
                     <ul>
                         <li>Click and drag to desired waypoint, changing time of flight with mouse wheel</li>
@@ -7770,8 +7793,7 @@ function openInstructionWindow() {
                     <ul>
                         <li>Right clicking on a burn opens up context menu with options</li>
                         <li>Right clicking also copies to clipboard text string for ingestion into STK</li>
-                        <li>By default right-clicking shows you burn magnitudes in RIC and allows alteration of burn direction</li>
-                        <li>Shift right-clicking brings up burn waypoint information and allows alteration of waypoint</li>
+                        <li>Burn information is diplayed in RIC direction, waypoint (if planned using a waypoint), and Az-EL-Magnitude. Click to alter in either format.</li>
                     </ul>
                 </li>
                 <li>Burns can be deleted by ctrl-clicking on the burn point</li>
@@ -7779,7 +7801,7 @@ function openInstructionWindow() {
                     <ul>
                         <li>Burns durations are limited to 6 hours for mathematical stability</li>
                         <li>Burns are limited to once every 30 minutes</li>
-                        <li>Two-body dynamics are utilized, therefore an error of ~100m per hour can be expected compared to full relative dynamics</li>
+                        <li>Two-body dynamics are utilized, therefore an error of ~500m per day can be expected compared to full relative dynamics at GEO</li>
                     </ul>
                 </li>
             </ul>
@@ -7796,8 +7818,10 @@ function openInstructionWindow() {
         <li>
             Hot Keys
             <ul>
+                <li><kbd>S</kbd> - Open satellite submenu</li>
+                <li><kbd>G</kbd> - Switch to ground-track view</li>
                 <li><kbd>Ctrl</kbd> + <kbd>h</kbd> - Run sim with HPOP</li>
-                <li><kbd>Shift</kbd> + <kbd>S</kbd> or <kbd>L</kbd> - Open save window</li>
+                <li><kbd>Shift</kbd> + <kbd>L</kbd> - Open save window</li>
                 <li><kbd>W</kbd> - Move Origin to the West</li>
                 <li><kbd>E</kbd> - Move Origin to the East</li>
                 <li><kbd>Alt</kbd> + <kbd>W</kbd> - Open White Cell Window</li>
