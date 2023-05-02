@@ -2125,23 +2125,30 @@ function startContextClick(event) {
         let groundPosition = astro.eci2latlong(Object.values(getCurrentInertial(activeSat)).slice(0,3), new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
         groundPosition = `Lat: ${(groundPosition.lat*180/Math.PI).toFixed(1)}<sup>o</sup>, Long: ${(groundPosition.long*180/Math.PI).toFixed(1)}<sup>o</sup>, <abbr title="Distance to Earth's Center">R</abbr>: ${math.norm(groundPosition.r_ecef).toFixed(1)} km`
         let newInnerHTML = `
-            <div sat="${activeSat}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
-                <span contentEditable="true" element="name" oninput="alterEditableSatChar(this)">${mainWindow.satellites[activeSat].name}</span>
-                <button sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
-                <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
-                <datalist id="sat-color-picker2">
-                    <option>#ff0000</option>
-                    <option>#0000ff</option>
-                </datalist>
-                <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
-                    <option value=""></option>
-                    <option value="delta">Delta</option>
-                    <option value="square">Square</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="diamond">Diamond</option>
-                    <option value="4-star">4-Point Star</option>
-                    <option value="star">5-Point Star</option>
-                </select>
+            <div sat="${activeSat}" style="display: flex; justify-content: space-between; margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
+                <div contentEditable="true" element="name" oninput="alterEditableSatChar(this)">
+                    ${mainWindow.satellites[activeSat].name}
+                </div>
+                <div>
+                    <button title="Lock Satellite" sat="${activeSat}" id="lock-sat-button" onclick="handleContextClick(this)" style="letter-spacing: -2px; transform: rotate(-90deg) translateX(12%); cursor: pointer; margin-bottom: 5px;">lllllllD</button>
+                </div>
+                <div>
+                    <input list="sat-color-picker3" title="Edit Satellite Color" sat="${activeSat}" element="color" oninput="alterEditableSatChar(this)" style="" type="color" value="${mainWindow.satellites[activeSat].color}"/>
+                    <datalist id="sat-color-picker2">
+                        <option>#ff0000</option>
+                        <option>#0000ff</option>
+                    </datalist></div>
+                <div>
+                    <select title="Edit Satellite Shape" element="shape" oninput="alterEditableSatChar(this)" style="font-size: 0.75em; width: 4ch; border: 1px solid white; color: white; background-color: black">
+                        <option value=""></option>
+                        <option value="delta">Delta</option>
+                        <option value="square">Square</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="diamond">Diamond</option>
+                        <option value="4-star">4-Point Star</option>
+                        <option value="star">5-Point Star</option>
+                    </select>
+                </div>
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
         `
