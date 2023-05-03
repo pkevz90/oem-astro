@@ -884,7 +884,7 @@ function handleSensorDialogBox(el) {
             type,
             avail: [],
             azMask: [],
-            elMask: [],
+            elMask: [0,90],
             maxRange: 60000,
             name: inputs[0],
             noise
