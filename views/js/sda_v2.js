@@ -845,6 +845,86 @@ function updateSensors(sensors) {
     })
 }
 
+function changeSensorDialog(el) {
+    let type
+    if (el === undefined) {
+        type = 'optical'
+    }
+    else {
+        type = el.id.split('-')[0]
+    }
+    console.log(type);
+    let inputFieldDiv = document.querySelector('dialog').querySelector('#input-field-div')
+    inputFieldDiv.innerHTML = `
+        <div> Name  <input placeholder="Sensor #${mainWindow.sensors.length+1}" style="width: 10em; text-align: center"/></div>
+        ${type !== 'space' ? `
+            <div> Latitude  <input placeholder="0" style="width: 5em; text-align: center" type="number"/> deg</div>
+            <div> Longitude <input placeholder="0" style="width: 5em; text-align: center" type="number"/> deg</div>
+        ` : `
+            Edit space sensor state using <em>Update State</em>
+        `}
+        <div style="margin: 5px 0px; width: 100%; background-color: black; height: 3px;"></div>
+        <div> &sigma; Angles <input placeholder="${type === 'optical' ? 0.0035 : 0.01}" style="width: 5em; text-align: center" type="number"/> deg</div>
+        ${type === 'radar' ? `<div> &sigma; Range <input placeholder="0.15" style="width: 5em; text-align: center" type="number"/> km</div>` : ''}   
+    `
+} 
+
+function handleSensorDialogBox(el) {
+    if (el.innerText === 'Add Sensor') {
+        let inputs = [...document.querySelector('dialog').querySelector('#input-field-div').querySelectorAll('input')].map(s => s.value === '' ? s.placeholder : s.value)
+        let radio = document.querySelector('dialog').querySelector('input:checked')
+        let type = radio.id.split('-')[0]
+        let noise = {
+            angle: Number(inputs[3]),
+        }
+        if (type === 'radar') {
+            noise.r = Number(inputs[4])
+        }
+        let sensor = {
+            type,
+            avail: [],
+            azMask: [],
+            elMask: [],
+            maxRange: 60000,
+            name: inputs[0],
+            noise
+        }
+        if (type !== 'space') {
+            sensor.lat = Number(inputs[1])
+            sensor.long = Number(inputs[2])
+        }
+        else {
+            sensor.epoch = new Date()
+            sensor.state = [42164, 0, 0, 0, 3.014, 0]
+        }
+        mainWindow.sensors.push(sensor)
+    }
+    document.querySelector('dialog').close()
+    updateSensors(mainWindow.sensors)
+}
+
+function openSensorDialog() {
+    let dialogBox = document.querySelector('dialog')
+    dialogBox.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            <label for="optical-sensor">Optical</label>
+            <input checked onchange="changeSensorDialog(this)" type="radio" name="sensor-type" id="optical-sensor"/>
+            <label style="margin-left: 10px;" for="radar-sensor">Radar</label>
+            <input onchange="changeSensorDialog(this)" type="radio" name="sensor-type" id="radar-sensor"/>
+            <label style="margin-left: 10px;" for="space-sensor">Space</label>
+            <input onchange="changeSensorDialog(this)" type="radio" name="sensor-type" id="space-sensor"/>
+        </div>
+        <div style="margin: 10px 0px;" id="input-field-div">
+        </div>
+        <div>
+            <button onclick="handleSensorDialogBox(this)">Add Sensor</button>
+            <button onclick="handleSensorDialogBox(this)">Cancel</button>
+        </div>
+    `
+    dialogBox.showModal()
+    changeSensorDialog()
+}
+
 function sunFromTime(jdUti = 2449444.5) {
     let tUti = (jdUti - 2451545) / 36525
     let lamba = 280.4606184 + 36000.770005361 * tUti
