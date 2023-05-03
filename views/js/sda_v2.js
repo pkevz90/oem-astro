@@ -840,7 +840,7 @@ function updateSensors(sensors) {
             <span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showAvailability(${ii})">Availablity</span>
             ${s.type === 'space' ? `<span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showStateUpdate(${ii})">Update State</span>` : ''}
         `
-        div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0, 3), s.state.slice(3, 6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
+        div.title = `${s.type}\n${s.type !== 'space' ? `Lat: ${s.lat} deg\nLong: ${s.long} deg` : `Semi-Major Axis: ${(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3)).a).toFixed(0)} km` }`
         sensDiv.append(div)
     })
 }
@@ -884,7 +884,7 @@ function handleSensorDialogBox(el) {
             type,
             avail: [],
             azMask: [],
-            elMask: [type === 'optical' ? 10 : type === 'space' ? -90 : 3,90],
+            elMask: [type === 'optical' ? 10 : type === 'space' ? -80 : 3,90],
             maxRange: 60000,
             name: inputs[0],
             noise
