@@ -1,21 +1,13 @@
-let appAcr = 'ROTS 2.1.2'
+let appAcr = 'ROTS 2.1.7'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '12 Apr 2023'
+let cao = '1 May 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
 document.getElementsByClassName('panel-button')[0].remove();
 document.getElementsByTagName('input')[16].setAttribute('list','name-list');
-// Div to lock and unlock
-const lockDiv = document.createElement("div")
-lockDiv.style.position = 'fixed'
-lockDiv.style.top = '7%'
-lockDiv.style.left = '110%'
-lockDiv.style.color = 'black'
-lockDiv.innerText = 'test'
-lockDiv.style.transition = 'right 0.5s'
-document.getElementsByTagName('body')[0].append(lockDiv)
+
 let currentAction
 let pastActions = []
 let futureActions = []
@@ -24,7 +16,7 @@ let errorList = []
 let ellipses = []
 let monteCarloData = null
 document.getElementById('time-slider-range').max = 48*3600
-
+document.body.append(document.createElement("dialog"))
 // If on touch screen, set and add required assets
 if (checkTouchScreen()) {
     let screenViewChange = document.createElement('div')
@@ -1758,12 +1750,10 @@ function keydownFunction(key) {
         if (mainWindow.colors.backgroundColor === '#111122') {
             mainWindow.colors.backgroundColor = 'white'
             mainWindow.colors.foregroundColor = 'black'
-            lockDiv.style.color = 'black'
         }
         else {
             mainWindow.colors.backgroundColor = '#111122'
             mainWindow.colors.foregroundColor = 'white'
-            lockDiv.style.color = 'white'
         }
     }
     else if (key.key === 'g' || key.key === 'G') {
@@ -1775,9 +1765,7 @@ function keydownFunction(key) {
     }
     else if (key.key === 's' || key.key === 'S') {
         if (mainWindow.satellites.length < 1) return
-        updateLockScreen()
-        lockDiv.style.left = lockDiv.style.left === '110%' ? '' : '110%'
-        lockDiv.style.right = lockDiv.style.right === '1%' ? '' : '1%'
+        openSatellitePanel()
     }
     else if (key.key === 'n' || key.key === 'N') {
         let newSat = mainWindow.satellites.length === 0 ?  new Satellite({
@@ -1960,7 +1948,6 @@ function alterEditableSatChar(action) {
         mainWindow.satellites[sat].genBurns()
         mainWindow.satellites[sat].calcTraj()
     }
-    updateLockScreen()
     updateWhiteCellWindow()
     document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
 }
@@ -2234,18 +2221,17 @@ function startContextClick(event) {
         navigator.clipboard.writeText(outText)
     }
     else {
-        let lockScreenStatus = lockDiv.style.left === '110%' ? false : true
         ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
         `
             ${mainWindow.hpop ? '' : `<div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Seed Planning Scenario</div>`}
-            ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
+            ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="openSatellitePanel()">Open Satellite Panel</div>` : ''}
             ${mainWindow.latLongMode ? `<div lat="${latLongClick.lat}" long="${latLongClick.long}" class="context-item" id="add-ground-site" onclick="handleContextClick(this)">Add Ground Site</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Exit ${mainWindow.hpop ? 'HPOP ' : ''}Ephemeris View</div>
         `
         : `
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
-            ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="handleContextClick(this)"" id="lock-screen">${lockScreenStatus ? 'Close' : 'Open'} Satellite Panel</div>` : ''}
+            ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="openSatellitePanel()">Open Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             ${mainWindow.latLongMode ? `<div lat="${latLongClick.lat}" long="${latLongClick.long}" class="context-item" id="add-ground-site" onclick="handleContextClick(this)">Add Ground Site</div>` : `<div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>`}
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import States</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadTles(event)"></div>
@@ -2279,79 +2265,8 @@ function changeData(el) {
     document.getElementById('context-menu')?.remove();
 }
 
-function changeLockStatus(el) {
-    mainWindow.satellites[el.getAttribute('sat')].locked = !el.checked
-}
-
-function changeNumLanes(element) {
-    if (element.id === 'refresh-lanes') return updateLockScreen()
-    let newWidth = Number(element.value)
-    newWidth = newWidth < 1 ? 1 : newWidth
-    mainWindow.nLane = newWidth
-}
-
 function changeSide(sat, side="neutral") {
     mainWindow.satellites[sat].side = side
-}
-
-function updateLockScreen(filter) {
-    // IF filter isn't undefined, that means that if comes from a filter input callback to search for a
-    // certain object
-    if (mainWindow.satellites.length === 0) return
-    let laneList = document.querySelector('#lane-list-div')
-    if (laneList === null) {
-        let height = 0.86 * window.innerHeight
-        let out = ''
-
-        out += `<div><input oninput="updateLockScreen(this)" id="lane-list-search" placeholder="Search" style="text-align: left; width: 10ch;"/></div>`
-        out += `<div class="no-scroll" id="lane-list-div" style="overflow: scroll; max-height: ${height}px">`
-        out += `
-            </div>
-            <div>
-                # Lanes<input step="1" oninput="changeNumLanes(this)" style="width: 5ch;" type="number" value="${mainWindow.nLane}"/>
-            </div>
-            <div style="float: right;"><button onclick="changeNumLanes(this)" id="refresh-lanes">Refresh Lanes</button></div>
-        `
-        lockDiv.innerHTML = out
-        updateLockScreen()
-        return
-    }
-    let lanes = satClusterK()
-    let outLanes = ``
-    if (filter !== undefined) {
-        let filterName = filter.value
-        const re = new RegExp("^"+filterName.toLowerCase());
-        let foundSatellite = mainWindow.satellites.findIndex(s => s.name.toLowerCase().search(re) !== -1)
-        if (foundSatellite === -1) {
-            foundSatellite = mainWindow.satellites.findIndex(s => s.name.toLowerCase().search(filterName.toLowerCase()) !== -1)
-        }
-        if (foundSatellite !== -1 && filterName.length > 0) {
-            let checked = mainWindow.satellites[foundSatellite].locked ? '' : 'checked'
-            outLanes += `
-                <div style="text-align: right">
-                <label style="cursor: pointer; padding: 5px" for="lock-${foundSatellite}">${mainWindow.satellites[foundSatellite].name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${foundSatellite}" id="lock-${foundSatellite}" type="checkbox"/>
-                <button onclick="changeOrigin(${foundSatellite})">Center</button>
-            </div>
-            <div style="width: 100%; height: 2px; background-color: black; margin: 5px 0px"></div>`
-            
-
-        }
-        
-    }
-    console.log(lanes);
-    lanes.forEach((lane, ii) => {
-        if (lanes.length > 1) {
-            outLanes += `<div style="text-align: right; margin-top: 10px;">Lane ${ii + 1}</div>`
-        }
-        lane.forEach(sat => {
-            let checked = mainWindow.satellites[sat].locked ? '' : 'checked'
-            outLanes += `<div style="text-align: right">
-                        <label style="cursor: pointer; padding: 5px" for="lock-${sat}">${mainWindow.satellites[sat].name}</label> <input style="cursor: pointer; padding: 5px" ${checked} oninput="changeLockStatus(this)" sat="${sat}" id="lock-${sat}" type="checkbox"/>
-                        <button onclick="changeOrigin(${sat})">Center</button>
-                    </div>`
-        })
-    })
-    laneList.innerHTML = outLanes
 }
 
 function handleContextClick(button) {
@@ -2470,18 +2385,6 @@ function handleContextClick(button) {
         mainWindow.satellites = []
         document.getElementById('context-menu')?.remove();
     }
-    else if (button.id === 'lock-screen') {
-        if (lockDiv.style.left === '110%') {
-            updateLockScreen()
-            lockDiv.style.right = '1%'
-            lockDiv.style.left = ''
-        }
-        else {
-            lockDiv.style.left = '110%'
-            lockDiv.style.right = ''
-        }
-        document.getElementById('context-menu')?.remove();
-    }
     else if (button.id === 'zoom-to-sat') {
         changeOrigin(button.getAttribute('sat'))
         keydownFunction({key: ' ', ignoreContext: true})
@@ -2513,7 +2416,6 @@ function handleContextClick(button) {
     else if (button.id === 'lock-sat-button') {
         let sat = button.getAttribute('sat')
         mainWindow.satellites[sat].locked = true
-        updateLockScreen()
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'display-data-1') {
@@ -3373,12 +3275,7 @@ let lastHiddenSatClicked = false
 document.getElementById('main-plot').addEventListener('pointerdown', event => {
     event.preventDefault()
     // If in ground track mode, don't track with clicked mouse
-    if (event.button === 0) {
-        // Close context and lock menu if open
-        lockDiv.style.right = ''
-        lockDiv.style.left = '110%'
-    }
-    else return startContextClick(event)
+    if (event.button !== 0) return startContextClick(event)
     // Check if clicked on time
     if (event.clientX < 450 && (mainWindow.getHeight() - event.clientY) < (mainWindow.getHeight() * 0.06)) return openTimePrompt()
     if (event.pointerType === 'touch') {
@@ -4541,7 +4438,6 @@ function initStateFunction(el) {
         }))
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ');
         updateWhiteCellWindow()
-        updateLockScreen()
         closeAll();
     }
     // else if (el.id === 'add-launch-button') addLaunch();
@@ -4601,7 +4497,6 @@ function editSatellite(button) {
             mainWindow.relativeData.dataReqs[index].target = Number(mainWindow.relativeData.dataReqs[index].target) > delSat ? Number(mainWindow.relativeData.dataReqs[index].target) - 1 : mainWindow.relativeData.dataReqs[index].target
         }
         resetDataDivs()
-        updateLockScreen()
         updateWhiteCellWindow()
         document.title = mainWindow.satellites.map(s => s.name).join(' / ')
         closeAll();
@@ -7660,7 +7555,6 @@ function convertTimeToDateTimeInput(timeIn = mainWindow.startDate, seconds = tru
 }
 
 function setTimeFromPrompt(el) {
-    console.log(el.parentElement.parentElement.getElementsByTagName('input'));
     let newTime = new Date(el.parentElement.parentElement.getElementsByTagName('input')[0].value) - mainWindow.startDate
     if (newTime < 0) {
         newTime = 0
@@ -7671,12 +7565,14 @@ function setTimeFromPrompt(el) {
     mainWindow.desired.scenarioTime = newTime / 1000
     mainWindow.scenarioTime = newTime / 1000
     document.getElementById('time-slider-range').value = newTime / 1000
-    document.getElementById('larger-time-div').remove()
+    document.querySelector('dialog').close()
     updateWhiteCellTimeAndErrors()
 }
 
 function openTimePrompt() {
     let curTime = new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))
+    // remove seconds from the current time
+    curTime = new Date(curTime.getFullYear(), curTime.getMonth(), curTime.getDate(), curTime.getHours(), curTime.getMinutes())
     let dateOptions = []
     for (let index = 0; index < 12; index++) {
         let optionTime = new Date(mainWindow.startDate - (-index*(mainWindow.scenarioLength / 12) * 3600 * 1000))
@@ -7692,46 +7588,92 @@ function openTimePrompt() {
         </div>
         <div>
             <button onclick="setTimeFromPrompt(this)"style="width: 100%; margin-top: 10px">Set Time</button>
+            <button onclick="closeQuickWindow()"style="width: 100%; margin-top: 10px">Cancel</button>
         </div>
     `
-    openQuickWindow(inner, 'desired-set-time')
+    openQuickWindow(inner)
 }
 
-function openQuickWindow(innerCode = 'Hey', focusId) {
-    let largerDiv = document.createElement('div')
-    largerDiv.style.display = 'flex'
-    largerDiv.style.justifyContent = 'space-around'
-    largerDiv.style.alignItems = 'center'
-    largerDiv.style.position = 'fixed'
-    largerDiv.style.left = '0%'
-    largerDiv.style.top = '0%'
-    largerDiv.style.width = '100%'
-    largerDiv.style.height = '100%'
-    largerDiv.style.zIndex = '90'
-    largerDiv.id = 'larger-time-div'
-    largerDiv.onclick = (el) => {
-        if (el.clientX < 450 && (mainWindow.getHeight() - el.clientY) < (mainWindow.getHeight() * 0.06)) return 
-    
-        if (mainWindow.aciveTouches.findIndex(s => s.id = el.pointerId) !== -1) return
-        if (el.target.id !== 'larger-time-div') return
-        document.getElementById('larger-time-div').remove()
-    }
-    let newDiv = document.createElement('div')
-    newDiv.innerHTML = innerCode
-    newDiv.style.width = 'auto'
-    newDiv.style.height = 'auto'
-    newDiv.style.background = '#ffffff'
-    newDiv.style.border = '1px solid black'
-    newDiv.style.borderRadius = '20px'
-    newDiv.style.padding = '30px'
-    largerDiv.append(newDiv)
-    document.body.append(largerDiv)
-    if (focusId !== undefined) {
-        setTimeout(() => {
-            document.getElementById(focusId).focus()
-        })
-    }    
+function setZoomFromWindow(el) {
+    let input = el.parentElement.parentElement.querySelector('input')
+    input = Number(input.value === '' ? input.placeholder : input.value)
+    input = input < 0 ? mainWindow.desired.plotWidth : input
+    mainWindow.desired.plotWidth = input
+    document.querySelector('dialog').close()
 }
+
+function openZoomWindow() {
+    let curZoom = mainWindow.desired.plotWidth
+    let inner = `
+        <div><h1>Desired Display Width</h1></div>
+        <div>
+            <input type="number" style="width: 10em; font-size: 2em" placeholder="${curZoom.toFixed(0)}"> km
+        </div>
+        <div>
+            <button onclick="setZoomFromWindow(this)"style="width: 100%; margin-top: 10px">Set Width</button>
+            <button onclick="closeQuickWindow()"style="width: 100%; margin-top: 10px">Cancel</button>
+        </div>
+    `
+    openQuickWindow(inner)
+}
+
+function changeLockStatus(el) {
+    let sat = el.getAttribute('sat')
+    mainWindow.satellites[sat].locked = !el.checked
+}
+
+function changeNumLanes(el) {
+    let nLanes = Number(el.value)
+    mainWindow.nLane = nLanes < 1 ? 1 : nLanes
+    openSatellitePanel()
+}
+
+function openSatellitePanel(nLanes = mainWindow.nLane) {
+    
+    let lanes = satClusterK(nLanes)
+    let inner = `
+        <div><h1>Satellite Panel</h1></div>
+        <div># Lanes <input oninput="changeNumLanes(this)" style="width: 4ch;" type="number" value="${nLanes}"/></div>
+        <div>
+            ${lanes.map((lane, laneIi) => {
+                let laneDiv = `
+                    <div><h3>Lane ${laneIi + 1}</h3></div>
+                    <div style="display: flex; flex-wrap: wrap;">
+                `
+                return laneDiv + lane.map(sat => {
+                    
+                    let chosenSat = mainWindow.satellites[sat]
+                    return `
+                        <div style="margin: 10px;">
+                            <input onchange="changeLockStatus(this)" sat="${sat}" style="margin: 0;" id="${chosenSat.name}-checkbox" type="checkbox" ${chosenSat.locked ? '' : 'checked'}/>
+                            <label for="${chosenSat.name}-checkbox"/>${chosenSat.name}</label>
+                            <button onclick="changeOrigin(${sat})">Center</button>
+                        </div>
+                    ` 
+                }).join('') + '</div>'
+            }).join('')}
+        </div>
+        <div>
+            <button onclick="closeQuickWindow()"style="width: 100%; margin-top: 10px">Close</button>
+        </div>
+    `
+    openQuickWindow(inner)
+}
+
+function closeQuickWindow() {
+    document.querySelector('dialog').close()
+}
+
+
+function openQuickWindow(innerCode = 'Hey') {
+    let dialog = document.querySelector('dialog')
+    dialog.innerHTML = innerCode  
+    if (dialog.open) return
+    dialog.showModal()
+}
+
+
+
 let instructionWindow
 function openInstructionWindow() {
     instructionWindow = window.open('', 'instructions', "width=400,height=400")
