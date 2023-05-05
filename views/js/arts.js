@@ -1966,7 +1966,7 @@ function startContextClick(event) {
         event.clientX = event.touches[0].clientX
         event.clientY = event.touches[0].clientY
     }
-    if (mainWindow.panelOpen) {
+    if (mainWindow.panelOpen || document.querySelector('dialog').open) {
         return false;
     }
     let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY])
@@ -6351,12 +6351,14 @@ function randn_bm() {
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
 }
 
-function changeOrigin(sat = 1, currentState = false) {
+function changeOrigin(sat = 1, currentState = true) {
     document.getElementById('context-menu')?.remove();
+    if (document.querySelector('dialog').open) {
+        document.querySelector('dialog').close()
+    }
     if (mainWindow.satellites.length <= sat) return
     mainWindow.groundTrackLimits.focus = sat
     if (mainWindow.ephemViewerMode) {
-        console.log('hey');
         let satHists = mainWindow.satellites.map(s => {
             let hist = s.stateHistory
             return hist.map((row, rowIi) => {
@@ -6409,9 +6411,7 @@ function changeOrigin(sat = 1, currentState = false) {
     }
     if (currentState === true) {
         let curPos = Object.values(getCurrentInertial(sat))
-        console.log(curPos);
-        curPos = propToTime(curPos, -mainWindow.desired.scenarioTime, true)
-        console.log(curPos);
+        curPos = propToTime(curPos, -mainWindow.desired.scenarioTime, false)
         curPos = PosVel2CoeNew(curPos.slice(0,3), curPos.slice(3,6))
         mainWindow.updateOrigin(curPos)
         return
@@ -7629,6 +7629,7 @@ function changeNumLanes(el) {
 }
 
 function openSatellitePanel(nLanes = mainWindow.nLane) {
+    document.getElementById('context-menu')?.remove();
     
     let lanes = satClusterK(nLanes)
     let inner = `
@@ -7653,6 +7654,9 @@ function openSatellitePanel(nLanes = mainWindow.nLane) {
                 }).join('') + '</div>'
             }).join('')}
         </div>
+        <div style="font-weight: 800; font-size: 0.75em;">
+            *Centering on an object will center on the objects <em>CURRENT</em> orbit, including any maneuver the object has undertaken
+        </div>
         <div>
             <button onclick="closeQuickWindow()"style="width: 100%; margin-top: 10px">Close</button>
         </div>
@@ -7665,11 +7669,17 @@ function closeQuickWindow() {
 }
 
 
-function openQuickWindow(innerCode = 'Hey') {
+function openQuickWindow(innerCode = 'Hey', styleOptions = {width: '75%'}) {
     let dialog = document.querySelector('dialog')
+    for (style in styleOptions) {
+        dialog.style[style] = styleOptions[style]
+    }
     dialog.innerHTML = innerCode  
     if (dialog.open) return
     dialog.showModal()
+    for (style in styleOptions) {
+        dialog.style[style] = styleOptions[style]
+    }
 }
 
 
