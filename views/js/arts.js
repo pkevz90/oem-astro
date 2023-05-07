@@ -69,7 +69,7 @@ class windowCanvas {
     extraAcc = [0,0,0]
     normalizeDirection = true;
     frameMove = undefined;
-    latLongMode = false;
+    latLongMode = true;
     groundTrackLimits = {
         center: 0,
         latCenter: 0,
@@ -6399,7 +6399,7 @@ function changeOrigin(sat = 1, currentState = true) {
                 let rowEci = row.position
                 let originEci = mainWindow.originHistory[rowIi].position
                 let rowRic = Eci2Ric(originEci.slice(0,3), originEci.slice(3), rowEci.slice(0,3), rowEci.slice(3))
-                console.log(rowRic.rHcw)
+                // console.log(rowRic.rHcw)
                 return {
                     t: row.t,
                     position: math.squeeze([...rowRic.rHcw, ...rowRic.drHcw])
@@ -7083,10 +7083,15 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
             let x = satEci[0]
             return {long: Math.atan2(y,x) * 180 / Math.PI, cluster: undefined}
         })
-        console.log(sats);
+        console.log('Sats before clustering: ',sats);
         let maxLong = math.max(sats.map(s => s.long))
         let minLong = math.min(sats.map(s => s.long))
         let clusters = math.range(maxLong, minLong, -(maxLong - minLong) / (nClusters - 1), true)._data
+        if (clusters.length === 0) {
+            console.log('no clusters, using max cluster')
+            clusters = [maxLong]
+        }
+        console.log('Initial Clusters: ',clusters);
         for (let index = 0; index < 10; index++) {
             // Assign points to clusters
             sats = sats.map(s => {
@@ -7104,6 +7109,7 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
             }
         }
         sats = sats.map((s, ii) => {return {cluster: s.cluster, sat: ii}})
+        console.log('Sats after clustering: ',sats);
         let output = []
         for (let index = 0; index < clusters.length; index++) {
             output.push(sats.filter(s => s.cluster === index).map(s => s.sat))
@@ -7111,6 +7117,7 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
         output = output.filter(s => s.length > 0)
         return output
     } catch (error) {
+        console.log(error);
         let output = [math.range(0,mainWindow.satellites.length)._data]
         return output
     }
@@ -7555,21 +7562,53 @@ function convertTimeToDateTimeInput(timeIn = mainWindow.startDate, seconds = tru
 }
 
 function setTimeFromPrompt(el) {
-    let newTime = new Date(el.parentElement.parentElement.getElementsByTagName('input')[0].value) - mainWindow.startDate
-    if (newTime < 0) {
-        newTime = 0
+    let inputs = [...el.parentElement.parentElement.querySelectorAll('input')].map(s => s.value === '' ? s.placeholder : s.value)
+    if (inputs.length > 2) {
+        let startTime = new Date(inputs[1] + ' ' + inputs[0])
+        mainWindow.startDate = startTime
+        inputs[2] = Number(inputs[2]) > 1 ? Number(inputs[2]) : 1
+        mainWindow.scenarioLength = inputs[2]
+        document.getElementById('time-slider-range').max = inputs[2]*3600
+    
+        mainWindow.updateOrigin()
+        mainWindow.changeTime(0, true)
     }
-    else if (newTime > mainWindow.scenarioLength*3600000)  {
-        newTime = mainWindow.scenarioLength * 3600000
+    else {
+        let newDate = new Date(inputs[1] + ' ' + inputs[0])
+        let newTime = newDate - mainWindow.startDate
+        if (newTime < 0) {
+            newTime = 0
+        }
+        else if (newTime > mainWindow.scenarioLength*3600000)  {
+            newTime = mainWindow.scenarioLength * 3600000
+        }
+        mainWindow.changeTime(newTime / 1000, true)
     }
-    mainWindow.desired.scenarioTime = newTime / 1000
-    mainWindow.scenarioTime = newTime / 1000
-    document.getElementById('time-slider-range').value = newTime / 1000
     document.querySelector('dialog').close()
     updateWhiteCellTimeAndErrors()
 }
 
+function showStartTimePrompt(el) {
+    let div = el.parentElement.parentElement.querySelector('div')
+    let newDiv = document.createElement('div')
+    newDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-around;">
+            <div><label>Scenario Length</label> <input style="width: 5ch; font-size: 1.5em;" type="number" placeholder="48"/> hrs</div
+        </div>
+    `
+    div.after(newDiv)
+    el.remove()
+
+}
+
 function openTimePrompt() {
+    let padNumber = function(a, b = 2) {
+        a = a + ''
+        while (a.length < b) {
+            a = '0' + a
+        }
+        return a
+    }
     let curTime = new Date(mainWindow.startDate - (-mainWindow.scenarioTime * 1000))
     // remove seconds from the current time
     curTime = new Date(curTime.getFullYear(), curTime.getMonth(), curTime.getDate(), curTime.getHours(), curTime.getMinutes())
@@ -7578,20 +7617,19 @@ function openTimePrompt() {
         let optionTime = new Date(mainWindow.startDate - (-index*(mainWindow.scenarioLength / 12) * 3600 * 1000))
         dateOptions.push(optionTime)
     }
-    
+    console.log(curTime.getFullYear()-padNumber(curTime.getMonth()+1)-padNumber(curTime.getDate()));
     let inner = `
-        <div>
-            <input id="desired-set-time" type="datetime-local" style="width: 100%; font-size: 2em" list="date-options" value="${convertTimeToDateTimeInput(curTime)}">
-            <datalist id="date-options">
-                ${dateOptions.map(opt => `<option value="${convertTimeToDateTimeInput(opt)}"></option>`)}
-            </datalist>
+        <div style="display: flex; justify-content: space-around;">
+            <div><input value="${padNumber(curTime.getHours())}:${padNumber(curTime.getMinutes())}" style="font-size: 2em;" type="time"/></div>
+            <div><input value="${curTime.getFullYear()}-${padNumber(curTime.getMonth()+1)}-${padNumber(curTime.getDate())}" style="font-size: 2em;" type="date"/></div>
         </div>
         <div>
             <button onclick="setTimeFromPrompt(this)"style="width: 100%; margin-top: 10px">Set Time</button>
+            <button onclick="showStartTimePrompt(this)"style="width: 100%; margin-top: 10px">Set Start Time and Scenario Length</button>
             <button onclick="closeQuickWindow()"style="width: 100%; margin-top: 10px">Cancel</button>
         </div>
     `
-    openQuickWindow(inner)
+    openQuickWindow(inner, {width: '50%'})
 }
 
 function setZoomFromWindow(el) {
@@ -7628,13 +7666,31 @@ function changeNumLanes(el) {
     openSatellitePanel()
 }
 
+function deleteSatellite(sat = 1) {
+    let confirmDelete = confirm('Delete ' + mainWindow.satellites[sat].name + ' from the scenario?')
+    if (!confirmDelete) return
+
+    mainWindow.relativeData.dataReqs = mainWindow.relativeData.dataReqs.filter(s => s.target !== sat && s.origin !== sat)
+    for (let index = 0; index < mainWindow.relativeData.dataReqs.length; index++) {
+        let origin = mainWindow.relativeData.dataReqs[index].origin
+        origin = origin > sat ? origin-1 : origin
+        let target = mainWindow.relativeData.dataReqs[index].target
+        target = target > sat ? target-1 : target
+        mainWindow.relativeData.dataReqs[index].origin = origin
+        mainWindow.relativeData.dataReqs[index].target = target
+        
+    }
+    mainWindow.satellites.splice(sat,1)
+    resetDataDivs()
+    openSatellitePanel()
+}
+
 function openSatellitePanel(nLanes = mainWindow.nLane) {
     document.getElementById('context-menu')?.remove();
     
     let lanes = satClusterK(nLanes)
     let inner = `
         <div><h1>Satellite Panel</h1></div>
-        <div># Lanes <input oninput="changeNumLanes(this)" style="width: 4ch;" type="number" value="${nLanes}"/></div>
         <div>
             ${lanes.map((lane, laneIi) => {
                 let laneDiv = `
@@ -7645,15 +7701,16 @@ function openSatellitePanel(nLanes = mainWindow.nLane) {
                     
                     let chosenSat = mainWindow.satellites[sat]
                     return `
-                        <div style="margin: 10px;">
-                            <input onchange="changeLockStatus(this)" sat="${sat}" style="margin: 0;" id="${chosenSat.name}-checkbox" type="checkbox" ${chosenSat.locked ? '' : 'checked'}/>
-                            <label for="${chosenSat.name}-checkbox"/>${chosenSat.name}</label>
-                            <button onclick="changeOrigin(${sat})">Center</button>
+                        <div style="margin: 10px; font-size: 1.5em;">
+                            <label style="font-size: 1.5em;" for="${chosenSat.name}-checkbox"/>${chosenSat.name}</label>
+                            <button style="font-size: 1em;" onclick="changeOrigin(${sat})">Center</button>
+                            <button style="font-size: 1em;" tabindex="-1" onclick="deleteSatellite(${sat})">X</button>
                         </div>
                     ` 
                 }).join('') + '</div>'
             }).join('')}
         </div>
+        <div># Lanes <input oninput="changeNumLanes(this)" style="width: 4ch;" type="number" value="${nLanes}"/></div>
         <div style="font-weight: 800; font-size: 0.75em;">
             *Centering on an object will center on the objects <em>CURRENT</em> orbit, including any maneuver the object has undertaken
         </div>
@@ -8714,7 +8771,7 @@ function dragElement(elmnt) {
     }
   }
 
-function resetDataDivs() {
+function resetDataDivs(hardReset = false) {
     let currentDivs = [...document.querySelectorAll('.data-drag-div')].map(div => {
         return {
             origin: div.getAttribute('origin'),
@@ -8733,6 +8790,7 @@ function resetDataDivs() {
         let existingDiv = currentDivs.findIndex(div => {
             return div.origin == req.origin && div.target == req.target
         })
+        existingDiv = hardReset ? -1 : existingDiv
         if (existingDiv !== -1) {
             let div = currentDivs[existingDiv]
             openDataDiv({
@@ -8742,7 +8800,7 @@ function resetDataDivs() {
                 data: req.data,
                 top: div.top + 'px',
                 left: div.left + 'px',
-                title: div.title
+                title: shortenString(mainWindow.satellites[req.origin].name, 12) + String.fromCharCode(8594) + shortenString(mainWindow.satellites[req.target].name,12)
             })
         }
         else {
