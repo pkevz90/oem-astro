@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.1.7'
+let appAcr = 'ROTS 2.2'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '1 May 2023'
+let cao = '5 May 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -42,6 +42,7 @@ function recordGif() {
 class windowCanvas {
     cnvs;
     plotWidth = 200;
+    playTimeStep = 0;
     plotHeight;
     plotCenter = 0;
     zeroCatsGood = true;
@@ -62,7 +63,7 @@ class windowCanvas {
         plot: {x: 0, y: 0, w: 0, h: 0}
     };
     colors = {
-        backgroundColor: 'white',
+        backgroundColor: 'rgb(255,255,255)',
         foregroundColor: 'black',
         textColor: 'black'
     }
@@ -441,6 +442,7 @@ class windowCanvas {
         })
         // console.timeEnd()
         // console.time()
+        let satellitesToDraw = [] // draw satellites in reverse order of altitude
         for (let index = 0; index < this.satellites.length; index++) {
             if (mainWindow.satellites[index].stateHistory === undefined) {
                 mainWindow.satellites[index].calcTraj(true)
@@ -479,22 +481,35 @@ class windowCanvas {
             let curEci = Object.values(getCurrentInertial(index, mainWindow.scenarioTime))
             let time = new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000))
             let latLong = astro.eci2latlong(curEci.slice(0,3), time)
-            latLong = {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI}
+            latLong = {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI, r: math.norm(latLong.r_ecef)}
             // let  = [
             //     (latLong.long+180)/360*this.cnvs.width,
             //     (90-latLong.lat)/180*this.cnvs.height
             // ]
-            let pixelPosition = this.latLong2Pixel(latLong)
+            satellitesToDraw.push(latLong)
+            // let pixelPosition = this.latLong2Pixel(latLong)
+            // drawSatellite({
+            //     pixelPosition,
+            //     shape: mainWindow.satellites[index].shape,
+            //     color: mainWindow.satellites[index].color,
+            //     name: mainWindow.satellites[index].name,
+            //     size: mainWindow.satellites[index].size,
+            //     cnvs: this.cnvs,
+            //     ctx: ctx
+            // })
+        }
+        satellitesToDraw = satellitesToDraw.map((s,ii) => {return {...s, index: ii}}).sort((a,b) => a.r-b.r).forEach(sat => {
+            let pixelPosition = this.latLong2Pixel(sat)
             drawSatellite({
                 pixelPosition,
-                shape: mainWindow.satellites[index].shape,
-                color: mainWindow.satellites[index].color,
-                name: mainWindow.satellites[index].name,
-                size: mainWindow.satellites[index].size,
+                shape: mainWindow.satellites[sat.index].shape,
+                color: mainWindow.satellites[sat.index].color,
+                name: mainWindow.satellites[sat.index].name,
+                size: mainWindow.satellites[sat.index].size,
                 cnvs: this.cnvs,
                 ctx: ctx
             })
-        }
+        })
         // Draw Sun
         let sunEci = astro.sunEciFromTime(new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
         let sunCoordinates = astro.eci2latlong(sunEci, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
@@ -1425,6 +1440,48 @@ class Satellite {
         this.calcTraj();
     }
 }
+class GroundSite {
+    constructor(options = {}) {
+        let {
+            lat = 30,
+            long = -90,
+            name = 'Ground Site ' + math.floor(math.random()*1000)
+        } = options
+        this.coordinates = {
+            lat,
+            long
+        }
+        this.name = name
+        this.limits = {
+            cats: false, // CATS must be less than (0 being good)
+            illumination: false, // target must be illuminated by sun
+            elevation: false, // Target must be above this elevation
+            azimuth: false,
+            moonExclusion: false // Exclusion angle from Moon
+        }
+    }
+    checkLimits = (satEci = [42164, 0, 0], date = new Date(2022,1,1), sunPosEci) => {
+        let canSeeSat = true
+        let siteEcef = astro.groundGeodeticPosition(this.coordinates.lat, this.coordinates.long).r
+        let siteEci = astro.ecef2eci(siteEcef, date)
+        sunPosEci = sunPosEci || astro.sunEciFromTime(date)
+        if (this.cats !== false) {
+            
+        }
+        if (this.illumination !== false) {
+
+        }
+        if (this.elevation !== false) {
+
+        }
+        if (this.azimuth !== false) {
+
+        }
+        if (this.moonExclusion !== false) {
+
+        }
+    }
+}
 
 function testTimeDelta(dt = 500, time = 7200) {
     let dtState = [0, 0, 0, 0.015, 0, 0.055]
@@ -1467,6 +1524,8 @@ let timeFunction = false;
             mainWindow.drawEarthFeatures()
 
             mainWindow.showTime();
+            mainWindow.changeTime(mainWindow.desired.scenarioTime + mainWindow.playTimeStep, true)
+        
             return window.requestAnimationFrame(animationLoop)
         }
         if (threeD) {
@@ -1505,6 +1564,7 @@ let timeFunction = false;
             console.log(`Autosaved on ${(new Date()).toString()}`)
             lastSaveTime = Date.now()
         }
+        mainWindow.changeTime(mainWindow.desired.scenarioTime + mainWindow.playTimeStep, true)
         return window.requestAnimationFrame(animationLoop)
     } catch (error) {
         console.log(mainWindow.satellites[0].burns[0]);
@@ -1767,6 +1827,18 @@ function keydownFunction(key) {
         if (mainWindow.satellites.length < 1) return
         openSatellitePanel()
     }
+    else if (key.key === 't' || key.key === 'T') {
+        openTimePrompt()
+    }
+    else if (key.key === 'p' || key.key === 'P') {
+        if (document.querySelectorAll('.play-drag-div').length === 0) {
+            openPlayButtonDiv()
+        }
+        else {
+            document.querySelector('.play-drag-div').remove()
+        }
+
+    }
     else if (key.key === 'n' || key.key === 'N') {
         let newSat = mainWindow.satellites.length === 0 ?  new Satellite({
                 name: 'Chief',
@@ -2002,7 +2074,6 @@ function startContextClick(event) {
         })
         latLongClick.long += latLongClick.long < 0 ? 360 : 0
         latLongClick.long -= latLongClick.long > 360 ? -360 : 0
-        console.log(latLongClick);
         activeSat = latLongs.findIndex(s => math.norm([s.long-latLongClick.long, s.lat-latLongClick.lat]) < 4/mainWindow.groundTrackLimits.zoom)
         activeSat = activeSat === -1 ? false : activeSat
         activeSite = mainWindow.groundSites.map(s => s.coordinates).map(s => {
@@ -2148,6 +2219,12 @@ function startContextClick(event) {
                 <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
                 ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
             `
+            if (mainWindow.latLongMode) {
+                newInnerHTML += `
+                    <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="zoom-to-sat">Zoom To</div>
+                    <div class="context-item" onclick="changeOrigin(${activeSat})" id="prop-options">Focus</div>
+                `
+            }
         }
         else if (!mainWindow.latLongMode) {
             newInnerHTML += `
@@ -6371,6 +6448,7 @@ function changeOrigin(sat = 1, currentState = true) {
                 }
             })
         })
+        mainWindow.originHistory = []
         mainWindow.originHistory = satHists[sat]
         mainWindow.originSun = mainWindow.originHistory.map(s => {
             let sunRic = sunFromTime(new Date(mainWindow.startDate - (-1000*s.t)))
@@ -6673,9 +6751,7 @@ function handleStkJ200File(file) {
 function handleSiteFile(file) {
     // Check if distance units are in km or meters
     let siteNames = file.split('\n').find(line => line.search(/[Place|Facility]-/) !== -1).split(/[Place|Facility]-/)[1].split(':  L')[0].split(',').map(name => name.trim())
-    
     file = file.split(/\n{2,}/).slice(1).map(sec => sec.split('\n').slice(2)).filter(row => row !== '')
-    console.log(file);
     file = file.map(siteSection => {
         let newSection = siteSection.map(row => {
             let items = row.split(/ {2,}/).filter(s => s !== '').map(s => Number(s))
@@ -6693,6 +6769,17 @@ function handleSiteFile(file) {
             color: 'rgb(250,125,100)'
         })
     })
+}
+
+function generateSiteFile(sites = mainWindow.groundSites) {
+    let outFile = `Facility-${sites.map(s => s.name).join(', ')}`
+    outFile += sites.map(site => {
+        let out = '\n\n\nLat     Long    '
+        out += '\n----------------------'
+        out += `\n${site.coordinates.lat}     ${site.coordinates.long}`
+        return out
+    }).join('')
+    downloadFile('site.txt', outFile)
 }
 
 function handleTleFile(file) {
@@ -7598,7 +7685,7 @@ function showStartTimePrompt(el) {
     `
     div.after(newDiv)
     el.remove()
-
+    document.querySelector('dialog').querySelector('input').focus()
 }
 
 function openTimePrompt() {
@@ -7835,6 +7922,7 @@ function openInstructionWindow() {
             Hot Keys
             <ul>
                 <li><kbd>S</kbd> - Open satellite submenu</li>
+                <li><kbd>T</kbd> - Open Time Panel</li>
                 <li><kbd>G</kbd> - Switch to ground-track view</li>
                 <li><kbd>Ctrl</kbd> + <kbd>h</kbd> - Run sim with HPOP</li>
                 <li><kbd>Shift</kbd> + <kbd>L</kbd> - Open save window</li>
@@ -8935,6 +9023,89 @@ function openDataDiv(options = {}) {
             relDiv.style.fontSize = fontSize + 'px'
         }
     })
+    dragElement(newDiv)
+}
+
+function clickPlayButton(el) {
+    if (!isNaN(Number(el))) {
+        if (mainWindow.playTimeStep !== 0) {
+            mainWindow.playTimeStep = Number(el)
+        }
+        return
+    }
+    switch (el.getAttribute('mode')) {
+        case 'play':
+            el.setAttribute('mode', 'pause')
+            let speed = el.parentElement.parentElement.querySelector('input:checked').getAttribute('speed');
+            el.classList.remove('play')
+            el.classList.add('pause')
+            mainWindow.playTimeStep = Number(speed)
+            break
+        default:
+            el.setAttribute('mode', 'play')
+            el.classList.remove('pause')
+            el.classList.add('play')
+            mainWindow.playTimeStep = 0
+            break
+    }
+}
+
+function openPlayButtonDiv(options = {}) {
+    let newDiv = document.createElement('div')
+    newDiv.style.position = 'fixed'
+    newDiv.style.padding = '20px 4px 4px 4px'
+    newDiv.style.cursor = 'move'
+    newDiv.style.display = 'flex'
+    newDiv.style.justifyContent = 'space-around'
+    newDiv.style.zIndex = 100
+    newDiv.style.top = '80%'
+    newDiv.style.left = '35%'
+    newDiv.style.width = '30%'
+    newDiv.style.height = 'auto'
+    newDiv.style.fontFamily = 'Courier'
+    newDiv.style.fontSize = '20px'
+    newDiv.style.backgroundColor = 'white'
+    newDiv.style.border = '1px solid black'
+    newDiv.style.borderRadius = '10px'
+    newDiv.style.boxShadow = '5px 5px 7px #575757'
+    newDiv.style.touchAction = 'none'
+    newDiv.innerHTML = `
+    <div style="text-align: center">
+        <div>
+            <button mode="play" onclick="clickPlayButton(this)" class="playback play"></button>
+        </div>
+        <div style="display: flex; justify-content: space-between">
+            <div style="margin-right: 30px;">
+                <input oninput="clickPlayButton(0.0166667)" checked id="play-one" name="play-speed" type="radio" speed="0.01667"/>
+                <label for="play-one">1x</label>
+            </div>
+            <div style="margin-right: 30px;">
+                <input oninput="clickPlayButton(0.166667)" id="play-ten" name="play-speed" type="radio" speed="0.1667"/>
+                <label for="play-ten">10x</label>
+            </div>
+            <div style="margin-right: 30px;">
+                <input oninput="clickPlayButton(1.66667)" id="play-hundred" name="play-speed" type="radio" speed="1.667"/>
+                <label for="play-hundred">100x</label>
+            </div>
+            <div style="margin-right: 30px;">
+                <input oninput="clickPlayButton(16.6667)" id="play-thousand" name="play-speed" type="radio" speed="16.6667"/>
+                <label for="play-thousand">1000x</label>
+            </div>
+        </div>
+    </div>
+    `
+    newDiv.classList.add('play-drag-div')
+    let exitButton = document.createElement('div')
+    exitButton.innerText = 'X'
+    exitButton.style.position = 'absolute'
+    exitButton.style.top = '1px'
+    exitButton.style.right = '3px'
+    exitButton.style.cursor = 'pointer'
+    exitButton.onclick = el => {
+        el.target.parentElement.remove()
+    }
+    document.body.append(newDiv)
+    newDiv.append(exitButton)
     dragElement(newDiv)
 }
 
