@@ -226,7 +226,7 @@ class windowCanvas {
         this.satellites.forEach(sat => sat.calcTraj(true))
     }
     changeTime(newTime = 3600, immediate = false) {
-        if (newTime < 0) return
+        if (newTime < 0 || newTime > (this.scenarioLength*3600)) return
         this.desired.scenarioTime = newTime
         document.querySelector('#time-slider-range').value = newTime
         if (immediate) {
@@ -510,6 +510,18 @@ class windowCanvas {
                 ctx: ctx
             })
         })
+        // Draw Moon
+        ctx.fillStyle = 'rgb(100,100,100)'
+        let moonEci = astro.moonEciFromTime(new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        let moonCoordinates = astro.eci2latlong(moonEci, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
+        moonCoordinates = {
+            lat: moonCoordinates.lat * 180 / Math.PI,
+            long: moonCoordinates.long * 180 / Math.PI,
+        }
+        moonCoordinates = this.latLong2Pixel(moonCoordinates)
+        ctx.beginPath()
+        ctx.arc(moonCoordinates[0], moonCoordinates[1], 6, 0, 2*Math.PI)
+        ctx.fill()
         // Draw Sun
         let sunEci = astro.sunEciFromTime(new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
         let sunCoordinates = astro.eci2latlong(sunEci, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
@@ -538,17 +550,6 @@ class windowCanvas {
             lastPoint = pixelPoint[0]
         })
         ctx.stroke()
-        ctx.fillStyle = 'rgb(100,100,100)'
-        let moonEci = astro.moonEciFromTime(new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
-        let moonCoordinates = astro.eci2latlong(moonEci, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
-        moonCoordinates = {
-            lat: moonCoordinates.lat * 180 / Math.PI,
-            long: moonCoordinates.long * 180 / Math.PI,
-        }
-        moonCoordinates = this.latLong2Pixel(moonCoordinates)
-        ctx.beginPath()
-        ctx.arc(moonCoordinates[0], moonCoordinates[1], 6, 0, 2*Math.PI)
-        ctx.fill()
         // console.timeEnd()
 
     }
@@ -1835,6 +1836,7 @@ function keydownFunction(key) {
             openPlayButtonDiv()
         }
         else {
+            mainWindow.playTimeStep = 0
             document.querySelector('.play-drag-div').remove()
         }
 
@@ -6766,7 +6768,7 @@ function handleSiteFile(file) {
                 lat: site[0][0],
                 long: site[0][1] > 180 ? site[0][1] - 360 : site[0][1],
             },
-            color: 'rgb(250,125,100)'
+            color: '#E17D64'
         })
     })
 }
@@ -7676,11 +7678,23 @@ function setTimeFromPrompt(el) {
 }
 
 function showStartTimePrompt(el) {
+    let padNumber = function(a, b = 2) {
+        a = a + ''
+        while (a.length < b) {
+            a = '0' + a
+        }
+        return a
+    }
+    let curStart = mainWindow.startDate
     let div = el.parentElement.parentElement.querySelector('div')
+    let currentInputs = div.querySelectorAll('input')
+    currentInputs[0].value = `${padNumber(curStart.getHours())}:${padNumber(curStart.getMinutes())}`;
+    currentInputs[1].value = `${curStart.getFullYear()}-${padNumber(curStart.getMonth()+1)}-${padNumber(curStart.getDate())}`;
+
     let newDiv = document.createElement('div')
     newDiv.innerHTML = `
         <div style="display: flex; justify-content: space-around;">
-            <div><label>Scenario Length</label> <input style="width: 5ch; font-size: 1.5em;" type="number" placeholder="48"/> hrs</div
+            <div><label>Scenario Length</label> <input style="width: 5ch; font-size: 1.5em;" type="number" placeholder="${mainWindow.scenarioLength}"/> hrs</div
         </div>
     `
     div.after(newDiv)
@@ -7704,7 +7718,6 @@ function openTimePrompt() {
         let optionTime = new Date(mainWindow.startDate - (-index*(mainWindow.scenarioLength / 12) * 3600 * 1000))
         dateOptions.push(optionTime)
     }
-    console.log(curTime.getFullYear()-padNumber(curTime.getMonth()+1)-padNumber(curTime.getDate()));
     let inner = `
         <div style="display: flex; justify-content: space-around;">
             <div><input value="${padNumber(curTime.getHours())}:${padNumber(curTime.getMinutes())}" style="font-size: 2em;" type="time"/></div>
@@ -9074,22 +9087,30 @@ function openPlayButtonDiv(options = {}) {
         <div>
             <button mode="play" onclick="clickPlayButton(this)" class="playback play"></button>
         </div>
-        <div style="display: flex; justify-content: space-between">
+        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
             <div style="margin-right: 30px;">
                 <input oninput="clickPlayButton(0.0166667)" checked id="play-one" name="play-speed" type="radio" speed="0.01667"/>
-                <label for="play-one">1x</label>
+                <label style="cursor: pointer;" for="play-one">1x</label>
             </div>
             <div style="margin-right: 30px;">
                 <input oninput="clickPlayButton(0.166667)" id="play-ten" name="play-speed" type="radio" speed="0.1667"/>
-                <label for="play-ten">10x</label>
+                <label style="cursor: pointer;" for="play-ten">10x</label>
             </div>
             <div style="margin-right: 30px;">
                 <input oninput="clickPlayButton(1.66667)" id="play-hundred" name="play-speed" type="radio" speed="1.667"/>
-                <label for="play-hundred">100x</label>
+                <label style="cursor: pointer;" for="play-hundred">100x</label>
             </div>
             <div style="margin-right: 30px;">
                 <input oninput="clickPlayButton(16.6667)" id="play-thousand" name="play-speed" type="radio" speed="16.6667"/>
-                <label for="play-thousand">1000x</label>
+                <label style="cursor: pointer;" for="play-thousand">1000x</label>
+            </div>
+            <div style="margin-right: 30px;">
+                <input oninput="clickPlayButton(33.3333)" id="play-2thousand" name="play-speed" type="radio" speed="33.3333"/>
+                <label style="cursor: pointer;" for="play-2thousand">2000x</label>
+            </div>
+            <div style="margin-right: 0px;">
+                <input oninput="clickPlayButton(66.6666)" id="play-4thousand" name="play-speed" type="radio" speed="66.6666"/>
+                <label style="cursor: pointer;" for="play-4thousand">4000x</label>
             </div>
         </div>
     </div>
@@ -9102,6 +9123,7 @@ function openPlayButtonDiv(options = {}) {
     exitButton.style.right = '3px'
     exitButton.style.cursor = 'pointer'
     exitButton.onclick = el => {
+        mainWindow.playTimeStep = 0
         el.target.parentElement.remove()
     }
     document.body.append(newDiv)
