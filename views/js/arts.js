@@ -3597,9 +3597,10 @@ function changeSatelliteInputType(el) {
     let padNumber = function(n) {
         return n < 10 ? '0' + n : n
     }
+    let date
     switch (el.id) {
         case 'eci-sat-input':
-            let date = new Date(mainWindow.startDate)
+            date = new Date(mainWindow.startDate)
             let originJ2000 = Coe2PosVelObject(mainWindow.originOrbit)
             date = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
             satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">`
@@ -3609,6 +3610,18 @@ function changeSatelliteInputType(el) {
             satInputs[4].innerHTML = `dX <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.vx.toFixed(2)}"> km/s</div>`
             satInputs[5].innerHTML = `dY <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.vy.toFixed(2)}"> km/s</div>`
             satInputs[6].innerHTML = `dZ <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originJ2000.vz.toFixed(2)}"> km/s</div>`
+            break
+        case 'coe-sat-input':
+            date = new Date(mainWindow.startDate)
+            let originCOE = mainWindow.originOrbit
+            date = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
+            satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">`
+            satInputs[1].innerHTML = `a <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originCOE.a.toFixed(4)}"> km</div>`
+            satInputs[2].innerHTML = `e <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originCOE.e.toFixed(4)}"> km</div>`
+            satInputs[3].innerHTML = `i <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.i*180/Math.PI).toFixed(4)}"> km</div>`
+            satInputs[4].innerHTML = `&Omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.raan*180/Math.PI).toFixed(4)}"> km/s</div>`
+            satInputs[5].innerHTML = `&omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.arg*180/Math.PI).toFixed(4)}"> km/s</div>`
+            satInputs[6].innerHTML = `&nu; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.tA*180/Math.PI).toFixed(4)}"> km/s</div>`
             break
         case 'ric-sat-input':
             satInputs[0].innerHTML = `
@@ -4435,9 +4448,9 @@ function initStateFunction(el) {
         nodes.children[1].children[5].getElementsByTagName('input')[0].value = (1000*ricInit.drHcw[2][0]).toFixed(3);
     }
     else if (el.id === 'add-satellite-button') {
-        let inputs = document.querySelectorAll('.sat-input')
+        let inputs = [...document.querySelectorAll('.sat-input')]
         let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-        let eciState, ricState, eciOrigin, startDate, relOrigin
+        let eciState, ricState, eciOrigin, startDate, relOrigin, date, dt, coeState
         switch (radioId) {
             case 'ric-sat-input':
                 relOrigin = Number(document.querySelector('#sat-input-origin').value)
@@ -4455,21 +4468,35 @@ function initStateFunction(el) {
                 eciState = [...eciState.rEcci, ...eciState.drEci]
                 break
             case 'eci-sat-input':
-                let date = new Date(inputs[0].value)
+                date = new Date(inputs[0].value)
                 if (mainWindow.satellites.length === 0) {
                     mainWindow.startDate = date
                 }
                 startDate = date
-                eciState = [
-                    inputs[1].value,
-                    inputs[2].value,
-                    inputs[3].value,
-                    inputs[4].value,
-                    inputs[5].value,
-                    inputs[6].value,
-                ].map(s => Number(s))
-                let dt = (mainWindow.startDate - date) / 1000
-                eciState = propToTime(eciState, dt)
+                eciState = inputs.slice(1,7).map(s => s.value === '' ? Number(s.placeholder) : Number(s.value))
+                dt = (mainWindow.startDate - date) / 1000
+                // If not first satellte, prop to scenario start time
+                eciState = mainWindow.satellites.length === 0 ? eciState : propToTime(eciState, dt)
+                break
+            case 'coe-sat-input':
+                date = new Date(inputs[0].value)
+                if (mainWindow.satellites.length === 0) {
+                    mainWindow.startDate = date
+                }
+                startDate = date
+                coeState = inputs.slice(1,7).map(s => s.value === '' ? Number(s.placeholder) : Number(s.value))
+                coeState = {
+                    a: coeState[0],
+                    e: coeState[1],
+                    i: coeState[2] * Math.PI / 180,
+                    raan: coeState[3] * Math.PI / 180,
+                    arg: coeState[4] * Math.PI / 180,
+                    tA: coeState[5] * Math.PI / 180,
+                }
+                eciState = Object.values(Coe2PosVelObject(coeState))
+                dt = (mainWindow.startDate - date) / 1000
+                // If not first satellite, prop to scenario start time
+                eciState = mainWindow.satellites.length === 0 ? eciState : propToTime(eciState, dt)
                 break
             case 'rmoe-sat-input':
                 relOrigin = Number(document.querySelector('#sat-input-origin').value)
@@ -4499,9 +4526,10 @@ function initStateFunction(el) {
                 eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(Number(inputs[0].value))))
                 break
         }
+        console.log(eciState);
         let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
         if (mainWindow.satellites.length === 0) {
-            if (radioId === 'eci-sat-input') {
+            if (radioId === 'eci-sat-input' || radioId === 'coe-sat-input') {
                 mainWindow.startDate = new Date(document.querySelector('.sat-input').value)
             }
             mainWindow.updateOrigin(position)
@@ -9039,11 +9067,18 @@ function openDataDiv(options = {}) {
     dragElement(newDiv)
 }
 
-function clickPlayButton(el) {
-    if (!isNaN(Number(el))) {
+function clickPlayButton(el, step) {
+    if (step !== undefined) {
         if (mainWindow.playTimeStep !== 0) {
-            mainWindow.playTimeStep = Number(el)
+            mainWindow.playTimeStep = Number(step)
         }
+        let allLabels = [...el.parentElement.parentElement.querySelectorAll('label')].forEach(lab => {
+            lab.style.fontWeight = ''
+            lab.style.textDecoration = 'none'
+        })
+        let label = el.parentElement.querySelector('label')
+        label.style.textDecoration = 'underline'
+        label.style.fontWeight = '900'
         return
     }
     switch (el.getAttribute('mode')) {
@@ -9087,29 +9122,29 @@ function openPlayButtonDiv(options = {}) {
         <div>
             <button mode="play" onclick="clickPlayButton(this)" class="playback play"></button>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-            <div style="margin-right: 30px;">
-                <input oninput="clickPlayButton(0.0166667)" checked id="play-one" name="play-speed" type="radio" speed="0.01667"/>
-                <label style="cursor: pointer;" for="play-one">1x</label>
+        <div style="display: flex; justify-content: space-around; margin: 15px 10px; flex-wrap: wrap;">
+            <div style="margin-right: 30px; minWidth: 50px;">
+                <input style="display: none;" oninput="clickPlayButton(this, 0.0166667)" checked id="play-one" name="play-speed" type="radio" speed="0.01667"/>
+                <label style="cursor: pointer; text-decoration: underline; font-weight: 900;" for="play-one">1x</label>
             </div>
             <div style="margin-right: 30px;">
-                <input oninput="clickPlayButton(0.166667)" id="play-ten" name="play-speed" type="radio" speed="0.1667"/>
-                <label style="cursor: pointer;" for="play-ten">10x</label>
-            </div>
-            <div style="margin-right: 30px;">
-                <input oninput="clickPlayButton(1.66667)" id="play-hundred" name="play-speed" type="radio" speed="1.667"/>
+                <input style="display: none;" oninput="clickPlayButton(this, 1.66667)" id="play-hundred" name="play-speed" type="radio" speed="1.667"/>
                 <label style="cursor: pointer;" for="play-hundred">100x</label>
             </div>
             <div style="margin-right: 30px;">
-                <input oninput="clickPlayButton(16.6667)" id="play-thousand" name="play-speed" type="radio" speed="16.6667"/>
+                <input style="display: none;" oninput="clickPlayButton(this, 16.6667)" id="play-thousand" name="play-speed" type="radio" speed="16.6667"/>
                 <label style="cursor: pointer;" for="play-thousand">1000x</label>
             </div>
             <div style="margin-right: 30px;">
-                <input oninput="clickPlayButton(33.3333)" id="play-2thousand" name="play-speed" type="radio" speed="33.3333"/>
+                <input style="display: none;" oninput="clickPlayButton(this, 33.3333)" id="play-2thousand" name="play-speed" type="radio" speed="33.3333"/>
                 <label style="cursor: pointer;" for="play-2thousand">2000x</label>
             </div>
+            <div style="margin-right: 30px;">
+                <input style="display: none;" oninput="clickPlayButton(this, 50)" id="play-3thousand" name="play-speed" type="radio" speed="33.3333"/>
+                <label style="cursor: pointer;" for="play-3thousand">3000x</label>
+            </div>
             <div style="margin-right: 0px;">
-                <input oninput="clickPlayButton(66.6666)" id="play-4thousand" name="play-speed" type="radio" speed="66.6666"/>
+                <input style="display: none;" oninput="clickPlayButton(this, 66.6666)" id="play-4thousand" name="play-speed" type="radio" speed="66.6666"/>
                 <label style="cursor: pointer;" for="play-4thousand">4000x</label>
             </div>
         </div>

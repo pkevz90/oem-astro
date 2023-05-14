@@ -386,6 +386,30 @@ function checkSensors(sat = [], time, options = {}) {
                 })
             }
         }
+        else {
+            let pastSensorObs = pastObs.filter(s => s.sensor === index).filter(ob => math.abs(ob.time - time) < obLimit)
+            // if (pastSensorObs.length > 0 && mask) continue
+            // Get Sensor ECI position
+            let sensorPos = sensorGeodeticPosition(mainWindow.sensors[index].lat, mainWindow.sensors[index].long, 0)
+            sensorPos = sensorPos.r
+            sensorPos = fk5Reduction(sensorPos, obDate)
+            let sensorVel = math.cross([0,0,2*Math.PI / 86164], sensorPos)
+            let { az, el, r } = razel(propSatState.slice(0, 3), obDate, mainWindow.sensors[index].lat, mainWindow.sensors[index].long, 0)
+            if (el < 0) continue
+
+            // Get range Rate
+            let relPosSensorSat = math.subtract(propSatState.slice(0, 3), sensorPos)
+            let relVelSensorSat = math.subtract(propSatState.slice(3), sensorVel)
+            
+            let rangeRate = math.dot(relPosSensorSat, relVelSensorSat) / math.norm(relPosSensorSat)
+            // continue
+            obs.push({
+                sensor: index,
+                time,
+                obs: [rangeRate],
+                noise: [mainWindow.sensors[index].noise.rate]
+            })
+        }
     }
     return obs
 }

@@ -269,5 +269,31 @@ let sensors = [
         elMask: [-5,90],
         maxRange: 60000,
         active: false
+    },
+    {
+        type: 'rangeRate',
+        name: 'Ocean Range Rate',
+        noise: {
+            rate: 0.000001, // km/s
+        },
+        lat: 30.4333, //deg
+        long: -10, //deg
+        azMask: [],
+        elMask: [10,90],
+        maxRange: 60000,
+        active: false
+    },
+    {
+        type: 'rangeRate',
+        name: 'Continent Range Rate',
+        noise: {
+            rate: 0.000001, // km/s
+        },
+        lat: 30.4333, //deg
+        long: 10, //deg
+        azMask: [],
+        elMask: [10,90],
+        maxRange: 60000,
+        active: false
     }
 ]
