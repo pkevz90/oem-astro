@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.2'
+let appAcr = 'ROTS 2.3'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '5 May 2023'
+let cao = '15 May 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -8502,7 +8502,16 @@ function openJ2000Window(j2000Satellites = [], km) {
         j2000Window = window.open('', 'j2000', "width=600px,height=600px")
         setTimeout(() => j2000Window.document.title = 'J2000 Import Tool', 1000)
     }
-    let time = j2000Satellites[0].state[0][0]
+    // Get min and max times from file, to compare to current time in sim
+    // If current time within min and max times, set as initial time for import
+    let minTime = new Date(math.min(j2000Satellites.map(sat => sat.state[0][0].getTime())))
+    let maxTime = new Date(math.max(j2000Satellites.map(sat => sat.state[sat.state.length-1][0].getTime())))
+    let currentSimTime = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
+    let time = currentSimTime < maxTime && currentSimTime > minTime ? currentSimTime : minTime
+    // Cut off seconds and milliseconds from default time
+    time = new Date(time.getFullYear(), time.getMonth(), time.getDate(), time.getHours(), time.getMinutes())
+
+
     j2000Window.j2000Satellites = j2000Satellites
     j2000Window.km = km
     j2000Window.updateWindow = updateJ200Window
@@ -8542,6 +8551,7 @@ function openJ2000Window(j2000Satellites = [], km) {
             originRadio[0] = true
         }
         let origin = originRadio.findIndex(s => s)
+        mainWindow.changeTime(0, true)
         importStates(coes, time, {
             colors: importColors,
             shapes: importShapes,
