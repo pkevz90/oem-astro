@@ -67,6 +67,10 @@ class windowCanvas {
         foregroundColor: 'black',
         textColor: 'black'
     }
+    siteAccessData = [{
+        sites: [0],
+        satellites: [0]
+    }]
     extraAcc = [0,0,0]
     normalizeDirection = true;
     frameMove = undefined;
@@ -330,53 +334,6 @@ class windowCanvas {
         let ctx = this.getContext()
         // If focus isn't undefined, follow focused satellite on map
         // console.time()
-        if (this.groundTrackLimits.focus !== undefined && this.satellites.length > this.groundTrackLimits.focus) {
-            if (this.satellites[this.groundTrackLimits.focus].stateHistory === undefined) {
-                // If state history doesn't exist while in ephem viewer mode, assume calculations are 
-                // Happening and will be recitified when done, until then don't display anything
-                if (mainWindow.ephemViewerMode) return
-                // Otherwise, create a state history
-                this.satellites[this.groundTrackLimits.focus].calcTraj(true)
-            }
-            let curTime = new Date(this.startDate - (-1000*this.scenarioTime))
-            let curEci = Object.values(getCurrentInertial(this.groundTrackLimits.focus))
-            let ecef = astro.eci2ecef(curEci.slice(0,3), curTime)
-            let long = math.atan2(ecef[1], ecef[0])*180/Math.PI
-            let lat = math.atan2(ecef[2], math.norm(ecef.slice(0,2)))*180/Math.PI
-            let satPoints = getGroundSwatchCircleCoordinates(curEci, lat, long)
-            satPoints = satPoints.map(s => this.latLong2Pixel({
-                lat: s[0],
-                long: s[1]
-            }))
-            ctx.strokeStyle = this.satellites[this.groundTrackLimits.focus].color
-            let lastPoint = 0
-            ctx.beginPath()
-            satPoints.forEach((pixelPoint,ii) => {
-                
-                if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
-                else if (math.abs(pixelPoint[0]-lastPoint) > this.cnvs.width/2) {
-                    ctx.moveTo(pixelPoint[0], pixelPoint[1])
-                }
-                else ctx.lineTo(pixelPoint[0], pixelPoint[1])
-                lastPoint = pixelPoint[0]
-            })
-            ctx.stroke()
-            let newCenters = this.fixGroundTrackCenter(lat, long, this.groundTrackLimits.zoom)
-            this.groundTrackLimits.center = newCenters.newLongCenter
-            this.groundTrackLimits.latCenter = newCenters.newLatCenter
-            ctx.textAlign = 'right'
-            ctx.textBaseline = 'bottom'
-            ctx.font = '20px sans-serif'
-            ctx.fillStyle = this.colors.foregroundColor
-            let textBaselinePixel = 5
-            this.groundSites.map(site => {
-                return {name: site.name, ...astro.rAzEl(curEci.slice(0,3), curTime, site.coordinates.lat, site.coordinates.long,0)}
-            }).filter(s => s.el > 0).forEach(vis => {
-                ctx.fillText(`${vis.name} Az: ${vis.az.toFixed(1)} El: ${vis.el.toFixed(1)} deg R: ${vis.r.toFixed(0)} km`, this.cnvs.width-5, this.cnvs.height-textBaselinePixel)
-                textBaselinePixel += 30
-            })
-
-        }
         // console.timeEnd()
         // console.time()
         ctx.lineWidth = 1
@@ -430,21 +387,12 @@ class windowCanvas {
         
         // console.timeEnd()
         // console.time()
-        this.groundSites.forEach(site => {
-            let pixelPos = this.latLong2Pixel(site.coordinates)
-            ctx.fillStyle = site.color
-            let size = 8
-            ctx.fillRect(pixelPos[0]-size/2, pixelPos[1]-size/2, size,size)
-            ctx.textBaseline = 'top'
-            ctx.textAlign = 'center'
-            ctx.font = `${7*(this.groundTrackLimits.zoom)**0.5}px sans-serif`
-            ctx.fillText(site.name, pixelPos[0], pixelPos[1]+size/2+2)
-        })
         // console.timeEnd()
         // console.time()
         let satellitesToDraw = [] // draw satellites in reverse order of altitude
         for (let index = 0; index < this.satellites.length; index++) {
             if (mainWindow.satellites[index].stateHistory === undefined) {
+                if (mainWindow.ephemViewerMode) return
                 mainWindow.satellites[index].calcTraj(true)
             }
             if (mainWindow.satellites[index].curPos === undefined) {
@@ -498,7 +446,72 @@ class windowCanvas {
             //     ctx: ctx
             // })
         }
-        satellitesToDraw = satellitesToDraw.map((s,ii) => {return {...s, index: ii}}).sort((a,b) => a.r-b.r).forEach(sat => {
+        
+        if (this.groundTrackLimits.focus !== undefined && this.satellites.length > this.groundTrackLimits.focus) {
+            if (this.satellites[this.groundTrackLimits.focus].stateHistory === undefined) {
+                // If state history doesn't exist while in ephem viewer mode, assume calculations are 
+                // Happening and will be recitified when done, until then don't display anything
+                if (mainWindow.ephemViewerMode) return
+                // Otherwise, create a state history
+                this.satellites[this.groundTrackLimits.focus].calcTraj(true)
+            }
+            let curTime = new Date(this.startDate - (-1000*this.scenarioTime))
+            let curEci = Object.values(getCurrentInertial(this.groundTrackLimits.focus))
+            let long = satellitesToDraw[this.groundTrackLimits.focus].long
+            let lat = satellitesToDraw[this.groundTrackLimits.focus].lat
+            let satPoints = getGroundSwatchCircleCoordinates(curEci, lat, long)
+            satPoints = satPoints.map(s => this.latLong2Pixel({
+                lat: s[0],
+                long: s[1]
+            }))
+            ctx.strokeStyle = this.satellites[this.groundTrackLimits.focus].color
+            let lastPoint = 0
+            ctx.beginPath()
+            satPoints.forEach((pixelPoint,ii) => {
+                
+                if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
+                else if (math.abs(pixelPoint[0]-lastPoint) > this.cnvs.width/2) {
+                    ctx.moveTo(pixelPoint[0], pixelPoint[1])
+                }
+                else ctx.lineTo(pixelPoint[0], pixelPoint[1])
+                lastPoint = pixelPoint[0]
+            })
+            ctx.stroke()
+            let newCenters = this.fixGroundTrackCenter(lat, long, this.groundTrackLimits.zoom)
+            this.groundTrackLimits.center = newCenters.newLongCenter
+            this.groundTrackLimits.latCenter = newCenters.newLatCenter
+            ctx.textAlign = 'right'
+            ctx.textBaseline = 'bottom'
+            ctx.font = '20px sans-serif'
+            ctx.fillStyle = this.colors.foregroundColor
+            ctx.strokeStyle = 'black'
+            ctx.lineWidth = 3
+            this.groundSites.map(site => {
+                return {name: site.name, long: site.coordinates.long, lat: site.coordinates.lat, ...astro.rAzEl(curEci.slice(0,3), curTime, site.coordinates.lat, site.coordinates.long,0)}
+            }).filter(s => s.el > 0).forEach(vis => {
+                // console.log(vis);
+                // ctx.fillText(`${vis.name} Az: ${vis.az.toFixed(1)} El: ${vis.el.toFixed(1)} deg R: ${vis.r.toFixed(0)} km`, this.cnvs.width-5, this.cnvs.height-textBaselinePixel)
+                // textBaselinePixel += 30
+                let satSeen = this.latLong2Pixel(satellitesToDraw[this.groundTrackLimits.focus])
+                vis = this.latLong2Pixel(vis)
+                ctx.beginPath()
+                ctx.moveTo(satSeen[0], satSeen[1])
+                ctx.lineTo(vis[0], vis[1])
+                ctx.stroke()
+            })
+
+        }
+        this.groundSites.forEach(site => {
+            let pixelPos = this.latLong2Pixel(site.coordinates)
+            ctx.fillStyle = site.color
+            let size = 8
+            ctx.fillRect(pixelPos[0]-size/2, pixelPos[1]-size/2, size,size)
+            ctx.textBaseline = 'top'
+            ctx.textAlign = 'center'
+            ctx.font = `${7*(this.groundTrackLimits.zoom)**0.5}px sans-serif`
+            ctx.fillText(site.name, pixelPos[0], pixelPos[1]+size/2+2)
+        })
+        satellitesToDraw.map((s,ii) => {return {...s, index: ii}}).sort((a,b) => a.r-b.r).forEach(sat => {
             let pixelPosition = this.latLong2Pixel(sat)
             drawSatellite({
                 pixelPosition,
@@ -1139,7 +1152,10 @@ class windowCanvas {
                     shape: sat.shape,
                     a: sat.a,
                     name: sat.name,
-                    burns: sat.burns,
+                    burns: sat.burns.map(b => {
+                        b.shown = false
+                        return b
+                    }),
                     point: sat.point,
                     team: sat.team
                 })
@@ -1384,6 +1400,7 @@ class Satellite {
                 burn.shown = 'post';
             }
         });
+        
     }
     getPositionArray() {
         return math.transpose([[this.curPos.r, this.curPos.i, this.curPos.c]]);
@@ -2353,6 +2370,7 @@ function handleContextClick(button) {
          button.parentElement.innerHTML = `
             <div class="context-item" onclick="handleContextClick(this)" id="waypoint-maneuver">Waypoint</div>
             <div class="context-item" onclick="handleContextClick(this)" id="direction-maneuver">Direction</div>
+            <div class="context-item" onclick="handleContextClick(this)" id="az-el-maneuver">Az El Mag</div>
             <div class="context-item" onclick="handleContextClick(this)" id="dsk-maneuver">DSK</div>
             <div class="context-item" onclick="handleContextClick(this)" id="drift-maneuver">Set Drift Rate</div>
             <div class="context-item" onclick="handleContextClick(this)" id="perch-maneuver">Perch</div>
@@ -3015,12 +3033,12 @@ function handleContextClick(button) {
         }
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
-    else if (button.id === 'direction-maneuver') {
+    else if (button.id === 'direction-maneuver' || button.id === 'az-el-maneuver') {
         button.parentElement.innerHTML = `
-            <div class="context-item" >R: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >I: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" >C: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
-            <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-direction" tabindex="0">Execute</div>
+            <div class="context-item" >${button.id === 'direction-maneuver' ? 'R' : 'Az'}: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> ${button.id === 'direction-maneuver' ? 'm/s' : 'deg'}</div>
+            <div class="context-item" >${button.id === 'direction-maneuver' ? 'I' : 'El'}: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> ${button.id === 'direction-maneuver' ? 'm/s' : 'deg'}</div>
+            <div class="context-item" >${button.id === 'direction-maneuver' ? 'C' : 'Mag'}: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"> m/s</div>
+            <div class="context-item" onkeydown="handleContextClick(this)" onclick="handleContextClick(this)" id="execute-${button.id === 'direction-maneuver' ? 'direction' : 'az-el'}" tabindex="0">Execute</div>
         `
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
@@ -3139,7 +3157,7 @@ function handleContextClick(button) {
         satTargetRmoes(sat, rmoes)
         document.getElementById('context-menu')?.remove();
     }
-    else if (button.id === 'execute-direction') {
+    else if (button.id === 'execute-direction' || button.id === 'execute-az-el') {
         let inputs = button.parentElement.getElementsByTagName('input');
         for (let ii = 0; ii < inputs.length; ii++) {
             if (inputs[ii].value === '') {
@@ -3148,6 +3166,13 @@ function handleContextClick(button) {
         }
         let sat = button.parentElement.sat;
         let dir = [Number(inputs[0].value) / 1000, Number(inputs[1].value) / 1000, Number(inputs[2].value) / 1000];
+        if (button.id === 'execute-az-el') {
+            dir = [
+                Math.cos(Number(inputs[0].value) * Math.PI / 180) * Math.cos(Number(inputs[1].value) * Math.PI / 180) * Number(inputs[2].value),
+                Math.sin(Number(inputs[0].value) * Math.PI / 180) * Math.cos(Number(inputs[1].value) * Math.PI / 180) * Number(inputs[2].value),
+                Math.sin(Number(inputs[1].value) * Math.PI / 180) * Number(inputs[2].value)
+            ].map(s => s/1000)
+        }
         insertDirectionBurn(sat, mainWindow.scenarioTime, dir)
         document.getElementById('context-menu')?.remove();
     }
@@ -3838,7 +3863,7 @@ function parseState(button) {
             inputValue.tA = solveKeplersEquation(inputValue.tA, inputValue.e)
             inputValue.tA = Eccentric2True(inputValue.e, inputValue.tA)
             inputValue = Object.values(Coe2PosVelObject(inputValue))
-            date = new Date('20'+date.slice(0,2), 0, date.slice(2,5), 0,0,86400*Number(date.slice(5)))
+            date = new Date('20'+date.slice(0,2), 0, date.slice(2,5), 0,0,72+86400*Number(date.slice(5)))
             eciValues = {
                 date, state: inputValue
             }
@@ -4610,37 +4635,60 @@ function editSatellite(button) {
         return;
     }
     if (button.nextSibling.selectedIndex < 0) return;
-    let inputs = document.querySelectorAll('.sat-input')
+    let inputs = [...document.querySelectorAll('.sat-input')]
     let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
     let originState = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-    let eciState, ricState
+    let eciState, ricState, eciOrigin, startDate, relOrigin, date, dt, coeState
     switch (radioId) {
         case 'ric-sat-input':
+            relOrigin = Number(document.querySelector('#sat-input-origin').value)
             ricState = [
-                inputs[0].value,
-                inputs[1].value,
-                inputs[2].value,
-                inputs[3].value,
-                inputs[4].value,
-                inputs[5].value,
-            ].map((s, ii) => Number(s) / (ii > 2 ? 1000 : 1))
-            eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), originState.slice(0,3), originState.slice(3,6))
+                Number(inputs[0].value),
+                Number(inputs[1].value),
+                Number(inputs[2].value),
+                Number(inputs[3].value) / 1000,
+                Number(inputs[4].value) / 1000,
+                Number(inputs[5].value) / 1000,
+            ]
+            relOrigin = relOrigin > -1 ? mainWindow.satellites[relOrigin].position : mainWindow.originOrbit
+            eciOrigin = Object.values(Coe2PosVelObject(relOrigin))
+            eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
             eciState = [...eciState.rEcci, ...eciState.drEci]
             break
         case 'eci-sat-input':
-            let date = new Date(inputs[0].value)
-            eciState = [
-                inputs[1].value,
-                inputs[2].value,
-                inputs[3].value,
-                inputs[4].value,
-                inputs[5].value,
-                inputs[6].value,
-            ].map(s => Number(s))
-            let dt = (mainWindow.startDate - date) / 1000
-            eciState = propToTime(eciState, dt, false)
+            date = new Date(inputs[0].value)
+            if (mainWindow.satellites.length === 0) {
+                mainWindow.startDate = date
+            }
+            startDate = date
+            eciState = inputs.slice(1,7).map(s => s.value === '' ? Number(s.placeholder) : Number(s.value))
+            dt = (mainWindow.startDate - date) / 1000
+            // If not first satellte, prop to scenario start time
+            eciState = mainWindow.satellites.length === 0 ? eciState : propToTime(eciState, dt)
+            break
+        case 'coe-sat-input':
+            date = new Date(inputs[0].value)
+            if (mainWindow.satellites.length === 0) {
+                mainWindow.startDate = date
+            }
+            startDate = date
+            coeState = inputs.slice(1,7).map(s => s.value === '' ? Number(s.placeholder) : Number(s.value))
+            coeState = {
+                a: coeState[0],
+                e: coeState[1],
+                i: coeState[2] * Math.PI / 180,
+                raan: coeState[3] * Math.PI / 180,
+                arg: coeState[4] * Math.PI / 180,
+                tA: coeState[5] * Math.PI / 180,
+            }
+            eciState = Object.values(Coe2PosVelObject(coeState))
+            dt = (mainWindow.startDate - date) / 1000
+            // If not first satellite, prop to scenario start time
+            eciState = mainWindow.satellites.length === 0 ? eciState : propToTime(eciState, dt)
             break
         case 'rmoe-sat-input':
+            relOrigin = Number(document.querySelector('#sat-input-origin').value)
+            relOrigin = relOrigin > -1 ? mainWindow.satellites[relOrigin].position : mainWindow.originOrbit
             let rmoes = [
                 inputs[0].value,
                 inputs[1].value,
@@ -4658,8 +4706,12 @@ function editSatellite(button) {
                 m: rmoes[5]
             })
             ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw])
-            eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), originState.slice(0,3), originState.slice(3,6))
+            eciOrigin = Object.values(Coe2PosVelObject(relOrigin))
+            eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
             eciState = [...eciState.rEcci, ...eciState.drEci]
+            break
+        case 'geo-sat-input':
+            eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(Number(inputs[0].value))))
             break
     }   
     eciState = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
@@ -5193,6 +5245,10 @@ function runge_kutta(eom, state, dt, a = [0,0,0], time = 0) {
 
 function getCurrentPosition(options = {}) {
     let {time = mainWindow.scenarioTime} = options;
+    if (this.stateHistory === undefined) {
+        this.calcTraj()
+        return [0,0,0,0,0,0]
+    }
     let index = this.stateHistory.findIndex(s => s.t > time) - 1
     index = index < 0 ? this.stateHistory.length - 1 : index
     let indexTime = this.stateHistory[index].t
@@ -7847,6 +7903,30 @@ function openSatellitePanel(nLanes = mainWindow.nLane) {
         </div>
     `
     openQuickWindow(inner)
+}
+
+function openSensorAccessPanel() {
+    let sites = mainWindow.groundSites.map(s => s.name)
+    let sats = mainWindow.satellites.map(s => s.name)
+    let windowHtml = `
+        <div style="display: flex; justify-content: space-around">
+            <div>
+                Sites
+                <select>
+                    <option value="0">Site 1</option>
+                </select>
+                <button style="width: 100%;">+</button>
+            </div>
+            <div>
+                Sites
+                <select>
+                    <option value="0">Sat 1</option>
+                </select>
+                <button style="width: 100%;">+</button>
+            </div>
+        </div>
+    `
+    openQuickWindow(windowHtml)
 }
 
 function closeQuickWindow() {
