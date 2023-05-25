@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.3'
+let appAcr = 'ROTS 2.4'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '15 May 2023'
+let cao = '22 May 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -68,8 +68,8 @@ class windowCanvas {
         textColor: 'black'
     }
     siteAccessData = [{
-        sites: [0],
-        satellites: [0]
+        sites: [],
+        satellites: []
     }]
     extraAcc = [0,0,0]
     normalizeDirection = true;
@@ -477,30 +477,37 @@ class windowCanvas {
                 lastPoint = pixelPoint[0]
             })
             ctx.stroke()
-            let newCenters = this.fixGroundTrackCenter(lat, long, this.groundTrackLimits.zoom)
-            this.groundTrackLimits.center = newCenters.newLongCenter
-            this.groundTrackLimits.latCenter = newCenters.newLatCenter
-            ctx.textAlign = 'right'
-            ctx.textBaseline = 'bottom'
-            ctx.font = '20px sans-serif'
-            ctx.fillStyle = this.colors.foregroundColor
-            ctx.strokeStyle = 'black'
-            ctx.lineWidth = 3
-            this.groundSites.map(site => {
-                return {name: site.name, long: site.coordinates.long, lat: site.coordinates.lat, ...astro.rAzEl(curEci.slice(0,3), curTime, site.coordinates.lat, site.coordinates.long,0)}
-            }).filter(s => s.el > 0).forEach(vis => {
-                // console.log(vis);
-                // ctx.fillText(`${vis.name} Az: ${vis.az.toFixed(1)} El: ${vis.el.toFixed(1)} deg R: ${vis.r.toFixed(0)} km`, this.cnvs.width-5, this.cnvs.height-textBaselinePixel)
-                // textBaselinePixel += 30
-                let satSeen = this.latLong2Pixel(satellitesToDraw[this.groundTrackLimits.focus])
-                vis = this.latLong2Pixel(vis)
-                ctx.beginPath()
-                ctx.moveTo(satSeen[0], satSeen[1])
-                ctx.lineTo(vis[0], vis[1])
-                ctx.stroke()
-            })
+            // let newCenters = this.fixGroundTrackCenter(lat, long, this.groundTrackLimits.zoom)
+            // this.groundTrackLimits.center = newCenters.newLongCenter
+            // this.groundTrackLimits.latCenter = newCenters.newLatCenter
 
         }
+        
+        ctx.strokeStyle = this.colors.foregroundColor
+        ctx.lineWidth = 3
+        let curTime = new Date(this.startDate - (-1000*this.scenarioTime))
+        this.siteAccessData.forEach(siteAcc => {
+            siteAcc.sites.forEach(site => {
+                if (site >= mainWindow.groundSites.length) return
+                siteAcc.satellites.map(sat => {
+                    if (sat >= mainWindow.satellites.length) return false
+                    let curEci = Object.values(getCurrentInertial(sat))
+                    return [sat, astro.rAzEl(curEci.slice(0,3), curTime, mainWindow.groundSites[site].coordinates.lat, mainWindow.groundSites[site].coordinates.long,0), mainWindow.groundSites[site].coordinates]
+                }).filter(s => {
+                    if (s === false) return false
+                    return s[1].el > 0
+                }).forEach(vis => {
+                    let satSeen = this.latLong2Pixel(satellitesToDraw[vis[0]])
+                    vis = this.latLong2Pixel(vis[2])
+                    ctx.beginPath()
+                    ctx.moveTo(satSeen[0], satSeen[1])
+                    ctx.lineTo(vis[0], vis[1])
+                    ctx.stroke()
+                })
+
+            })
+        })
+        ctx.fillStyle = 'rgb(200,100,100)'
         this.groundSites.forEach(site => {
             let pixelPos = this.latLong2Pixel(site.coordinates)
             ctx.fillStyle = site.color
@@ -1461,14 +1468,16 @@ class Satellite {
 class GroundSite {
     constructor(options = {}) {
         let {
-            lat = 30,
-            long = -90,
-            name = 'Ground Site ' + math.floor(math.random()*1000)
+            lat = -60+120*Math.random(),
+            long = 360*Math.random(),
+            name = 'Ground Site ' + math.floor(math.random()*1000),
+            color = "#E17D64"
         } = options
         this.coordinates = {
             lat,
             long
         }
+        this.color = color
         this.name = name
         this.limits = {
             cats: false, // CATS must be less than (0 being good)
@@ -1585,7 +1594,7 @@ let timeFunction = false;
         mainWindow.changeTime(mainWindow.desired.scenarioTime + mainWindow.playTimeStep, true)
         return window.requestAnimationFrame(animationLoop)
     } catch (error) {
-        console.log(mainWindow.satellites[0].burns[0]);
+        console.log(mainWindow.satellites[0]?.burns[0]);
         console.log(error.stack);
         errorList.push(error)
         let autosavedScen = JSON.parse(window.localStorage.getItem('autosave'))
@@ -1844,6 +1853,10 @@ function keydownFunction(key) {
     else if (key.key === 's' || key.key === 'S') {
         if (mainWindow.satellites.length < 1) return
         openSatellitePanel()
+    } 
+    else if (key.key === 'a' || key.key === 'A') {
+        if (mainWindow.satellites.length < 1 || mainWindow.groundSites.length < 1) return
+        openSensorAccessPanel()
     }
     else if (key.key === 't' || key.key === 'T') {
         openTimePrompt()
@@ -1873,10 +1886,14 @@ function keydownFunction(key) {
         mainWindow.satellites.push(newSat)
         document.title = mainWindow.satellites.map(sat => sat.name).join(' / ')
     }
+    else if (key.key === 'M' || key.key === 'm') {
+        let newSite = new GroundSite()
+        mainWindow.groundSites.push(newSite)
+    }
     else if (key.key ==='h' && key.ctrlKey) {
         key.preventDefault()
         displayHpopTraj()
-    }
+    } 
     else if ((key.key === 'S' || key.key === 's') && key.shiftKey) openSaveWindow()
     else if ((key.key === 'L' || key.key === 'l') && key.shiftKey) openSaveWindow()
     else if (key.key === ',' && key.ctrlKey) mainWindow.satellites.forEach(sat => sat.size = sat.size > 1 ? sat.size - 0.25 : sat.size)
@@ -2180,6 +2197,7 @@ function startContextClick(event) {
     else if (activeSite !== false) {
         let {lat, long} = mainWindow.groundSites[activeSite].coordinates
         long  = long > 180 ? long - 360 : long
+        let satellitesToShowData = mainWindow.siteAccessData[0].sites.find(s => s === activeSite) !== undefined ? mainWindow.siteAccessData[0].satellites : []
         ctxMenu.innerHTML = `
             <div site="${activeSite}" style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <span contentEditable="true" element="name" site="${activeSite}" oninput="alterEditableSiteChar(this)">${mainWindow.groundSites[activeSite].name}</span>
@@ -2194,6 +2212,15 @@ function startContextClick(event) {
             <div site="${activeSite}" class="context-item" onclick="handleContextClick(this)" id="delete-site">Delete Site</div>
             <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
                 Lat: ${lat.toFixed(2)} Long: ${long.toFixed(2)}
+            </div>
+            <div>
+                ${satellitesToShowData.length > 0 ? `<div style="color: white; padding: 5px 15px; font-size: 0.75em; text-decoration: underline">Access Data</div>` : ''}
+                ${satellitesToShowData.map(sat => {
+                    let curTime = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
+                    let curEci = Object.values(getCurrentInertial(sat))
+                    let azElRad = astro.rAzEl(curEci.slice(0,3), curTime, lat, long,0)
+                    return `<div style="color: white; padding: 2.5px 20px; font-size: 0.75em;">${mainWindow.satellites[sat].name} Az: ${azElRad.az.toFixed(2)}, El: ${azElRad.el.toFixed(2)}</div>`
+                }).join('')}
             </div>
         `
     }
@@ -2329,6 +2356,7 @@ function startContextClick(event) {
             <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
             ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="openSatellitePanel()">Open Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
+            ${mainWindow.latLongMode ? `<div class="context-item" onclick="openSensorAccessPanel()">Open Access Panel</div>` : ``}
             ${mainWindow.latLongMode ? `<div lat="${latLongClick.lat}" long="${latLongClick.long}" class="context-item" id="add-ground-site" onclick="handleContextClick(this)">Add Ground Site</div>` : `<div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>`}
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import States</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadTles(event)"></div>
             <div class="context-item" onclick="openInstructionWindow()" id="instructions">Instructions</div>
@@ -2500,14 +2528,12 @@ function handleContextClick(button) {
         let inputs = [...button.parentElement.querySelectorAll('input')].map(s => {
             return s.value === '' ? s.placeholder : s.value
         })
-        mainWindow.groundSites.push({
+        mainWindow.groundSites.push(new GroundSite({
             name: inputs[0],
-            coordinates: {
-                long: Number(inputs[2]),
-                lat: Number(inputs[1])
-            },
+            long: Number(inputs[2]),
+            lat: Number(inputs[1]),
             color: '#E17D64'
-        })
+        }))
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'lock-sat-button') {
@@ -3512,7 +3538,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
     }
     else if (mainWindow.latLongMode) {
         let {lat, long} = mainWindow.pixel2LatLong([event.clientX, event.clientY])
-        mainWindow.groundTrackLimits.focus = undefined
+        // mainWindow.groundTrackLimits.focus = undefined
         mainWindow.frameMove = {
             x: event.clientX,
             y: event.clientY,
@@ -3642,11 +3668,11 @@ function changeSatelliteInputType(el) {
             date = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
             satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">`
             satInputs[1].innerHTML = `a <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originCOE.a.toFixed(4)}"> km</div>`
-            satInputs[2].innerHTML = `e <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originCOE.e.toFixed(4)}"> km</div>`
-            satInputs[3].innerHTML = `i <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.i*180/Math.PI).toFixed(4)}"> km</div>`
-            satInputs[4].innerHTML = `&Omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.raan*180/Math.PI).toFixed(4)}"> km/s</div>`
-            satInputs[5].innerHTML = `&omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.arg*180/Math.PI).toFixed(4)}"> km/s</div>`
-            satInputs[6].innerHTML = `&nu; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.tA*180/Math.PI).toFixed(4)}"> km/s</div>`
+            satInputs[2].innerHTML = `e <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${originCOE.e.toFixed(4)}"></div>`
+            satInputs[3].innerHTML = `i <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.i*180/Math.PI).toFixed(4)}"> deg</div>`
+            satInputs[4].innerHTML = `&Omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.raan*180/Math.PI).toFixed(4)}"> deg</div>`
+            satInputs[5].innerHTML = `&omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.arg*180/Math.PI).toFixed(4)}"> deg</div>`
+            satInputs[6].innerHTML = `&nu; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.tA*180/Math.PI).toFixed(4)}"> deg</div>`
             break
         case 'ric-sat-input':
             satInputs[0].innerHTML = `
@@ -5614,6 +5640,9 @@ function PosVel2CoeNew(r = [42164.14, 0, 0], v = [0, 3.0746611796284924, 0]) {
     }
     else if (en < 1e-6) {
         argLat = math.acos(math.dot(n, r) / math.norm(n) / rn)
+        if (argLat.re !== undefined) {
+            argLat = argLat.re
+        }
         if (r[2] < 0) {
             argLat = 2 * Math.PI - argLat
         }
@@ -6846,14 +6875,12 @@ function handleSiteFile(file) {
         return newSection
     })
     file.forEach((site, siteIi) => {
-        mainWindow.groundSites.push({
+        mainWindow.groundSites.push(new GroundSite({
             name: siteNames[siteIi],
-            coordinates: {
-                lat: site[0][0],
-                long: site[0][1] > 180 ? site[0][1] - 360 : site[0][1],
-            },
+            long: site[0][1] > 180 ? site[0][1] - 360 : site[0][1],
+            lat: site[0][0],
             color: '#E17D64'
-        })
+        }))
     })
 }
 
@@ -7905,25 +7932,61 @@ function openSatellitePanel(nLanes = mainWindow.nLane) {
     openQuickWindow(inner)
 }
 
+function satAccessCheckChange(el) {
+    let associatedLabel = el.parentElement.querySelector('label');
+    associatedLabel.style.color = el.checked ? 'rgb(100,200,100)' : 'rgb(200,100,100)'
+}
+
+function closeSensorAccessPanel(el) {
+    document.querySelector('dialog').close()
+    if (el.innerText === 'Cancel') return
+    let siteCheckboxes = document.querySelector('dialog').querySelector('#site-access-outer-div').querySelectorAll('input[type="checkbox"]')
+    let satCheckboxes = document.querySelector('dialog').querySelector('#sat-access-outer-div').querySelectorAll('input[type="checkbox"]')
+    siteCheckboxes = [...siteCheckboxes].filter(box => box.checked).map(box => {
+        box = box.parentElement
+        return Number(box.getAttribute('siteindex'))
+    })
+    satCheckboxes = [...satCheckboxes].filter(box => box.checked).map(box => {
+        box = box.parentElement
+        return Number(box.getAttribute('satindex'))
+    })
+    mainWindow.siteAccessData[0] = {
+        sites: siteCheckboxes,
+        satellites: satCheckboxes
+    }
+}
+
 function openSensorAccessPanel() {
-    let sites = mainWindow.groundSites.map(s => s.name)
-    let sats = mainWindow.satellites.map(s => s.name)
+    let sites = mainWindow.groundSites.map((s,ii) => [ii, s.name])
+    let sats = mainWindow.satellites.map((s,ii) => [ii, s.name])
+    let access = mainWindow.siteAccessData[0]
     let windowHtml = `
         <div style="display: flex; justify-content: space-around">
-            <div>
-                Sites
-                <select>
-                    <option value="0">Site 1</option>
-                </select>
-                <button style="width: 100%;">+</button>
+            <div id="site-access-outer-div">
+                <h2>Ground Sites</h2>
+                ${sites.map(si => {
+                    return `
+                        <div class="site-access-div" sitename="${si[1]}" siteindex="${si[0]}">
+                            <input onchange="satAccessCheckChange(this)" ${access.sites.find(s => s===si[0]) === undefined ? '' : 'checked'} id="${si[1]}-checkbox" type="checkbox" style="display: none;"/>
+                            <label style="cursor: pointer; font-size: 1.5em; color: ${access.sites.find(s => s===si[0]) === undefined ? 'rgb(200,100,100)' : 'rgb(100,200,100)'};" for="${si[1]}-checkbox">${si[1]}</label>
+                        </div>
+                    `
+                }).join('')}
             </div>
-            <div>
-                Sites
-                <select>
-                    <option value="0">Sat 1</option>
-                </select>
-                <button style="width: 100%;">+</button>
+            <div id="sat-access-outer-div">
+                <h2>Satellites</h2>
+                ${sats.map(si => {
+                    return `
+                        <div class="sat-access-div" satname="${si[1]}" satindex="${si[0]}">
+                            <input onchange="satAccessCheckChange(this)" ${access.satellites.find(s => s===si[0]) === undefined ? '' : 'checked'} id="${si[1]}-checkbox" type="checkbox" style="display: none;"/>
+                            <label style="cursor: pointer; font-size: 1.5em; color: ${access.satellites.find(s => s===si[0]) === undefined ? 'rgb(200,100,100)' : 'rgb(100,200,100)'};" for="${si[1]}-checkbox">${si[1]}</span>
+                        </div>
+                    `
+                }).join('')}
             </div>
+        </div>
+        <div>
+                <button onclick="closeSensorAccessPanel(this)">Confirm</button><button onclick="closeSensorAccessPanel(this)">Cancel</button>
         </div>
     `
     openQuickWindow(windowHtml)
@@ -8042,7 +8105,9 @@ function openInstructionWindow() {
         <li>
             Hot Keys
             <ul>
+                <li><kbd>P</kbd> - Open Playback Window</li>
                 <li><kbd>S</kbd> - Open satellite submenu</li>
+                <li><kbd>A</kbd> - Open site access submenu</li>
                 <li><kbd>T</kbd> - Open Time Panel</li>
                 <li><kbd>G</kbd> - Switch to ground-track view</li>
                 <li><kbd>Ctrl</kbd> + <kbd>h</kbd> - Run sim with HPOP</li>
@@ -9602,7 +9667,7 @@ function calcSatTrajectory(position = mainWindow.originOrbit, burns = [], option
                 let mo_mf = math.exp(mag*1000 / isp / g0)
                 a *= mo_mf // Accounting for lowering mass after every burn in acceleration
                 mass /= mo_mf
-                console.log(a, mass, mo_mf, isp);
+                // console.log(a, mass, mo_mf, isp);
             }
         }
         tProp += timeDelta
@@ -9653,10 +9718,10 @@ function handleEphemFile(text) {
     let ephemEnd = text.findIndex(s => s.search('END Ephemeris') !== -1)
 
     ephemEnd = ephemEnd === -1 ? text.length : ephemEnd
-    let states = text.slice(ephemStart, ephemEnd).filter(s => s !== '\r').map(s => s.split(/ {2,}/).map(r => Number(r)))
+    let states = text.slice(ephemStart, ephemEnd).filter(s => s !== '\r').map(s => s.split(/ {1,}/).filter(s => s.length > 0).map(r => Number(r)))
     states = states.map(s => {
         let newDate = new Date(baseDate - (-1000*s[0]))
-        return [newDate, ...s.slice(1)] 
+        return [newDate, ...(math.norm(s.slice(1,4)) > 6000000 ? s.slice(1).map(s => s/1000) : s.slice(1))] 
     })
     // Find closest time
     minStateIndex = 0
