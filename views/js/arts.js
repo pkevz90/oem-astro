@@ -3875,7 +3875,7 @@ function parseState(button) {
         // parse tle
         try {
             let date = inputValue.slice(inputValue.search(/\d{5}.\d{4,}/)).split(/ {1,}/)[0]
-            inputValue = inputValue.slice(inputValue.search(/2 {1,}\d{5}/)).split(/ {1,}/)
+            inputValue = inputValue.slice(inputValue.search(/(\n| |\r|\t)2 {1,}\d{5}/)).split(/ {1,}/).filter(s => s.length > 0)
             inputValue = {
                 a: Number(inputValue[7]),
                 e: Number('0.'+inputValue[4]),
@@ -3904,6 +3904,7 @@ function parseState(button) {
     changeSatelliteInputType({id: 'eci-sat-input'})
     let satInputs = document.querySelectorAll('.sat-input')
     satInputs[0].value = convertTimeToDateTimeInput(eciValues.date)
+    console.log(eciValues);
     satInputs[1].value = eciValues.state[0].toFixed(8)
     satInputs[2].value = eciValues.state[1].toFixed(8)
     satInputs[3].value = eciValues.state[2].toFixed(8)

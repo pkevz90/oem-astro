@@ -414,6 +414,106 @@ function checkSensors(sat = [], time, options = {}) {
     return obs
 }
 
+function checkSensorsRedux(sat = [42164, 0, 0, 0, 3.0147, 0], obDate = new Date(), options = {}) {
+    let { noise = false, mask = true, pastObs = [], obLimit = 900, sensors = math.range(0, mainWindow.sensors.length)._data } = options
+    let propSatState = sat.slice()
+    let sunPos = sunFromTime(julianDate(obDate.getFullYear(), obDate.getMonth() + 1, obDate.getDate(), obDate.getHours(), obDate.getMinutes(), obDate.getSeconds()))
+    sunPos = math.subtract(sunPos, sat.slice(0, 3))
+    let obs = []
+    for (let ii = 0; ii < sensors.length; ii++) {
+        let index = sensors[ii]
+        if (!mainWindow.sensors[index].active) continue
+
+        // Check if sensor is available
+        let avail = mainWindow.sensors[index].avail.filter(a => a[0] < obDate && a[1] > obDate).length === 0
+        if (!avail) continue
+
+        let pastSensorObs = pastObs.filter(s => s.sensor === index).filter(ob => math.abs(ob.time - time) < obLimit)
+        if (pastSensorObs.length > 0 && mask) continue
+
+        let sensorPos
+        if (mainWindow.sensors[index].type === 'space') {
+            let delta = (obDate - mainWindow.sensors[index].epoch) / 1000
+            sensorPos = propToTime(mainWindow.sensors[index].state.slice(), delta).slice(0,3)
+        }
+        else {
+            sensorPos = sensorGeodeticPosition(mainWindow.sensors[index].lat, mainWindow.sensors[index].long, 0).r
+            sensorPos = fk5Reduction(sensorPos, obDate)
+        }
+        // Check if sensor in direct sunlight, turn off optical sensors if so
+        let siteCats = math.acos(math.dot(sensorPos, math.subtract(sunPos, sensorPos)) / math.norm(sensorPos) / math.norm(sunPos)) * 180 / Math.PI
+        if (siteCats < 90 && mainWindow.sensors[index].type === 'optical' && mask) continue
+        // Get CATS from the site to the target
+        let relativeSatState = math.subtract(propSatState.slice(0, 3), sensorPos)
+        let relativeSunState = math.subtract(sunPos, propSatState.slice(0,3))
+        // Check if within range
+        if (math.norm(relativeSatState.slice(0, 3)) > mainWindow.sensors[index].maxRange && mask) continue
+        // Check if sun behind optical sensor
+        let cats = math.acos(math.dot(relativeSatState, relativeSunState) / math.norm(relativeSatState) / math.norm(relativeSunState)) * 180 / Math.PI
+        if (cats > 90 && (mainWindow.sensors[index].type === 'optical' || mainWindow.sensors[index].type === 'space') && mask) continue
+
+        let illuminationCheck = isSatIlluminated(sat.slice(0, 3), sunPos)
+        if (!illuminationCheck && mask && (mainWindow.sensors[index].type === 'space' || mainWindow.sensors[index].type === 'optical')) continue
+        let obTime = (obDate - mainWindow.startTime) / 1000
+        if (mainWindow.sensors[index].type === 'space') {
+            let vertVec = math.dotDivide(sensorPos, math.norm(sensorPos.slice(0, 3)))
+            vertVec = math.squeeze(math.multiply(rotationMatrices(mainWindow.sensors[index].elAngle, 3), math.transpose([vertVec])))
+            let ra = math.atan2(relativeSatState[1], relativeSatState[0])
+            let dec = math.atan2(relativeSatState[2], math.norm(relativeSatState.slice(0, 2)))
+            
+            obs.push({
+                sensor: index,
+                obTime,
+                obs: [ra, dec],
+                noise: [mainWindow.sensors[index].noise.angle, mainWindow.sensors[index].noise.angle].map(n => n * Math.PI / 180)
+            })
+        }
+        else {
+            let { az, el, r } = razel(propSatState.slice(0, 3), obDate, mainWindow.sensors[index].lat, mainWindow.sensors[index].long, 0)
+            
+            let sensorVel = math.cross([0,0,2*Math.PI / 86164], sensorPos)
+            let relPosSensorSat = math.subtract(propSatState.slice(0, 3), sensorPos)
+            let relVelSensorSat = math.subtract(propSatState.slice(3), sensorVel)
+            let rangeRate = math.dot(relPosSensorSat, relVelSensorSat) / math.norm(relPosSensorSat)
+            switch (mainWindow.sensors.type) {
+                case 'optical':
+                    obs.push({
+                        sensor: index,
+                        obTime,
+                        obs: [az * Math.PI / 180, el * Math.PI / 180],
+                        noise: [mainWindow.sensors[index].noise.angle, mainWindow.sensors[index].noise.angle].map(n => n * Math.PI / 180)
+                    })
+                    break
+                case 'radar':
+                    obs.push({
+                        sensor: index,
+                        obTime,
+                        obs: [az * Math.PI / 180, el * Math.PI / 180, r],
+                        noise: [mainWindow.sensors[index].noise.angle * Math.PI / 180, mainWindow.sensors[index].noise.angle * Math.PI / 180, mainWindow.sensors[index].noise.r]
+                    })
+                    break
+                case 'range':
+                    obs.push({
+                        sensor: index,
+                        obTime,
+                        obs: [r],
+                        noise: [mainWindow.sensors[index].noise.r]
+                    })
+                    break
+                case 'rangeRate':
+                    obs.push({
+                        sensor: index,
+                        obTime,
+                        obs: [rangeRate],
+                        noise: [mainWindow.sensors[index].noise.rr]
+                    })
+                    break
+            }
+        }
+    }
+    return obs
+}
+
 function getObHistory(e) {
     let inputs = e.target.parentElement.getElementsByTagName('input')
     let maxTime = inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value
