@@ -491,14 +491,14 @@ class windowCanvas {
                 if (site >= mainWindow.groundSites.length) return
                 siteAcc.satellites.map(sat => {
                     if (sat >= mainWindow.satellites.length) return false
-                    let curEci = Object.values(getCurrentInertial(sat))
-                    return [sat, astro.rAzEl(curEci.slice(0,3), curTime, mainWindow.groundSites[site].coordinates.lat, mainWindow.groundSites[site].coordinates.long,0), mainWindow.groundSites[site].coordinates]
+                    return [sat, site]
                 }).filter(s => {
                     if (s === false) return false
-                    return s[1].el > 0
+                    // console.log(s, mainWindow.groundSites[s[1]].checkLimits(Object.values(getCurrentInertial(s[0])).slice(0,3)));
+                    return mainWindow.groundSites[s[1]].checkLimits(Object.values(getCurrentInertial(s[0])).slice(0,3)).result
                 }).forEach(vis => {
                     let satSeen = this.latLong2Pixel(satellitesToDraw[vis[0]])
-                    vis = this.latLong2Pixel(vis[2])
+                    vis = this.latLong2Pixel(mainWindow.groundSites[vis[1]].coordinates)
                     ctx.beginPath()
                     ctx.moveTo(satSeen[0], satSeen[1])
                     ctx.lineTo(vis[0], vis[1])
@@ -1148,7 +1148,16 @@ class windowCanvas {
         this.updateOrigin(originOrbit)
         this.plotWidth = plotWidth;
         this.relativeData = relativeData;
-        this.groundSites = groundSites
+        console.log(groundSites);
+        this.groundSites = groundSites.map(s => {
+            return new GroundSite({
+                name: s.name,
+                color: s.color,
+                lat: s.coordinates.lat,
+                long: s.coordinates.long,
+                limits: s.limits
+            })
+        })
         this.satellites = [];
         satellites.forEach(sat =>{
             this.satellites.push(
@@ -1471,7 +1480,15 @@ class GroundSite {
             lat = -60+120*Math.random(),
             long = 360*Math.random(),
             name = 'Ground Site ' + math.floor(math.random()*1000),
-            color = "#E17D64"
+            color = "#E17D64",
+            limits = {
+                sunExclusion: false,
+                maxSunElevation: false,
+                illumination: false,
+                elevation: 10,
+                azimuth: false,
+                moonExclusion: false
+            }
         } = options
         this.coordinates = {
             lat,
@@ -1479,34 +1496,49 @@ class GroundSite {
         }
         this.color = color
         this.name = name
-        this.limits = {
-            cats: false, // CATS must be less than (0 being good)
-            illumination: false, // target must be illuminated by sun
-            elevation: false, // Target must be above this elevation
-            azimuth: false,
-            moonExclusion: false // Exclusion angle from Moon
-        }
+        this.limits = limits
     }
-    checkLimits = (satEci = [42164, 0, 0], date = new Date(2022,1,1), sunPosEci) => {
+    checkLimits = (satEci = Object.values(getCurrentInertial(0)).slice(0,3), date = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)), sunPosEci, moonPosEci) => {
         let canSeeSat = true
         let siteEcef = astro.groundGeodeticPosition(this.coordinates.lat, this.coordinates.long).r
         let siteEci = astro.ecef2eci(siteEcef, date)
         sunPosEci = sunPosEci || astro.sunEciFromTime(date)
-        if (this.cats !== false) {
-            
+        moonPosEci = moonPosEci || astro.moonEciFromTime(date)
+        let relSatSensor = math.subtract(satEci, siteEci)
+        let {az, el, r} = astro.rAzEl(satEci, date, this.coordinates.lat, this.coordinates.long)
+        if (this.limits.sunExclusion !== false) {
+            let relSunSensor = math.subtract(sunPosEci, siteEci)
+            let cats = math.acos(math.dot(relSatSensor, relSunSensor) / math.norm(relSatSensor) / math.norm(relSunSensor))*180/Math.PI
+            canSeeSat = cats > this.limits.sunExclusion
+            // console.log(cats, this.limits.sunExclusion);
         }
-        if (this.illumination !== false) {
+        if (!canSeeSat) return {result: false, reason: 0}
+        if (this.limits.illumination !== false) {
+            canSeeSat = isSatIlluminated(satEci, sunPosEci)
+        }
+        if (!canSeeSat) return {result: false, reason: 1}
+        if (this.limits.elevation !== false) {
+            canSeeSat = el > this.limits.elevation
+            // console.log(el, this.limits.elevation);
+        }
+        if (!canSeeSat) return {result: false, reason: 2, numbers: {el, elLimit: this.limits.elevation}}
+        if (this.limits.azimuth !== false) {
 
         }
-        if (this.elevation !== false) {
-
+        if (!canSeeSat) return {result: false, reason: 3}
+        if (this.limits.moonExclusion !== false) {
+            let relMoonSensor = math.subtract(moonPosEci, siteEci)
+            let catm = math.acos(math.dot(relSatSensor, relMoonSensor) / math.norm(relSatSensor) / math.norm(relMoonSensor))*180/Math.PI
+            canSeeSat = catm > this.limits.moonExclusion
+            // console.log(catm, this.limits.moonExclusion);
         }
-        if (this.azimuth !== false) {
-
+        if (!canSeeSat) return {result: false, reason: 4}
+        if (this.limits.maxSunElevation !== false) {
+            let sunAzEl = astro.rAzEl(sunPosEci, date, this.coordinates.lat, this.coordinates.long)
+            canSeeSat = sunAzEl.el < this.limits.maxSunElevation
+            // console.log(sunAzEl.el, this.limits.maxSunElevation);
         }
-        if (this.moonExclusion !== false) {
-
-        }
+        return {result: canSeeSat, reason: 5}
     }
 }
 
@@ -1642,6 +1674,8 @@ function keydownFunction(key) {
             mainWindow.latLongMode = false
             for (let index = 0; index < mainWindow.satellites.length; index++) {
                 mainWindow.satellites[index].latLong = undefined
+                mainWindow.satellites[index].calcTraj(true)
+                mainWindow.satellites[index].calcTraj()
             }
             mainWindow.setState('ri');
             mainWindow.desired.plotCenter = 0
@@ -2209,6 +2243,7 @@ function startContextClick(event) {
             </div>
             <div style="background-color: white; cursor: default; width: 100%; height: 2px"></div>
             
+            <div site="${activeSite}" class="context-item" onclick="handleContextClick(this)" id="change-site-limits">Visibility Constraints</div>
             <div site="${activeSite}" class="context-item" onclick="handleContextClick(this)" id="delete-site">Delete Site</div>
             <div style="font-size: 0.75em; margin-top: 5px; padding: 5px 15px; color: white; cursor: default;">
                 Lat: ${lat.toFixed(2)} Long: ${long.toFixed(2)}
@@ -2219,6 +2254,31 @@ function startContextClick(event) {
                     let curTime = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
                     let curEci = Object.values(getCurrentInertial(sat))
                     let azElRad = astro.rAzEl(curEci.slice(0,3), curTime, lat, long,0)
+                    let checkSeeSat = mainWindow.groundSites[activeSite].checkLimits(curEci.slice(0,3))
+                    if (!checkSeeSat.result) {
+                        let falseReason
+                        switch (checkSeeSat.reason) {
+                            case 0:
+                                falseReason = 'In Sun Exclusion'
+                                break
+                            case 1: 
+                                falseReason = 'Not Illuminated'
+                                break
+                            case 2: 
+                                falseReason = 'Below Elevation Limit'
+                                break
+                            case 3: 
+                                falseReason = 'Outside Azimuth Limit'
+                                break
+                            case 4: 
+                                falseReason = 'In Moon Exclusion'
+                                break
+                            case 5: 
+                                falseReason = 'Sun Elevation Limit'
+                                break
+                        }
+                        return `<div style="color: white; padding: 2.5px 20px; font-size: 0.75em;">${mainWindow.satellites[sat].name} ${falseReason}</div>`
+                    }
                     return `<div style="color: white; padding: 2.5px 20px; font-size: 0.75em;">${mainWindow.satellites[sat].name} Az: ${azElRad.az.toFixed(2)}, El: ${azElRad.el.toFixed(2)}</div>`
                 }).join('')}
             </div>
@@ -2393,6 +2453,18 @@ function changeSide(sat, side="neutral") {
     mainWindow.satellites[sat].side = side
 }
 
+function lineSphereIntercetionBool(line = [-0.45, 0, 0.45], lineOrigin = [282.75, 0, 0], sphereOrigin = [0, 0, 0], sphereRadius = 200) {
+    line = math.dotDivide(line, math.norm(line))
+    let check = math.dot(line, math.subtract(lineOrigin, sphereOrigin)) ** 2 - (math.norm(math.subtract(lineOrigin, sphereOrigin)) ** 2 - sphereRadius ** 2)
+    return check > 0
+}
+
+function isSatIlluminated(satPos = [6900, 0, 0], sunPos = [6900000, 0, 0]) {
+    let satSunAngle = math.acos(math.dot(satPos.slice(0, 3), sunPos) / math.norm(satPos.slice(0, 3)) / math.norm(sunPos))
+    if (satSunAngle < Math.PI / 2) return true
+    return !lineSphereIntercetionBool(math.subtract(satPos.slice(0, 3), sunPos), sunPos, [0, 0, 0], 6400)
+}
+
 function handleContextClick(button) {
     if (button.id === 'maneuver-options') {
          button.parentElement.innerHTML = `
@@ -2534,6 +2606,34 @@ function handleContextClick(button) {
             lat: Number(inputs[1]),
             color: '#E17D64'
         }))
+        document.getElementById('context-menu')?.remove();
+    }
+    else if (button.id === 'change-site-limits') {
+        let site = button.getAttribute('site')
+        let inputPlacehoders = [
+            mainWindow.groundSites[site].limits.maxSunElevation !== false ? mainWindow.groundSites[site].limits.maxSunElevation : 0,
+            mainWindow.groundSites[site].limits.sunExclusion !== false ? mainWindow.groundSites[site].limits.sunExclusion : 0,
+            mainWindow.groundSites[site].limits.moonExclusion !== false ? mainWindow.groundSites[site].limits.moonExclusion : 0,
+            mainWindow.groundSites[site].limits.elevation !== false ? mainWindow.groundSites[site].limits.elevation : 0,
+        ].map(s => Number(s.toFixed(1)))
+        button.parentElement.innerHTML = `
+            <div style="color: white; padding: 5px"><input element="illumination" ${mainWindow.groundSites[site].limits.illumination !== false ? 'checked' : ''} id="target-illum-box" type="checkbox"/> <label for="target-illum-box">Target Illuminated</label></div>
+            <div style="color: white; padding: 5px"><input element="maxSunElevation" ${mainWindow.groundSites[site].limits.maxSunElevation !== false ? 'checked' : ''} id="max-sun-el-box" type="checkbox"/> <label for="max-sun-el-box">Max Sun Elevation</label> <input placeholder="${inputPlacehoders[0]}" type="number" style="width: 5ch; font-size: 1.1em;"/> deg</div>
+            <div style="color: white; padding: 5px"><input element="sunExclusion" ${mainWindow.groundSites[site].limits.sunExclusion !== false ? 'checked' : ''} id="sun-ex-box" type="checkbox"/> <label for="sun-ex-box">Solar Exclusion</label> <input placeholder="${inputPlacehoders[1]}" type="number" style="width: 5ch; font-size: 1.1em;"/> deg</div>
+            <div style="color: white; padding: 5px"><input element="moonExclusion" ${mainWindow.groundSites[site].limits.moonExclusion !== false ? 'checked' : ''} id="moon-ex-box" type="checkbox"/> <label for="moon-ex-box">Lunar Exclusion</label> <input placeholder="${inputPlacehoders[2]}" type="number" style="width: 5ch; font-size: 1.1em;"/> deg</div>
+            <div style="color: white; padding: 5px"><input element="elevation" ${mainWindow.groundSites[site].limits.elevation !== false ? 'checked' : ''} id="sat-el-box" type="checkbox"/> <label for="sat-el-box">Min Target Elevation</label> <input placeholder="${inputPlacehoders[3]}" type="number" style="width: 5ch; font-size: 1.1em;"/> deg</div>
+            <div site="${site}" class="context-item" tabindex="0" onclick="handleContextClick(this)" id="change-site-limits-execute">Confirm Limits</div>
+        `
+    }
+    else if (button.id === 'change-site-limits-execute') {
+        let site = button.getAttribute('site')
+        let inputPlacehoders = [...button.parentElement.querySelectorAll('input[type=checkbox]')]
+        let numInputPlaceholders = [true, ...[...button.parentElement.querySelectorAll('input[type=number]')].map(s => s.value === '' ? Number(s.placeholder) : Number(s.value))]
+        console.log(inputPlacehoders, numInputPlaceholders);
+        inputPlacehoders = inputPlacehoders.map((s,ii) => [s.getAttribute('element'), s.checked, numInputPlaceholders[ii]])
+        inputPlacehoders.forEach(input => {
+            mainWindow.groundSites[site].limits[input[0]] = input[1] ? input[2] : false
+        })
         document.getElementById('context-menu')?.remove();
     }
     else if (button.id === 'lock-sat-button') {
@@ -3876,6 +3976,9 @@ function parseState(button) {
         try {
             let date = inputValue.slice(inputValue.search(/\d{5}.\d{4,}/)).split(/ {1,}/)[0]
             inputValue = inputValue.slice(inputValue.search(/(\n| |\r|\t)2 {1,}\d{5}/)).split(/ {1,}/).filter(s => s.length > 0)
+            
+            let name = inputValue[1]
+            document.querySelectorAll('.sat-style-input')[3].value = name
             inputValue = {
                 a: Number(inputValue[7]),
                 e: Number('0.'+inputValue[4]),
