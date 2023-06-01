@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.4'
+let appAcr = 'ROTS 2.5'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '22 May 2023'
+let cao = '31 May 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -63,8 +63,8 @@ class windowCanvas {
         plot: {x: 0, y: 0, w: 0, h: 0}
     };
     colors = {
-        backgroundColor: 'rgb(255,255,255)',
-        foregroundColor: 'black',
+        backgroundColor: '#111122',
+        foregroundColor: 'white',
         textColor: 'black'
     }
     siteAccessData = [{
@@ -211,10 +211,18 @@ class windowCanvas {
         this.scenarioLength = 48
         this.updateOrigin(this.originOrbit)
     }
-    updateOrigin(newOrigin = this.originOrbit, updateSats = true) {
+    updateOrigin(newOrigin = this.originOrbit, updateSats = true, updateScenarioLength = false) {
         this.originOrbit = newOrigin
         let originEci = Object.values(Coe2PosVelObject(this.originOrbit))
         this.mm = (398600.4418 / this.originOrbit.a ** 3) ** 0.5
+        if (updateScenarioLength) {
+            let period = 2*Math.PI/this.mm
+            let newLength = (86164/period)**(1.2/3)*2*period/3600
+            newLength = Math.ceil(newLength)
+            console.log(newLength);
+            mainWindow.scenarioLength = newLength
+            document.querySelector('#time-slider-range').max = newLength*3600
+        }
         this.timeDelta = 2 * Math.PI / this.mm / 48
         let sun = sunFromTime(this.startDate)  
         sun = math.squeeze(Eci2Ric(originEci.slice(0,3), originEci.slice(3,6), sun, [0,0,0]).rHcw)
@@ -332,10 +340,6 @@ class windowCanvas {
     }
     drawEarthFeatures() {
         let ctx = this.getContext()
-        // If focus isn't undefined, follow focused satellite on map
-        // console.time()
-        // console.timeEnd()
-        // console.time()
         ctx.lineWidth = 1
         ctx.strokeStyle = 'rgb(150,150,150)'
         math.range(0,360,15)._data.forEach(long => {
@@ -384,11 +388,6 @@ class windowCanvas {
             ctx.stroke()
         })
         
-        
-        // console.timeEnd()
-        // console.time()
-        // console.timeEnd()
-        // console.time()
         let satellitesToDraw = [] // draw satellites in reverse order of altitude
         for (let index = 0; index < this.satellites.length; index++) {
             if (mainWindow.satellites[index].stateHistory === undefined) {
@@ -446,25 +445,24 @@ class windowCanvas {
             //     ctx: ctx
             // })
         }
-        
-        if (this.groundTrackLimits.focus !== undefined && this.satellites.length > this.groundTrackLimits.focus) {
-            if (this.satellites[this.groundTrackLimits.focus].stateHistory === undefined) {
+        for (let index = 0; index < this.satellites.length; index++) {
+            if (!this.satellites[index].showGroundTrack) continue
+            if (this.satellites[index].stateHistory === undefined) {
                 // If state history doesn't exist while in ephem viewer mode, assume calculations are 
                 // Happening and will be recitified when done, until then don't display anything
                 if (mainWindow.ephemViewerMode) return
                 // Otherwise, create a state history
-                this.satellites[this.groundTrackLimits.focus].calcTraj(true)
+                this.satellites[index].calcTraj(true)
             }
-            let curTime = new Date(this.startDate - (-1000*this.scenarioTime))
-            let curEci = Object.values(getCurrentInertial(this.groundTrackLimits.focus))
-            let long = satellitesToDraw[this.groundTrackLimits.focus].long
-            let lat = satellitesToDraw[this.groundTrackLimits.focus].lat
+            let curEci = Object.values(getCurrentInertial(index))
+            let long = satellitesToDraw[index].long
+            let lat = satellitesToDraw[index].lat
             let satPoints = getGroundSwatchCircleCoordinates(curEci, lat, long)
             satPoints = satPoints.map(s => this.latLong2Pixel({
                 lat: s[0],
                 long: s[1]
             }))
-            ctx.strokeStyle = this.satellites[this.groundTrackLimits.focus].color
+            ctx.strokeStyle = this.satellites[index].color
             let lastPoint = 0
             ctx.beginPath()
             satPoints.forEach((pixelPoint,ii) => {
@@ -477,10 +475,6 @@ class windowCanvas {
                 lastPoint = pixelPoint[0]
             })
             ctx.stroke()
-            // let newCenters = this.fixGroundTrackCenter(lat, long, this.groundTrackLimits.zoom)
-            // this.groundTrackLimits.center = newCenters.newLongCenter
-            // this.groundTrackLimits.latCenter = newCenters.newLatCenter
-
         }
         
         ctx.strokeStyle = this.colors.foregroundColor
@@ -1221,7 +1215,9 @@ class Satellite {
             mass = 1000, //kilograms
             thrust = 10000, // Newtons
             isp = 200,
-            cov = undefined
+            cov = undefined,
+            cd = 1,
+            cr = 1
         } = options; 
         if (position === undefined) {
             position = {...mainWindow.originOrbit}
@@ -1233,6 +1229,8 @@ class Satellite {
         this.size = size;
         this.color = color;
         this.mass = mass;
+        this.cd = cd
+        this.cr = cr
         this.thrust = a === undefined ? thrust : mass * a * 1000;
         this.isp = isp
         this.color = color;
@@ -1244,6 +1242,7 @@ class Satellite {
         this.locked = locked
         this.pixelPos = [0,0]
         this.cov = cov
+        this.showGroundTrack = false
         setTimeout(() => {
             this.burns = burns;
             this.calcTraj(true)
@@ -1487,9 +1486,17 @@ class GroundSite {
                 illumination: false,
                 elevation: 10,
                 azimuth: false,
-                moonExclusion: false
-            }
+                moonExclusion: false,
+                range: false
+            },
+            type = 'radar'
         } = options
+        let expectedLimits = ['sunExclusion', 'maxSunElevation', 'illumination', 'elevation','azimuth','moonExclusion','range']
+        expectedLimits.forEach(lim => {
+            if (limits[lim] === undefined) {
+                limits[lim] = false
+            }
+        })
         this.coordinates = {
             lat,
             long
@@ -1497,6 +1504,7 @@ class GroundSite {
         this.color = color
         this.name = name
         this.limits = limits
+        this.type = type
     }
     checkLimits = (satEci = Object.values(getCurrentInertial(0)).slice(0,3), date = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)), sunPosEci, moonPosEci) => {
         let canSeeSat = true
@@ -1538,6 +1546,11 @@ class GroundSite {
             canSeeSat = sunAzEl.el < this.limits.maxSunElevation
             // console.log(sunAzEl.el, this.limits.maxSunElevation);
         }
+        if (!canSeeSat) return {result: false, reason: 5}
+        if (this.limits.range !== false) {
+            canSeeSat = r < this.limits.range
+        }
+        if (!canSeeSat) return {result: false, reason: 6}
         return {result: canSeeSat, reason: 5}
     }
 }
@@ -2276,10 +2289,13 @@ function startContextClick(event) {
                             case 5: 
                                 falseReason = 'Sun Elevation Limit'
                                 break
+                            case 6: 
+                                falseReason = 'Range Limit Exceeded'
+                                break
                         }
                         return `<div style="color: white; padding: 2.5px 20px; font-size: 0.75em;">${mainWindow.satellites[sat].name} ${falseReason}</div>`
                     }
-                    return `<div style="color: white; padding: 2.5px 20px; font-size: 0.75em;">${mainWindow.satellites[sat].name} Az: ${azElRad.az.toFixed(2)}, El: ${azElRad.el.toFixed(2)}</div>`
+                    return `<div style="color: white; padding: 2.5px 20px; font-size: 0.75em;">${mainWindow.satellites[sat].name} Az: ${azElRad.az.toFixed(2)}, El: ${azElRad.el.toFixed(2)},  R: ${azElRad.r.toFixed(1)}</div>`
                 }).join('')}
             </div>
         `
@@ -2344,7 +2360,7 @@ function startContextClick(event) {
         else {
             newInnerHTML += `
                 <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="zoom-to-sat">Zoom To</div>
-                <div class="context-item" onclick="changeOrigin(${activeSat})" id="prop-options">Focus</div>
+                <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="ground-trace-button">${mainWindow.satellites[activeSat].showGroundTrack ? 'Hide' : 'Show'} Field of View</div>
             `
         }
         newInnerHTML += `
@@ -2413,7 +2429,7 @@ function startContextClick(event) {
             <div class="context-item" onclick="handleContextClick(this)" id="exit-ephem-viewer">Exit ${mainWindow.hpop ? 'HPOP ' : ''}Ephemeris View</div>
         `
         : `
-            <div class="context-item" id="add-satellite" onclick="openPanel(this)">Satellite Menu</div>
+            <div class="context-item" id="add-satellite" onclick="openPanel(this)">Add Satellites</div>
             ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="openSatellitePanel()">Open Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             ${mainWindow.latLongMode ? `<div class="context-item" onclick="openSensorAccessPanel()">Open Access Panel</div>` : ``}
@@ -2587,6 +2603,11 @@ function handleContextClick(button) {
         keydownFunction({key: ' ', ignoreContext: true})
         document.getElementById('context-menu')?.remove();
     }
+    else if (button.id === 'ground-trace-button') {
+        let sat = button.getAttribute('sat')
+        mainWindow.satellites[sat].showGroundTrack = !mainWindow.satellites[sat].showGroundTrack
+        document.getElementById('context-menu')?.remove();
+    }
     else if (button.id === 'add-ground-site') {
         let numCurrentGroundSides = mainWindow.groundSites.length
         button.parentElement.innerHTML = `
@@ -2612,9 +2633,10 @@ function handleContextClick(button) {
         let site = button.getAttribute('site')
         let inputPlacehoders = [
             mainWindow.groundSites[site].limits.maxSunElevation !== false ? mainWindow.groundSites[site].limits.maxSunElevation : 0,
-            mainWindow.groundSites[site].limits.sunExclusion !== false ? mainWindow.groundSites[site].limits.sunExclusion : 0,
+            mainWindow.groundSites[site].limits.sunExclusion !== false ? mainWindow.groundSites[site].limits.sunExclusion : 90,
             mainWindow.groundSites[site].limits.moonExclusion !== false ? mainWindow.groundSites[site].limits.moonExclusion : 0,
             mainWindow.groundSites[site].limits.elevation !== false ? mainWindow.groundSites[site].limits.elevation : 0,
+            mainWindow.groundSites[site].limits.range !== false ? mainWindow.groundSites[site].limits.range : 60000,
         ].map(s => Number(s.toFixed(1)))
         button.parentElement.innerHTML = `
             <div style="color: white; padding: 5px"><input element="illumination" ${mainWindow.groundSites[site].limits.illumination !== false ? 'checked' : ''} id="target-illum-box" type="checkbox"/> <label for="target-illum-box">Target Illuminated</label></div>
@@ -2622,8 +2644,14 @@ function handleContextClick(button) {
             <div style="color: white; padding: 5px"><input element="sunExclusion" ${mainWindow.groundSites[site].limits.sunExclusion !== false ? 'checked' : ''} id="sun-ex-box" type="checkbox"/> <label for="sun-ex-box">Solar Exclusion</label> <input placeholder="${inputPlacehoders[1]}" type="number" style="width: 5ch; font-size: 1.1em;"/> deg</div>
             <div style="color: white; padding: 5px"><input element="moonExclusion" ${mainWindow.groundSites[site].limits.moonExclusion !== false ? 'checked' : ''} id="moon-ex-box" type="checkbox"/> <label for="moon-ex-box">Lunar Exclusion</label> <input placeholder="${inputPlacehoders[2]}" type="number" style="width: 5ch; font-size: 1.1em;"/> deg</div>
             <div style="color: white; padding: 5px"><input element="elevation" ${mainWindow.groundSites[site].limits.elevation !== false ? 'checked' : ''} id="sat-el-box" type="checkbox"/> <label for="sat-el-box">Min Target Elevation</label> <input placeholder="${inputPlacehoders[3]}" type="number" style="width: 5ch; font-size: 1.1em;"/> deg</div>
+            <div style="color: white; padding: 5px"><input element="range" ${mainWindow.groundSites[site].limits.range !== false ? 'checked' : ''} id="sat-range-box" type="checkbox"/> <label for="sat-range-box">Max Target Range</label> <input placeholder="${inputPlacehoders[4]}" type="number" style="width: 7ch; font-size: 1.1em;"/> km</div>
             <div site="${site}" class="context-item" tabindex="0" onclick="handleContextClick(this)" id="change-site-limits-execute">Confirm Limits</div>
         `
+        let cm = document.getElementById('context-menu')
+        let elHeight = cm.offsetHeight
+        let elTop =  Number(cm.style.top.split('p')[0])
+        cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    
     }
     else if (button.id === 'change-site-limits-execute') {
         let site = button.getAttribute('site')
@@ -3813,9 +3841,11 @@ function changeSatelliteInputType(el) {
             satInputs[6].innerHTML = `Out-of-Plane <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
             break
         case 'geo-sat-input':
-            satInputs[1].innerHTML = ``
-            satInputs[0].innerHTML = `Longitude <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
-            satInputs[2].innerHTML = ``
+            date = new Date(mainWindow.startDate)
+            date = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
+            satInputs[0].innerHTML = mainWindow.satellites.length === 0 ? `Epoch <input class="sat-input" style="width: 20ch; font-size: 1.25em;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">` : ''
+            satInputs[1].innerHTML = `Longitude <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
+            satInputs[2].innerHTML = `Drift Rate<input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg/day</div>`
             satInputs[3].innerHTML = ``
             satInputs[4].innerHTML = ``
             satInputs[5].innerHTML = ``
@@ -4605,7 +4635,7 @@ function initStateFunction(el) {
     else if (el.id === 'add-satellite-button') {
         let inputs = [...document.querySelectorAll('.sat-input')]
         let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-        let eciState, ricState, eciOrigin, startDate, relOrigin, date, dt, coeState
+        let eciState, ricState, eciOrigin, startDate, relOrigin, date, dt, coeState, long, driftRate
         switch (radioId) {
             case 'ric-sat-input':
                 relOrigin = Number(document.querySelector('#sat-input-origin').value)
@@ -4678,7 +4708,19 @@ function initStateFunction(el) {
                 eciState = [...eciState.rEcci, ...eciState.drEci]
                 break
             case 'geo-sat-input':
-                eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(Number(inputs[0].value))))
+                date = mainWindow.startDate
+                if (mainWindow.satellites.length === 0) {
+                    date = new Date(inputs[0].value)
+                    mainWindow.startDate = date
+                    long = Number(inputs[1].value)
+                    driftRate = Number(inputs[2].value)
+                }
+                else {
+                    long = Number(inputs[0].value)
+                    driftRate = Number(inputs[1].value)
+                }
+                console.log(date, long, driftRate);
+                eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(long, date, driftRate)))
                 break
         }
         console.log(eciState);
@@ -4687,7 +4729,7 @@ function initStateFunction(el) {
             if (radioId === 'eci-sat-input' || radioId === 'coe-sat-input') {
                 mainWindow.startDate = new Date(document.querySelector('.sat-input').value)
             }
-            mainWindow.updateOrigin(position)
+            mainWindow.updateOrigin(position, true, true)
             showScreenAlert('RIC frame centered on initial satellite')
         }
         let styleInputs = document.querySelectorAll('.sat-style-input')
@@ -6895,15 +6937,15 @@ function showLogo() {
     let ctx = cnvs.getContext('2d')
     cnvs.width = window.innerWidth
     cnvs.height = window.innerHeight
-    ctx.fillStyle = 'white'
+    ctx.fillStyle = '#111122'
     ctx.fillRect(0,0,cnvs.width, cnvs.height)
-    ctx.globalAlpha = 0.25
-    ctx.strokeStyle = 'red'
+    ctx.globalAlpha = 1
+    ctx.strokeStyle = '#FF1111'
     ctx.beginPath()
     ctx.ellipse(cnvs.width / 2, cnvs.height / 2-50, 200, 100, -20*Math.PI / 180, -2 * Math.PI*0.15, 2 * Math.PI*0.8)
     ctx.stroke()
     ctx.globalAlpha = 1
-    ctx.fillStyle = 'black'
+    ctx.fillStyle = 'white'
     ctx.textBaseline = 'alphabetic'
     ctx.textAlign = 'center'
     ctx.font = (190/1490)*window.innerWidth + 'px sans-serif'
@@ -8154,7 +8196,7 @@ function openInstructionWindow() {
                                 </li>
                             </ul>
                         </li>
-                        <li>Enter origin J2000 origin state manually under <em>Options</em>, then add satellites with <em>Satellite Menu</em>
+                        <li>Enter origin J2000 origin state manually under <em>Options</em>, then add satellites with <em>Add Satellites </em> menu
                             <ul>
                                 <li>RIC coordinates off of any on-screen asset's RIC frame</li>
                                 <li>ECI coordinates with an associated epoch</li>
@@ -8221,6 +8263,7 @@ function openInstructionWindow() {
                 <li><kbd>Alt</kbd> + <kbd>W</kbd> - Open White Cell Window</li>
                 <li><kbd>D</kbd> - Switch between dark and light mode</li>
                 <li><kbd>N</kbd> - Add random perched satellite</li>
+                <li><kbd>N</kbd> - Add random ground station</li>
                 <li><kbd>Ctrl</kbd> + <kbd><></kbd> - Change satellite display size</li>
                 <li><kbd>Shift</kbd> + <kbd><></kbd> - Change trajectory dot size</li>
                 <li><kbd><></kbd> - Move time +/- 2 minutes</li>
@@ -10109,10 +10152,10 @@ function displayHpopTraj(update = false, sat = false) {
     })
 }
 
-function geoSatelliteAtLongitude(long = 0) {
-    let date = mainWindow.startDate
+function geoSatelliteAtLongitude(long = 0, date = mainWindow.startDate, drift = 0) {
     let sidAngle = astro.siderealTime(astro.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds()))
-    let a = 42164.140100123965
+    let a = (360+drift)*Math.PI/180 / 86164
+    a = (398600.4418/a**2)**(1/3)
     let tA = sidAngle * Math.PI / 180 + long * Math.PI / 180
 
     for (let index = 0; index < 10; index++) {
@@ -10126,6 +10169,7 @@ function geoSatelliteAtLongitude(long = 0) {
         let del = (state2 - state1) / 0.01
         tA += (long*Math.PI / 180 - state1) / del
     }
+
     return {
         a, e: 0, i: 0, raan: 0, arg: 0, tA
     }
