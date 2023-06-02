@@ -543,13 +543,17 @@ class windowCanvas {
             lat: sunCoordinates.lat * 180 / Math.PI,
             long: sunCoordinates.long * 180 / Math.PI,
         }
+        let sunLat = sunCoordinates.lat
         let sunPoints = getGroundSwatchCircleCoordinates(sunEci, sunCoordinates.lat, sunCoordinates.long)
         sunCoordinates = this.latLong2Pixel(sunCoordinates)
         ctx.fillStyle = 'rgb(225,112,0)'
         ctx.beginPath()
         ctx.arc(sunCoordinates[0], sunCoordinates[1], 6, 0, 2*Math.PI)
         ctx.fill()
-        ctx.strokeStyle = 'rgb(225,112,0)'
+        // ctx.strokeStyle = 'white'
+        ctx.fillStyle =  this.colors.foregroundColor
+        // ctx.strokeStyle = 'orange'
+        ctx.globalAlpha =  0.125
         let lastPoint = 0
         ctx.beginPath()
         sunPoints.map(s => this.latLong2Pixel({
@@ -557,13 +561,35 @@ class windowCanvas {
         })).forEach((pixelPoint,ii) => {
             
             if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
-            else if (math.abs(pixelPoint[0]-lastPoint) > this.cnvs.width/2) {
-                ctx.moveTo(pixelPoint[0], pixelPoint[1])
+            else if (math.abs(pixelPoint[0]-lastPoint[0]) > this.cnvs.width/2) {
+                let yShadow = (this.colors.backgroundColor === '#111122' ? 1 : -1)*sunLat >  0 ? -1000 : this.cnvs.height + 1000
+                let crossDirection = pixelPoint[0] > this.cnvs.width/2 ? -this.cnvs.width : this.cnvs.width
+                let drawnPoint = pixelPoint[0]
+                if (drawnPoint > this.cnvs.width) {
+                    drawnPoint = this.cnvs.width-(drawnPoint-this.cnvs.width)
+                }
+                else if (drawnPoint < 0) {
+                    drawnPoint = -drawnPoint
+                }
+                let drawnPointLast = lastPoint[0]
+                if (drawnPointLast < 0) {
+                    drawnPointLast = -drawnPointLast
+                }
+                else if (drawnPointLast > this.cnvs.width) {
+                    drawnPointLast = this.cnvs.width-(drawnPointLast-this.cnvs.width)
+                }
+                // console.log(yShadow);
+                ctx.lineTo(drawnPoint+crossDirection, pixelPoint[1])
+                ctx.lineTo(drawnPoint+crossDirection, yShadow)
+                ctx.lineTo(drawnPointLast-crossDirection, yShadow)
+                ctx.lineTo(drawnPointLast-crossDirection, lastPoint[1])
+                ctx.lineTo(pixelPoint[0], pixelPoint[1])
             }
             else ctx.lineTo(pixelPoint[0], pixelPoint[1])
-            lastPoint = pixelPoint[0]
+            lastPoint = pixelPoint
         })
-        ctx.stroke()
+        ctx.fill()
+        ctx.globalAlpha =  1
         // console.timeEnd()
 
     }
@@ -1598,6 +1624,7 @@ let timeFunction = false;
             mainWindow.showTime();
             mainWindow.changeTime(mainWindow.desired.scenarioTime + mainWindow.playTimeStep, true)
         
+            if (timeFunction) console.timeEnd()
             return window.requestAnimationFrame(animationLoop)
         }
         if (threeD) {
