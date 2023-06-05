@@ -409,55 +409,48 @@ class windowCanvas {
             }
         
             if (mainWindow.satellites[index].latLong === undefined) {
-                mainWindow.satellites[index].latLong = mainWindow.satellites[index].stateHistory.map(state => {
-                    let time = new Date(mainWindow.startDate - (-state.t*1000))
-                    let eciState = Object.values(getCurrentInertial(index, state.t))
+                // mainWindow.satellites[index].latLong = mainWindow.satellites[index].stateHistory.map(state => {
+                //     let time = new Date(mainWindow.startDate - (-state.t*1000))
+                //     let eciState = Object.values(getCurrentInertial(index, state.t))
+                //     let latLong = astro.eci2latlong(eciState.slice(0,3), time)
+                //     return {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI}
+                // })
+                mainWindow.satellites[index].latLong = []
+                let numPoints = mainWindow.satellites[index].stateHistory.length*4
+                for (let timeIndex = 0; timeIndex < numPoints; timeIndex++) {
+                    let time = new Date(mainWindow.startDate - (-mainWindow.scenarioLength*3600000*timeIndex/numPoints))
+                    // console.log(time);
+                    let eciState = Object.values(getCurrentInertial(index, mainWindow.scenarioLength*3600*timeIndex/numPoints))
                     let latLong = astro.eci2latlong(eciState.slice(0,3), time)
-                    return {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI}
-                })
+                    mainWindow.satellites[index].latLong.push({lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI})
+                }
             }
-            ctx.fillStyle = mainWindow.satellites[index].color
-            mainWindow.satellites[index].latLong.forEach(point => {
-                // let pixelPoint = [
-                //     (point.long+180)/360*this.cnvs.width,
-                //     (90-point.lat)/180*this.cnvs.height
-                // ]
+            ctx.strokeStyle = mainWindow.satellites[index].color
+            // ctx.fillStyle = mainWindow.satellites[index].color
+            // mainWindow.satellites[index].latLong.forEach(point => {
+            //     let pixelPoint = this.latLong2Pixel(point)
+            //     ctx.fillRect(pixelPoint[0]-this.trajSize, pixelPoint[1]-this.trajSize,this.trajSize*2,this.trajSize*2)
+            // })
+            let lastSatPoint
+            ctx.beginPath()
+            ctx.lineWidth = this.trajSize
+            mainWindow.satellites[index].latLong.forEach((point,ii) => {
                 let pixelPoint = this.latLong2Pixel(point)
-                ctx.fillRect(pixelPoint[0]-this.trajSize, pixelPoint[1]-this.trajSize,this.trajSize*2,this.trajSize*2)
+                if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
+                else if (math.abs(pixelPoint[0]-lastSatPoint[0]) > this.cnvs.width/2) {
+                    ctx.moveTo(pixelPoint[0], pixelPoint[1])
+                }
+                else ctx.lineTo(pixelPoint[0], pixelPoint[1])
+                lastSatPoint = pixelPoint
             })
+            ctx.stroke()
             let curEci = Object.values(getCurrentInertial(index, mainWindow.scenarioTime))
             let time = new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000))
             let latLong = astro.eci2latlong(curEci.slice(0,3), time)
             latLong = {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI, r: math.norm(latLong.r_ecef)}
-            // let  = [
-            //     (latLong.long+180)/360*this.cnvs.width,
-            //     (90-latLong.lat)/180*this.cnvs.height
-            // ]
             satellitesToDraw.push(latLong)
-            // let pixelPosition = this.latLong2Pixel(latLong)
-            // drawSatellite({
-            //     pixelPosition,
-            //     shape: mainWindow.satellites[index].shape,
-            //     color: mainWindow.satellites[index].color,
-            //     name: mainWindow.satellites[index].name,
-            //     size: mainWindow.satellites[index].size,
-            //     cnvs: this.cnvs,
-            //     ctx: ctx
-            // })
-        }
-        for (let index = 0; index < this.satellites.length; index++) {
             if (!this.satellites[index].showGroundTrack) continue
-            if (this.satellites[index].stateHistory === undefined) {
-                // If state history doesn't exist while in ephem viewer mode, assume calculations are 
-                // Happening and will be recitified when done, until then don't display anything
-                if (mainWindow.ephemViewerMode) return
-                // Otherwise, create a state history
-                this.satellites[index].calcTraj(true)
-            }
-            let curEci = Object.values(getCurrentInertial(index))
-            let long = satellitesToDraw[index].long
-            let lat = satellitesToDraw[index].lat
-            let satPoints = getGroundSwatchCircleCoordinates(curEci, lat, long)
+            let satPoints = getGroundSwatchCircleCoordinates(curEci, latLong.lat, latLong.long)
             satPoints = satPoints.map(s => this.latLong2Pixel({
                 lat: s[0],
                 long: s[1]
@@ -525,17 +518,21 @@ class windowCanvas {
             })
         })
         // Draw Moon
-        ctx.fillStyle = 'rgb(100,100,100)'
+        ctx.fillStyle = 'rgb(140,140,140)'
         let moonEci = astro.moonEciFromTime(new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
         let moonCoordinates = astro.eci2latlong(moonEci, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
         moonCoordinates = {
             lat: moonCoordinates.lat * 180 / Math.PI,
             long: moonCoordinates.long * 180 / Math.PI,
         }
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'top'
+        ctx.font = '20px serif'
         moonCoordinates = this.latLong2Pixel(moonCoordinates)
         ctx.beginPath()
         ctx.arc(moonCoordinates[0], moonCoordinates[1], 6, 0, 2*Math.PI)
         ctx.fill()
+        ctx.fillText('Moon',moonCoordinates[0], moonCoordinates[1]+4)
         // Draw Sun
         let sunEci = astro.sunEciFromTime(new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
         let sunCoordinates = astro.eci2latlong(sunEci, new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
@@ -550,18 +547,19 @@ class windowCanvas {
         ctx.beginPath()
         ctx.arc(sunCoordinates[0], sunCoordinates[1], 6, 0, 2*Math.PI)
         ctx.fill()
-        // ctx.strokeStyle = 'white'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'top'
+        ctx.font = '20px serif'
+        ctx.fillText('Sun',sunCoordinates[0], sunCoordinates[1]+4)
         ctx.fillStyle =  this.colors.foregroundColor
-        // ctx.strokeStyle = 'orange'
         ctx.globalAlpha =  0.125
         let lastPoint = 0
         ctx.beginPath()
         sunPoints.map(s => this.latLong2Pixel({
             lat: s[0], long: s[1]
         })).forEach((pixelPoint,ii) => {
-            
             if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
-            else if (math.abs(pixelPoint[0]-lastPoint[0]) > this.cnvs.width/2) {
+            else if (math.abs(pixelPoint[0]-lastPoint[0]) > (this.groundTrackLimits.zoom*this.cnvs.width/2)) {
                 let yShadow = (this.colors.backgroundColor === '#111122' ? 1 : -1)*sunLat >  0 ? -1000 : this.cnvs.height + 1000
                 let crossDirection = pixelPoint[0] > this.cnvs.width/2 ? -this.cnvs.width : this.cnvs.width
                 let drawnPoint = pixelPoint[0]
@@ -5260,7 +5258,7 @@ function findMinDistance(vector1, vector2) {
     return outVec
 }
 
-function drawCurve(ctx, points) {
+function drawContinuousCurve(ctx, points) {
     ctx.beginPath();
     let point1 = points[0];
     var t = 1;
@@ -7942,7 +7940,9 @@ function setTimeFromPrompt(el) {
         inputs[2] = Number(inputs[2]) > 1 ? Number(inputs[2]) : 1
         mainWindow.scenarioLength = inputs[2]
         document.getElementById('time-slider-range').max = inputs[2]*3600
-    
+        mainWindow.satellites.forEach(sat => {
+            sat.latLong = undefined
+        })
         mainWindow.updateOrigin()
         mainWindow.changeTime(0, true)
     }
@@ -10128,6 +10128,11 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
 }
 
 function displayHpopTraj(update = false, sat = false) {
+    
+    for (let index = 0; index < mainWindow.satellites.length; index++) {
+        mainWindow.satellites[index].latLong = undefined
+        
+    }
     if (mainWindow.hpop && !update) {
         mainWindow.ephemViewerMode = false
         mainWindow.hpop = false
@@ -10201,11 +10206,11 @@ function geoSatelliteAtLongitude(long = 0, date = mainWindow.startDate, drift = 
         a, e: 0, i: 0, raan: 0, arg: 0, tA
     }
 }
-function getGroundSwatchCircleCoordinates(rEci = [42164, 0, 0], lat = 0, long = 0) {
+function getGroundSwatchCircleCoordinates(rEci = [42164, 0, 0], lat = 0, long = 0, nPoints = 100) {
     let rN = math.norm(rEci.slice(0,3))
     let angGround = astro.groundSwath(rN)
     
-    let nPoints = 100, points = []
+    let points = []
     for (let index = 0; index < nPoints+1; index++) {
         let bearing = 360*index/nPoints
         points.push(astro.pointRadialDistance(lat, long, bearing, angGround))
