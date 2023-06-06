@@ -416,14 +416,17 @@ class windowCanvas {
                 //     return {lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI}
                 // })
                 mainWindow.satellites[index].latLong = []
-                let numPoints = mainWindow.satellites[index].stateHistory.length*4
-                for (let timeIndex = 0; timeIndex < numPoints; timeIndex++) {
+                let numPoints = mainWindow.satellites[index].stateHistory.length*3, timeIndex = 0
+                // Equation attempts to put more timesteps in extreme latitudes to smooth out trajectory on mercator projection
+                while (timeIndex <= numPoints) {
                     let time = new Date(mainWindow.startDate - (-mainWindow.scenarioLength*3600000*timeIndex/numPoints))
                     // console.log(time);
                     let eciState = Object.values(getCurrentInertial(index, mainWindow.scenarioLength*3600*timeIndex/numPoints))
                     let latLong = astro.eci2latlong(eciState.slice(0,3), time)
                     mainWindow.satellites[index].latLong.push({lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI})
+                    timeIndex += 2.1 - (Math.abs(latLong.lat*180/Math.PI))/45
                 }
+                console.log(mainWindow.satellites[index].latLong.length);
             }
             ctx.strokeStyle = mainWindow.satellites[index].color
             // ctx.fillStyle = mainWindow.satellites[index].color
@@ -436,6 +439,7 @@ class windowCanvas {
             ctx.lineWidth = this.trajSize
             mainWindow.satellites[index].latLong.forEach((point,ii) => {
                 let pixelPoint = this.latLong2Pixel(point)
+                // ctx.strokeRect(pixelPoint[0], pixelPoint[1],5,5)
                 if (ii === 0) ctx.moveTo(pixelPoint[0], pixelPoint[1])
                 else if (math.abs(pixelPoint[0]-lastSatPoint[0]) > this.cnvs.width/2) {
                     ctx.moveTo(pixelPoint[0], pixelPoint[1])
@@ -3517,7 +3521,7 @@ function plotRelativeData() {
     })
 }
 
-function showScreenAlert(message = 'test alert') {
+function showScreenAlert(message = 'test alert', textSize = 1, bottom = '80%', delay = 3000) {
     
     let currentAlerts = document.querySelectorAll('.screen-alert')
     for (let index = 0; index < currentAlerts.length; index++) {
@@ -3525,6 +3529,7 @@ function showScreenAlert(message = 'test alert') {
     }
     let alertMessage = document.createElement('div');
     alertMessage.classList.add('screen-alert');
+    alertMessage.style.fontSize = textSize+'em'
     if (message === 'start-screen') {
         alertMessage.innerHTML = `
             Options to get started
@@ -3537,7 +3542,7 @@ function showScreenAlert(message = 'test alert') {
     }
     document.getElementsByTagName('body')[0].appendChild(alertMessage);
     setTimeout(() => {
-        document.getElementsByClassName('screen-alert')[0].style.bottom = message === 'start-screen' ? '60%' : '85%';
+        document.getElementsByClassName('screen-alert')[0].style.bottom = message === 'start-screen' ? '60%' : bottom;
     },50)
     setTimeout(() => {
         try {
@@ -3549,7 +3554,7 @@ function showScreenAlert(message = 'test alert') {
         } catch (error) {
             
         }
-    },message === 'start-screen' ? 60000 : 3000)
+    },message === 'start-screen' ? 60000 : delay)
 
 }
 
@@ -4087,7 +4092,7 @@ function openPanel(button) {
     if (button.id === 'add-satellite' || button.id === 'add-satellite-2') {
         document.getElementsByName('sat-input-radio')[0].checked = true
         changeSatelliteInputType({
-            id: 'ric-sat-input'
+            id: mainWindow.satellites.length === 0 ? 'coe-sat-input' : 'ric-sat-input'
         })
         let selectEl = document.getElementById('edit-select');
         selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = '';
@@ -6956,8 +6961,11 @@ function showLogo() {
     cnvs.onclick = el => {
         el.target.style.opacity = 0
         
-        showScreenAlert('Right-click to see planning options')
-        setTimeout(() => el.target.remove(), 500)
+        showScreenAlert('Right-click anywhere on screen to begin', 4, '80%', 4000)
+        setTimeout(() => {
+            el.target.remove()
+            // showScreenAlert('Right Click to see Options')
+        }, 500)
     }
     let ctx = cnvs.getContext('2d')
     cnvs.width = window.innerWidth
@@ -8163,6 +8171,7 @@ function openSensorAccessPanel() {
         </div>
     `
     openQuickWindow(windowHtml)
+    document.getElementById('context-menu')?.remove();
 }
 
 function closeQuickWindow() {
