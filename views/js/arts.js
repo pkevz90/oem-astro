@@ -1,12 +1,17 @@
-let appAcr = 'ROTS 2.5'
+let appAcr = 'ROTS 2.6'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '31 May 2023'
+let cao = '7 Jun 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
 document.getElementsByClassName('panel-button')[0].remove();
 document.getElementsByTagName('input')[16].setAttribute('list','name-list');
+
+// Add div to put message if trying to add satellites when none exist
+let satInputInfoDiv = document.createElement('div')
+satInputInfoDiv.id = "sat-input-info"
+document.querySelector('.satellite-input').before(satInputInfoDiv)
 
 let currentAction
 let pastActions = []
@@ -501,13 +506,15 @@ class windowCanvas {
         ctx.fillStyle = 'rgb(200,100,100)'
         this.groundSites.forEach(site => {
             let pixelPos = this.latLong2Pixel(site.coordinates)
+            ctx.strokeStyle = site.color
             ctx.fillStyle = site.color
-            let size = 8
-            ctx.fillRect(pixelPos[0]-size/2, pixelPos[1]-size/2, size,size)
+            let size = 10
+            ctx.strokeRect(pixelPos[0]-size/2, pixelPos[1]-size/2, size,size)
             ctx.textBaseline = 'top'
             ctx.textAlign = 'center'
-            ctx.font = `${7*(this.groundTrackLimits.zoom)**0.5}px sans-serif`
-            ctx.fillText(site.name, pixelPos[0], pixelPos[1]+size/2+2)
+            let fontSize = 15*(this.groundTrackLimits.zoom)**0.5
+            ctx.font = `${fontSize}px sans-serif`
+            ctx.fillText(site.name, pixelPos[0], pixelPos[1]+fontSize/2+2)
         })
         satellitesToDraw.map((s,ii) => {return {...s, index: ii}}).sort((a,b) => a.r-b.r).forEach(sat => {
             let pixelPosition = this.latLong2Pixel(sat)
@@ -3807,6 +3814,10 @@ function changeSatelliteInputType(el) {
         return n < 10 ? '0' + n : n
     }
     let date
+    // Disable option to input states as RIC or RMOE's until there is a satellite to reference off of
+    document.querySelector('#ric-sat-input').disabled = mainWindow.satellites.length === 0
+    document.querySelector('#rmoe-sat-input').disabled = mainWindow.satellites.length === 0
+    document.querySelector('#sat-input-info').innerHTML = mainWindow.satellites.length === 0 ? '<em>At least one satellite must exist to import with RIC or RMOE</em>' : ''
     switch (el.id) {
         case 'eci-sat-input':
             date = new Date(mainWindow.startDate)
@@ -3832,7 +3843,7 @@ function changeSatelliteInputType(el) {
             satInputs[5].innerHTML = `&omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.arg*180/Math.PI).toFixed(4)}"> deg</div>`
             satInputs[6].innerHTML = `&nu; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(originCOE.tA*180/Math.PI).toFixed(4)}"> deg</div>`
             break
-        case 'ric-sat-input':
+        case 'ric-sat-input':    
             satInputs[0].innerHTML = `
                 <label>Rel Origin</label><select id="sat-input-origin">
                     <option value="-1">Current Origin</option>
