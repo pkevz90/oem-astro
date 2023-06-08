@@ -944,13 +944,17 @@ function updateSensors(sensors) {
         let realIndex = mainWindow.sensors.findIndex(a => a.name === s.name)
         div.innerHTML = `
             <label class="sensor-label" style="color: ${s.active ? 'rgb(100,200,100)' : 'rgb(200,80,80)'}" for="sensor-${ii}">
-                <span>${s.name}</span>
+                <span>${s.name}</span><span style="font-size: 0.25em">${s.type}</span>
             </label> 
             <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> 
             <span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showAvailability(${realIndex})">Availablity</span>
             ${mainWindow.sensors[realIndex].type === 'space' ? `<span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showStateUpdate(${ii})">Update State</span>` : ''}
         `
-        div.title = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0, 3), s.state.slice(3, 6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat}, Long: ${s.long}`
+        let divTitle = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0, 3), s.state.slice(3, 6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat} deg\nLong: ${s.long} deg`
+        divTitle +=  s.azMask !== undefined ? `\nAzimuth Vis: ${s.azMask.join(' to ')} deg` : ''
+        divTitle += `\nElevation Vis: ${s.elMask.join(' to ')} deg`
+        divTitle += `\nMax Range: ${s.maxRange} km`
+        div.title = divTitle
         sensDiv.append(div)
     }
     sensors.forEach((s, ii) => {
@@ -958,13 +962,17 @@ function updateSensors(sensors) {
         let div = document.createElement("div")
         div.innerHTML = `
             <label class="sensor-label" style="color: ${s.active ? 'rgb(100,200,100)' : 'rgb(200,80,80)'}" for="sensor-${ii}">
-                <span>${s.name}</span>
+                <span>${s.name}</span><span style="font-size: 0.25em">${s.type}</span>
             </label> 
             <input ob="active" id="sensor-${ii}" sensor="${ii}" type="checkbox" ${s.active ? 'checked' : ''} oninput="changeSensorProperty(this)"/> 
             <span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showAvailability(${ii})">Availablity</span>
             ${s.type === 'space' ? `<span class="pointer" style="font-size: 0.5em; padding: 3px; border: 1px solid black; border-radius: 5px" onclick="showStateUpdate(${ii})">Update State</span>` : ''}
         `
-        div.title = `${s.type}\n${s.type !== 'space' ? `Lat: ${s.lat} deg\nLong: ${s.long} deg` : `Semi-Major Axis: ${(PosVel2CoeNew(s.state.slice(0,3), s.state.slice(3)).a).toFixed(0)} km` }`
+        let divTitle = s.type === 'space' ? Object.values(PosVel2CoeNew(s.state.slice(0, 3), s.state.slice(3, 6))).map((s, ii) => ii > 1 ? s * 180 / Math.PI : s).map(s => s.toFixed(3)).join(', ') : `Lat: ${s.lat} deg\nLong: ${s.long} deg`
+        divTitle += s.azMask !== undefined ? `\nAzimuth Vis: ${s.azMask.join(' to ')} deg` : ''
+        divTitle += `\nElevation Vis: ${s.elMask.join(' to ')} deg`
+        divTitle += `\nMax Range: ${s.maxRange} km`
+        div.title = divTitle
         sensDiv.append(div)
     })
 }
@@ -1159,13 +1167,14 @@ function timeChange(t) {
 function updateCoeDisplay() {
     let div = document.getElementById('coe-display')
     div.innerHTML = ''
+    div.style.fontSize = '1.5em'
     let coes = PosVel2CoeNew(mainWindow.satellites[0].origState.slice(0, 3), mainWindow.satellites[0].origState.slice(3, 6))
-    div.innerHTML = `a: <span class="coe-box" coe="a" contentEditable="true" oninput="coeChange(this)">${coes.a.toFixed(1)}</span> / 
-        e: <span class="coe-box"  coe="e" contentEditable="true" oninput="coeChange(this)">${coes.e.toFixed(4)}</span> / 
-        Inc: <span class="coe-box"  coe="i" contentEditable="true" oninput="coeChange(this)">${(coes.i * 180 / Math.PI).toFixed(1)}</span> / 
-        RAAN: <span class="coe-box"  coe="raan" contentEditable="true" oninput="coeChange(this)">${(coes.raan * 180 / Math.PI).toFixed(1)}</span> / 
-        Arg Per: <span class="coe-box"  coe="arg" contentEditable="true" oninput="coeChange(this)">${(coes.arg * 180 / Math.PI).toFixed(1)}</span> / 
-        True A: <span class="coe-box"  coe="tA" contentEditable="true" oninput="coeChange(this)">${(coes.tA * 180 / Math.PI).toFixed(1)}</span>`
+    div.innerHTML = `a:<span class="coe-box" coe="a" contentEditable="true" oninput="coeChange(this)">${coes.a.toFixed(1)}</span> 
+        e:<span class="coe-box"  coe="e" contentEditable="true" oninput="coeChange(this)">${coes.e.toFixed(4)}</span> 
+        i:<span class="coe-box"  coe="i" contentEditable="true" oninput="coeChange(this)">${(coes.i * 180 / Math.PI).toFixed(1)}</span> 
+        &Omega;:<span class="coe-box"  coe="raan" contentEditable="true" oninput="coeChange(this)">${(coes.raan * 180 / Math.PI).toFixed(1)}</span> 
+        &omega;:<span class="coe-box"  coe="arg" contentEditable="true" oninput="coeChange(this)">${(coes.arg * 180 / Math.PI).toFixed(1)}</span> 
+        &nu;:<span class="coe-box"  coe="tA" contentEditable="true" oninput="coeChange(this)">${(coes.tA * 180 / Math.PI).toFixed(1)}</span>`
 }
 
 function coeChange(t) {
@@ -1476,13 +1485,14 @@ function showMap() {
     img.onload = function () {
         ctx.drawImage(img, 0, 0, cnvs.width, cnvs.height);
         mainWindow.sensors.forEach(sens => {
-            ctx.fillStyle = 'red'
+            ctx.strokeStyle = 'red'
+            ctx.lineWidth = 2
             if (!sens.active) return
             if (sens.type === 'space') {
                 let sensState = propToTime(sens.state, (mainWindow.startTime - sens.epoch) / 1000)
                 let time = 0
                 let timeDelta = 10
-                ctx.fillStyle = 'red'
+                ctx.fillStyle = 'rgba(255,0,0,0.125)'
                 while (time < endTime) {
                     let ecefPos = fk5ReductionTranspose(sensState.slice(0, 3), new Date(mainWindow.startTime - time * 1000))
                     let longSat = math.atan2(ecefPos[1], ecefPos[0])
@@ -1501,9 +1511,7 @@ function showMap() {
             }
             let { lat, long } = sens
             let location = latLong2Pixels(lat, long, cnvs)
-            ctx.beginPath();
-            ctx.arc(location.x, location.y, cnvs.width / 200, 0, 2 * Math.PI);
-            ctx.fill();
+            ctx.strokeRect(location.x-5, location.y-5, 10,10)
             ctx.font = '15px sans-serif'
             ctx.fillStyle = '#eee'
             ctx.textAlign = 'center'
@@ -1621,26 +1629,32 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
         ctx.textAlign = 'center'
         ctx.fillText(sens.name, locationSens.x, locationSens.y + 20)
     })
-    ctx.fillStyle = 'orange'
+    ctx.strokeStyle = 'white'
+    ctx.lineWidth = 4
     obs.forEach(ob => {
         s = JSON.parse(JSON.stringify(mainWindow.sensors[ob.sensor]))
         if (s.type === 'space') {
             let state = propToTime(s.state, ((jsTime - new Date(s.epoch))) / 1000)
             let satEcef = fk5ReductionTranspose(state.slice(0, 3), jsTime)
-            let longSat = math.atan2(satEcef[1], satEcef[0]) * 180 / Math.PI
-            let latSat = math.atan2(satEcef[2], math.norm(satEcef.slice(0, 2))) * 180 / Math.PI
-            let locationSens = latLong2Pixels(latSat, longSat, cnvs)
-            ctx.beginPath();
-            ctx.arc(locationSens.x, locationSens.y, cnvs.width / 200, 0, 2 * Math.PI);
-            ctx.fill();
+            let longSens = math.atan2(satEcef[1], satEcef[0]) * 180 / Math.PI
+            longSens += 180
+            longSens = longSens > 360 ? longSens-360 : longSens
+            let latSens = math.atan2(satEcef[2], math.norm(satEcef.slice(0, 2))) * 180 / Math.PI
+            latSens = 90 - latSens
+            ctx.beginPath()
+            ctx.moveTo(cnvs.width * longSens / 360, cnvs.height * latSens / 180)
+            ctx.lineTo(cnvs.width * longSat / 360, cnvs.height * latSat / 180)
+            ctx.stroke()
         }
         s.long += 180
         s.long = s.long > 360 ? s.long - 360 : s.long
         s.lat = 90 - s.lat
-        ctx.beginPath();
-        ctx.arc(cnvs.width * s.long / 360, cnvs.height * s.lat / 180, cnvs.width / 200, 0, 2 * Math.PI);
-        ctx.fill();
+        ctx.beginPath()
+        ctx.moveTo(cnvs.width * s.long / 360, cnvs.height * s.lat / 180)
+        ctx.lineTo(cnvs.width * longSat / 360, cnvs.height * latSat / 180)
+        ctx.stroke()
     })
+    ctx.strokeStyle = 'black'
     // Draw sun position at time
     let sunPos = math.squeeze(math.multiply(rotationMatrices(360 * time / 31556952, 3), math.transpose([mainWindow.initSun])))
     ctx.fillStyle = 'yellow'
@@ -1654,7 +1668,7 @@ function drawOnMap(time = 0, inCnvs = document.getElementById('map-canvas')) {
     latSun = 90 - latSun
 
     ctx.beginPath();
-    ctx.arc(cnvs.width * longSun / 360, cnvs.height * latSun / 180, cnvs.width / 100, 0, 2 * Math.PI);
+    ctx.arc(cnvs.width * longSun / 360, cnvs.height * latSun / 180, cnvs.height / 100, 0, 2 * Math.PI);
     ctx.fill()
     ctx.fillStyle = 'black'
     ctx.textAlign = 'center'

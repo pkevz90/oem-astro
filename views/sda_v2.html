@@ -16,9 +16,9 @@
 <body class="noselect">
     <div id="main-display">
         <div id="results-display">
-            <div><span>OD Date</span><input type="date" name="" id="date-input" oninput="timeChange(this)"><input type="time" name="" id="time-input" oninput="timeChange(this)"></div>
+            <div><span>OD Epoch</span> <input type="date" name="" id="date-input" oninput="timeChange(this)"><input type="time" name="" id="time-input" oninput="timeChange(this)"></div>
             <div>
-                <input type="text" placeholder="SDA Report Input" style="width: 15ch;" oninput="importState(this)"> -or- <input style="width: 8ch;" type="Number" title="Input GEO satellite at given longitude in degrees" placeholder="Long" id="long-input"> <button onclick="addSatellite(this)">Create GEO Sat</button><button onclick="importTargetEFile(this)">Import .e</button><input onchange="importTargetEFile(this)" id="import-target-e-file" type="file" style="display: none;"/>
+                <input type="text" placeholder="J2000 State" style="width: 15ch;" oninput="importState(this)"> -or- <input style="width: 10ch;" type="Number" title="Input GEO satellite at given longitude in degrees" placeholder="GEO Long" id="long-input"> <button onclick="addSatellite(this)">Create GEO Sat</button><button onclick="importTargetEFile(this)">Import .e</button><input onchange="importTargetEFile(this)" id="import-target-e-file" type="file" style="display: none;"/>
             </div>
             <div id="tasking-buttons">
                 <button onclick="showMap()">Display Map</button>
