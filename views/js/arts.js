@@ -6972,7 +6972,7 @@ function showLogo() {
     cnvs.onclick = el => {
         el.target.style.opacity = 0
         
-        showScreenAlert('Right-click anywhere on screen to begin', 4, '80%', 4000)
+        showScreenAlert('Right-click anywhere on screen to begin', 4, '60%', 4000)
         setTimeout(() => {
             el.target.remove()
             // showScreenAlert('Right Click to see Options')
@@ -8177,8 +8177,9 @@ function openSensorAccessPanel() {
                 }).join('')}
             </div>
         </div>
-        <div>
-                <button onclick="closeSensorAccessPanel(this)">Confirm</button><button onclick="closeSensorAccessPanel(this)">Cancel</button>
+        <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+                <div><button style="font-size: 3em; padding: 10px 150px;" onclick="closeSensorAccessPanel(this)">Confirm</button></div>
+                <div><button style="font-size: 3em; padding: 10px 150px;" onclick="closeSensorAccessPanel(this)">Cancel</button></div<
         </div>
     `
     openQuickWindow(windowHtml)
