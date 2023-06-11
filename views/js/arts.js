@@ -1295,22 +1295,22 @@ class Satellite {
         mainWindow.drawCurve(this.stateHistory.map(s => s.position), {color: this.color});
     }
     drawBurns() {
-        let timeDelta, ctx = mainWindow.getContext(), dist = mainWindow.getPlotWidth() * 0.025;
+        let timeDelta, ctx = mainWindow.getContext(), dist = mainWindow.getPlotWidth() * 0.015;
         ctx.lineWidth = mainWindow.trajSize * 2
         let state = mainWindow.getState();
         let fC = mainWindow.frameCenter;
         let filterTime = mainWindow.burnStatus.type !== false ? mainWindow.scenarioLength*3600 : mainWindow.scenarioTime;
         let burns = this.burns.filter(b => b.time < filterTime)
         mainWindow.drawCurve(burns.map(b => b.location), {color: this.color, size: mainWindow.trajSize * 3});
-        ctx.font = 'bold 15px serif';
         ctx.strokeStyle = this.color;
         ctx.textBaseline = 'middle'
         ctx.textAlign = 'center'
-        let textHeight = 20;
         let burnFilterTime = mainWindow.hpop ? mainWindow.scenarioLength*3600 : mainWindow.scenarioTime
         // console.log(burnFilterTime);
         burns.filter(b => b.time < burnFilterTime).forEach(burn => {
             timeDelta = mainWindow.scenarioTime - burn.time;
+            let textHeight = mainWindow.cnvs.height/30;
+            ctx.font = 'bold '+textHeight+'px serif';
             let mag = math.norm(burn.direction);
             let dispDist = timeDelta > (mag / this.a) ? dist : dist * timeDelta * this.a / mag;
             if (mainWindow.burnStatus.type) return;
@@ -1324,7 +1324,7 @@ class Satellite {
                 ctx.lineTo(point2.ri.x, point2.ri.y);
                 mag2 = math.norm([point2.ri.x - point1.ri.x, point2.ri.y - point1.ri.y]);
                 if (mag2 > 1e-6) {
-                    ctx.fillText((1000*mag).toFixed(1), -textWidth * (point2.ri.x - point1.ri.x) / mag2 / 1.2 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 / 1.2 + point1.ri.y)
+                    ctx.fillText((1000*mag).toFixed(1), -textWidth*1.2 * (point2.ri.x - point1.ri.x) / mag2 / 1.2 + point1.ri.x, -textHeight*(point2.ri.y - point1.ri.y) / mag2 / 1.2 + point1.ri.y)
                     ctx.stroke();
                 }
             }
@@ -4621,7 +4621,7 @@ function calcBurns() {
     let mag2 = math.norm([finalPos.x - initPos.x, finalPos.y - initPos.y]);
     ctx.textBaseline = "middle"
     ctx.textAlign = 'center'
-    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -60 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
+    ctx.fillText((1000*mag).toFixed(1) + ' m/s', -120 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
     sat.calcTraj(true, this.burnStatus.burn)
 }
 
@@ -4968,7 +4968,6 @@ function drawPoints(options = {}) {
         }
     });
     ctx.fill();
-    ctx.stroke();
 
 }
 
@@ -5160,7 +5159,10 @@ function drawSatellite(satellite = {}) {
     ctx.textBaseline = 'middle';
     let letterY = pixelPosition[1] + shapeHeight / 2 + size * 2.5
     ctx.font = `${size * 5}px Courier`;
-    ctx.fillText(name ? shortenString(name) : '', pixelPosition[0], letterY);
+    ctx.strokeStyle = mainWindow.colors.foregroundColor
+    ctx.strokeText(name ? shortenString(name) : '', pixelPosition[0], letterY);
+    // ctx.fillText(name ? shortenString(name) : '', pixelPosition[0], letterY);
+    // ctx.strokeText(name ? shortenString(name) : '', pixelPosition[0], letterY);
 }
 
 function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
@@ -7604,7 +7606,7 @@ function draw3dScene(az = azD, el = elD) {
     })
 }
 
-function hcwFiniteBurnTwoBurn(stateInit = {x: 00, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, stateFinal = {x: 10, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, tf = 7200, a0 = 0.00001, n = mainWindow.mm) {
+function hcwFiniteBurnTwoBurn(stateInit = {x: 0, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, stateFinal = {x: 10, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, tf = 7200, a0 = 0.00001, n = mainWindow.mm) {
     
     let state = math.transpose([Object.values(stateInit)]);
     let linState = math.transpose([curve2linear(math.squeeze(state))])
@@ -10080,12 +10082,12 @@ function createHpopStateHistory(startPosition = mainWindow.satellites[0].positio
             // Prop to next time step
             let timeToNextTimeStep = tD - timeToBurn
             if (burnDuration > timeToNextTimeStep) {
-                // position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), timeToNextTimeStep, {
-                //     maxError: 1e-6,
-                //     a: acc
-                // }).state
+                position = prop.propToTime(position, new Date(startDate - (-1000*tProp)), timeToNextTimeStep, {
+                    maxError: 1e-6,
+                    a: acc
+                }).state
                 
-                position = runge_kutta4(inertialEom, position, timeToNextTimeStep, acc)
+                // position = runge_kutta4(inertialEom, position, timeToNextTimeStep, acc)
                 tProp += timeToNextTimeStep
                 stateHistory.push({
                     t: tProp,
