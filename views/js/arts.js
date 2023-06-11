@@ -3164,27 +3164,24 @@ function handleContextClick(button) {
             time: mainWindow.desired.scenarioTime
         })
         let inputs = button.parentElement.getElementsByTagName('input');
-        inputs[0].value = inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value
-        let currentPos = mainWindow.satellites[sat].curPos
-        let eciPos = Ric2Eci([currentPos.r, currentPos.i, currentPos.c], [currentPos.rd, currentPos.id, currentPos.cd])
-        let driftRate = Number(inputs[0].value) * Math.PI / 180
-        let period = 2 * Math.PI / mainWindow.mm
-        // Convert drift rate to desired SMA
-        driftRate += 2 * Math.PI
-        driftRate /= period
-        driftRate = (398600.4418 / driftRate ** 2) ** (1/3)
-        let r = math.norm(eciPos.rEcci)
-        let energy = -398600.4418 / driftRate / 2
-        let vel = ((energy + 398600.4418 / r) * 2) ** (1/2)
-        let newVel = math.dotMultiply(vel, math.dotDivide(eciPos.drEci, math.norm(eciPos.drEci)))
-        let newRic = Eci2Ric([(398600.4418 / mainWindow.mm ** 2)**(1/3), 0, 0], [0, (398600.4418 / ((398600.4418 / mainWindow.mm ** 2)**(1/3))) ** (1/2), 0], eciPos.rEcci, newVel)
-        let direction = math.subtract(math.squeeze(newRic.drHcw), [currentPos.rd, currentPos.id, currentPos.cd])
-        
-        position = {x: currentPos.r, y: currentPos.i, z: currentPos.c, xd: currentPos.rd, yd: currentPos.id, zd: currentPos.cd};
+        let desiredDriftRate = Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value)
+        let curEciPosition = Object.values(getCurrentInertial(sat))
+        let rVec = curEciPosition.slice(0,3).map(s => s / math.norm(curEciPosition.slice(0,3)))
+        let cVec = math.cross(curEciPosition.slice(0,3), curEciPosition.slice(3))
+        cVec = cVec.map(s => s/math.norm(cVec))
+        let iVec = math.cross(cVec, rVec)
+        let ricVelocity = [math.dot(rVec, curEciPosition.slice(3)), math.dot(iVec, curEciPosition.slice(3)), math.dot(cVec, curEciPosition.slice(3))]
+        let desiredMeanMotion = (398600.4418 / mainWindow.originOrbit.a**3)**(0.5) * (360+desiredDriftRate)/360
+        let desiredSemiMajorAxis = (398600.4418/(desiredMeanMotion** 2))**(1/3)
+        let desiredEpsilon = -398600.4418/desiredSemiMajorAxis/2
+        let r = math.norm(curEciPosition.slice(0,3))
+        let desiredVelocitySquared = (desiredEpsilon + 398600.4418/r)*2
+        let desiredInTrack = (desiredVelocitySquared-ricVelocity[0]**2-ricVelocity[2]**2)**(0.5)
+        let inTrackBurn = desiredInTrack - ricVelocity[1]
         mainWindow.satellites[sat].burns = mainWindow.satellites[sat].burns.filter(burn => {
             return burn.time < mainWindow.scenarioTime;
         })
-        insertDirectionBurn(sat, mainWindow.desired.scenarioTime, direction)
+        insertDirectionBurn(sat, mainWindow.desired.scenarioTime, [0,inTrackBurn,0])
         mainWindow.satellites[sat].calcTraj(true);
         document.getElementById('context-menu')?.remove();
     }
