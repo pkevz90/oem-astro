@@ -7,12 +7,11 @@ document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].c
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].innerText = 'Edit';
 document.getElementsByClassName('panel-button')[0].remove();
 document.getElementsByTagName('input')[16].setAttribute('list','name-list');
-
 // Add div to put message if trying to add satellites when none exist
 let satInputInfoDiv = document.createElement('div')
 satInputInfoDiv.id = "sat-input-info"
 document.querySelector('.satellite-input').before(satInputInfoDiv)
-
+let coastlineEcefPoints = coastlines.map(section => section.map(point => astro.groundGeodeticPosition(point[1], point[0]).r))
 let currentAction
 let pastActions = []
 let futureActions = []
@@ -117,7 +116,7 @@ class windowCanvas {
         burn: null,
         frame: null
     };
-    
+    showRicCoastlines = false
     trajSize = 1.5;
     encoder;
     mm = 2 * Math.PI / 86164;
@@ -933,7 +932,10 @@ class windowCanvas {
         ctx.lineWidth = 3.67;
     }
     drawInertialOrbit() {
-        let a = (398600.4418 / mainWindow.mm ** 2) ** (1/3);
+        let currentOriginState = [mainWindow.originHistory[0], ...mainWindow.originHistory.filter(line => line.t > mainWindow.scenarioTime)]
+        currentOriginState = currentOriginState[currentOriginState.length-1]
+        currentOriginState = propToTime(currentOriginState.position, mainWindow.scenarioTime - currentOriginState.t)
+        let a = math.norm(currentOriginState.slice(0,3));
         let circleTop = this.convertToPixels([0, 0, 0]).ri;
         let circleCenter = this.convertToPixels([-a, 0, 0]).ri;
         let ctx = this.getContext();
@@ -945,16 +947,36 @@ class windowCanvas {
         ctx.beginPath();
         ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
         ctx.stroke();
-        circleTop = this.convertToPixels([-a+6371, 0, 0]).ri;
-        ctx.fillStyle = 'rgb(0,60,0)';
-        ctx.beginPath();
-        ctx.arc(circleCenter.x, circleCenter.y, circleCenter.y - circleTop.y, 0, 2 * Math.PI)
-        ctx.fill();
-        ctx.fillStyle = this.colors.backgroundColor;
         ctx.globalAlpha = 1;
+        ctx.lineWidth = 4;
+        circleTop = this.convertToPixels([-a+6371, 0, 0]).ri;
+        let earthRadPixels = circleCenter.y - circleTop.y
+        ctx.beginPath();
+        ctx.arc(circleCenter.x, circleCenter.y, earthRadPixels, 0, 2 * Math.PI)
+        ctx.stroke();
+        if (!mainWindow.showRicCoastlines) return
+        let angMomVec = math.cross(currentOriginState.slice(0,3), currentOriginState.slice(3))
+        let coastlinesToShow = coastlinesToPoints(angMomVec, currentOriginState.slice(0,3))
+        ctx.lineWidth = 1
+        let earthRad2 = earthRadPixels**2/16
+        ctx.beginPath()
+        coastlinesToShow.map(section => {
+            let lastAngle
+            section.forEach((point,ii) => {
+                let x = -point[0] * math.cos(point[1]) / 6371 * earthRadPixels+circleCenter.x
+                let y = -point[0] * math.sin(point[1]) / 6371 * earthRadPixels+circleCenter.y
+                // ctx.strokeRect(x,y,1,1)
+                if (ii === 0) ctx.moveTo(x,y)
+                else if (ii > 0 && math.subtract(lastAngle, [x,y]).reduce((a,b) => a + b **2) > earthRad2) ctx.moveTo(x,y)
+                else ctx.lineTo(x,y)
+                lastAngle = [x,y]
+            })
+            // ctx.stroke()
+        })
+        ctx.stroke()
         ctx.lineWidth = oldLineWidth;
         ctx.strokeStyle = oldStyle;
-
+        ctx.fillStyle = this.colors.backgroundColor;
     }
     drawCurve(line, options = {}) {
         let {color = 'red', size = this.trajSize} = options
@@ -1285,7 +1307,9 @@ class Satellite {
         }, 250);
     }
     calcTraj (recalcBurns = false, burnStart = 0) {
-        if (mainWindow.ephemViewerMode) return
+        if (mainWindow.ephemViewerMode) return // Don't recalculate trajectory if working off of an ephemeris history
+        // Double check that burns are labeled correctly for if they are currently displayed
+        this.burns.forEach(burn => burn.shown = recalcBurns || mainWindow.scenarioTime > burn.time ? 'post' : 'pre')
         this.stateHistory = calcSatTrajectory(this.position, this.burns, {recalcBurns, a: this.a, startBurn: burnStart})
     }
     genBurns = generateBurns;
@@ -1976,6 +2000,9 @@ function keydownFunction(key) {
     else if (key.key ==='h' && key.ctrlKey) {
         key.preventDefault()
         displayHpopTraj()
+    } 
+    else if (key.key ==='c' && key.ctrlKey) {
+        mainWindow.showRicCoastlines = !mainWindow.showRicCoastlines
     } 
     else if ((key.key === 'S' || key.key === 's') && key.shiftKey) openSaveWindow()
     else if ((key.key === 'L' || key.key === 'l') && key.shiftKey) openSaveWindow()
@@ -5880,6 +5907,23 @@ function addTestSatellites() {
     // }))
 }
 
+function coastlinesToPoints(vantagePoint = Object.values(getCurrentInertial(0)).slice(0,3), satPoint = Object.values(getCurrentInertial(0)).slice(0,3), date = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))) {
+    vantagePoint = astro.eci2ecef(vantagePoint, date)
+    satPoint = astro.eci2ecef(satPoint, date)
+    let satPointNorm = math.norm(satPoint)
+    satPoint = satPoint.map(s => s/satPointNorm)
+    let vPnorm = math.norm(vantagePoint)
+    let vantagePointVec = vantagePoint.map(s => s/vPnorm)
+    let rot = [math.cross(vantagePointVec, satPoint),  satPoint,vantagePointVec]
+    // console.time('asdf')
+    let coastlinePoints = coastlineEcefPoints.map(section => section.filter((point,ii) => math.dot(point, vantagePoint) > 0 && ii % 2 === 0).map(point => {
+        point = math.multiply(rot, point)
+        return [math.norm(point.slice(0,2)),math.atan2(point[1], point[0]), point[2]]
+    }))
+    // console.timeEnd('asdf')
+    return coastlinePoints
+} 
+
 function testLambertSolutionMan() {
     addTestSatellites()
 
@@ -7954,6 +7998,7 @@ function setTimeFromPrompt(el) {
     let inputs = [...el.parentElement.parentElement.querySelectorAll('input')].map(s => s.value === '' ? s.placeholder : s.value)
     if (inputs.length > 2) {
         let startTime = new Date(inputs[1] + ' ' + inputs[0])
+        let oldStart = mainWindow.startDate
         mainWindow.startDate = startTime
         inputs[2] = Number(inputs[2]) > 1 ? Number(inputs[2]) : 1
         mainWindow.scenarioLength = inputs[2]
@@ -7962,7 +8007,7 @@ function setTimeFromPrompt(el) {
             sat.latLong = undefined
         })
         mainWindow.updateOrigin()
-        mainWindow.changeTime(0, true)
+        if (math.abs(oldStart - mainWindow.startDate) > 600000) mainWindow.changeTime(0, true)
     }
     else {
         let newDate = new Date(inputs[1] + ' ' + inputs[0])
@@ -8312,6 +8357,7 @@ function openInstructionWindow() {
                 <li><kbd>N</kbd> - Add random perched satellite</li>
                 <li><kbd>N</kbd> - Add random ground station</li>
                 <li><kbd>Ctrl</kbd> + <kbd><></kbd> - Change satellite display size</li>
+                <li><kbd>Ctrl</kbd> + <kbd>c</kbd> - Display ground features on RIC plot</li>
                 <li><kbd>Shift</kbd> + <kbd><></kbd> - Change trajectory dot size</li>
                 <li><kbd><></kbd> - Move time +/- 2 minutes</li>
                 <li><kbd>Alt</kbd> + <kbd>Number</kbd> - Set Origin Hotkey</li>

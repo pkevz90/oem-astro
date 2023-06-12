@@ -6,24 +6,25 @@ class astro {
         // tbd
     }
     static rot (angle = 45, axis = 1, useDegree = true) {
-        angle = useDegree ? angle*Math.PI / 180 : angle
+        angle = useDegree ? angle*0.017453292519943295 : angle
         let rotMat;
+        let sAng = Math.sin(angle), cAng = Math.cos(angle)
         if (axis === 1) {
             rotMat = [
                 [1, 0, 0],
-                [0, Math.cos(angle), Math.sin(angle)],
-                [0, -Math.sin(angle), Math.cos(angle)]
+                [0, cAng, sAng],
+                [0, -sAng, cAng]
             ];
         } else if (axis === 2) {
             rotMat = [
-                [Math.cos(angle), 0, -Math.sin(angle)],
+                [cAng, 0, -sAng],
                 [0, 1, 0],
-                [Math.sin(angle), 0, Math.cos(angle)]
+                [sAng, 0, cAng]
             ];
         } else {
             rotMat = [
-                [Math.cos(angle), Math.sin(angle), 0],
-                [-Math.sin(angle), Math.cos(angle), 0],
+                [cAng, sAng, 0],
+                [-sAng, cAng, 0],
                 [0, 0, 1]
             ]
         }
@@ -140,18 +141,17 @@ class astro {
         return math.squeeze(math.multiply(overallR, math.transpose([r])))
     }
     static groundGeodeticPosition(lat = 39.586667, long = -105.64, h = 4.347667) {
-        lat *= Math.PI / 180
+        lat *= 0.017453292519943295 // Convert to radians
     
-        // let eEarth = 0.081819221
-        let eEarth = 0.006694385 ** 0.5
+        let eEarth2 = 0.006694385
         let rEarth = 6378.1363
-        let rFocus = eEarth * rEarth
-    
-        let cEarth = rEarth / (1 - eEarth ** 2 * Math.sin(lat) ** 2) ** 0.5
-        let sEarth = rEarth * (1 - eEarth ** 2) / (1 - eEarth ** 2 * Math.sin(lat) ** 2) ** 0.5
+        let sinLat = Math.sin(lat)
+        let c = (1 - eEarth2 * sinLat ** 2) ** 0.5
+        let cEarth = rEarth / c
+        let sEarth = rEarth * (1 - eEarth2) / c
         
         let rSigma = (cEarth + h) * Math.cos(lat)
-        let rk = (sEarth + h) * Math.sin(lat)
+        let rk = (sEarth + h) * sinLat
         // console.log(rSigma, rk / math.tan(lat));
         let r = math.squeeze(math.multiply(astro.rot(-long, 3),math.transpose([[rSigma, 0, rk]])));
         let rij = math.dotDivide(r.slice(0,2) , math.norm(r.slice(0,2)) /(rk / math.tan(lat)))
