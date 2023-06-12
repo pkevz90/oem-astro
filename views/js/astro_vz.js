@@ -679,7 +679,7 @@ class Propagator {
         let {a = [0,0,0]} = options
         let k1 = math.dotMultiply(h, this.highPrecisionProp(state, time, a))
         let k2 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(2/9,k1)), new Date(time - (-1000*h*2/9)), a))
-        let k3 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(1/12,k1),math.dotMultiply(1/4,k2)), new Date(time - (-1000*h/3))))
+        let k3 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(1/12,k1),math.dotMultiply(1/4,k2)), new Date(time - (-1000*h/3)), a))
         let k4 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(69/128,k1),math.dotMultiply(-243/128,k2),math.dotMultiply(135/64,k3)), new Date(time - (-1000*h*3/4)), a))
         let k5 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(-17/12,k1),math.dotMultiply(27/4,k2),math.dotMultiply(-27/5,k3),math.dotMultiply(16/15,k4)), new Date(time - (-1000*h)), a))
         let k6 = math.dotMultiply(h, this.highPrecisionProp(math.add(state,math.dotMultiply(65/432,k1),math.dotMultiply(-5/16,k2),math.dotMultiply(13/16,k3),math.dotMultiply(4/27,k4),math.dotMultiply(5/144,k5)), new Date(time - (-1000*h*5/6)), a))
