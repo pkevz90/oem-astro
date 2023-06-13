@@ -8097,7 +8097,7 @@ function openTimePrompt() {
         </div>
         <div>
             <button onclick="setTimeFromPrompt(this)"style="width: 100%; margin-top: 10px">Set Time</button>
-            <button onclick="showStartTimePrompt(this)"style="width: 100%; margin-top: 10px">Set Start Time and Scenario Length</button>
+            ${mainWindow.ephemViewerMode ? '' :`<button onclick="showStartTimePrompt(this)"style="width: 100%; margin-top: 10px">Set Start Time and Scenario Length</button>`}
             <button onclick="closeQuickWindow()"style="width: 100%; margin-top: 10px">Cancel</button>
         </div>
     `
