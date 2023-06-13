@@ -1211,13 +1211,21 @@ class windowCanvas {
         })
         this.satellites = [];
         satellites.forEach(sat =>{
+            // Check if lists thrust and mass
+            let thrust = sat.thrust || 10000
+            let mass = sat.mass || 1000
             this.satellites.push(
                 new Satellite({
                     position: sat.position,
                     size: sat.size,
                     color: sat.color,
                     shape: sat.shape,
-                    a: sat.a,
+                    a: thrust/mass/1000,
+                    thrust,
+                    mass,
+                    cr: sat.cr,
+                    cd: sat.cd,
+                    area: sat.area,
                     name: sat.name,
                     burns: sat.burns.map(b => {
                         b.shown = false
@@ -1269,12 +1277,13 @@ class Satellite {
             side = 'neutral',
             point = 'none',
             team = 1,
-            mass = 1000, //kilograms
+            mass = 850, //kilograms
             thrust = 10000, // Newtons
             isp = 200,
             cov = undefined,
-            cd = 1,
-            cr = 1
+            cd = 2.2,
+            cr = 1.8,
+            area = 15
         } = options; 
         if (position === undefined) {
             position = {...mainWindow.originOrbit}
@@ -1294,6 +1303,7 @@ class Satellite {
         this.shape = shape;
         this.name = name;
         this.side = side;
+        this.area = area
         this.a = a === undefined ? this.thrust / this.mass / 1000 : Number(a); // km/s/s
         this.originDate = Date.now()
         this.locked = locked
@@ -1493,7 +1503,13 @@ class Satellite {
             name: this.name,
             a: this.a,
             point: this.point,
-            team: this.team
+            team: this.team,
+            mass: this.mass,
+            thrust: this.thrust,
+            isp: this.isp,
+            cd: this.cd,
+            cr: this.cr,
+            area: this.area
         }
     }
     propInitialState(dt) {
@@ -2414,7 +2430,7 @@ function startContextClick(event) {
         else if (!mainWindow.latLongMode) {
             newInnerHTML += `
                 <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
-                <div class="context-item" sat="${activeSat}" id="engine-set" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Set Engine</div>
+                <div class="context-item" sat="${activeSat}" id="prop-options-set" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Set Prop Options</div>
                 <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
                 ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
                 ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
@@ -2564,29 +2580,38 @@ function handleContextClick(button) {
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
     }
-    if (button.id === 'engine-set') {
+    if (button.id === 'prop-options-set') {
         let sat = button.getAttribute('sat')
         button.parentElement.innerHTML = `
             <div class="context-item" >Initial Mass: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].mass}"> kg</div>
             <div class="context-item" >Thrust: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].thrust}"> N</div>
             <div class="context-item" >Specific Impulse: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].isp}"> sec</div>
-            <div class="context-item" sat=${sat} onclick="handleContextClick(this)" id="engine-save">Save</div>
+            <div class="context-item" >Area: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].area}"> m<sup>2</sup></div>
+            <div class="context-item" >C<sub>d</sub>: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].cd}"></div>
+            <div class="context-item" >C<sub>r</sub>: <input type="Number" style="width: 5em; font-size: 1em" placeholder="${mainWindow.satellites[sat].cr}"></div>
+            <div class="context-item" sat=${sat} onclick="handleContextClick(this)" id="prop-options-save">Save</div>
         `
         let cm = document.getElementById('context-menu')
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
     }
-    if (button.id === 'engine-save') {
+    if (button.id === 'prop-options-save') {
         let sat = button.getAttribute('sat')
         let inputs = button.parentElement.getElementsByTagName('input');
         let mass = Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value)
         let thrust = Number(inputs[1].value === '' ? inputs[1].placeholder : inputs[1].value)
         let isp = Number(inputs[2].value === '' ? inputs[2].placeholder : inputs[2].value)
+        let area = Number(inputs[3].value === '' ? inputs[3].placeholder : inputs[3].value)
+        let cd = Number(inputs[4].value === '' ? inputs[4].placeholder : inputs[4].value)
+        let cr = Number(inputs[5].value === '' ? inputs[5].placeholder : inputs[5].value)
         mainWindow.satellites[sat].mass = mass
         mainWindow.satellites[sat].thrust = thrust
         mainWindow.satellites[sat].isp = isp
         mainWindow.satellites[sat].a = thrust / mass / 1000
+        mainWindow.satellites[sat].area = area
+        mainWindow.satellites[sat].cd = cd
+        mainWindow.satellites[sat].cr = cr
         mainWindow.satellites[sat].calcTraj(true)
         mainWindow.satellites[sat].calcTraj()
         document.getElementById('context-menu')?.remove();
@@ -10078,11 +10103,21 @@ function loadEphemFileInViewer(satellites, options = {}) {
     }, 1000)
 }
 
-function createHpopStateHistory(startPosition = mainWindow.satellites[0].position, burns = mainWindow.satellites[0].burns, a = 0.001) {
+function createHpopStateHistory(startPosition = mainWindow.satellites[0].position, burns = mainWindow.satellites[0].burns, a = 0.001, options = {}) {
+    console.log(options);
+    let {
+        cr = 1.8,
+        cd = 2.2,
+        area = 15,
+        mass = 850,
+        srbarea = 1
+    } = options
+    console.log(cr, cd, area, mass, srbarea);
     let prop, defaultError = 1e-4
     try {
         prop = new Propagator({
-            order: 8
+            order: 8,
+            cr, cd, area, mass, srbarea
         })
     } catch (error) {
         return
@@ -10218,7 +10253,7 @@ function displayHpopTraj(update = false, sat = false) {
     })      
     let satHists = mainWindow.satellites.map((sat, satIi) => {
         console.log('Calculating HPOP Trajetories...'+(1+satIi)+'/'+mainWindow.satellites.length);
-        return createHpopStateHistory(sat.position, sat.burns, sat.a)
+        return createHpopStateHistory(sat.position, sat.burns, sat.a, mainWindow.satellites[satIi].getData())
     })
     satHists = satHists.map((sat, satIi) => {
     
