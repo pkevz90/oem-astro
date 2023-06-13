@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.6'
+let appAcr = 'ROTS 2.7'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '7 Jun 2023'
+let cao = '12 Jun 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
