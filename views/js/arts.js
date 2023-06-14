@@ -646,6 +646,7 @@ class windowCanvas {
             }
         })
         maxInc = math.ceil(maxInc)
+        maxInc = maxInc < 1 ? 1 : maxInc
         for (let index = 1; index < 5; index++) {
             ctx.beginPath()
             ctx.arc(this.cnvs.width/2, this.cnvs.height/2, (index/4)*outerDiameter/2, 0, 2*Math.PI)
