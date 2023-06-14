@@ -79,6 +79,7 @@ class windowCanvas {
     normalizeDirection = true;
     frameMove = undefined;
     latLongMode = true;
+    polarPlotMode = false;
     groundTrackLimits = {
         center: 0,
         latCenter: 0,
@@ -600,6 +601,75 @@ class windowCanvas {
         ctx.globalAlpha =  1
         // console.timeEnd()
 
+    }
+    pixelToPolar(x,y, maxInc=90) {
+        let smallestDimension = this.cnvs.width < this.cnvs.height ? this.cnvs.width : this.cnvs.height
+        let outerDiameter = smallestDimension * 0.8
+        x -= this.cnvs.width/2
+        y -= this.cnvs.height/2
+        y *= -1
+        return [maxInc*math.norm([x,y])/outerDiameter, math.atan2(-x,y)*180/Math.PI]
+    }
+    polarToPixel(inc, raan, maxInc=90) {
+        let smallestDimension = this.cnvs.width < this.cnvs.height ? this.cnvs.width : this.cnvs.height
+        let outerDiameter = smallestDimension * 0.8
+        raan *= Math.PI / 180
+
+        let radialDistance = inc*outerDiameter/maxInc
+        let x = -radialDistance/2*Math.sin(raan)
+        let y = radialDistance/2*Math.cos(raan)
+        return [x + this.cnvs.width/2, this.cnvs.height/2-y]
+    }
+    drawPolarPlot() {
+        let ctx = this.getContext()
+        ctx.lineWidth = 1
+        ctx.strokeStyle = 'rgb(150,150,150)'
+        ctx.fillStyle = 'rgb(150,150,150)'
+        let smallestDimension = this.cnvs.width < this.cnvs.height ? this.cnvs.width : this.cnvs.height
+        let outerDiameter = smallestDimension * 0.8
+        let radialLines = [[0,-1, 0],[1,0, 270],[0,1, 180],[-1,0, 90]]
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        let maxInc = 0
+        let sats = mainWindow.satellites.map((sat,satIi) => {
+            let eciState = Object.values(getCurrentInertial(satIi))
+            let coeState = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3))
+            let i = coeState.i * 180/Math.PI
+            maxInc = i > maxInc ? i : maxInc
+            return {
+                name: sat.name,
+                color: sat.color,
+                shape: sat.shape,
+                i,
+                size: sat.size,
+                raan: coeState.raan * 180/Math.PI
+            }
+        })
+        maxInc = math.ceil(maxInc)
+        for (let index = 1; index < 5; index++) {
+            ctx.beginPath()
+            ctx.arc(this.cnvs.width/2, this.cnvs.height/2, (index/4)*outerDiameter/2, 0, 2*Math.PI)
+            ctx.stroke()
+            ctx.fillText(index/4*maxInc, this.cnvs.width/2-(index/4)*outerDiameter/2*0.7071, this.cnvs.height/2-(index/4)*outerDiameter/2*0.7071)
+            ctx.beginPath()
+            ctx.moveTo(this.cnvs.width/2, this.cnvs.height/2)
+            ctx.lineTo(radialLines[index-1][0]*outerDiameter/2+this.cnvs.width/2, radialLines[index-1][1]*outerDiameter/2+this.cnvs.height/2)
+            ctx.stroke()
+            ctx.fillText(radialLines[index-1][2], radialLines[index-1][0]*outerDiameter/2+this.cnvs.width/2, radialLines[index-1][1]*outerDiameter/2+this.cnvs.height/2)
+        }
+        maxInc = math.ceil(maxInc)
+        sats.forEach(sat => {
+            let pixelPosition = this.polarToPixel(sat.i, sat.raan, maxInc)
+            drawSatellite({
+                pixelPosition,
+                shape: sat.shape,
+                color: sat.color,
+                name: sat.name,
+                size: sat.size,
+                cnvs: this.cnvs,
+                ctx: ctx
+            })
+        })
     }
     getCurrentSun(t = this.scenarioTime) {
         let curSunIndex = this.originSun.findIndex(s => s[0] > t)
@@ -1667,6 +1737,13 @@ let timeFunction = false;
         if (timeFunction) console.time()
         mainWindow.clear();
         mainWindow.updateSettings();
+        if (mainWindow.polarPlotMode) {
+            mainWindow.drawPolarPlot()
+            mainWindow.showTime();
+            mainWindow.changeTime(mainWindow.desired.scenarioTime + mainWindow.playTimeStep, true)
+            if (timeFunction) console.timeEnd()
+            return window.requestAnimationFrame(animationLoop)
+        }
         if (mainWindow.latLongMode) {
             mainWindow.drawEarthFeatures()
 
@@ -2012,6 +2089,9 @@ function keydownFunction(key) {
     else if (key.key === 'M' || key.key === 'm') {
         let newSite = new GroundSite()
         mainWindow.groundSites.push(newSite)
+    }
+    else if (key.key === 'F' || key.key === 'f') {
+        mainWindow.polarPlotMode = !mainWindow.polarPlotMode
     }
     else if (key.key ==='h' && key.ctrlKey) {
         key.preventDefault()
@@ -8372,6 +8452,7 @@ function openInstructionWindow() {
                 <li><kbd>S</kbd> - Open satellite submenu</li>
                 <li><kbd>A</kbd> - Open site access submenu</li>
                 <li><kbd>T</kbd> - Open Time Panel</li>
+                <li><kbd>F</kbd> - Open Polar Plot</li>
                 <li><kbd>G</kbd> - Switch to ground-track view</li>
                 <li><kbd>Ctrl</kbd> + <kbd>h</kbd> - Run sim with HPOP</li>
                 <li><kbd>Shift</kbd> + <kbd>L</kbd> - Open save window</li>
