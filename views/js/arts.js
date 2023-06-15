@@ -4894,7 +4894,6 @@ function initStateFunction(el) {
                 eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(long, date, driftRate)))
                 break
         }
-        console.log(eciState);
         let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
         if (mainWindow.satellites.length === 0) {
             if (radioId === 'eci-sat-input' || radioId === 'coe-sat-input') {
@@ -5971,6 +5970,14 @@ function PosVel2CoeNew(r = [42164.14, 0, 0], v = [0, 3.0746611796284924, 0]) {
     else if (i < 1e-6) {
         longOfPeri = math.acos(e[0] / en)
         if (e[1] < 0) {
+            longOfPeri = 2 * Math.PI - longOfPeri
+        }
+        raan = 0
+        arg = longOfPeri
+    }
+    else if (math.abs(i-3.141592653589793) < 1e-6) {
+        longOfPeri = math.acos(e[0] / en)
+        if (e[1] > 0) {
             longOfPeri = 2 * Math.PI - longOfPeri
         }
         raan = 0
