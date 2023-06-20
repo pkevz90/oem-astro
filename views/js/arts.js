@@ -1071,9 +1071,11 @@ class windowCanvas {
         let oldLineW = ctx.lineWidth + 0
         ctx.lineWidth = 2
         ellipses.forEach(ell => {
+            if (this.state.search(ell.screen) === -1) return
+            ctx.strokeStyle = ell.color
             let pixPos = this.convertToPixels([ell.position.r, ell.position.i, ell.position.c, 0, 0, 0])
             ctx.beginPath()
-            ctx.ellipse(pixPos.ri.x, pixPos.ri.y, ell.a * this.cnvs.width / this.desired.plotWidth, ell.b * this.cnvs.width / this.desired.plotWidth, ell.ang, 0, 2 * Math.PI)
+            ctx.ellipse(pixPos[ell.screen].x, pixPos[ell.screen].y, ell.a * this.cnvs.width / this.desired.plotWidth, ell.b * this.cnvs.width / this.desired.plotWidth, ell.ang, 0, 2 * Math.PI)
             ctx.stroke()
         })
         ctx.lineWidth = oldLineW
@@ -1460,7 +1462,7 @@ class Satellite {
         })
     }
     currentPosition = getCurrentPosition
-    drawCurrentPosition() {
+    drawCurrentPosition(justUpdate = false) {
         if (!this.stateHistory) return;
         let cur = this.currentPosition(mainWindow.scenarioTime);
         this.curPos = cur
@@ -1473,7 +1475,16 @@ class Satellite {
             cd: cur[5]
         };
         this.curPos = cur;
+        if (justUpdate) return
         mainWindow.drawSatLocation(cur, {size: this.size, color: this.color, shape: this.shape, name: this.name});
+    }
+    setCovariance(cov) {
+        
+        cov = cov === undefined ? math.diag([1,1,1,0.001,0.001,0.001].map(s => s**2)) : cov
+        this.cov = cov
+        console.log(mainWindow.desired.scenarioTime);
+        this.covTime = mainWindow.desired.scenarioTime
+        this.curCov = JSON.parse(JSON.stringify(cov))
     }
     checkClickProximity(position, burns = false) {
         // Check if clicked on current position of object, if burns flag is true, check click to current object burns
@@ -1751,6 +1762,8 @@ let timeFunction = false;
             mainWindow.showTime();
             mainWindow.changeTime(mainWindow.desired.scenarioTime + mainWindow.playTimeStep, true)
         
+            mainWindow.showData();
+            mainWindow.satellites.forEach(sat => sat.drawCurrentPosition(true))
             if (timeFunction) console.timeEnd()
             return window.requestAnimationFrame(animationLoop)
         }
@@ -1768,8 +1781,11 @@ let timeFunction = false;
         mainWindow.drawPlot();
         mainWindow.showTime();
         mainWindow.showData();
+        
+        calcCovariance()
         mainWindow.drawEllipses()
         mainWindow.showLocation();
+        
         if (mainWindow.burnStatus.type) {
             mainWindow.calculateBurn();
         }
@@ -1812,6 +1828,7 @@ let timeFunction = false;
 function keydownFunction(key) {
     // Ignore unless given a object key which says to continue (only applies to ground track context menu)
     if (key.ignoreContext !== true && document.getElementById('context-menu') !== null) return
+    if (document.querySelector('dialog').open) return
     key.key = key.key.toLowerCase();
     if (key.key === 'Control') {
         let buttons = document.getElementsByClassName('ctrl-switch');
@@ -2120,10 +2137,72 @@ function keydownFunction(key) {
     else if (key.key === 'w') moveTrueAnomaly(-0.1, false)
     else if (key.key === 'e') moveTrueAnomaly(0.1, false)
 }
+function calcCovariance(){
+    
+    ellipses = []
+    try {
+        for (let index = 0; index < mainWindow.satellites.length; index++) {
+            if (mainWindow.satellites[index].cov === undefined) continue
+            let eciStateOrig = Object.values(getCurrentInertial(index, mainWindow.satellites[index].covTime))
+            let eciStateCur = Object.values(getCurrentInertial(index, mainWindow.desired.scenarioTime))
+            let r = Ric2EciRedux(eciStateCur.slice(0,3), eciStateCur.slice(3))
+            let curCov = propEciCovariance(eciStateOrig, mainWindow.satellites[index].cov, mainWindow.desired.scenarioTime-mainWindow.satellites[index].covTime)
+            
+            curCov = math.multiply(math.transpose(r), curCov.P, r)
+            let radInTrackEig = curCov.slice(0,2).map(s => s.slice(0,2))
+            // Making sure numerical differences don't error out eigenvalue calc
+            radInTrackEig[0][1] = radInTrackEig[1][0]
+            radInTrackEig = math.eigs(radInTrackEig)
+            radInTrackEig.vectors = math.transpose(radInTrackEig.vectors)
+            // Sort to find the largest radial component
+            let mainRadialIntrack = {vec: radInTrackEig.vectors[1], a:radInTrackEig.values[1], b: radInTrackEig.values[0]}
+            let InCtTrackEig = curCov.slice(1,3).map(s => s.slice(1,3))
+            InCtTrackEig[0][1] = InCtTrackEig[1][0]
+            InCtTrackEig = math.eigs(InCtTrackEig)
+            InCtTrackEig.vectors = math.transpose(InCtTrackEig.vectors)
+            // Sort to find the largest radial component
+            let mainIntrackCross = {vec: InCtTrackEig.vectors[1], a:InCtTrackEig.values[1], b: InCtTrackEig.values[0]}
+            let ricPos = Object.values(mainWindow.satellites[index].curPos)
+            let ellipseRIt = {
+                screen: 'ri',
+                color: mainWindow.satellites[index].color,
+                a: 3 * mainRadialIntrack.a ** 0.5,
+                b: 3 * mainRadialIntrack.b ** 0.5,
+                ang: math.atan2(mainRadialIntrack.vec[0], mainRadialIntrack.vec[1]),
+                position: {
+                    r: ricPos[0],
+                    i: ricPos[1],
+                    c: ricPos[2]
+                },
+            
+        
+            }
+            let ellipseCIt = {
+                screen: 'ci',
+                color: mainWindow.satellites[index].color,
+                a: 3 * mainIntrackCross.a ** 0.5,
+                b: 3 * mainIntrackCross.b ** 0.5,
+                ang: math.atan2(mainIntrackCross.vec[1], mainIntrackCross.vec[0]),
+                position: {
+                    r: ricPos[0],
+                    i: ricPos[1],
+                    c: ricPos[2]
+                },
+            
+        
+            }
+            ellipses.push(ellipseRIt)
+            ellipses.push(ellipseCIt)
+        }
+    } catch (error) {
+        ellipses = []
+        console.error('Error while calculating covariance')
+        console.error(error)
+    }
+}
 function sliderFunction(slider) {
     let timeDelta = Number(slider.value) - mainWindow.desired.scenarioTime
     mainWindow.desired.scenarioTime += timeDelta
-    
     updateWhiteCellTimeAndErrors()
     if (monteCarloData !== null) {
         // console.log('hey');
@@ -2513,6 +2592,7 @@ function startContextClick(event) {
                 <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
                 <div class="context-item" sat="${activeSat}" id="prop-options-set" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Set Prop Options</div>
                 <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
+                <div class="context-item" onclick="openCovPrompt(${activeSat})" id="prop-options">Set Covariance</div>
                 ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
                 ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
             `
@@ -6861,18 +6941,41 @@ function findCovariance(points) {
     }
 }
 
+function Ric2EciRedux(rC = [(398600.4418 / n ** 2)**(1/3), 0, 0], drC = [0, (398600.4418 / ((398600.4418 / n ** 2)**(1/3))) ** (1/2), 0]) {
+    let h = math.cross(rC, drC);
+    let ricX = math.dotDivide(rC, math.norm(rC));
+    let ricZ = math.dotDivide(h, math.norm(h));
+    let ricY = math.cross(ricZ, ricX);
+
+    let ricXd = math.dotMultiply(1 / math.norm(rC), math.subtract(drC, math.dotMultiply(math.dot(ricX, drC), ricX)));
+    let ricYd = math.cross(ricZ, ricXd);
+    let ricZd = [0,0,0];
+
+    let C = math.transpose([ricX, ricY, ricZ]);
+    let Cd = math.transpose([ricXd, ricYd, ricZd]);
+    let R1 = math.concat(C, math.zeros([3,3]), 1)
+    let R2 = math.concat(Cd, C, 1)
+    let R = math.concat(R1, R2, 0)
+    return R
+}
+
 function cov2ellipse(cov, average) {
     let riStd = cov.slice(0,2).map(s => s.slice(0,2))
     let eigRiStd = math.eigs(riStd);
+    let eigRiStd2 = math.eigs(cov);
+    console.log(cov);
+    console.log(astro.choleskyDecomposition(cov));
+    console.log(math.transpose(eigRiStd2.vectors));
+    console.log(eigRiStd2.values);
     return {
         screen: 'ri',
         a: 3 * eigRiStd.values[1] ** 0.5,
         b: 3 * eigRiStd.values[0] ** 0.5,
         ang: math.atan2(eigRiStd.vectors[0][1], eigRiStd.vectors[1][1]),
         position: {
-            r: average[0][0],
-            i: average[1][0],
-            c: average[2][0]
+            r: average[0],
+            i: average[1],
+            c: average[2]
         },
     
 
@@ -8190,6 +8293,55 @@ function openTimePrompt() {
         </div>
     `
     openQuickWindow(inner, {width: '50%'})
+}
+
+function openCovPrompt(sat = 0) {
+    
+    document.getElementById('context-menu')?.remove();
+    let initCov = math.diag([1,1,1,0.001,0.001,0.001])
+    let inner = `
+        <div style="display: flex; justify-content: space-around;">
+            <div>
+                <div style="text-align: center; font-size: 2.5em;">Covariance Info for ${mainWindow.satellites[sat].name} at Current Time [km & km/s]</div>
+                ${initCov.map((row, rowIi) => {
+                    return `<div class="cov-row">${row.map((inputNum, inIi) => `<input ${rowIi > inIi ? 'tabindex=-1' : ''} type="Number" style="width: 10ch; font-size: 1.25vw;" placeholder="${inputNum}"/>`).slice(0,rowIi+1).join('')}</div>`
+                }).join('')}
+                <div id="cov-warning-message" style="text-align: center; color: red;"></div>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+            <div><button sat="${sat}" onclick="validateCovData(this)" id="cov-confirm" style="font-size: 3em;">Confirm</button></div><div><button onclick="validateCovData(this)" id="cov-cancel" style="font-size: 3em;">Cancel</button></div>
+        </div>
+        <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+            <div><button onclick="validateCovData(this)" id="cov-cola" style="font-size: 3em;">COLA Analysis</button></div>
+        </div>
+    `
+    openQuickWindow(inner, {width: '50%'})
+}
+
+function validateCovData(el) {
+    if (el.id === 'cov-cancel') {
+        document.querySelector('dialog').close()
+        return
+    }
+    else if (el.id === 'cov-confirm') {
+        let sat = el.getAttribute('sat')
+        let inputs = [...el.parentElement.parentElement.parentElement.querySelectorAll('.cov-row')].map(s => [...s.querySelectorAll('input')])
+        let covStart = math.zeros([6,6])
+        inputs.forEach((row, rowIi) => {
+            row.forEach((el, elIi) => {
+                covStart[rowIi][elIi] = Number(el.value === '' ? el.placeholder : el.value)
+            })
+        })
+        let curEci = Object.values(getCurrentInertial(sat))
+        
+        let r = Ric2EciRedux(curEci.slice(0,3), curEci.slice(3))
+        covStart = math.multiply(covStart, math.transpose(covStart))
+        covStart = math.multiply(r, covStart, math.transpose(r))
+        mainWindow.satellites[sat].setCovariance(covStart)
+        document.querySelector('dialog').close()
+        return
+    }
 }
 
 function setZoomFromWindow(el) {
@@ -10484,4 +10636,69 @@ function launchRocket(lat = 0, long = 0, a = .025, date = new Date(), targetLong
     console.log(targetState);
     console.log(t / 60);
     console.log(hpop.getAtmosphereDensity(math.norm(position.slice(0,3))-6378));
+}
+
+function burnFromRicToRic(satFrom = 0, satTo = 1, burn = [1,0,0]) {
+    let curEciSatFrom = Object.values(getCurrentInertial(satFrom))
+    let curEciSatTo = Object.values(getCurrentInertial(satTo))
+    let r1 = curEciSatFrom.slice(0,3).map(s => s/math.norm(curEciSatFrom.slice(0,3)))
+    let c1 = math.cross(curEciSatFrom.slice(0,3), curEciSatFrom.slice(3))
+    c1 = c1.map(s => s/math.norm(c1))
+    let i1 = math.cross(c1,r1)
+    let r2 = curEciSatTo.slice(0,3).map(s => s/math.norm(curEciSatTo.slice(0,3)))
+    let c2 = math.cross(curEciSatTo.slice(0,3), curEciSatTo.slice(3))
+    c2 = c2.map(s => s/math.norm(c2))
+    let i2 = math.cross(c2,r2)
+    console.log(r1,r2,i1,i2,c1,c2);
+    let r = [[math.dot(r1,r2), math.dot(r1,i2), math.dot(r1,c2)],
+             [math.dot(i1,r2), math.dot(i1,i2), math.dot(i1,c2)],
+             [math.dot(c1,r2), math.dot(c1,i2), math.dot(c1,c2)]]
+    
+    burn = math.multiply(r, burn)
+    return burn
+}
+
+function propEciCovariance(state=[42164, 0, 0, 0, 3.071, 0], cov, tf=3600) {
+     cov = cov === undefined ? math.diag([1,1,1,0.001,0.001,0.001].map(s => s ** 2)) : cov
+     cov = astro.choleskyDecomposition(cov)
+    
+     let L = 6
+     
+     let sigmaPoints = [state], w = [0.2]
+     let waj = (1-w[0])/2/L, c = (L/(1-w[0]))**0.5
+     cov = math.transpose(cov)
+     for (let index = 0; index < L; index++) {
+        sigmaPoints.push(math.add(state, cov[index].map(s => s*c)))
+        sigmaPoints.push(math.subtract(state, cov[index].map(s => s*c)))
+        w.push(waj)
+        w.push(waj)
+     }
+     sigmaPoints = sigmaPoints.map(s => propToTime(s, tf))
+     let P = math.zeros([6,6])
+     for (let index = 0; index < 2*L; index++) {
+        // console.log(math.transpose([math.subtract(sigmaPoints[index], sigmaPoints[0])]), [math.subtract(sigmaPoints[index], sigmaPoints[0])]);
+        P = math.add(P, math.dotMultiply(w[index],math.multiply(math.transpose([math.subtract(sigmaPoints[index], sigmaPoints[0])]), [math.subtract(sigmaPoints[index], sigmaPoints[0])])))
+        
+     }
+    //  console.log(astro.choleskyDecomposition(P));
+     return {P, sigmaPoints}
+}
+
+function colaAnalysis(sat1 = 0, sat2 = 1, options = {}) {
+    let {points = 100000, distanceLimit = 1} = options
+    let eci1Cur = Object.values(getCurrentInertial(sat1))
+    let eci1Start = Object.values(getCurrentInertial(sat1, mainWindow.satellites[sat1].covTime))
+    let eci2Cur = Object.values(getCurrentInertial(sat2))
+    let eci2Start = Object.values(getCurrentInertial(sat2, mainWindow.satellites[sat1].covTime))
+    let cov1 = propEciCovariance(eci1Start, mainWindow.satellites[sat1].cov, mainWindow.desired.scenarioTime - mainWindow.satellites[sat1].covTime).P
+    cov1 = astro.choleskyDecomposition(cov1)
+    let cov2 = propEciCovariance(eci2Start, mainWindow.satellites[sat2].cov, mainWindow.desired.scenarioTime - mainWindow.satellites[sat2].covTime).P
+    cov2 = astro.choleskyDecomposition(cov2)
+    let colaEvents = 0
+    for (let index = 0; index < points; index++) {
+        let point1 = math.add(eci1Cur, math.transpose(cov1).reduce((a,b) => math.add(a, math.dotMultiply(randn_bm(), b)), [0,0,0,0,0,0]))
+        let point2 = math.add(eci2Cur, math.transpose(cov1).reduce((a,b) => math.add(a, math.dotMultiply(randn_bm(), b)), [0,0,0,0,0,0]))
+        if (math.norm(math.subtract(point1, point2)) < distanceLimit) colaEvents++;
+    }
+    console.log((colaEvents*100/points).toFixed(4)+'%');
 }

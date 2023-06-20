@@ -422,6 +422,32 @@ class astro {
         time = time.split(' ');
         return time[1] + ' ' + time[0] + ' ' + time[2] + ' ' + time[3];
     }
+    static choleskyDecomposition(matrix = [[25, 15, -5],[15, 18,  0],[-5,  0, 11]]) {
+        let a = math.zeros([matrix.length, matrix.length])    
+        for (let ii = 0; ii < a.length; ii++) {
+            for (let jj = 0; jj <= ii; jj++) {
+                if (ii === jj) {
+                    a[ii][jj] = matrix[ii][jj]
+                    let subNumber = 0
+                    for (let kk = 0; kk < jj; kk++) {
+                        subNumber += a[jj][kk] ** 2
+                    }
+                    a[ii][jj] -= subNumber
+                    a[ii][jj] = a[ii][jj] ** (1/2)
+                }
+                else {
+                    a[ii][jj] = matrix[ii][jj]
+                    let subNumber = 0
+                    for (let kk = 0; kk < jj; kk++) {
+                        subNumber += a[ii][kk] * a[jj][kk]
+                    }
+                    a[ii][jj] -= subNumber
+                    a[ii][jj] *= 1 / a[jj][jj]
+                }
+            }
+        }
+        return a
+    }
 }
 
 class Propagator {
