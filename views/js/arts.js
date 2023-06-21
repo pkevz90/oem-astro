@@ -1478,9 +1478,18 @@ class Satellite {
         if (justUpdate) return
         mainWindow.drawSatLocation(cur, {size: this.size, color: this.color, shape: this.shape, name: this.name});
     }
+    setReachability(dV = 1) {
+        dV /= 3
+        let newReach = math.diag([1e-2, 1e-2, 1e-2, dV, dV, dV].map(s => (s/1000)**2))
+        this.reach = newReach
+        this.reachTime = mainWindow.scenarioTime
+    }
     setCovariance(cov) {
-        
+
         cov = cov === undefined ? math.diag([1,1,1,0.001,0.001,0.001].map(s => s**2)) : cov
+        // Ensure none of the diagonal terms are zero to allow for eigenvalue calculation
+        cov = cov.map((row,ii) => row.map((item, jj) => jj === ii ? (item < 1e-10 ? 1e-10 : item) : item))
+        console.log(cov);
         this.cov = cov
         console.log(mainWindow.desired.scenarioTime);
         this.covTime = mainWindow.desired.scenarioTime
@@ -1783,6 +1792,7 @@ let timeFunction = false;
         mainWindow.showData();
         
         calcCovariance()
+        calcReachability()
         mainWindow.drawEllipses()
         mainWindow.showLocation();
         
@@ -2144,9 +2154,9 @@ function calcCovariance(){
         for (let index = 0; index < mainWindow.satellites.length; index++) {
             if (mainWindow.satellites[index].cov === undefined) continue
             let eciStateOrig = Object.values(getCurrentInertial(index, mainWindow.satellites[index].covTime))
-            let eciStateCur = Object.values(getCurrentInertial(index, mainWindow.desired.scenarioTime))
+            let eciStateCur = Object.values(getCurrentInertial(index, mainWindow.scenarioTime))
             let r = Ric2EciRedux(eciStateCur.slice(0,3), eciStateCur.slice(3))
-            let curCov = propEciCovariance(eciStateOrig, mainWindow.satellites[index].cov, mainWindow.desired.scenarioTime-mainWindow.satellites[index].covTime)
+            let curCov = propEciCovariance(eciStateOrig, mainWindow.satellites[index].cov, mainWindow.scenarioTime-mainWindow.satellites[index].covTime)
             
             curCov = math.multiply(math.transpose(r), curCov.P, r)
             let radInTrackEig = curCov.slice(0,2).map(s => s.slice(0,2))
@@ -2198,6 +2208,69 @@ function calcCovariance(){
         ellipses = []
         console.error('Error while calculating covariance')
         console.error(error)
+    }
+}
+
+function calcReachability(){
+    
+    try {
+        for (let index = 0; index < mainWindow.satellites.length; index++) {
+            if (mainWindow.satellites[index].reach === undefined || mainWindow.scenarioTime < mainWindow.satellites[index].reachTime) continue
+            let eciStateOrig = Object.values(getCurrentInertial(index, mainWindow.satellites[index].reachTime))
+            let eciStateCur = Object.values(getCurrentInertial(index, mainWindow.scenarioTime))
+            let r = Ric2EciRedux(eciStateCur.slice(0,3), eciStateCur.slice(3))
+            let curCov = propEciCovariance(eciStateOrig, mainWindow.satellites[index].reach, mainWindow.scenarioTime-mainWindow.satellites[index].reachTime)
+            
+            curCov = math.multiply(math.transpose(r), curCov.P, r)
+            let radInTrackEig = curCov.slice(0,2).map(s => s.slice(0,2))
+            // Making sure numerical differences don't error out eigenvalue calc
+            radInTrackEig[0][1] = radInTrackEig[1][0]
+            radInTrackEig = math.eigs(radInTrackEig)
+            radInTrackEig.vectors = math.transpose(radInTrackEig.vectors)
+            // Sort to find the largest radial component
+            let mainRadialIntrack = {vec: radInTrackEig.vectors[1], a:radInTrackEig.values[1], b: radInTrackEig.values[0]}
+            let InCtTrackEig = curCov.slice(1,3).map(s => s.slice(1,3))
+            InCtTrackEig[0][1] = InCtTrackEig[1][0]
+            InCtTrackEig = math.eigs(InCtTrackEig)
+            InCtTrackEig.vectors = math.transpose(InCtTrackEig.vectors)
+            // Sort to find the largest radial component
+            let mainIntrackCross = {vec: InCtTrackEig.vectors[1], a:InCtTrackEig.values[1], b: InCtTrackEig.values[0]}
+            let ricPos = Object.values(mainWindow.satellites[index].curPos)
+            let ellipseRIt = {
+                screen: 'ri',
+                color: mainWindow.satellites[index].color,
+                a: 3 * mainRadialIntrack.a ** 0.5,
+                b: 3 * mainRadialIntrack.b ** 0.5,
+                ang: math.atan2(mainRadialIntrack.vec[0], mainRadialIntrack.vec[1]),
+                position: {
+                    r: ricPos[0],
+                    i: ricPos[1],
+                    c: ricPos[2]
+                },
+            
+        
+            }
+            let ellipseCIt = {
+                screen: 'ci',
+                color: mainWindow.satellites[index].color,
+                a: 3 * mainIntrackCross.a ** 0.5,
+                b: 3 * mainIntrackCross.b ** 0.5,
+                ang: math.atan2(mainIntrackCross.vec[1], mainIntrackCross.vec[0]),
+                position: {
+                    r: ricPos[0],
+                    i: ricPos[1],
+                    c: ricPos[2]
+                },
+            
+        
+            }
+            ellipses.push(ellipseRIt)
+            ellipses.push(ellipseCIt)
+        }
+    } catch (error) {
+        ellipses = []
+        // console.error('Error while calculating reachability')
+        // console.error(error)
     }
 }
 function sliderFunction(slider) {
@@ -2592,7 +2665,8 @@ function startContextClick(event) {
                 <div class="context-item" id="maneuver-options" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Manuever Options</div>
                 <div class="context-item" sat="${activeSat}" id="prop-options-set" onclick="handleContextClick(this)" onmouseover="handleContextClick(event)">Set Prop Options</div>
                 <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
-                <div class="context-item" onclick="openCovPrompt(${activeSat})" id="prop-options">Set Covariance</div>
+                <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="set-covariance">${mainWindow.satellites[activeSat].cov === undefined ? 'Set' : 'Delete'} Covariance</div>
+                <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="set-reachability">${mainWindow.satellites[activeSat].reach === undefined ? 'Display' : 'Delete'} Reachability</div>
                 ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
                 ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
             `
@@ -2740,6 +2814,40 @@ function handleContextClick(button) {
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'set-covariance') {
+        let sat = button.getAttribute('sat')
+        if (button.innerText === 'Delete Covariance') {
+            mainWindow.satellites[sat].cov = undefined
+        }
+        else {
+            openCovPrompt(sat)
+        }
+        document.getElementById('context-menu')?.remove();
+    }
+    if (button.id === 'set-reachability') {
+        let sat = button.getAttribute('sat')
+        if (button.innerText === 'Delete Reachability') {
+            mainWindow.satellites[sat].cov = undefined
+            document.getElementById('context-menu')?.remove();
+            return
+        }
+        button.parentElement.innerHTML = `
+            <div class="context-item" >&Delta;V: <input type="Number" style="width: 5em; font-size: 1em" placeholder="5"> m/s</div>
+            <div class="context-item" sat=${sat} onclick="handleContextClick(this)" id="save-reachability">Set</div>
+        `
+        let cm = document.getElementById('context-menu')
+        let elHeight = cm.offsetHeight
+        let elTop =  Number(cm.style.top.split('p')[0])
+        cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'save-reachability') {
+        let sat = button.getAttribute('sat')
+        let inputs = button.parentElement.getElementsByTagName('input');
+        let dV = Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value)
+        mainWindow.satellites[sat].setReachability(dV)
+        document.getElementById('context-menu')?.remove();
+        
     }
     if (button.id === 'prop-options-set') {
         let sat = button.getAttribute('sat')
