@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.7'
+let appAcr = 'ROTS 2.8'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '12 Jun 2023'
+let cao = '20 Jun 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -2828,7 +2828,7 @@ function handleContextClick(button) {
     if (button.id === 'set-reachability') {
         let sat = button.getAttribute('sat')
         if (button.innerText === 'Delete Reachability') {
-            mainWindow.satellites[sat].cov = undefined
+            mainWindow.satellites[sat].reach = undefined
             document.getElementById('context-menu')?.remove();
             return
         }
