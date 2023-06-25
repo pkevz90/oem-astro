@@ -6,6 +6,12 @@ let sites = [
         country: 'USA'
     },
     {
+        name: 'Middle Atlantic',
+        lat: -19.3,
+        long: -16.3,
+        country: 'World'
+    },
+    {
         name: 'Perth',
         lat: -31.95,
         long: 115.85,

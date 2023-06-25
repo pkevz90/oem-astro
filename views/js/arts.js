@@ -422,6 +422,9 @@ class windowCanvas {
                 // })
                 mainWindow.satellites[index].latLong = []
                 let numPoints = mainWindow.satellites[index].stateHistory.length*3, timeIndex = 0
+                // let numPoints = 2*Math.PI*(mainWindow.satellites[index].position.a**3/398600.4418)**0.5/3/48, timeIndex = 0
+                // numPoints = Math.floor(mainWindow.scenarioLength*3600/numPoints)
+                // console.log(numPoints);
                 // Equation attempts to put more timesteps in extreme latitudes to smooth out trajectory on mercator projection
                 while (timeIndex <= numPoints) {
                     let time = new Date(mainWindow.startDate - (-mainWindow.scenarioLength*3600000*timeIndex/numPoints))
@@ -431,7 +434,7 @@ class windowCanvas {
                     mainWindow.satellites[index].latLong.push({lat: latLong.lat*180/Math.PI, long: latLong.long*180/Math.PI})
                     timeIndex += 2.1 - (Math.abs(latLong.lat*180/Math.PI))/45
                 }
-                console.log(mainWindow.satellites[index].latLong.length);
+                // console.log(mainWindow.satellites[index].latLong.length);
             }
             ctx.strokeStyle = mainWindow.satellites[index].color
             // ctx.fillStyle = mainWindow.satellites[index].color
@@ -787,7 +790,7 @@ class windowCanvas {
             }
         }
     }
-    convertToPixels(input = [0, 0, 0, 0, 0, 0]) {
+    convertToPixels(input = [0, 0, 0, 0, 0, 0], plotCenter = this.plotCenter) {
         if (Array.isArray(input)) {
             input = math.squeeze(input);
             input = {
@@ -798,7 +801,7 @@ class windowCanvas {
         }
         return{
             ri: {
-                x: -(input.i - this.plotCenter) * this.cnvs.width  / this.plotWidth + this.cnvs.width * this.frameCenter.ri.x,
+                x: -(input.i - plotCenter) * this.cnvs.width  / this.plotWidth + this.cnvs.width * this.frameCenter.ri.x,
                 y: this.cnvs.height * this.frameCenter.ri.y - input.r * this.cnvs.height / this.plotHeight
             },
             ci: {
@@ -1168,18 +1171,20 @@ class windowCanvas {
             ctx.textBaseline = 'bottom';
             ctx.font = 'bold ' + this.cnvs.height * 0.02 + 'px serif';
             ctx.fillStyle = this.colors.foregroundColor;
-            // console.time()
-            // let originLoc = {...mainWindow.originOrbit}
-            // originLoc.tA = propTrueAnomaly(originLoc.tA, originLoc.a, originLoc.e, mainWindow.scenarioTime)
-            // originLoc = Object.values(Coe2PosVelObject(originLoc))
-            // originLoc = fk5ReductionTranspose(originLoc.slice(0,3), new Date(mainWindow.startDate - (-mainWindow.scenarioTime*1000)))
-            // originLoc = ecef2latlong(originLoc)
-            // ctx.fillText(`Lat ${originLoc.latSat.toFixed(1)}/Long ${originLoc.longSat.toFixed(1)}`, this.cnvs.width - 10, this.cnvs.height -  25)
-            // console.timeEnd()
             if (!this.mousePosition) return;
+            if (mainWindow.latLongMode) {
+                let latLong = this.pixel2LatLong(this.mousePosition)
+                while (latLong.long < -180) {
+                    latLong.long += 360
+                }
+                while (latLong.long > 180) {
+                    latLong.long -= 360
+                }
+                ctx.fillText(`Lat: ${latLong.lat.toFixed(1)} Long: ${latLong.long.toFixed(1)}`, this.cnvs.width - 10, this.cnvs.height -  10)
+                return
+            }
             let ricCoor = this.convertToRic(this.mousePosition);
             let frame = Object.keys(ricCoor)[0];
-            ctx.fillStyle = this.colors.foregroundColor;
             ctx.fillText(`${frame === 'ri' ? 'R' : 'C'} ${ricCoor[frame][frame === 'ri' ? 'r' : 'c'].toFixed(1)} km ${frame === 'ri' ? 'I' : frame === 'ci' ? 'I' : 'R'} ${ricCoor[frame][frame === 'ri' ? 'i' : frame === 'ci' ? 'i' : 'r'].toFixed(1)} km `, this.cnvs.width - 10, this.cnvs.height -  10)
             }
         catch (e) {
@@ -1772,6 +1777,7 @@ let timeFunction = false;
             mainWindow.changeTime(mainWindow.desired.scenarioTime + mainWindow.playTimeStep, true)
         
             mainWindow.showData();
+            mainWindow.showLocation();
             mainWindow.satellites.forEach(sat => sat.drawCurrentPosition(true))
             if (timeFunction) console.timeEnd()
             return window.requestAnimationFrame(animationLoop)
@@ -1862,6 +1868,7 @@ function keydownFunction(key) {
     if (key.key === ' ') {
         if (threeD) {
             threeD = false
+            mainWindow.latLongMode = true
             return
         }
         if (mainWindow.latLongMode) {
@@ -2009,7 +2016,7 @@ function keydownFunction(key) {
                 break;
             case 'ci': 
                 // threeD = true
-                mainWindow.latLongMode = true
+                threeD = true
                 mainWindow.setState('ri');
                 mainWindow.setFrameCenter({
                     ri: {
@@ -7465,8 +7472,8 @@ function handleTleFile(file) {
             let epoch = file[index].match(/\d{5}.\d{8}/)[0]
             let threeLEname
             if (index !== 0) {
-                if (file[index-1][0] === '0') {
-                    threeLEname = file[index-1].slice(2)
+                if (file[index-1][0] !== '2') {
+                    threeLEname = file[index-1][0] === '0' ? file[index-1].slice(2) : file[index-1]
                 }
             }
             let sat = {
@@ -7891,6 +7898,53 @@ function draw3dScene(az = azD, el = elD) {
     let d = lineLength * 2 
     let r = math.multiply( rotationMatrices(el, 2), rotationMatrices(az, 3))
     let curSun = mainWindow.getCurrentSun().map(s => s * sunLength)
+    let originEci = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime)
+    // let rEci2Ric = Eci2Ric(originEci.slice(0,3), originEci.slice(3),0,0,true)
+    
+    // for (let index = 0; index < coastlines.length; index++) {
+    //     coastlines[index].forEach(point => {
+    //         let lat = point[1]*Math.PI/180, long = point[0]*Math.PI/180, rEarth = 6371
+    //         let eciState = [Math.cos(long)*Math.cos(lat), Math.sin(long)*Math.cos(lat), Math.sin(lat),0,0,0].map(s => s*rEarth)
+    //         let ricState = math.multiply(rEci2Ric, math.subtract(eciState.slice(0,3),originEci.slice(0,3)))//Eci2RicWithC(originEci, eciState, rEci2Ric).slice(0,3)
+    //         let position = math.multiply(r, ricState)
+    //         let pos = [position[0] - mainWindow.cnvs.width/2, position[1] - mainWindow.cnvs.height/2].map(s => s/1000)
+    //         position = [pos[0] + mainWindow.cnvs.width/2, pos[1] + mainWindow.cnvs.height/2]
+    //         points.push({
+    //             color: mainWindow.colors.foregroundColor,
+    //             position,
+    //             size: mainWindow.trajSize
+    //         })
+
+    //     })
+    // }
+    // Show Distance Markers
+    for (let index = 1; index <= 5; index++) {
+        let baseNumber = mainWindow.plotWidth/6
+        let baseUnit = baseNumber < 10 ? baseNumber < 5 ? 1 : 5 : 10 
+        baseNumber = Math.floor(mainWindow.plotWidth/6/baseUnit)*baseUnit
+        points.push({
+            color: mainWindow.colors.foregroundColor,
+            position: math.multiply(r, [0,baseNumber*index,0]),
+            text: (index*baseNumber)+'km',
+            alpha: 0.25,
+            size: 0
+        })
+        points.push({
+            color: mainWindow.colors.foregroundColor,
+            position: math.multiply(r, [baseNumber*index,0,0]),
+            text: (index*baseNumber)+'km',
+            alpha: 0.25,
+            size: 0
+        })
+        points.push({
+            color: mainWindow.colors.foregroundColor,
+            position: math.multiply(r, [0,0,baseNumber*index]),
+            text: (index*baseNumber)+'km',
+            alpha: 0.25,
+            size: 0
+        })
+        
+    }
     // Calc points for axis lines
     for (let index = 0; index <= linePoints; index++) {
 
@@ -7914,60 +7968,88 @@ function draw3dScene(az = azD, el = elD) {
     }
     points.push({
         color: mainWindow.colors.foregroundColor,
-        position: math.multiply(r, [lineLength, 0, 0]),
-        size: 2,
-        text: 'R'
+        position: math.multiply(r, [lineLength*1.1, 0, 0]),
+        size: 0,
+        text: 'R',
+        alpha: 1,
     },{
         color: mainWindow.colors.foregroundColor,
-        position: math.multiply(r, [0,lineLength, 0]),
-        size: 2,
-        text: 'I'
+        position: math.multiply(r, [0,lineLength*1.1, 0]),
+        size: 0,
+        text: 'I',
+        alpha: 1,
     },{
         color: mainWindow.colors.foregroundColor,
-        position: math.multiply(r, [0,0,lineLength]),
-        size: 2,
-        text: 'C'
+        position: math.multiply(r, [0,0,lineLength*1.1]),
+        size: 0,
+        text: 'C',
+        alpha: 1,
     })
     mainWindow.satellites.forEach(sat => {
         if (sat.stateHistory === undefined) sat.calcTraj()
         let cur = sat.currentPosition(mainWindow.scenarioTime);
         cur = {r: cur[0], i: cur[1], c: cur[2], rd: cur[3], id: cur[4], cd: cur[5]};
         sat.curPos = cur;
-        if (!sat.locked) sat.stateHistory.forEach(point => {
-            points.push({
-                color: sat.color,
-                position: math.multiply(r, [point.position[0], point.position[1], point.position[2]]),
-                size: 2
+        if (!sat.locked) {
+            sat.stateHistory.forEach(point => {
+                points.push({
+                    color: sat.color,
+                    position: math.multiply(r, [point.position[0], point.position[1], point.position[2]]),
+                    size: mainWindow.trajSize*2
+                })
             })
-        })
+            sat.burns.forEach(burn => {
+                if (burn.time > mainWindow.scenarioTime) return
+                points.push({
+                    color: sat.color,
+                    position: math.multiply(r, burn.location),
+                    size: mainWindow.trajSize*8
+                })
+            })
+        }
         let pos = math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c])
         sat.pixelPos = mainWindow.convertToPixels(pos).ri
         points.push({
             color: sat.color,
             position: pos,
-            size: 10,
+            size: mainWindow.trajSize*10,
             text: shortenString(sat.name),
+            alpha: 1,
             shape: sat.shape
         })
     })
     points = points.sort((a,b) => a.position[2] - b.position[2])
     ctx.textAlign = 'center'
-    ctx.font = 'bold 15px serif'
-    points.map(p => {
-        pos = mainWindow.convertToPixels(p.position).ri
-        ctx.fillStyle = p.color
-        ctx.fillRect(pos.x - p.size / 2, pos.y - p.size / 2,p.size,p.size)
-        if (p.text !== undefined) {
-            ctx.fillText(p.text, pos.x, pos.y - 5)
+    ctx.textBaseline = 'middle'
+    points.forEach(p => {
+        let pos = mainWindow.convertToPixels(p.position).ri
+        let viewDistance = mainWindow.plotWidth/2
+        let zRatio = (viewDistance - p.position[2])/viewDistance
+        if (zRatio < 0.25) return
+        let size = p.size / zRatio
+        let textSize = size === 0 ? 20 / zRatio : size
+        if (p.shape !== undefined) {
+            drawSatellite({
+                pixelPosition: [pos.x, pos.y],
+                shape: p.shape,
+                color: p.color,
+                name: p.text,
+                size: size/5,
+                cnvs: mainWindow.cnvs,
+                ctx
+            })
         }
-        // if (p.shape !== undefined) {
-        //     drawSatellite({
-        //         pixelPosition: [p.x, p.y],
-        //         shape: p.shape,
-        //         cnvs: mainWindow.cnvs,
-        //         ctx
-        //     })
-        // }
+        else {
+            ctx.fillStyle = p.color
+            ctx.fillRect(pos.x - size / 2, pos.y - size / 2,size,size)
+        }
+        if (p.text !== undefined && p.shape === undefined) {
+            ctx.font = `bold ${textSize}px serif`
+            ctx.fillStyle = mainWindow.colors.foregroundColor
+            ctx.globalAlpha = p.alpha
+            ctx.fillText(p.text, pos.x, pos.y - size)
+        }
+        ctx.globalAlpha = 1
     })
 }
 
