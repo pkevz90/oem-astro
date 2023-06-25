@@ -2017,6 +2017,7 @@ function keydownFunction(key) {
             case 'ci': 
                 // threeD = true
                 threeD = true
+                mainWindow.desired.plotCenter = 0
                 mainWindow.setState('ri');
                 mainWindow.setFrameCenter({
                     ri: {
@@ -2084,6 +2085,14 @@ function keydownFunction(key) {
             return
         }
         mainWindow.latLongMode = true
+    }
+    else if (key.key === 'x' || key.key === 'X') {
+        mainWindow.latLongMode = false
+        threeD = !threeD
+        if (threeD) {
+            mainWindow.setState('ri');
+            mainWindow.desired.plotCenter = 0
+        }
     }
     else if (key.key === 's' || key.key === 'S') {
         if (mainWindow.satellites.length < 1) return
@@ -8794,7 +8803,20 @@ function openInstructionWindow() {
                 <li>Select the team state will go to and generate file for state info management during scenario</li>
             </ul>
         </li>
-        <li>Spacebar changes current view</li>
+        <li>
+            Spacebar changes current view (listed in order)
+            <ol>
+                <li>RI Plot</li>
+                <li>RI & CI Plot</li>
+                <li>RI & Narrow CI Plot</li>
+                <li>RI, CI & CR Plot</li>
+                <li>CR & CI Plot</li>
+                <li>CR Plot</li>
+                <li>CI Plot</li>
+                <li>3D Plot</li>
+                <li>Ground Track</li>
+            </ol>
+        </li>
         <li>
             Hot Keys
             <ul>
@@ -8803,6 +8825,7 @@ function openInstructionWindow() {
                 <li><kbd>A</kbd> - Open site access submenu</li>
                 <li><kbd>T</kbd> - Open Time Panel</li>
                 <li><kbd>F</kbd> - Open Polar Plot</li>
+                <li><kbd>X</kbd> - Open 3D View</li>
                 <li><kbd>G</kbd> - Switch to ground-track view</li>
                 <li><kbd>Ctrl</kbd> + <kbd>h</kbd> - Run sim with HPOP</li>
                 <li><kbd>Shift</kbd> + <kbd>L</kbd> - Open save window</li>
