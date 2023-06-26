@@ -19,6 +19,8 @@ let lastSaveName = ''
 let errorList = []
 let ellipses = []
 let monteCarloData = null
+
+let focLen = 1, azD = 45, elD = 45
 document.getElementById('time-slider-range').max = 48*3600
 document.body.append(document.createElement("dialog"))
 // If on touch screen, set and add required assets
@@ -109,7 +111,9 @@ class windowCanvas {
         ri: {x: 0.5, y: 0.5, w: 1, h: 1},
         ci: {x: 0.5, y: 1, w: 1, h: 0},
         rc: {x: 0, y: 1, w: 0, h: 0},
-        plot: {x: 0, y: 0, w: 0, h: 0}
+        plot: {x: 0, y: 0, w: 0, h: 0},
+        elD: 90,
+        azD: 0
     };
     burnStatus = {
         type: false,
@@ -722,11 +726,16 @@ class windowCanvas {
         }
         this.plotHeight = this.desired.plotWidth * this.getRatio();
     }
-    setFrameCenter(options) {
+    setFrameCenter(options, immediate = false) {
         let {ri = this.frameCenter.ri, ci = this.frameCenter.ci, rc = this.frameCenter.rc, plot = this.frameCenter.plot} = options;
         this.desired.ri = ri;
         this.desired.ci = ci;
         this.desired.rc = rc;
+        if (immediate) {
+            this.frameCenter.ri = ri;
+            this.frameCenter.ci = ci;
+            this.frameCenter.rc = rc;
+        }
         this.desired.plot = plot;
     }
     updateSettings() {
@@ -740,6 +749,9 @@ class windowCanvas {
         this.plotCenter += (this.desired.plotCenter - this.plotCenter) * this.desired.speed 
         this.plotWidth += (this.desired.plotWidth - this.plotWidth) * this.desired.speed 
         this.plotHeight = this.plotWidth * this.getRatio();
+        
+        elD += (this.desired.elD - elD) * this.desired.speed 
+        azD += (this.desired.azD - azD) * this.desired.speed 
     }
     setSize(width, height) {
         this.cnvs.width = width;
@@ -2018,6 +2030,10 @@ function keydownFunction(key) {
                 // threeD = true
                 threeD = true
                 mainWindow.desired.plotCenter = 0
+                elD = 0
+                azD = 0
+                mainWindow.desired.elD = 45
+                mainWindow.desired.azD = 45
                 mainWindow.setState('ri');
                 mainWindow.setFrameCenter({
                     ri: {
@@ -2029,7 +2045,7 @@ function keydownFunction(key) {
                     rc: {
                         x: 0, y: 1, w: 0, h: 0
                     }
-                })
+                }, true)
                 mainWindow.satellites.forEach(sat => sat.calcTraj(true))
                 break;
             default:  
@@ -2091,7 +2107,22 @@ function keydownFunction(key) {
         threeD = !threeD
         if (threeD) {
             mainWindow.setState('ri');
+            mainWindow.setFrameCenter({
+                ri: {
+                    x: 0.5, y: 0.5, w: 1, h: 1
+                },
+                ci: {
+                    x: 0.5, y: 1, w: 1, h: 0
+                },
+                rc: {
+                    x: 0, y: 1, w: 0, h: 0
+                }
+            })
             mainWindow.desired.plotCenter = 0
+            elD = 90
+            azD = 0
+            mainWindow.desired.elD = 45
+            mainWindow.desired.azD = 45
         }
     }
     else if (key.key === 's' || key.key === 'S') {
@@ -4102,7 +4133,9 @@ document.getElementById('main-plot').addEventListener('pointermove', event => {
             let delY = event.clientY - mainWindow.frameMove.y;
             if (threeD) {
                 elD = mainWindow.frameMove.el + delY * 0.4
+                mainWindow.desired.elD = elD
                 azD = mainWindow.frameMove.az + delX * 0.4
+                mainWindow.desired.azD = azD
                 return
             }
             mainWindow.desired.plotCenter = mainWindow.frameMove.origin + delX * mainWindow.getPlotWidth() / mainWindow.getWidth(); 
@@ -7898,7 +7931,6 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
     }
 }
 setSun()
-let focLen = 1, azD = 45, elD = 45
 function draw3dScene(az = azD, el = elD) {
     el = 90 - el
     let linePoints = 200
@@ -7921,6 +7953,7 @@ function draw3dScene(az = azD, el = elD) {
     let thetaGmst = astro.siderealTime(jd_UTI)
     let w = astro.rot(-thetaGmst, 3)
     let earthPoints = [], lineFilterDistance
+    // Draw rudimentary 3d earth if coastlines is on (will slow down considerably for now)
     if (mainWindow.showRicCoastlines) {
         lineFilterDistance = (3000000/rOriginEci)**2
         earthPoints = coastlineEcefPoints.map(coast => {
@@ -7977,24 +8010,25 @@ function draw3dScene(az = azD, el = elD) {
         
     }
     // Calc points for axis lines
+    let lineSize = mainWindow.plotSize * mainWindow.cnvs.width * mainWindow.frameCenter.ri.w * 0.0025
     for (let index = 0; index <= linePoints; index++) {
 
         points.push({
             color: mainWindow.colors.foregroundColor,
             position: math.multiply(r, [lineLength * index / linePoints, 0, 0]),
-            size: 2
+            size: lineSize
         },{
             color: mainWindow.colors.foregroundColor,
             position: math.multiply(r, [0, lineLength * index / linePoints, 0]),
-            size: 2
+            size: lineSize
         },{
             color: mainWindow.colors.foregroundColor,
             position: math.multiply(r, [0, 0, lineLength * index / linePoints]),
-            size: 2
+            size: lineSize
         },{
             color: '#ffa500',
             position: math.multiply(r, math.dotMultiply(index / linePoints, curSun)),
-            size: 2
+            size: lineSize
         })
     }
     points.push({
