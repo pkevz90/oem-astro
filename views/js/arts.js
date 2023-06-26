@@ -2459,7 +2459,9 @@ function startContextClick(event) {
     // Check if clicked on satellite
     let checkProxSats
     if (threeD) {
-        checkProxSats = mainWindow.satellites.map(sat => math.norm(math.subtract([event.clientX, event.clientY], Object.values(sat.pixelPos)))).findIndex(sat => sat < 10)
+        checkProxSats = mainWindow.satellites.map(sat => {
+            return math.norm(math.subtract([event.clientX, event.clientY], Object.values(sat.pixelPos)))
+        }).findIndex(sat => sat < 30)
     }
     else {
         checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, false)).findIndex(sat => sat.ri || sat.rc || sat.ci)
@@ -7902,31 +7904,51 @@ function draw3dScene(az = azD, el = elD) {
     let linePoints = 200
     let lineLength = 0.25 * mainWindow.plotHeight
     let sunLength = lineLength * 0.8
+    let viewDistance = mainWindow.plotWidth/2
     let points = []
     let ctx = mainWindow.getContext()
     let d = lineLength * 2 
     let r = math.multiply( rotationMatrices(el, 2), rotationMatrices(az, 3))
     let curSun = mainWindow.getCurrentSun().map(s => s * sunLength)
     let originEci = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime)
-    // let rEci2Ric = Eci2Ric(originEci.slice(0,3), originEci.slice(3),0,0,true)
+    let rOriginEci = math.norm(originEci.slice(0,3))
+    // let rCameraEci = (rOriginEci+mainWindow.plotWidth/2)/rOriginEci
+    let originEciCamera = originEci.map(s => s*rOriginEci)
+    let rEci2Ric = Eci2Ric(originEci.slice(0,3), originEci.slice(3),0,0,true)
+    let curDate = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
+    let jd_UTI = astro.julianDate(curDate.getFullYear(), curDate.getMonth()+1, curDate.getDate(), curDate.getHours(), curDate.getMinutes(), curDate.getSeconds()+curDate.getMilliseconds()/1000) 
+        
+    let thetaGmst = astro.siderealTime(jd_UTI)
+    let w = astro.rot(-thetaGmst, 3)
+    let earthPoints = [], lineFilterDistance
+    if (mainWindow.showRicCoastlines) {
+        lineFilterDistance = (3000000/rOriginEci)**2
+        earthPoints = coastlineEcefPoints.map(coast => {
+            return coast.filter((s,ii) => ii % 4 === 0).map(point => {
+                let eciState = math.multiply(w, point) 
+                if (math.dot(eciState, math.subtract(originEciCamera.slice(0,3), eciState)) < 0) return undefined
+                let ricState = math.multiply(rEci2Ric, math.subtract(eciState,originEci.slice(0,3)))//Eci2RicWithC(originEci, eciState, rEci2Ric).slice(0,3)
+                let position = math.multiply(r, ricState)
+                
+                return position
     
-    // for (let index = 0; index < coastlines.length; index++) {
-    //     coastlines[index].forEach(point => {
-    //         let lat = point[1]*Math.PI/180, long = point[0]*Math.PI/180, rEarth = 6371
-    //         let eciState = [Math.cos(long)*Math.cos(lat), Math.sin(long)*Math.cos(lat), Math.sin(lat),0,0,0].map(s => s*rEarth)
-    //         let ricState = math.multiply(rEci2Ric, math.subtract(eciState.slice(0,3),originEci.slice(0,3)))//Eci2RicWithC(originEci, eciState, rEci2Ric).slice(0,3)
-    //         let position = math.multiply(r, ricState)
-    //         let pos = [position[0] - mainWindow.cnvs.width/2, position[1] - mainWindow.cnvs.height/2].map(s => s/1000)
-    //         position = [pos[0] + mainWindow.cnvs.width/2, pos[1] + mainWindow.cnvs.height/2]
-    //         points.push({
-    //             color: mainWindow.colors.foregroundColor,
-    //             position,
-    //             size: mainWindow.trajSize
-    //         })
-
-    //     })
-    // }
-    // Show Distance Markers
+            }).filter(s => s !== undefined)
+        }).filter(s => s.length > 0)
+        mainWindow.groundSites.forEach(site => {
+            let eciState = astro.latlong2eci(site.coordinates.lat, site.coordinates.long, curDate)
+            if (math.dot(eciState, math.subtract(originEciCamera.slice(0,3), eciState)) < 0) return 
+            let ricState = math.multiply(rEci2Ric, math.subtract(eciState,originEci.slice(0,3)))
+            let position = math.multiply(r, ricState)
+            points.push({
+                color: 'orange',
+                position,
+                size: 10,
+                text: site.name,
+                alpha: 1,
+            })
+        })
+    }
+        // Show Distance Markers
     for (let index = 1; index <= 5; index++) {
         let baseNumber = mainWindow.plotWidth/6
         let baseUnit = baseNumber < 10 ? baseNumber < 5 ? 1 : 5 : 10 
@@ -7977,7 +7999,7 @@ function draw3dScene(az = azD, el = elD) {
     }
     points.push({
         color: mainWindow.colors.foregroundColor,
-        position: math.multiply(r, [lineLength*1.1, 0, 0]),
+        position: math.multiply(r, [lineLength*1.1,0, 0]),
         size: 0,
         text: 'R',
         alpha: 1,
@@ -8017,11 +8039,18 @@ function draw3dScene(az = azD, el = elD) {
             })
         }
         let pos = math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c])
-        sat.pixelPos = mainWindow.convertToPixels(pos).ri
+        let zRatio = (viewDistance - pos[2])/viewDistance
+        let pixelPos = mainWindow.convertToPixels(pos).ri
+        pixelPos = [pixelPos.x-mainWindow.cnvs.width/2, pixelPos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
+        pixelPos = {
+            x: pixelPos[0] + mainWindow.cnvs.width/2,
+            y: pixelPos[1] + mainWindow.cnvs.height/2
+        }
+        sat.pixelPos = pixelPos
         points.push({
             color: sat.color,
             position: pos,
-            size: mainWindow.trajSize*10,
+            size: sat.size*5,
             text: shortenString(sat.name),
             alpha: 1,
             shape: sat.shape
@@ -8030,10 +8059,37 @@ function draw3dScene(az = azD, el = elD) {
     points = points.sort((a,b) => a.position[2] - b.position[2])
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
+    ctx.strokeStyle = mainWindow.colors.foregroundColor
+    
+    earthPoints.forEach(coast => {
+        ctx.beginPath()
+        let lastAngle
+        for (let index = 0; index < coast.length; index++) {
+            let pos = mainWindow.convertToPixels(coast[index]).ri
+            let zRatio = (viewDistance - coast[index][2])/viewDistance
+            pos = [pos.x-mainWindow.cnvs.width/2, pos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
+            pos = {
+                x: pos[0] + mainWindow.cnvs.width/2,
+                y: pos[1] + mainWindow.cnvs.height/2
+            }
+            if (zRatio < 0.25) return
+
+            if (index === 0) ctx.moveTo(pos.x,pos.y)
+            else if (index > 0 && math.subtract(lastAngle, [pos.x,pos.y]).reduce((a,b) => a + b **2) > lineFilterDistance) ctx.moveTo(pos.x,pos.y)
+            else ctx.lineTo(pos.x,pos.y)
+            lastAngle = [pos.x, pos.y]
+        }
+        ctx.stroke()
+    })
     points.forEach(p => {
         let pos = mainWindow.convertToPixels(p.position).ri
         let viewDistance = mainWindow.plotWidth/2
         let zRatio = (viewDistance - p.position[2])/viewDistance
+        pos = [pos.x-mainWindow.cnvs.width/2, pos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
+        pos = {
+            x: pos[0] + mainWindow.cnvs.width/2,
+            y: pos[1] + mainWindow.cnvs.height/2
+        }
         if (zRatio < 0.25) return
         let size = p.size / zRatio
         let textSize = size === 0 ? 20 / zRatio : size
@@ -8043,7 +8099,7 @@ function draw3dScene(az = azD, el = elD) {
                 shape: p.shape,
                 color: p.color,
                 name: p.text,
-                size: size/5,
+                size: size*0.2/zRatio,
                 cnvs: mainWindow.cnvs,
                 ctx
             })
