@@ -1801,6 +1801,8 @@ let timeFunction = false;
             mainWindow.showTime();
             mainWindow.showData();
             if (timeFunction) console.timeEnd()
+            
+            mainWindow.changeTime(mainWindow.desired.scenarioTime + mainWindow.playTimeStep, true)
             return requestAnimationFrame(animationLoop)
         }
         mainWindow.drawInertialOrbit(); 
@@ -7932,8 +7934,15 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
 }
 setSun()
 function draw3dScene(az = azD, el = elD) {
+    // let sensors = [{
+    //     sat: 0,
+    //     range: 200,
+    //     radius: 20,
+    //     sensorR: [[1,0,0],[0,1,0],[0,0,1]]
+    // }]
+    let sensors = []
     el = 90 - el
-    let linePoints = 200
+    let linePoints = 100
     let lineLength = 0.25 * mainWindow.plotHeight
     let sunLength = lineLength * 0.8
     let viewDistance = mainWindow.plotWidth/2
@@ -7942,6 +7951,7 @@ function draw3dScene(az = azD, el = elD) {
     let d = lineLength * 2 
     let r = math.multiply( rotationMatrices(el, 2), rotationMatrices(az, 3))
     let curSun = mainWindow.getCurrentSun().map(s => s * sunLength)
+    let curMoon = mainWindow.getCurrentMoon().map(s => s * sunLength)
     let originEci = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime)
     let rOriginEci = math.norm(originEci.slice(0,3))
     // let rCameraEci = (rOriginEci+mainWindow.plotWidth/2)/rOriginEci
@@ -7953,6 +7963,41 @@ function draw3dScene(az = azD, el = elD) {
     let thetaGmst = astro.siderealTime(jd_UTI)
     let w = astro.rot(-thetaGmst, 3)
     let earthPoints = [], lineFilterDistance
+    // Draw sensors
+    sensors.forEach(sens => {
+        let circleCenter = [0,1,0].map(s => s*sens.range)
+        let twoPi = 2*Math.PI
+        for (let index = 0; index < 100; index++) {
+            let sinAng = math.sin(twoPi*index / 80)
+            let cosAng = math.cos(twoPi*index / 80)
+            let ricPoint1 = math.add(circleCenter, [sens.radius*sinAng, 0, sens.radius*cosAng])
+            ricPoint1 = math.multiply(sens.sensorR, ricPoint1)
+            if (index % 16 === 0) {
+                for (let index = 0; index < 80; index++) {
+                    let ricLinePoint = ricPoint1.map(s => index*s/80)
+                    ricLinePoint = math.multiply(r, ricLinePoint)
+                    points.push({
+                        color: '#ff0000',
+                        position: ricLinePoint,
+                        size: 2.5
+                    })
+                }
+            }
+            ricPoint1 = math.multiply(r, ricPoint1)
+            let ricPoint2 = math.add(circleCenter, [sens.radius*0.5*sinAng, -sens.range*0.5, 0.5*sens.radius*cosAng])
+            ricPoint2 = math.multiply(r, sens.sensorR, ricPoint2)
+            points.push({
+                color: '#ff0000',
+                position: ricPoint2,
+                size: 2.5
+            },{
+                color: '#ff0000',
+                position: ricPoint1,
+                size: 2.5
+            })
+        }
+    })
+
     // Draw rudimentary 3d earth if coastlines is on (will slow down considerably for now)
     if (mainWindow.showRicCoastlines) {
         lineFilterDistance = (3000000/rOriginEci)**2
@@ -8028,6 +8073,10 @@ function draw3dScene(az = azD, el = elD) {
         },{
             color: '#ffa500',
             position: math.multiply(r, math.dotMultiply(index / linePoints, curSun)),
+            size: lineSize
+        },{
+            color: '#aaaaaa',
+            position: math.multiply(r, math.dotMultiply(index / linePoints, curMoon)),
             size: lineSize
         })
     }
