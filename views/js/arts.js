@@ -1146,7 +1146,18 @@ class windowCanvas {
                 let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0, req.interceptTime);
                 mainWindow.relDataDivs[ii].forEach(span => {
                     let type = span.getAttribute('type')
-                    span.innerText = type === 'interceptData' ? relDataIn[span.getAttribute('type')] : relDataIn[span.getAttribute('type')].toFixed(2)
+                    console.log(type);
+                    switch (type) {
+                        case 'interceptData':
+                            span.innerText = relDataIn[span.getAttribute('type')]
+                            break;
+                        case 'position':
+                            span.innerText = relDataIn[span.getAttribute('type')].map(s => s.toFixed(1)).join(',')
+                            break;
+                        default:
+                            relDataIn[span.getAttribute('type')].toFixed(2)
+                            break;
+                    }
                 })
             })
             ctx.textAlign = 'left'
@@ -3120,6 +3131,7 @@ function handleContextClick(button) {
         button.parentElement.targets = targets
         let out  = `
            <div class="context-item" onclick="handleContextClick(this)" id="display-data-3">Confirm</div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="position"/><label style="cursor: pointer" for="position">RIC Position</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="range"/><label style="cursor: pointer" for="range">Range</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="rangeRate"/><label style="cursor: pointer" for="rangeRate">Range Rate</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="relativeVelocity"/><label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
@@ -5539,7 +5551,9 @@ function drawSatellite(satellite = {}) {
 function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
     let sunAngle, moonAngle, rangeRate, range, poca, toca, tanRate, rangeStd, relPos, relVel, relPosHis, interceptData;
     try {
-        let relState = math.subtract(Object.values(mainWindow.satellites[n_origin].curPos), Object.values(mainWindow.satellites[n_target].curPos))
+        let pos1 = Object.values(getCurrentInertial(n_origin)), pos2 = Object.values(getCurrentInertial(n_target))
+        let currentTime = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
+        let relState = math.subtract(pos1, pos2)
         relPos = relState.slice(0,3)
         relVel = relState.slice(3,6)
         range = math.norm(relPos);
@@ -5550,10 +5564,10 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
                 rangeStd = (rData.reduce((a, b) => a + (b - rDataAve) ** 2, 0) / (rData.length-1)) ** 0.5
             }
         }
-        sunAngle = mainWindow.getCurrentSun()
+        sunAngle = astro.sunEciFromTime(currentTime)//mainWindow.getCurrentSun()
         sunAngle = math.acos(math.dot(relPos, sunAngle) / range / math.norm(sunAngle)) * 180 / Math.PI;
         sunAngle = mainWindow.zeroCatsGood ? 180 - sunAngle : sunAngle;
-        moonAngle = mainWindow.getCurrentMoon()
+        moonAngle = astro.moonEciFromTime(currentTime)//mainWindow.getCurrentMoon()
         moonAngle = math.acos(math.dot(relPos, moonAngle) / range / math.norm(moonAngle)) * 180 / Math.PI;
         moonAngle = mainWindow.zeroCatsGood ? 180 - moonAngle : moonAngle; // Appropriate for USSF
         rangeRate = math.dot(relVel, relPos) * 1000 / range;
@@ -5562,6 +5576,7 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
 
         poca = math.min(relPosHis);
         toca = relPosHis.findIndex(element => element === poca) * mainWindow.timeDelta;
+        position = math.squeeze(Eci2Ric(pos1.slice(0,3), pos1.slice(3),pos2.slice(0,3), pos2.slice(3)).rHcw)
         if (intercept !== false) {
             let point1 = mainWindow.satellites[n_target].currentPosition()
             let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + intTime*3600})
@@ -5607,6 +5622,7 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
                 interceptData = '\nOutside of\nKinematic\nReach'
             }
         }
+        
     }
     catch (err) {
         console.log(err)
@@ -5619,6 +5635,7 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
             toca: 0,
             tanRate: 0,
             relativeVelocity: 0,
+            position: [0,0,0],
             interceptData: '\nOutside of\nKinematic\nReach'
         }
     }
@@ -5632,6 +5649,7 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
         poca,
         toca,
         tanRate,
+        position,
         relativeVelocity: math.norm(relVel)*1000,
         interceptData
     }
@@ -10204,6 +10222,7 @@ function openDataDiv(options = {}) {
     } = options
     let properTerms = {
         range: {name: 'Range', units: 'km'},
+        position: {name: 'RIC', units: 'km'},
         relativeVelocity: {name: 'Rel Vel', units: 'm/s'},
         sunAngle: {name: 'CATS', units: 'deg'},
         moonAngle: {name: 'CATM', units: 'deg'},
