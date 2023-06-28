@@ -18,7 +18,7 @@ let futureActions = []
 let lastSaveName = ''
 let errorList = []
 let ellipses = []
-let circleTrig = math.range(0,360,1.8,false)._data.map(s => s*Math.PI/180).map(s => [Math.sin(s), Math.cos(s)])
+let circleTrig = math.range(0,360,7.2,false)._data.map(s => s*Math.PI/180).map(s => [Math.sin(s), Math.cos(s)])
 let monteCarloData = null
 
 let focLen = 1, azD = 45, elD = 45
@@ -7937,9 +7937,14 @@ setSun()
 function draw3dScene(az = azD, el = elD) {
     // let sensors = [{
     //     sat: 0,
+    //     range: 1000,
+    //     radius: 230,
+    //     sensorR: [[1,0,0],[0,1,0],[0,0,1]]
+    // },{
+    //     sat: 0,
     //     range: 200,
     //     radius: 20,
-    //     sensorR: [[1,0,0],[0,1,0],[0,0,1]]
+    //     sensorR: [[1,0,0],[0,-1,0],[0,0,1]]
     // }]
     let sensors = []
     el = 90 - el
@@ -7985,63 +7990,185 @@ function draw3dScene(az = azD, el = elD) {
         let b = 3*(curCov.values[curCov.values.length-2]**0.5)
         let c = 3*(curCov.values[curCov.values.length-3]**0.5)
         let rRicToCov = math.transpose([curCov.vectors[curCov.vectors.length-1], curCov.vectors[curCov.vectors.length-2], curCov.vectors[curCov.vectors.length-3]])
+        let lastPoints, firstPoints
         for (let index = 0; index < circleTrig.length; index++) {
             let sinAng = circleTrig[index][0]
             let cosAng = circleTrig[index][1]
             let point = math.add(ellipseCenter, math.multiply(rRicToCov,[sinAng*a,cosAng*b,0]))
-            point = math.multiply(r, point)
-            points.push({
-                color,
-                position: point,
-                size: 2.5
-            })
+            let point1 = math.multiply(r, point)
             point = math.add(ellipseCenter, math.multiply(rRicToCov,[sinAng*a,0,cosAng*c]))
-            point = math.multiply(r, point)
-            points.push({
-                color,
-                position: point,
-                size: 2.5
-            })
+            let point2 = math.multiply(r, point)
             point = math.add(ellipseCenter, math.multiply(rRicToCov,[0,sinAng*b,cosAng*c]))
-            point = math.multiply(r, point)
+            let point3 = math.multiply(r, point)
+            if (lastPoints === undefined) {
+                firstPoints = [point1, point2, point3]
+                lastPoints = [point1, point2, point3]
+                continue
+            }
+            else if (index === circleTrig.length-1) {
+                
             points.push({
                 color,
-                position: point,
+                position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
                 size: 2.5
             })
+            }
+            points.push({
+                color,
+                position: [point1, lastPoints[0], (point1[2] + lastPoints[0][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point2, lastPoints[1], (point2[2] + lastPoints[1][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point3, lastPoints[2], (point3[2] + lastPoints[2][2])/2],
+                size: 2.5
+            })
+            lastPoints = [point1, point2, point3]
+        }
+    }
+    // Draw Reachability
+    for (let index = 0; index < mainWindow.satellites.length; index++) {
+        if (mainWindow.satellites[index].reach === undefined) continue
+        let color = mainWindow.satellites[index].color
+        let eciStateOrig = Object.values(getCurrentInertial(index, mainWindow.satellites[index].reachTime))
+        // let eciStateCur = Object.values(getCurrentInertial(index, mainWindow.scenarioTime))
+        let rRic2Eci= Ric2EciRedux(originEci.slice(0,3), originEci.slice(3))
+        let curCov = propEciCovariance(eciStateOrig, mainWindow.satellites[index].reach, mainWindow.scenarioTime-mainWindow.satellites[index].reachTime)
+        
+        curCov = math.multiply(math.transpose(rRic2Eci), curCov.P, rRic2Eci)
+        curCov[0][1] = curCov[1][0]
+        curCov[0][2] = curCov[2][0]
+        curCov[1][2] = curCov[2][1]
+        curCov = math.eigs(curCov.slice(0,3).map(s => s.slice(0,3)))
+        curCov.vectors = math.transpose(curCov.vectors)
+        // Sort to find the largest radial component
+        let ellipseCenter = Object.values(mainWindow.satellites[index].curPos).slice(0,3)
+        let a = 3*(curCov.values[curCov.values.length-1]**0.5)
+        let b = 3*(curCov.values[curCov.values.length-2]**0.5)
+        let c = 3*(curCov.values[curCov.values.length-3]**0.5)
+        let rRicToCov = math.transpose([curCov.vectors[curCov.vectors.length-1], curCov.vectors[curCov.vectors.length-2], curCov.vectors[curCov.vectors.length-3]])
+        let lastPoints, firstPoints
+        for (let index = 0; index < circleTrig.length; index++) {
+            let sinAng = circleTrig[index][0]
+            let cosAng = circleTrig[index][1]
+            let point = math.add(ellipseCenter, math.multiply(rRicToCov,[sinAng*a,cosAng*b,0]))
+            let point1 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[sinAng*a,0,cosAng*c]))
+            let point2 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[0,sinAng*b,cosAng*c]))
+            let point3 = math.multiply(r, point)
+            if (lastPoints === undefined) {
+                firstPoints = [point1, point2, point3]
+                lastPoints = [point1, point2, point3]
+                continue
+            }
+            else if (index === circleTrig.length-1) {
+                
+            points.push({
+                color,
+                position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
+                size: 2.5
+            })
+            }
+            points.push({
+                color,
+                position: [point1, lastPoints[0], (point1[2] + lastPoints[0][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point2, lastPoints[1], (point2[2] + lastPoints[1][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point3, lastPoints[2], (point3[2] + lastPoints[2][2])/2],
+                size: 2.5
+            })
+            lastPoints = [point1, point2, point3]
         }
     }
     // Draw sensors
     sensors.forEach(sens => {
         let circleCenter = [0,1,0].map(s => s*sens.range)
+        let lastPoints, firstPoints
         for (let index = 0; index < circleTrig.length; index++) {
             let sinAng = circleTrig[index][0]
             let cosAng = circleTrig[index][1]
-            let ricPoint1 = math.add(circleCenter, [sens.radius*sinAng, 0, sens.radius*cosAng])
-            ricPoint1 = math.multiply(sens.sensorR, ricPoint1)
-            if (index % 16 === 0) {
-                for (let index = 0; index < 80; index++) {
-                    let ricLinePoint = ricPoint1.map(s => index*s/80)
-                    ricLinePoint = math.multiply(r, ricLinePoint)
+            let ricCirclePoint = [sens.radius*sinAng, 0, sens.radius*cosAng]
+            let point1 = math.add(circleCenter, ricCirclePoint)
+            let point2 = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.666),[0,sens.range*0.333,0]))
+            let point3 = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.333),[0,sens.range*0.666,0]))
+            if (index % 10 === 0) {
+                let lastPointLine
+                for (let index = 0; index <= 20; index++) {
+                    let ricLinePoint = point1.map(s => index*s/20)
+                    ricLinePoint = math.multiply(r,sens.sensorR, ricLinePoint)
+                    if (lastPointLine === undefined) {
+                        lastPointLine = ricLinePoint.slice()
+                    }
                     points.push({
                         color: '#ff0000',
-                        position: ricLinePoint,
+                        position: [ricLinePoint, lastPointLine, (ricCirclePoint[2]+lastPointLine[2])/2],
                         size: 2.5
                     })
+                    lastPointLine = ricLinePoint.slice()
                 }
             }
-            ricPoint1 = math.multiply(r, ricPoint1)
-            let ricPoint2 = math.add(circleCenter, [sens.radius*0.5*sinAng, -sens.range*0.5, 0.5*sens.radius*cosAng])
-            ricPoint2 = math.multiply(r, sens.sensorR, ricPoint2)
+            point1 = math.multiply(r,sens.sensorR, point1)
+            point2 = math.multiply(r,sens.sensorR, point2)
+            point3 = math.multiply(r,sens.sensorR, point3)
+            if (lastPoints === undefined) {
+                firstPoints = [point1, point2, point3]
+                lastPoints = [point1, point2, point3]
+            }  
+            else if (index === circleTrig.length-1) {
+                
+                points.push({
+                    color: '#ff0000',
+                    position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
+                    size: 2.5
+                },{
+                    color: '#ff0000',
+                    position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
+                    size: 2.5
+                },{
+                    color: '#ff0000',
+                    position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
+                    size: 2.5
+                })
+            }
             points.push({
                 color: '#ff0000',
-                position: ricPoint2,
+                position: [point1, lastPoints[0], (point1[2]+lastPoints[0][2])/2],
                 size: 2.5
             },{
                 color: '#ff0000',
-                position: ricPoint1,
+                position: [point2, lastPoints[1], (point2[2]+lastPoints[1][2])/2],
+                size: 2.5
+            },{
+                color: '#ff0000',
+                position: [point3, lastPoints[2], (point3[2]+lastPoints[2][2])/2],
                 size: 2.5
             })
+            lastPoints = [point1, point2, point3]
         }
     })
 
@@ -8211,9 +8338,34 @@ function draw3dScene(az = azD, el = elD) {
         }
         ctx.stroke()
     })
+    ctx.lineWidth = 1
     points.forEach(p => {
-        let pos = mainWindow.convertToPixels(p.position).ri
         let viewDistance = mainWindow.plotWidth/2
+        if (p.position[0].length !== undefined) {
+            // Line
+            ctx.strokeStyle = p.color
+            let pos1 = mainWindow.convertToPixels(p.position[0]).ri
+            let pos2 = mainWindow.convertToPixels(p.position[1]).ri
+            let zRatio1 = (viewDistance - p.position[0][2])/viewDistance
+            let zRatio2 = (viewDistance - p.position[1][2])/viewDistance
+            if (zRatio1 < 0.25) return
+            pos1 = [pos1.x-mainWindow.cnvs.width/2, pos1.y-mainWindow.cnvs.height/2].map(s => s/zRatio1)
+            pos1 = {
+                x: pos1[0] + mainWindow.cnvs.width/2,
+                y: pos1[1] + mainWindow.cnvs.height/2
+            }
+            pos2 = [pos2.x-mainWindow.cnvs.width/2, pos2.y-mainWindow.cnvs.height/2].map(s => s/zRatio2)
+            pos2 = {
+                x: pos2[0] + mainWindow.cnvs.width/2,
+                y: pos2[1] + mainWindow.cnvs.height/2
+            }
+            ctx.beginPath()
+            ctx.moveTo(pos1.x, pos1.y)
+            ctx.lineTo(pos2.x, pos2.y)
+            ctx.stroke()
+            return
+        }
+        let pos = mainWindow.convertToPixels(p.position).ri
         let zRatio = (viewDistance - p.position[2])/viewDistance
         pos = [pos.x-mainWindow.cnvs.width/2, pos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
         pos = {
