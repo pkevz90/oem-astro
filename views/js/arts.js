@@ -18,6 +18,7 @@ let futureActions = []
 let lastSaveName = ''
 let errorList = []
 let ellipses = []
+let circleTrig = math.range(0,360,1.8,false)._data.map(s => s*Math.PI/180).map(s => [Math.sin(s), Math.cos(s)])
 let monteCarloData = null
 
 let focLen = 1, azD = 45, elD = 45
@@ -7963,13 +7964,59 @@ function draw3dScene(az = azD, el = elD) {
     let thetaGmst = astro.siderealTime(jd_UTI)
     let w = astro.rot(-thetaGmst, 3)
     let earthPoints = [], lineFilterDistance
+    // Draw Covariance
+    for (let index = 0; index < mainWindow.satellites.length; index++) {
+        if (mainWindow.satellites[index].cov === undefined) continue
+        let color = mainWindow.satellites[index].color
+        let eciStateOrig = Object.values(getCurrentInertial(index, mainWindow.satellites[index].covTime))
+        // let eciStateCur = Object.values(getCurrentInertial(index, mainWindow.scenarioTime))
+        let rRic2Eci= Ric2EciRedux(originEci.slice(0,3), originEci.slice(3))
+        let curCov = propEciCovariance(eciStateOrig, mainWindow.satellites[index].cov, mainWindow.scenarioTime-mainWindow.satellites[index].covTime)
+        
+        curCov = math.multiply(math.transpose(rRic2Eci), curCov.P, rRic2Eci)
+        curCov[0][1] = curCov[1][0]
+        curCov[0][2] = curCov[2][0]
+        curCov[1][2] = curCov[2][1]
+        curCov = math.eigs(curCov.slice(0,3).map(s => s.slice(0,3)))
+        curCov.vectors = math.transpose(curCov.vectors)
+        // Sort to find the largest radial component
+        let ellipseCenter = Object.values(mainWindow.satellites[index].curPos).slice(0,3)
+        let a = 3*(curCov.values[curCov.values.length-1]**0.5)
+        let b = 3*(curCov.values[curCov.values.length-2]**0.5)
+        let c = 3*(curCov.values[curCov.values.length-3]**0.5)
+        let rRicToCov = math.transpose([curCov.vectors[curCov.vectors.length-1], curCov.vectors[curCov.vectors.length-2], curCov.vectors[curCov.vectors.length-3]])
+        for (let index = 0; index < circleTrig.length; index++) {
+            let sinAng = circleTrig[index][0]
+            let cosAng = circleTrig[index][1]
+            let point = math.add(ellipseCenter, math.multiply(rRicToCov,[sinAng*a,cosAng*b,0]))
+            point = math.multiply(r, point)
+            points.push({
+                color,
+                position: point,
+                size: 2.5
+            })
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[sinAng*a,0,cosAng*c]))
+            point = math.multiply(r, point)
+            points.push({
+                color,
+                position: point,
+                size: 2.5
+            })
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[0,sinAng*b,cosAng*c]))
+            point = math.multiply(r, point)
+            points.push({
+                color,
+                position: point,
+                size: 2.5
+            })
+        }
+    }
     // Draw sensors
     sensors.forEach(sens => {
         let circleCenter = [0,1,0].map(s => s*sens.range)
-        let twoPi = 2*Math.PI
-        for (let index = 0; index < 100; index++) {
-            let sinAng = math.sin(twoPi*index / 80)
-            let cosAng = math.cos(twoPi*index / 80)
+        for (let index = 0; index < circleTrig.length; index++) {
+            let sinAng = circleTrig[index][0]
+            let cosAng = circleTrig[index][1]
             let ricPoint1 = math.add(circleCenter, [sens.radius*sinAng, 0, sens.radius*cosAng])
             ricPoint1 = math.multiply(sens.sensorR, ricPoint1)
             if (index % 16 === 0) {
