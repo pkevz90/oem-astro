@@ -1146,8 +1146,7 @@ class windowCanvas {
                 let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0, req.interceptTime);
                 mainWindow.relDataDivs[ii].forEach(span => {
                     let type = span.getAttribute('type')
-                    console.log(type);
-                    switch (type) {
+                switch (type) {
                         case 'interceptData':
                             span.innerText = relDataIn[span.getAttribute('type')]
                             break;
