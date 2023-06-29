@@ -18,7 +18,7 @@ let futureActions = []
 let lastSaveName = ''
 let errorList = []
 let ellipses = []
-let circleTrig = math.range(0,360,7.2,false)._data.map(s => s*Math.PI/180).map(s => [Math.sin(s), Math.cos(s)])
+let circleTrig = math.range(0,360,12,false)._data.map(s => s*Math.PI/180).map(s => [Math.sin(s), Math.cos(s)])
 let monteCarloData = null
 
 let focLen = 1, azD = 45, elD = 45
@@ -2134,8 +2134,12 @@ function keydownFunction(key) {
             mainWindow.desired.plotCenter = 0
             elD = 90
             azD = 0
-            mainWindow.desired.elD = 45
-            mainWindow.desired.azD = 45
+            mainWindow.desired.elD = 90
+            mainWindow.desired.azD = 0
+            setTimeout(() => {
+                mainWindow.desired.elD = 45
+                mainWindow.desired.azD = 45
+            },125)
         }
     }
     else if (key.key === 's' || key.key === 'S') {
@@ -7951,6 +7955,7 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
     }
 }
 setSun()
+let f3d = 3
 function draw3dScene(az = azD, el = elD) {
     // let sensors = [{
     //     sat: 0,
@@ -8006,6 +8011,10 @@ function draw3dScene(az = azD, el = elD) {
         let a = 3*(curCov.values[curCov.values.length-1]**0.5)
         let b = 3*(curCov.values[curCov.values.length-2]**0.5)
         let c = 3*(curCov.values[curCov.values.length-3]**0.5)
+        let b2 = 3*(curCov.values[curCov.values.length-2]**0.5)*0.942926826429283
+        let c2 = 3*(curCov.values[curCov.values.length-3]**0.5)*0.942926826429283
+        let b3 = 3*(curCov.values[curCov.values.length-2]**0.5)*0.7459517410653645
+        let c3 = 3*(curCov.values[curCov.values.length-3]**0.5)*0.7459517410653645
         let rRicToCov = math.transpose([curCov.vectors[curCov.vectors.length-1], curCov.vectors[curCov.vectors.length-2], curCov.vectors[curCov.vectors.length-3]])
         let lastPoints, firstPoints
         for (let index = 0; index < circleTrig.length; index++) {
@@ -8017,26 +8026,50 @@ function draw3dScene(az = azD, el = elD) {
             let point2 = math.multiply(r, point)
             point = math.add(ellipseCenter, math.multiply(rRicToCov,[0,sinAng*b,cosAng*c]))
             let point3 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[-a*0.333,sinAng*b2,cosAng*c2]))
+            let point4 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[a*0.333,sinAng*b2,cosAng*c2]))
+            let point5 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[-a*0.667,sinAng*b3,cosAng*c3]))
+            let point6 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[a*0.667,sinAng*b3,cosAng*c3]))
+            let point7 = math.multiply(r, point)
             if (lastPoints === undefined) {
-                firstPoints = [point1, point2, point3]
-                lastPoints = [point1, point2, point3]
+                firstPoints = [point1, point2, point3, point4, point5, point6, point7]
+                lastPoints = [point1, point2, point3, point4, point5, point6, point7]
                 continue
             }
             else if (index === circleTrig.length-1) {
                 
-            points.push({
-                color,
-                position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
-                size: 2.5
-            },{
-                color,
-                position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
-                size: 2.5
-            },{
-                color,
-                position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
-                size: 2.5
-            })
+                points.push({
+                    color,
+                    position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point4, firstPoints[3], (point4[2] + firstPoints[3][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point5, firstPoints[4], (point5[2] + firstPoints[4][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point6, firstPoints[5], (point6[2] + firstPoints[5][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point7, firstPoints[6], (point7[2] + firstPoints[6][2])/2],
+                    size: 2.5
+                })
             }
             points.push({
                 color,
@@ -8050,8 +8083,24 @@ function draw3dScene(az = azD, el = elD) {
                 color,
                 position: [point3, lastPoints[2], (point3[2] + lastPoints[2][2])/2],
                 size: 2.5
+            },{
+                color,
+                position: [point4, lastPoints[3], (point4[2] + lastPoints[3][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point5, lastPoints[4], (point5[2] + lastPoints[4][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point6, lastPoints[5], (point6[2] + lastPoints[5][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point7, lastPoints[6], (point7[2] + lastPoints[6][2])/2],
+                size: 2.5
             })
-            lastPoints = [point1, point2, point3]
+            lastPoints = [point1, point2, point3, point4, point5, point6, point7]
         }
     }
     // Draw Reachability
@@ -8074,6 +8123,10 @@ function draw3dScene(az = azD, el = elD) {
         let a = 3*(curCov.values[curCov.values.length-1]**0.5)
         let b = 3*(curCov.values[curCov.values.length-2]**0.5)
         let c = 3*(curCov.values[curCov.values.length-3]**0.5)
+        let b2 = 3*(curCov.values[curCov.values.length-2]**0.5)*0.942926826429283
+        let c2 = 3*(curCov.values[curCov.values.length-3]**0.5)*0.942926826429283
+        let b3 = 3*(curCov.values[curCov.values.length-2]**0.5)*0.7459517410653645
+        let c3 = 3*(curCov.values[curCov.values.length-3]**0.5)*0.7459517410653645
         let rRicToCov = math.transpose([curCov.vectors[curCov.vectors.length-1], curCov.vectors[curCov.vectors.length-2], curCov.vectors[curCov.vectors.length-3]])
         let lastPoints, firstPoints
         for (let index = 0; index < circleTrig.length; index++) {
@@ -8085,26 +8138,50 @@ function draw3dScene(az = azD, el = elD) {
             let point2 = math.multiply(r, point)
             point = math.add(ellipseCenter, math.multiply(rRicToCov,[0,sinAng*b,cosAng*c]))
             let point3 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[-a*0.333,sinAng*b2,cosAng*c2]))
+            let point4 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[a*0.333,sinAng*b2,cosAng*c2]))
+            let point5 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[-a*0.667,sinAng*b3,cosAng*c3]))
+            let point6 = math.multiply(r, point)
+            point = math.add(ellipseCenter, math.multiply(rRicToCov,[a*0.667,sinAng*b3,cosAng*c3]))
+            let point7 = math.multiply(r, point)
             if (lastPoints === undefined) {
-                firstPoints = [point1, point2, point3]
-                lastPoints = [point1, point2, point3]
+                firstPoints = [point1, point2, point3, point4, point5, point6, point7]
+                lastPoints = [point1, point2, point3, point4, point5, point6, point7]
                 continue
             }
             else if (index === circleTrig.length-1) {
                 
-            points.push({
-                color,
-                position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
-                size: 2.5
-            },{
-                color,
-                position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
-                size: 2.5
-            },{
-                color,
-                position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
-                size: 2.5
-            })
+                points.push({
+                    color,
+                    position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point4, firstPoints[3], (point4[2] + firstPoints[3][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point5, firstPoints[4], (point5[2] + firstPoints[4][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point6, firstPoints[5], (point6[2] + firstPoints[5][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point7, firstPoints[6], (point7[2] + firstPoints[6][2])/2],
+                    size: 2.5
+                })
             }
             points.push({
                 color,
@@ -8118,8 +8195,24 @@ function draw3dScene(az = azD, el = elD) {
                 color,
                 position: [point3, lastPoints[2], (point3[2] + lastPoints[2][2])/2],
                 size: 2.5
+            },{
+                color,
+                position: [point4, lastPoints[3], (point4[2] + lastPoints[3][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point5, lastPoints[4], (point5[2] + lastPoints[4][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point6, lastPoints[5], (point6[2] + lastPoints[5][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point7, lastPoints[6], (point7[2] + lastPoints[6][2])/2],
+                size: 2.5
             })
-            lastPoints = [point1, point2, point3]
+            lastPoints = [point1, point2, point3, point4, point5, point6, point7]
         }
     }
     // Draw sensors
@@ -8363,8 +8456,8 @@ function draw3dScene(az = azD, el = elD) {
             ctx.strokeStyle = p.color
             let pos1 = mainWindow.convertToPixels(p.position[0]).ri
             let pos2 = mainWindow.convertToPixels(p.position[1]).ri
-            let zRatio1 = (viewDistance - p.position[0][2])/viewDistance
-            let zRatio2 = (viewDistance - p.position[1][2])/viewDistance
+            let zRatio1 = (viewDistance*f3d - p.position[0][2])/viewDistance/f3d
+            let zRatio2 = (viewDistance*f3d - p.position[1][2])/viewDistance/f3d
             if (zRatio1 < 0.25) return
             pos1 = [pos1.x-mainWindow.cnvs.width/2, pos1.y-mainWindow.cnvs.height/2].map(s => s/zRatio1)
             pos1 = {
@@ -8383,7 +8476,7 @@ function draw3dScene(az = azD, el = elD) {
             return
         }
         let pos = mainWindow.convertToPixels(p.position).ri
-        let zRatio = (viewDistance - p.position[2])/viewDistance
+        let zRatio = (viewDistance*f3d - p.position[2])/viewDistance/f3d
         pos = [pos.x-mainWindow.cnvs.width/2, pos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
         pos = {
             x: pos[0] + mainWindow.cnvs.width/2,
