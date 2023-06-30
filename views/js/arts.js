@@ -1364,6 +1364,7 @@ class Satellite {
     shape;
     burns = [];
     name;
+    conicVolumes = []
     stateHistory;
     constructor(options = {}) {
         let {
@@ -2733,6 +2734,7 @@ function startContextClick(event) {
                 <div class="context-item" onclick="handleContextClick(this)" id="prop-options">Propagate To</div>
                 <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="set-covariance">${mainWindow.satellites[activeSat].cov === undefined ? 'Set' : 'Delete'} Covariance</div>
                 <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="set-reachability">${mainWindow.satellites[activeSat].reach === undefined ? 'Display' : 'Delete'} Reachability</div>
+                <div class="context-item" sat="${activeSat}" onclick="handleContextClick(this)" id="set-conic-volume">Edit Conic Volumes</div>
                 ${mainWindow.satellites.length > 1 ? '<div class="context-item" onclick="handleContextClick(this)" id="display-data-1">Display Data</div>' : ''}
                 ${mainWindow.satellites[activeSat].burns.length > 0 ? `<div sat="${activeSat}" class="context-item" onclick="openBurnsWindow(this)" id="open-burn-window">Open Burns Window</div>` : ''}
             `
@@ -2906,6 +2908,39 @@ function handleContextClick(button) {
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'set-conic-volume') {
+        let sat = button.getAttribute('sat')
+        // button.parentElement.innerHTML = ''
+        button.parentElement.innerHTML = `
+            <div class="context-item" >RIC Vector <input type="Number" style="width: 5em; font-size: 1em" placeholder="-1"><input type="Number" style="width: 3em; font-size: 1em" placeholder="0"><input type="Number" style="width: 3em; font-size: 1em" placeholder="0"></div>
+            <div class="context-item" >Half-Angle <input type="Number" style="width: 5em; font-size: 1em" placeholder="10"> deg</div>
+            <div class="context-item" >Range <input type="Number" style="width: 5em; font-size: 1em" placeholder="10"> km</div>
+            <div class="context-item" sat=${sat} onclick="handleContextClick(this)" id="save-conic-volume">Set</div>
+        `
+        let cm = document.getElementById('context-menu')
+        let elHeight = cm.offsetHeight
+        let elTop =  Number(cm.style.top.split('p')[0])
+        cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'save-conic-volume') {
+        let sat = button.getAttribute('sat')
+        let inputs = [...button.parentElement.getElementsByTagName('input')].map(s => Number(s.value === '' ? s.placeholder: s.value));
+        let ricVector = inputs.slice(0,3).map(s => s/math.norm(inputs.slice(0,3)))
+        let halfAngle = inputs[3]
+        let range = inputs[4]
+        let volume = {
+            sat,
+            range,
+            radius: range*math.tan(halfAngle*Math.PI/180),
+            sensorR: findRotationMatrix([0,1,0],ricVector)
+        }
+        if (volume.sensorR === false) {
+            volume.sensorR = math.identity([3])
+        }
+        mainWindow.satellites[sat].conicVolumes.push(volume)
+        document.getElementById('context-menu')?.remove();
+        
     }
     if (button.id === 'save-reachability') {
         let sat = button.getAttribute('sat')
@@ -7956,6 +7991,29 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
 }
 setSun()
 let f3d = 3
+function get3dLinePoints(points = [[100,200, 100],[300,400,200], [900,500,-100]], options = {}) {
+    let {closed = false, color = '#ff00000', size = 2.5} = options
+    let outPoints = []
+    for (let index = 0; index < points.length; index++) {
+        if (index < (points.length-1)) {
+            outPoints.push({
+                color,
+                position: [points[index], points[index+1], (points[index][2] + points[index+1][2])/2],
+                size
+            })
+        }
+        else if (closed) {
+            outPoints.push({
+                color,
+                position: [points[index], points[0], (points[index][2] + points[0][2])/2],
+                size
+            })
+        }
+    }
+    return outPoints
+}
+
+
 function draw3dScene(az = azD, el = elD) {
     // let sensors = [{
     //     sat: 0,
@@ -7969,8 +8027,13 @@ function draw3dScene(az = azD, el = elD) {
     //     sensorR: [[1,0,0],[0,-1,0],[0,0,1]]
     // }]
     let sensors = []
+    mainWindow.satellites.forEach(sat => sensors.push(...sat.conicVolumes))
+    // let sensors = math.squeeze(mainWindow.satellites.map(s => s.conicVolumes))
+    if (sensors.length === undefined) {
+        sensors = [sensors]
+    }
     el = 90 - el
-    let linePoints = 100
+    let linePoints = 10
     let lineLength = 0.25 * mainWindow.plotHeight
     let sunLength = lineLength * 0.8
     let viewDistance = mainWindow.plotWidth/2
@@ -8215,77 +8278,11 @@ function draw3dScene(az = azD, el = elD) {
             lastPoints = [point1, point2, point3, point4, point5, point6, point7]
         }
     }
-    // Draw sensors
-    sensors.forEach(sens => {
-        let circleCenter = [0,1,0].map(s => s*sens.range)
-        let lastPoints, firstPoints
-        for (let index = 0; index < circleTrig.length; index++) {
-            let sinAng = circleTrig[index][0]
-            let cosAng = circleTrig[index][1]
-            let ricCirclePoint = [sens.radius*sinAng, 0, sens.radius*cosAng]
-            let point1 = math.add(circleCenter, ricCirclePoint)
-            let point2 = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.666),[0,sens.range*0.333,0]))
-            let point3 = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.333),[0,sens.range*0.666,0]))
-            if (index % 10 === 0) {
-                let lastPointLine
-                for (let index = 0; index <= 20; index++) {
-                    let ricLinePoint = point1.map(s => index*s/20)
-                    ricLinePoint = math.multiply(r,sens.sensorR, ricLinePoint)
-                    if (lastPointLine === undefined) {
-                        lastPointLine = ricLinePoint.slice()
-                    }
-                    points.push({
-                        color: '#ff0000',
-                        position: [ricLinePoint, lastPointLine, (ricCirclePoint[2]+lastPointLine[2])/2],
-                        size: 2.5
-                    })
-                    lastPointLine = ricLinePoint.slice()
-                }
-            }
-            point1 = math.multiply(r,sens.sensorR, point1)
-            point2 = math.multiply(r,sens.sensorR, point2)
-            point3 = math.multiply(r,sens.sensorR, point3)
-            if (lastPoints === undefined) {
-                firstPoints = [point1, point2, point3]
-                lastPoints = [point1, point2, point3]
-            }  
-            else if (index === circleTrig.length-1) {
-                
-                points.push({
-                    color: '#ff0000',
-                    position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
-                    size: 2.5
-                },{
-                    color: '#ff0000',
-                    position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
-                    size: 2.5
-                },{
-                    color: '#ff0000',
-                    position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
-                    size: 2.5
-                })
-            }
-            points.push({
-                color: '#ff0000',
-                position: [point1, lastPoints[0], (point1[2]+lastPoints[0][2])/2],
-                size: 2.5
-            },{
-                color: '#ff0000',
-                position: [point2, lastPoints[1], (point2[2]+lastPoints[1][2])/2],
-                size: 2.5
-            },{
-                color: '#ff0000',
-                position: [point3, lastPoints[2], (point3[2]+lastPoints[2][2])/2],
-                size: 2.5
-            })
-            lastPoints = [point1, point2, point3]
-        }
-    })
 
     // Draw rudimentary 3d earth if coastlines is on (will slow down considerably for now)
     if (mainWindow.showRicCoastlines) {
         lineFilterDistance = (3000000/rOriginEci)**2
-        earthPoints = coastlineEcefPoints.map(coast => {
+        coastlineEcefPoints.map(coast => {
             return coast.filter((s,ii) => ii % 4 === 0).map(point => {
                 let eciState = math.multiply(w, point) 
                 if (math.dot(eciState, math.subtract(originEciCamera.slice(0,3), eciState)) < 0) return undefined
@@ -8295,7 +8292,9 @@ function draw3dScene(az = azD, el = elD) {
                 return position
     
             }).filter(s => s !== undefined)
-        }).filter(s => s.length > 0)
+        }).filter(s => s.length > 0).forEach(area => {
+            points.push(...get3dLinePoints(area, {color: mainWindow.colors.foregroundColor}))
+        })
         mainWindow.groundSites.forEach(site => {
             let eciState = astro.latlong2eci(site.coordinates.lat, site.coordinates.long, curDate)
             if (math.dot(eciState, math.subtract(originEciCamera.slice(0,3), eciState)) < 0) return 
@@ -8340,30 +8339,17 @@ function draw3dScene(az = azD, el = elD) {
     }
     // Calc points for axis lines
     let lineSize = mainWindow.plotSize * mainWindow.cnvs.width * mainWindow.frameCenter.ri.w * 0.0025
-    for (let index = 0; index <= linePoints; index++) {
-
-        points.push({
-            color: mainWindow.colors.foregroundColor,
-            position: math.multiply(r, [lineLength * index / linePoints, 0, 0]),
-            size: lineSize
-        },{
-            color: mainWindow.colors.foregroundColor,
-            position: math.multiply(r, [0, lineLength * index / linePoints, 0]),
-            size: lineSize
-        },{
-            color: mainWindow.colors.foregroundColor,
-            position: math.multiply(r, [0, 0, lineLength * index / linePoints]),
-            size: lineSize
-        },{
-            color: '#ffa500',
-            position: math.multiply(r, math.dotMultiply(index / linePoints, curSun)),
-            size: lineSize
-        },{
-            color: '#aaaaaa',
-            position: math.multiply(r, math.dotMultiply(index / linePoints, curMoon)),
-            size: lineSize
-        })
-    }
+    let rLine = math.range(0,linePoints, true)._data.map(s => [lineLength * s / linePoints, 0, 0]).map(point => math.multiply(r,point))
+    points.push(...get3dLinePoints(rLine, {color: mainWindow.colors.foregroundColor, size: lineSize*2}))
+    let iLine = math.range(0,linePoints, true)._data.map(s => [0,lineLength * s / linePoints, 0]).map(point => math.multiply(r,point))
+    points.push(...get3dLinePoints(iLine, {color: mainWindow.colors.foregroundColor, size: lineSize*2}))
+    let cLine = math.range(0,linePoints, true)._data.map(s => [0,0,lineLength * s / linePoints]).map(point => math.multiply(r,point))
+    points.push(...get3dLinePoints(cLine, {color: mainWindow.colors.foregroundColor, size: lineSize*2}))
+    let sunLine = math.range(0,linePoints, true)._data.map(s => math.dotMultiply(s/linePoints, curSun)).map(point => math.multiply(r,point))
+    points.push(...get3dLinePoints(sunLine, {color: '#ffa500', size: lineSize*2}))
+    let moonLine = math.range(0,linePoints, true)._data.map(s => math.dotMultiply(s/linePoints, curMoon)).map(point => math.multiply(r,point))
+    points.push(...get3dLinePoints(moonLine, {color: '#aaaaaa', size: lineSize*2}))
+    
     points.push({
         color: mainWindow.colors.foregroundColor,
         position: math.multiply(r, [lineLength*1.1,0, 0]),
@@ -8406,7 +8392,7 @@ function draw3dScene(az = azD, el = elD) {
             })
         }
         let pos = math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c])
-        let zRatio = (viewDistance - pos[2])/viewDistance
+        let zRatio = (viewDistance*f3d - pos[2])/viewDistance/f3d
         let pixelPos = mainWindow.convertToPixels(pos).ri
         pixelPos = [pixelPos.x-mainWindow.cnvs.width/2, pixelPos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
         pixelPos = {
@@ -8422,6 +8408,62 @@ function draw3dScene(az = azD, el = elD) {
             alpha: 1,
             shape: sat.shape
         })
+    })
+    // Draw sensors
+    sensors.forEach(sens => {
+        let circleCenter = [0,1,0].map(s => s*sens.range)
+        let lastPoints, firstPoints
+        let color = mainWindow.satellites[sens.sat].color
+        let sensorCenter = Object.values(mainWindow.satellites[sens.sat].curPos).slice(0,3)
+        for (let index = 0; index < circleTrig.length; index++) {
+            let sinAng = circleTrig[index][0]
+            let cosAng = circleTrig[index][1]
+            let ricCirclePoint = [sens.radius*sinAng, 0, sens.radius*cosAng]
+            let point1 = math.add(circleCenter, ricCirclePoint)
+            let point2 = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.666),[0,sens.range*0.333,0]))
+            let point3 = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.333),[0,sens.range*0.666,0]))
+            if (index % 3 === 0) {
+                let linePoints = math.range(0,10, true)._data.map(s => point1.map(p => s*p/10)).map(point => math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point))))
+                points.push(...get3dLinePoints(linePoints, {color}))
+            }
+            point1 = math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point1)))
+            point2 = math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point2)))
+            point3 = math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point3)))
+            if (lastPoints === undefined) {
+                firstPoints = [point1, point2, point3]
+                lastPoints = [point1, point2, point3]
+            }  
+            else if (index === circleTrig.length-1) {
+                
+                points.push({
+                    color,
+                    position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
+                    size: 2.5
+                },{
+                    color,
+                    position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
+                    size: 2.5
+                })
+            }
+            points.push({
+                color,
+                position: [point1, lastPoints[0], (point1[2]+lastPoints[0][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point2, lastPoints[1], (point2[2]+lastPoints[1][2])/2],
+                size: 2.5
+            },{
+                color,
+                position: [point3, lastPoints[2], (point3[2]+lastPoints[2][2])/2],
+                size: 2.5
+            })
+            lastPoints = [point1, point2, point3]
+        }
     })
     points = points.sort((a,b) => a.position[2] - b.position[2])
     ctx.textAlign = 'center'
@@ -8448,12 +8490,12 @@ function draw3dScene(az = azD, el = elD) {
         }
         ctx.stroke()
     })
-    ctx.lineWidth = 1
     points.forEach(p => {
         let viewDistance = mainWindow.plotWidth/2
         if (p.position[0].length !== undefined) {
             // Line
             ctx.strokeStyle = p.color
+            ctx.lineWidth = p.size
             let pos1 = mainWindow.convertToPixels(p.position[0]).ri
             let pos2 = mainWindow.convertToPixels(p.position[1]).ri
             let zRatio1 = (viewDistance*f3d - p.position[0][2])/viewDistance/f3d
