@@ -5777,10 +5777,14 @@ function findRotationMatrix(v1 = [1, 0, 0], v2 = mainWindow.getCurrentSun(mainWi
     v1 = math.dotDivide(v1, math.norm(v1));
     v2 = math.dotDivide(v2, math.norm(v2));
     let eulerAxis = math.cross(v1, v2);
+    if (math.norm(eulerAxis) < 1e-6) {
+        // Bandaid for now 
+        eulerAxis = [1,0,0]
+    }
     eulerAxis = math.dotDivide(eulerAxis, math.norm(eulerAxis));
     let x = eulerAxis[0], y = eulerAxis[1], z = eulerAxis[2];
     let eulerAngle = math.acos(math.dot(v1,v2));
-    if (eulerAngle < 1e-7) return false;
+    if (eulerAngle < 1e-7) return math.identity([3]);
     let c = math.cos(eulerAngle), s = math.sin(eulerAngle);
     return [[c + x*x*(1-c), x*y*(1-c)-z*s, x*z*(1-c)+y*s],
              [y*x*(1-c)+z*s, c + y*y*(1-c), y*z*(1-c)-x*s],
@@ -8415,81 +8419,36 @@ function draw3dScene(az = azD, el = elD) {
         let lastPoints, firstPoints
         let color = mainWindow.satellites[sens.sat].color
         let sensorCenter = Object.values(mainWindow.satellites[sens.sat].curPos).slice(0,3)
-        for (let index = 0; index < circleTrig.length; index++) {
-            let sinAng = circleTrig[index][0]
-            let cosAng = circleTrig[index][1]
-            let ricCirclePoint = [sens.radius*sinAng, 0, sens.radius*cosAng]
-            let point1 = math.add(circleCenter, ricCirclePoint)
-            let point2 = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.666),[0,sens.range*0.333,0]))
-            let point3 = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.333),[0,sens.range*0.666,0]))
-            if (index % 3 === 0) {
-                let linePoints = math.range(0,10, true)._data.map(s => point1.map(p => s*p/10)).map(point => math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point))))
-                points.push(...get3dLinePoints(linePoints, {color}))
-            }
-            point1 = math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point1)))
-            point2 = math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point2)))
-            point3 = math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point3)))
-            if (lastPoints === undefined) {
-                firstPoints = [point1, point2, point3]
-                lastPoints = [point1, point2, point3]
-            }  
-            else if (index === circleTrig.length-1) {
-                
-                points.push({
-                    color,
-                    position: [point1, firstPoints[0], (point1[2] + firstPoints[0][2])/2],
-                    size: 2.5
-                },{
-                    color,
-                    position: [point2, firstPoints[1], (point2[2] + firstPoints[1][2])/2],
-                    size: 2.5
-                },{
-                    color,
-                    position: [point3, firstPoints[2], (point3[2] + firstPoints[2][2])/2],
-                    size: 2.5
-                })
-            }
-            points.push({
-                color,
-                position: [point1, lastPoints[0], (point1[2]+lastPoints[0][2])/2],
-                size: 2.5
-            },{
-                color,
-                position: [point2, lastPoints[1], (point2[2]+lastPoints[1][2])/2],
-                size: 2.5
-            },{
-                color,
-                position: [point3, lastPoints[2], (point3[2]+lastPoints[2][2])/2],
-                size: 2.5
-            })
-            lastPoints = [point1, point2, point3]
-        }
+        let linePoints = []
+        let circlePoints1 = circleTrig.map((ang,ii) => {
+            let ricCirclePoint = [sens.radius*ang[0], 0, sens.radius*ang[1]]
+            let point = math.add(circleCenter, ricCirclePoint)
+            if (ii % 3 === 0) linePoints.push(point)
+            return math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point)))
+        })
+        let circlePoints2 = circleTrig.map(ang => {
+            let ricCirclePoint = [sens.radius*ang[0], 0, sens.radius*ang[1]]
+            let point = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.333),[0,sens.range*0.666,0]))
+            return math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point)))
+        })
+        let circlePoints3 = circleTrig.map(ang => {
+            let ricCirclePoint = [sens.radius*ang[0], 0, sens.radius*ang[1]]
+            let point = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.666),[0,sens.range*0.333,0]))
+            return math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point)))
+        })
+        points.push(...get3dLinePoints(circlePoints1, {color, closed: true}))
+        points.push(...get3dLinePoints(circlePoints2, {color, closed: true}))
+        points.push(...get3dLinePoints(circlePoints3, {color, closed: true}))
+        linePoints.forEach(pointIn => {
+            let pointForLines = math.range(0,10, true)._data.map(s => pointIn.map(p => s*p/10)).map(point => math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point))))
+            points.push(...get3dLinePoints(pointForLines, {color}))
+        })
     })
     points = points.sort((a,b) => a.position[2] - b.position[2])
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.strokeStyle = mainWindow.colors.foregroundColor
-    
-    earthPoints.forEach(coast => {
-        ctx.beginPath()
-        let lastAngle
-        for (let index = 0; index < coast.length; index++) {
-            let pos = mainWindow.convertToPixels(coast[index]).ri
-            let zRatio = (viewDistance - coast[index][2])/viewDistance
-            pos = [pos.x-mainWindow.cnvs.width/2, pos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
-            pos = {
-                x: pos[0] + mainWindow.cnvs.width/2,
-                y: pos[1] + mainWindow.cnvs.height/2
-            }
-            if (zRatio < 0.25) return
 
-            if (index === 0) ctx.moveTo(pos.x,pos.y)
-            else if (index > 0 && math.subtract(lastAngle, [pos.x,pos.y]).reduce((a,b) => a + b **2) > lineFilterDistance) ctx.moveTo(pos.x,pos.y)
-            else ctx.lineTo(pos.x,pos.y)
-            lastAngle = [pos.x, pos.y]
-        }
-        ctx.stroke()
-    })
     points.forEach(p => {
         let viewDistance = mainWindow.plotWidth/2
         if (p.position[0].length !== undefined) {
