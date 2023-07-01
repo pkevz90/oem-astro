@@ -2237,6 +2237,12 @@ function calcCovariance(){
             InCtTrackEig.vectors = math.transpose(InCtTrackEig.vectors)
             // Sort to find the largest radial component
             let mainIntrackCross = {vec: InCtTrackEig.vectors[1], a:InCtTrackEig.values[1], b: InCtTrackEig.values[0]}
+            let CtRadEig = [curCov[0], curCov[2]].map(s => [s[0], s[2]])
+            CtRadEig[0][1] = CtRadEig[1][0]
+            CtRadEig = math.eigs(CtRadEig)
+            CtRadEig.vectors = math.transpose(CtRadEig.vectors)
+            // Sort to find the largest radial component
+            let mainCrossRadial = {vec: CtRadEig.vectors[1], a:CtRadEig.values[1], b: CtRadEig.values[0]}
             let ricPos = Object.values(mainWindow.satellites[index].curPos)
             let ellipseRIt = {
                 screen: 'ri',
@@ -2266,8 +2272,23 @@ function calcCovariance(){
             
         
             }
+            let ellipseCR = {
+                screen: 'rc',
+                color: mainWindow.satellites[index].color,
+                a: 3 * mainCrossRadial.a ** 0.5,
+                b: 3 * mainCrossRadial.b ** 0.5,
+                ang: math.atan2(mainCrossRadial.vec[1], -mainCrossRadial.vec[0]),
+                position: {
+                    r: ricPos[0],
+                    i: ricPos[1],
+                    c: ricPos[2]
+                },
+            
+        
+            }
             ellipses.push(ellipseRIt)
             ellipses.push(ellipseCIt)
+            ellipses.push(ellipseCR)
         }
     } catch (error) {
         ellipses = []
@@ -8416,7 +8437,6 @@ function draw3dScene(az = azD, el = elD) {
     // Draw sensors
     sensors.forEach(sens => {
         let circleCenter = [0,1,0].map(s => s*sens.range)
-        let lastPoints, firstPoints
         let color = mainWindow.satellites[sens.sat].color
         let sensorCenter = Object.values(mainWindow.satellites[sens.sat].curPos).slice(0,3)
         let linePoints = []
@@ -8436,12 +8456,12 @@ function draw3dScene(az = azD, el = elD) {
             let point = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.666),[0,sens.range*0.333,0]))
             return math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point)))
         })
-        points.push(...get3dLinePoints(circlePoints1, {color, closed: true}))
-        points.push(...get3dLinePoints(circlePoints2, {color, closed: true}))
-        points.push(...get3dLinePoints(circlePoints3, {color, closed: true}))
+        points.push(...get3dLinePoints(circlePoints1, {color, closed: true, size: 1.25}))
+        points.push(...get3dLinePoints(circlePoints2, {color, closed: true, size: 1.25}))
+        points.push(...get3dLinePoints(circlePoints3, {color, closed: true, size: 1.25}))
         linePoints.forEach(pointIn => {
             let pointForLines = math.range(0,10, true)._data.map(s => pointIn.map(p => s*p/10)).map(point => math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point))))
-            points.push(...get3dLinePoints(pointForLines, {color}))
+            points.push(...get3dLinePoints(pointForLines, {color, size: 1.25}))
         })
     })
     points = points.sort((a,b) => a.position[2] - b.position[2])
