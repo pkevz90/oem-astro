@@ -4035,16 +4035,17 @@ function get3dClickRicPosition(x,y,viewDistance = 1.5*mainWindow.plotWidth/2,ang
         viewDistance*Math.sin(angles.az*Math.PI/180)*Math.cos((90-angles.el)*Math.PI/180),
         viewDistance*Math.sin((90-angles.el)*Math.PI/180),
     ]
+    let maxCameraPosition = math.max(cameraPos.map(s => math.abs(s)))
+    maxCameraPosition = cameraPos.findIndex(s => math.abs(s) === maxCameraPosition)
     let position = mainWindow.convertToRic([x,y]).ri
     position = [position.r, position.i, 0]
     // console.log(position, cameraRot, cameraPos);
     position = math.multiply(math.transpose(cameraRot), position)
-    
-    let ratio = cameraPos[2]/(cameraPos[2]-position[2])
+    let ratio = cameraPos[maxCameraPosition]/(cameraPos[maxCameraPosition]-position[maxCameraPosition])
     // console.log(position, ratio);
     position = math.add(math.subtract(position, cameraPos).map(s => s*ratio), cameraPos)
     // console.log(position);
-    return {ri: {r: position[0], i: position[1]}}
+    return {ri: {r: position[0], i: position[1]}, ci: {i: position[1], c: position[2]}, rc: {r: position[0], c: position[2]}}
 }
 
 document.getElementById('main-plot').addEventListener('pointerdown', event => {
@@ -4162,11 +4163,12 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
                 return a.time - b.time;
             })
             mainWindow.burnStatus = {
-                type: burnType,
+                type: threeD && elD < 45 ? 'manual' : burnType, // If in cross-track mode on 3D view, always manual burns
                 sat: mainWindow.currentTarget.sat,
                 burn: mainWindow.satellites[mainWindow.currentTarget.sat].burns.findIndex(burn => burn.time === mainWindow.desired.scenarioTime),
-                frame: Object.keys(check)[0]
+                frame: threeD ? elD > 45 ? 'ri' : 'ci' : Object.keys(check)[0]
             }
+            console.log(mainWindow.burnStatus.type)
             if (burnType === 'waypoint' && mainWindow.satellites[mainWindow.currentTarget.sat].a > 0.000001) mainWindow.changeTime(mainWindow.desired.scenarioTime + defaultTranTime)
         }, 250)
     }
@@ -5079,7 +5081,7 @@ function generateBurns(all = false, burn = 0) {
 }
 
 function calcBurns() {
-    let cross = this.burnStatus.frame === 'ri' ? false : true;
+    let cross = this.burnStatus.frame !== 'ri' || (threeD && elD < 45)
     let sat = this.satellites[this.burnStatus.sat];
     if (!this.mousePosition) return;
     let mousePosition = threeD ? get3dClickRicPosition(this.mousePosition[0], this.mousePosition[1]) : this.convertToRic(this.mousePosition);
@@ -5090,7 +5092,7 @@ function calcBurns() {
         target = [
             cross ? target.rHcw[0][0] : mousePosition[this.burnStatus.frame].r,
             cross ? target.rHcw[1][0] : mousePosition[this.burnStatus.frame].i,
-            cross ? mousePosition[this.burnStatus.frame].c : target.rHcw[2][0]
+            cross ? mousePosition[threeD ? 'ci' : this.burnStatus.frame].c : target.rHcw[2][0]
         ]
         target = Ric2Eci(target, [0,0,0], originAtTime.slice(0,3), originAtTime.slice(3,6)).rEcci
         sat.burns[this.burnStatus.burn].waypoint.target = target
@@ -5098,7 +5100,7 @@ function calcBurns() {
         sat.burns[this.burnStatus.burn].direction = [
             cross ? sat.burns[this.burnStatus.burn].direction[0] : (mousePosition[this.burnStatus.frame].r - sat.burns[this.burnStatus.burn].location[0]) * mainWindow.burnSensitivity / 1000,
             cross ? sat.burns[this.burnStatus.burn].direction[1] : (mousePosition[this.burnStatus.frame].i - sat.burns[this.burnStatus.burn].location[1]) * mainWindow.burnSensitivity / 1000,
-            cross ? (mousePosition[this.burnStatus.frame].c - sat.burns[this.burnStatus.burn].location[2]) *
+            cross ? (mousePosition[threeD ? 'ci' : this.burnStatus.frame].c - sat.burns[this.burnStatus.burn].location[2]) *
                 mainWindow.burnSensitivity / 1000 : sat.burns[this.burnStatus.burn].direction[2]
         ]
         sat.burns[this.burnStatus.burn].waypoint = false
@@ -8131,7 +8133,6 @@ function draw3dScene(az = azD, el = elD) {
         
     let thetaGmst = astro.siderealTime(jd_UTI)
     let w = astro.rot(-thetaGmst, 3)
-    let earthPoints = [], lineFilterDistance
     // Draw Covariance
     for (let index = 0; index < mainWindow.satellites.length; index++) {
         if (mainWindow.satellites[index].cov === undefined) continue
@@ -8406,13 +8407,15 @@ function draw3dScene(az = azD, el = elD) {
             alpha: 0.25,
             size: 0
         })
-        points.push({
-            color: mainWindow.colors.foregroundColor,
-            position: math.multiply(r, [0,0,baseNumber*index]),
-            text: (index*baseNumber)+'km',
-            alpha: 0.25,
-            size: 0
-        })
+        if (elD < 80) {
+            points.push({
+                color: mainWindow.colors.foregroundColor,
+                position: math.multiply(r, [0,0,baseNumber*index]),
+                text: (index*baseNumber)+'km',
+                alpha: 0.25,
+                size: 0
+            })
+        }
         
     }
     // Calc points for axis lines
@@ -8422,8 +8425,11 @@ function draw3dScene(az = azD, el = elD) {
     points.push(...get3dLinePoints(rLine, {color: mainWindow.colors.foregroundColor, size: lineSize*2}))
     let iLine = math.range(0,linePoints, true)._data.map(s => [0,lineLength * s / linePoints, 0]).map(point => math.multiply(r,point))
     points.push(...get3dLinePoints(iLine, {color: mainWindow.colors.foregroundColor, size: lineSize*2}))
-    let cLine = math.range(0,linePoints, true)._data.map(s => [0,0,lineLength * s / linePoints]).map(point => math.multiply(r,point))
-    points.push(...get3dLinePoints(cLine, {color: mainWindow.colors.foregroundColor, size: lineSize*2}))
+    // Only draw cross-track axis if not directly into camera
+    if (elD < 80) {
+        let cLine = math.range(0,linePoints, true)._data.map(s => [0,0,lineLength * s / linePoints]).map(point => math.multiply(r,point))
+        points.push(...get3dLinePoints(cLine, {color: mainWindow.colors.foregroundColor, size: lineSize*2}))
+    }
     let sunLine = math.range(0,linePoints, true)._data.map(s => math.dotMultiply(s/linePoints, curSun)).map(point => math.multiply(r,point))
     points.push(...get3dLinePoints(sunLine, {color: '#ffa500', size: lineSize*2}))
     let moonLine = math.range(0,linePoints, true)._data.map(s => math.dotMultiply(s/linePoints, curMoon)).map(point => math.multiply(r,point))
@@ -8441,13 +8447,16 @@ function draw3dScene(az = azD, el = elD) {
         size: 0,
         text: 'I',
         alpha: 1,
-    },{
-        color: mainWindow.colors.foregroundColor,
-        position: math.multiply(r, [0,0,lineLength*1.1]),
-        size: 0,
-        text: 'C',
-        alpha: 1,
     })
+    if (elD < 80) {
+        points.push({
+            color: mainWindow.colors.foregroundColor,
+            position: math.multiply(r, [0,0,lineLength*1.1]),
+            size: 0,
+            text: 'C',
+            alpha: 1,
+        })
+    }
     mainWindow.satellites.forEach(sat => {
         if (sat.stateHistory === undefined) sat.calcTraj()
         let cur = sat.currentPosition(mainWindow.scenarioTime);
@@ -8471,12 +8480,19 @@ function draw3dScene(az = azD, el = elD) {
                     x: burnPixelPos[0] + mainWindow.cnvs.width/2,
                     y: burnPixelPos[1] + mainWindow.cnvs.height/2
                 }
+                let burnVector = math.add(burn.location, burn.direction.map(s => s*3000))
+                burnVector = math.multiply(r, burnVector)
                 burn.pixelPos = burnPixelPos
                 points.push({
                     color: sat.color,
                     position: burnPosition,
                     size: mainWindow.trajSize*8,
                     text: (1000*math.norm(burn.direction)).toFixed(1)
+                })
+                points.push({
+                    color: sat.color,
+                    position: [burnPosition, burnVector],
+                    size: mainWindow.trajSize*2
                 })
             })
         }
