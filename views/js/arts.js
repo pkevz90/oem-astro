@@ -1,6 +1,6 @@
 let appAcr = 'ROTS 2.8'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '20 Jun 2023'
+let cao = '6 Jul 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -1146,7 +1146,7 @@ class windowCanvas {
                 let relDataIn = getRelativeData(req.origin, req.target, req.data.filter(d => d === 'interceptData').length > 0, req.interceptTime);
                 mainWindow.relDataDivs[ii].forEach(span => {
                     let type = span.getAttribute('type')
-                switch (type) {
+                    switch (type) {
                         case 'interceptData':
                             span.innerText = relDataIn[span.getAttribute('type')]
                             break;
@@ -1154,7 +1154,7 @@ class windowCanvas {
                             span.innerText = relDataIn[span.getAttribute('type')].map(s => s.toFixed(1)).join(',')
                             break;
                         default:
-                            relDataIn[span.getAttribute('type')].toFixed(2)
+                            span.innerText = relDataIn[span.getAttribute('type')].toFixed(2)
                             break;
                     }
                 })
@@ -1805,9 +1805,12 @@ let timeFunction = false;
             mainWindow.satellites.forEach(sat => sat.drawCurrentPosition(true))
             if (timeFunction) console.timeEnd()
             return window.requestAnimationFrame(animationLoop)
-        }
+        } 
         if (threeD) {
             mainWindow.satellites.forEach(sat => sat.checkInBurn())
+            if (mainWindow.burnStatus.type) {
+                mainWindow.calculateBurn();
+            }
             draw3dScene()
             
             mainWindow.showTime();
@@ -2569,10 +2572,19 @@ function startContextClick(event) {
         
     }
     // Check if clicked on burn
-    checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, true))
-    // Find index of satellite burn clicked on
-    let burnIndexSat = checkProxSats.findIndex(sat => sat !== false)
-    let activeBurn = burnIndexSat === -1 ? false : {sat: burnIndexSat, burn: checkProxSats[burnIndexSat]}
+    // If so, find index of satellite burn clicked on
+    let burnIndexSat, activeBurn
+    if (threeD) {
+        checkProxSats = mainWindow.satellites.map((sat, satIi) => {
+            return {satIi, burnsClicked: sat.burns.map((b, bIi) => { return {clicked: math.norm(math.subtract([event.clientX, event.clientY], Object.values(b.pixelPos))) < 20, bIi}}).filter(b => b.clicked).map(b => b.bIi)}
+        }).filter(sat => sat.burnsClicked.length > 0)
+        activeBurn = checkProxSats.length > 0 ? {sat: checkProxSats[0].satIi, burn: checkProxSats[0].burnsClicked[checkProxSats[0].burnsClicked.length-1]} : false
+    }
+    else {
+        checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, true))
+        burnIndexSat = checkProxSats.findIndex(sat => sat !== false)
+        activeBurn = burnIndexSat === -1 ? false : {sat: burnIndexSat, burn: checkProxSats[burnIndexSat]}
+    }
     // If in ground track mode, can't select burns
     activeBurn = mainWindow.latLongMode ? false : activeBurn
 
@@ -2934,9 +2946,13 @@ function handleContextClick(button) {
         let sat = button.getAttribute('sat')
         // button.parentElement.innerHTML = ''
         button.parentElement.innerHTML = `
+            <div class="context-item" >Pointing <select style="font-size: 1em; width: 50%;"><option value="-1">RIC Coordinate</option>${mainWindow.satellites.map((satIn, satIi) => {
+                return satIi == sat ? '' : `<option value="${satIi}">${satIn.name}</option>`
+            }).join('')}</select></div>
             <div class="context-item" >RIC Vector <input type="Number" style="width: 5em; font-size: 1em" placeholder="-1"><input type="Number" style="width: 3em; font-size: 1em" placeholder="0"><input type="Number" style="width: 3em; font-size: 1em" placeholder="0"></div>
             <div class="context-item" >Half-Angle <input type="Number" style="width: 5em; font-size: 1em" placeholder="10"> deg</div>
             <div class="context-item" >Range <input type="Number" style="width: 5em; font-size: 1em" placeholder="10"> km</div>
+            <div class="context-item" >Color <input type="color" style="width: 5em; font-size: 1em" value="${mainWindow.satellites[sat].color}"> km</div>
             <div class="context-item" sat=${sat} onclick="handleContextClick(this)" id="save-conic-volume">Set</div>
         `
         let cm = document.getElementById('context-menu')
@@ -2947,14 +2963,16 @@ function handleContextClick(button) {
     if (button.id === 'save-conic-volume') {
         let sat = button.getAttribute('sat')
         let inputs = [...button.parentElement.getElementsByTagName('input')].map(s => Number(s.value === '' ? s.placeholder: s.value));
+        let select = button.parentElement.querySelector('select').value
         let ricVector = inputs.slice(0,3).map(s => s/math.norm(inputs.slice(0,3)))
         let halfAngle = inputs[3]
         let range = inputs[4]
         let volume = {
             sat,
             range,
-            radius: range*math.tan(halfAngle*Math.PI/180),
-            sensorR: findRotationMatrix([0,1,0],ricVector)
+            halfAngle: halfAngle,
+            sensorR: select == -1 ? ricVector : select,//findRotationMatrix([0,1,0],ricVector),
+            color: button.parentElement.getElementsByTagName('input')[5].value
         }
         if (volume.sensorR === false) {
             volume.sensorR = math.identity([3])
@@ -4008,6 +4026,27 @@ function showScreenAlert(message = 'test alert', textSize = 1, bottom = '80%', d
 
 changePlanType = (box) => mainWindow.burnType = box.checked ? 'waypoint' : 'manual';
 let lastHiddenSatClicked = false
+
+function get3dClickRicPosition(x,y,viewDistance = 1.5*mainWindow.plotWidth/2,angles = {el: elD, az: azD}) {
+    angles.el = 90 - angles.el
+    let cameraRot = math.multiply( rotationMatrices(angles.el, 2), rotationMatrices(angles.az, 3))
+    let cameraPos = [
+        -viewDistance*Math.cos(angles.az*Math.PI/180)*Math.cos((90-angles.el)*Math.PI/180),
+        viewDistance*Math.sin(angles.az*Math.PI/180)*Math.cos((90-angles.el)*Math.PI/180),
+        viewDistance*Math.sin((90-angles.el)*Math.PI/180),
+    ]
+    let position = mainWindow.convertToRic([x,y]).ri
+    position = [position.r, position.i, 0]
+    // console.log(position, cameraRot, cameraPos);
+    position = math.multiply(math.transpose(cameraRot), position)
+    
+    let ratio = cameraPos[2]/(cameraPos[2]-position[2])
+    // console.log(position, ratio);
+    position = math.add(math.subtract(position, cameraPos).map(s => s*ratio), cameraPos)
+    // console.log(position);
+    return {ri: {r: position[0], i: position[1]}}
+}
+
 document.getElementById('main-plot').addEventListener('pointerdown', event => {
     event.preventDefault()
     // If in ground track mode, don't track with clicked mouse
@@ -4028,7 +4067,14 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
         }
         else if (mainWindow.aciveTouches.length > 2) return
     }
-    let ricCoor = mainWindow.convertToRic([event.clientX, event.clientY]);
+    let ricCoor
+    if (threeD) {
+        ricCoor = get3dClickRicPosition(event.clientX, event.clientY)
+    }
+    else {
+        ricCoor = mainWindow.convertToRic([event.clientX, event.clientY])
+    }
+
     // event.preventDefault()
     let subList = document.getElementsByClassName('sub-menu');
     for (let ii = 0; ii < subList.length; ii++) subList[ii].remove();
@@ -4038,7 +4084,8 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
     let sat = 0, check;
     if (ricCoor === undefined) return;
     while (sat < mainWindow.satellites.length && !mainWindow.latLongMode) {
-        check = mainWindow.satellites[sat].checkClickProximity(ricCoor);
+        // console.log(math.norm(math.subtract(Object.values(mainWindow.satellites[sat].pixelPos), [event.clientX, event.clientY])) );
+        check = threeD ? {ri: math.norm(math.subtract(Object.values(mainWindow.satellites[sat].pixelPos), [event.clientX, event.clientY])) < 20} : mainWindow.satellites[sat].checkClickProximity(ricCoor);
         if (mainWindow.satellites[sat].locked) {
             sat++
             continue
@@ -4051,7 +4098,18 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             })
             if (checkExistingBurns.length === 0) break
         };
-        check = mainWindow.satellites[sat].checkBurnProximity(ricCoor);
+        if (threeD) {
+            check = mainWindow.satellites[sat].burns.map((b, bIi) => {return {withinClick: math.norm(math.subtract(Object.values(b.pixelPos), [event.clientX, event.clientY])) < 20, bIi}}).filter(b => b.withinClick).map(b => b.bIi)
+            if (check.length > 0) {
+                check = {ri: check[check.length-1]}
+            }
+            else {
+                check = {ri: false}
+            }
+        }
+        else {
+            check = mainWindow.satellites[sat].checkBurnProximity(ricCoor);
+        }
         for (frame in check) mainWindow.currentTarget = check[frame] !== false ? {sat, frame, type: 'burn'} : mainWindow.currentTarget
         if (mainWindow.currentTarget) break
         sat++
@@ -4153,7 +4211,7 @@ document.getElementById('main-plot').addEventListener('pointerdown', event => {
             pointId: event.pointerId
         };
     }
-    else if (ricCoor.ri || ricCoor.ci) {
+    else if (ricCoor.ri || ricCoor.ci || threeD) {
         try {
             mainWindow.frameMove = {
                 x: event.clientX,
@@ -5024,7 +5082,7 @@ function calcBurns() {
     let cross = this.burnStatus.frame === 'ri' ? false : true;
     let sat = this.satellites[this.burnStatus.sat];
     if (!this.mousePosition) return;
-    let mousePosition = this.convertToRic(this.mousePosition);
+    let mousePosition = threeD ? get3dClickRicPosition(this.mousePosition[0], this.mousePosition[1]) : this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
     if (mainWindow.burnStatus.type === 'waypoint' && sat.a > 0.000001 && sat.burns[this.burnStatus.burn].waypoint !== false) {
         let originAtTime = propToTimeAnalytic(mainWindow.originOrbit, sat.burns[this.burnStatus.burn].time+sat.burns[this.burnStatus.burn].waypoint.tranTime)
@@ -5049,6 +5107,9 @@ function calcBurns() {
             sat.burns[hh].direction[2] = 0
         }
     }
+    sat.calcTraj(true, this.burnStatus.burn)
+    // If in 3D mode, annotation is handled by the draw3dscene function
+    if (threeD) return
     let mag = math.norm([sat.burns[this.burnStatus.burn].direction[0], sat.burns[this.burnStatus.burn].direction[1], sat.burns[this.burnStatus.burn].direction[2]])
     let initPos = this.convertToPixels(sat.burns[this.burnStatus.burn].location)[this.burnStatus.frame];
     let ctx = this.getContext();
@@ -5065,7 +5126,7 @@ function calcBurns() {
     ctx.textBaseline = "middle"
     ctx.textAlign = 'center'
     ctx.fillText((1000*mag).toFixed(1) + ' m/s', -120 *(finalPos.x - initPos.x) / mag2 / 1.5 + initPos.x, -60*(finalPos.y - initPos.y) / mag2 / 1.5 + initPos.y)
-    sat.calcTraj(true, this.burnStatus.burn)
+   
 }
 
 function addToolTip(element) {
@@ -5698,7 +5759,6 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
             interceptData: '\nOutside of\nKinematic\nReach'
         }
     }
-    
     return {
         sunAngle,
         moonAngle,
@@ -7487,8 +7547,9 @@ function showLogo() {
     ctx.fillRect(0,0,cnvs.width, cnvs.height)
     ctx.globalAlpha = 1
     ctx.strokeStyle = '#FF1111'
+    ctx.lineWidth = 4
     ctx.beginPath()
-    ctx.ellipse(cnvs.width / 2, cnvs.height / 2-50, 200, 100, -20*Math.PI / 180, -2 * Math.PI*0.15, 2 * Math.PI*0.8)
+    ctx.ellipse(cnvs.width / 2, cnvs.height / 2-50, cnvs.width/4, cnvs.width/8, -20*Math.PI / 180, -2 * Math.PI*0.15, 2 * Math.PI*0.8)
     ctx.stroke()
     ctx.globalAlpha = 1
     ctx.fillStyle = 'white'
@@ -8042,21 +8103,13 @@ function get3dLinePoints(points = [[100,200, 100],[300,400,200], [900,500,-100]]
 function draw3dScene(az = azD, el = elD) {
     // let sensors = [{
     //     sat: 0,
-    //     range: 1000,
-    //     radius: 230,
-    //     sensorR: [[1,0,0],[0,1,0],[0,0,1]]
-    // },{
-    //     sat: 0,
-    //     range: 200,
-    //     radius: 20,
-    //     sensorR: [[1,0,0],[0,-1,0],[0,0,1]]
+    //     range: 500,
+    //     halfAngle: 50,
+    //     sensorR: [1,0,0],
+    //     color: '#aaaaaa'
     // }]
     let sensors = []
     mainWindow.satellites.forEach(sat => sensors.push(...sat.conicVolumes))
-    // let sensors = math.squeeze(mainWindow.satellites.map(s => s.conicVolumes))
-    if (sensors.length === undefined) {
-        sensors = [sensors]
-    }
     el = 90 - el
     let linePoints = 10
     let lineLength = 0.25 * mainWindow.plotHeight
@@ -8364,6 +8417,7 @@ function draw3dScene(az = azD, el = elD) {
     }
     // Calc points for axis lines
     let lineSize = mainWindow.plotSize * mainWindow.cnvs.width * mainWindow.frameCenter.ri.w * 0.0025
+    lineSize = lineSize > 4 ? 4 : lineSize
     let rLine = math.range(0,linePoints, true)._data.map(s => [lineLength * s / linePoints, 0, 0]).map(point => math.multiply(r,point))
     points.push(...get3dLinePoints(rLine, {color: mainWindow.colors.foregroundColor, size: lineSize*2}))
     let iLine = math.range(0,linePoints, true)._data.map(s => [0,lineLength * s / linePoints, 0]).map(point => math.multiply(r,point))
@@ -8409,10 +8463,20 @@ function draw3dScene(az = azD, el = elD) {
             })
             sat.burns.forEach(burn => {
                 if (burn.time > mainWindow.scenarioTime) return
+                let burnPosition = math.multiply(r, burn.location)
+                let zRatioBurn = (viewDistance*f3d - burnPosition[2])/viewDistance/f3d
+                let burnPixelPos = mainWindow.convertToPixels(burnPosition).ri
+                burnPixelPos = [burnPixelPos.x-mainWindow.cnvs.width/2, burnPixelPos.y-mainWindow.cnvs.height/2].map(s => s/zRatioBurn)
+                burnPixelPos = {
+                    x: burnPixelPos[0] + mainWindow.cnvs.width/2,
+                    y: burnPixelPos[1] + mainWindow.cnvs.height/2
+                }
+                burn.pixelPos = burnPixelPos
                 points.push({
                     color: sat.color,
-                    position: math.multiply(r, burn.location),
-                    size: mainWindow.trajSize*8
+                    position: burnPosition,
+                    size: mainWindow.trajSize*8,
+                    text: (1000*math.norm(burn.direction)).toFixed(1)
                 })
             })
         }
@@ -8436,33 +8500,72 @@ function draw3dScene(az = azD, el = elD) {
     })
     // Draw sensors
     sensors.forEach(sens => {
-        let circleCenter = [0,1,0].map(s => s*sens.range)
-        let color = mainWindow.satellites[sens.sat].color
+        let color = sens.color
         let sensorCenter = Object.values(mainWindow.satellites[sens.sat].curPos).slice(0,3)
+        let sensorVector = sens.sensorR
+        if (sensorVector.length < 3) {
+            let targetRic = Object.values(mainWindow.satellites[sensorVector].curPos).slice(0,3)
+            sensorVector = math.subtract(targetRic, sensorCenter)
+            sensorVector = math.dotDivide(sensorVector, math.norm(sensorVector))
+        }
+        let sensorRotMatrix = findRotationMatrix([0,1,0], sensorVector)
         let linePoints = []
+        let outerCircleRange = sens.range*Math.cos(sens.halfAngle*Math.PI/180)
+        let sensorRadius = sens.range*Math.sin(sens.halfAngle*Math.PI/180)
+        let circleCenter = [0,1,0].map(s => s*outerCircleRange)
+        // draw concentric cirles to sensor's range
         let circlePoints1 = circleTrig.map((ang,ii) => {
-            let ricCirclePoint = [sens.radius*ang[0], 0, sens.radius*ang[1]]
+            let ricCirclePoint = [sensorRadius*ang[0], 0, sensorRadius*ang[1]]
             let point = math.add(circleCenter, ricCirclePoint)
             if (ii % 3 === 0) linePoints.push(point)
-            return math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point)))
+            return math.multiply(r,math.add(sensorCenter, math.multiply(sensorRotMatrix, point)))
         })
         let circlePoints2 = circleTrig.map(ang => {
-            let ricCirclePoint = [sens.radius*ang[0], 0, sens.radius*ang[1]]
-            let point = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.333),[0,sens.range*0.666,0]))
-            return math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point)))
+            let ricCirclePoint = [sensorRadius*ang[0], 0, sensorRadius*ang[1]]
+            let point = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.333),[0,outerCircleRange*0.6667,0]))
+            return math.multiply(r,math.add(sensorCenter, math.multiply(sensorRotMatrix, point)))
         })
         let circlePoints3 = circleTrig.map(ang => {
-            let ricCirclePoint = [sens.radius*ang[0], 0, sens.radius*ang[1]]
-            let point = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.666),[0,sens.range*0.333,0]))
-            return math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point)))
+            let ricCirclePoint = [sensorRadius*ang[0], 0, sensorRadius*ang[1]]
+            let point = math.add(circleCenter, math.subtract(ricCirclePoint.map(s => s*0.666),[0,outerCircleRange*0.333,0]))
+            return math.multiply(r,math.add(sensorCenter, math.multiply(sensorRotMatrix, point)))
+        })
+        let circlePoints4 = circleTrig.map(ang => {
+            let sensorSphereRadius = sens.range*Math.sin(sens.halfAngle*Math.PI/270)
+            let outerSphereCircleRange = sens.range*Math.cos(sens.halfAngle*Math.PI/270)
+            // console.log(sensorSphereRadius, outerSphereCircleRange, outerCircleRange);
+            let ricCirclePoint = [sensorSphereRadius*ang[0], 0, sensorSphereRadius*ang[1]]
+            let point = math.add(circleCenter, math.add(ricCirclePoint,[0,(outerSphereCircleRange-outerCircleRange),0]))
+            return math.multiply(r,math.add(sensorCenter, math.multiply(sensorRotMatrix, point)))
+        })
+        let circlePoints5 = circleTrig.map(ang => {
+            let sensorSphereRadius = sens.range*Math.sin(sens.halfAngle*Math.PI/540)
+            let outerSphereCircleRange = sens.range*Math.cos(sens.halfAngle*Math.PI/540)
+            // console.log(sensorSphereRadius, outerSphereCircleRange, outerCircleRange);
+            let ricCirclePoint = [sensorSphereRadius*ang[0], 0, sensorSphereRadius*ang[1]]
+            let point = math.add(circleCenter, math.add(ricCirclePoint,[0,(outerSphereCircleRange-outerCircleRange),0]))
+            return math.multiply(r,math.add(sensorCenter, math.multiply(sensorRotMatrix, point)))
         })
         points.push(...get3dLinePoints(circlePoints1, {color, closed: true, size: 1.25}))
         points.push(...get3dLinePoints(circlePoints2, {color, closed: true, size: 1.25}))
         points.push(...get3dLinePoints(circlePoints3, {color, closed: true, size: 1.25}))
-        linePoints.forEach(pointIn => {
-            let pointForLines = math.range(0,10, true)._data.map(s => pointIn.map(p => s*p/10)).map(point => math.multiply(r,math.add(sensorCenter, math.multiply(sens.sensorR, point))))
-            points.push(...get3dLinePoints(pointForLines, {color, size: 1.25}))
+        points.push(...get3dLinePoints(circlePoints4, {color, closed: true, size: 1.25}))
+        points.push(...get3dLinePoints(circlePoints5, {color, closed: true, size: 1.25}))
+        // Draw line to outermost circle to further define sensor volume
+        let outerSphericalLines = math.range(0,16,true)._data.map(iter => {
+            let angle = (-sens.halfAngle+2*sens.halfAngle*iter/16)*Math.PI/180
+            return [Math.sin(angle)*sens.range, Math.cos(angle)*sens.range, 0]
         })
+        linePoints.forEach((pointIn, ii) => {
+            let angle = math.atan2(pointIn[2], pointIn[0])*180/Math.PI
+            let outerSphereLinesRotMatrix = astro.rot(angle,2)
+            let pointForLines = math.range(0,10, true)._data.map(s => pointIn.map(p => s*p/10)).map(point => math.multiply(r,math.add(sensorCenter, math.multiply(sensorRotMatrix, point))))
+            points.push(...get3dLinePoints(pointForLines, {color, size: 1.25}))
+            if (ii > linePoints.length/2) return
+            let outerSpherePoints = outerSphericalLines.map(point => math.multiply(r,math.add(sensorCenter, math.multiply(sensorRotMatrix, math.multiply(outerSphereLinesRotMatrix,point)))))
+            points.push(...get3dLinePoints(outerSpherePoints, {color, size: 1.25}))
+        })
+        // Draw spherical lines to define end of sensor volume
     })
     points = points.sort((a,b) => a.position[2] - b.position[2])
     ctx.textAlign = 'center'
@@ -8479,7 +8582,13 @@ function draw3dScene(az = azD, el = elD) {
             let pos2 = mainWindow.convertToPixels(p.position[1]).ri
             let zRatio1 = (viewDistance*f3d - p.position[0][2])/viewDistance/f3d
             let zRatio2 = (viewDistance*f3d - p.position[1][2])/viewDistance/f3d
-            if (zRatio1 < 0.25) return
+            if (zRatio1 < 0.25 && zRatio2 < 0.25) return
+            else if (zRatio1 < 0.25) {
+                zRatio1 = zRatio2
+            }
+            else if (zRatio2 < 0.25) {
+                zRatio2 = zRatio1
+            }
             pos1 = [pos1.x-mainWindow.cnvs.width/2, pos1.y-mainWindow.cnvs.height/2].map(s => s/zRatio1)
             pos1 = {
                 x: pos1[0] + mainWindow.cnvs.width/2,
@@ -8522,10 +8631,10 @@ function draw3dScene(az = azD, el = elD) {
             ctx.fillRect(pos.x - size / 2, pos.y - size / 2,size,size)
         }
         if (p.text !== undefined && p.shape === undefined) {
-            ctx.font = `bold ${textSize}px serif`
-            ctx.fillStyle = mainWindow.colors.foregroundColor
+            ctx.font = `bold ${textSize*3}px serif`
+            ctx.fillStyle = p.color
             ctx.globalAlpha = p.alpha
-            ctx.fillText(p.text, pos.x, pos.y - size)
+            ctx.fillText(p.text, pos.x, pos.y - size*3)
         }
         ctx.globalAlpha = 1
     })
@@ -9252,6 +9361,12 @@ function openInstructionWindow() {
                         <li>Right clicking on a burn opens up context menu with options</li>
                         <li>Right clicking also copies to clipboard text string for ingestion into STK</li>
                         <li>Burn information is diplayed in RIC direction, waypoint (if planned using a waypoint), and Az-EL-Magnitude. Click to alter in either format.</li>
+                    </ul>
+                </li>
+                <li>3D View Considerations
+                    <ul>
+                        <liClick and drag will assume the burn takes place in RI frame</li>
+                        <li>Currently, only way to plan cross-track is to right-click and alter manually</li>
                     </ul>
                 </li>
                 <li>Burns can be deleted by ctrl-clicking on the burn point</li>
