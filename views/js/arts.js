@@ -1898,6 +1898,8 @@ function keydownFunction(key) {
         if (threeD) {
             threeD = false
             mainWindow.latLongMode = true
+            // mainWindow.desired.elD = mainWindow.desired.elD > 45 ? 0 : 90
+            // mainWindow.desired.azD = 0
             return
         }
         if (mainWindow.latLongMode) {
@@ -2081,6 +2083,11 @@ function keydownFunction(key) {
                 })
                 break;       
         }
+    }
+    else if (key.key === 'v' || key.key === 'V') {
+        if (!threeD) return
+        mainWindow.desired.elD = mainWindow.desired.elD > 45 ? 0 : 90
+        mainWindow.desired.azD = 0
     }
     else if (!isNaN(Number(key.key))) {
         if (key.altKey) {
@@ -8078,7 +8085,7 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
     }
 }
 setSun()
-let f3d = 3
+let f3d = 10
 function get3dLinePoints(points = [[100,200, 100],[300,400,200], [900,500,-100]], options = {}) {
     let {closed = false, color = '#ff00000', size = 2.5} = options
     let outPoints = []
@@ -8360,33 +8367,67 @@ function draw3dScene(az = azD, el = elD) {
 
     // Draw rudimentary 3d earth if coastlines is on (will slow down considerably for now)
     if (mainWindow.showRicCoastlines) {
-        lineFilterDistance = (3000000/rOriginEci)**2
-        coastlineEcefPoints.map(coast => {
-            return coast.filter((s,ii) => ii % 4 === 0).map(point => {
-                let eciState = math.multiply(w, point) 
-                if (math.dot(eciState, math.subtract(originEciCamera.slice(0,3), eciState)) < 0) return undefined
-                let ricState = math.multiply(rEci2Ric, math.subtract(eciState,originEci.slice(0,3)))//Eci2RicWithC(originEci, eciState, rEci2Ric).slice(0,3)
-                let position = math.multiply(r, ricState)
+        // lineFilterDistance = (3000000/rOriginEci)**2
+        // coastlineEcefPoints.map(coast => {
+        //     return coast.filter((s,ii) => ii % 4 === 0).map(point => {
+        //         let eciState = math.multiply(w, point) 
+        //         if (math.dot(eciState, math.subtract(originEciCamera.slice(0,3), eciState)) < 0) return undefined
+        //         let ricState = math.multiply(rEci2Ric, math.subtract(eciState,originEci.slice(0,3)))//Eci2RicWithC(originEci, eciState, rEci2Ric).slice(0,3)
+        //         let position = math.multiply(r, ricState)
                 
-                return position
+        //         return position
     
-            }).filter(s => s !== undefined)
-        }).filter(s => s.length > 0).forEach(area => {
-            points.push(...get3dLinePoints(area, {color: mainWindow.colors.foregroundColor}))
-        })
-        mainWindow.groundSites.forEach(site => {
-            let eciState = astro.latlong2eci(site.coordinates.lat, site.coordinates.long, curDate)
-            if (math.dot(eciState, math.subtract(originEciCamera.slice(0,3), eciState)) < 0) return 
-            let ricState = math.multiply(rEci2Ric, math.subtract(eciState,originEci.slice(0,3)))
-            let position = math.multiply(r, ricState)
-            points.push({
-                color: 'orange',
-                position,
-                size: 10,
-                text: site.name,
-                alpha: 1,
-            })
-        })
+        //     }).filter(s => s !== undefined)
+        // }).filter(s => s.length > 0).forEach(area => {
+        //     points.push(...get3dLinePoints(area, {color: mainWindow.colors.foregroundColor}))
+        // })
+        // mainWindow.groundSites.forEach(site => {
+        //     let eciState = astro.latlong2eci(site.coordinates.lat, site.coordinates.long, curDate)
+        //     if (math.dot(eciState, math.subtract(originEciCamera.slice(0,3), eciState)) < 0) return 
+        //     let ricState = math.multiply(rEci2Ric, math.subtract(eciState,originEci.slice(0,3)))
+        //     let position = math.multiply(r, ricState)
+        //     points.push({
+        //         color: '#111111',
+        //         position,
+        //         size: 10,
+        //         text: site.name,
+        //         alpha: 1,
+        //     })
+        // })
+        let centerPoint = [-rOriginEci, 0, 0], rEarth = 6371
+        // let centerPointZ = math.multiply(r, centerPoint)[2]
+        // let lats = math.range(-90,90,10,true)._data.map(s => [Math.sin(s*Math.PI / 180), Math.cos(s*Math.PI / 180)])
+        // let longs = math.range(0,360,20,true)._data.map(s => [Math.sin(s*Math.PI / 180), Math.cos(s*Math.PI / 180)])
+        // for (let latsIi = 0; latsIi < lats.length-1; latsIi++) {
+        //     for (let longIi = 0; longIi < longs.length-1; longIi++) {
+        //         let filledPoints = [
+        //             [lats[latsIi], longs[longIi]],
+        //             [lats[latsIi+1], longs[longIi]],
+        //             [lats[latsIi+1], longs[longIi+1]],
+        //             [lats[latsIi], longs[longIi+1]]
+        //         ]
+        //         filledPoints = filledPoints.map(point => math.multiply(r,math.add(centerPoint, [rEarth*point[1][0]*point[0][1], rEarth*point[1][1]*point[0][1],rEarth*point[0][0]])))
+        //         if (filledPoints.filter(s => s[2] > centerPointZ).length === 0) continue
+        //         let aveZ = (filledPoints[0][2]+filledPoints[1][2]+filledPoints[2][2]+filledPoints[3][2])/4;
+        //         points.push({
+        //             color: '#111111',
+        //             position: [filledPoints, 0, aveZ]
+        //         })
+        //     }
+        // }
+        for (let lat = -60; lat <= 60; lat+=30) {
+            let rLat = rEarth*Math.cos(lat*Math.PI/180)
+            let hLat = rEarth*Math.sin(lat*Math.PI/180)
+            let circlePoints = circleTrig.map(angs => math.multiply(r, math.add(centerPoint, [rLat*angs[0], rLat*angs[1], hLat])))
+            points.push(...get3dLinePoints(circlePoints, {color: '#224466', size: 2, closed: true}))
+        }
+        for (let long = 0; long < 360; long+=30) {
+            let cosLong = Math.cos(long*Math.PI/180)
+            let sinLong = Math.sin(long*Math.PI/180)
+            let circlePoints = circleTrig.map(angs => math.multiply(r, math.add(centerPoint, [rEarth*angs[0]*cosLong, rEarth*angs[0]*sinLong, rEarth*angs[1]])))
+            points.push(...get3dLinePoints(circlePoints, {color: '#224466', size: 2, closed: true}))
+        }
+
     }
         // Show Distance Markers
     for (let index = 1; index <= 5; index++) {
@@ -8400,13 +8441,15 @@ function draw3dScene(az = azD, el = elD) {
             alpha: 0.25,
             size: 0
         })
-        points.push({
-            color: mainWindow.colors.foregroundColor,
-            position: math.multiply(r, [baseNumber*index,0,0]),
-            text: (index*baseNumber)+'km',
-            alpha: 0.25,
-            size: 0
-        })
+        if (elD > 10 || math.abs(azD) > 10) {
+            points.push({
+                color: mainWindow.colors.foregroundColor,
+                position: math.multiply(r, [baseNumber*index,0,0]),
+                text: (index*baseNumber)+'km',
+                alpha: 0.25,
+                size: 0
+            })
+        }
         if (elD < 80) {
             points.push({
                 color: mainWindow.colors.foregroundColor,
@@ -8434,14 +8477,16 @@ function draw3dScene(az = azD, el = elD) {
     points.push(...get3dLinePoints(sunLine, {color: '#ffa500', size: lineSize*2}))
     let moonLine = math.range(0,linePoints, true)._data.map(s => math.dotMultiply(s/linePoints, curMoon)).map(point => math.multiply(r,point))
     points.push(...get3dLinePoints(moonLine, {color: '#aaaaaa', size: lineSize*2}))
-    
+    if (elD > 10 || math.abs(azD) > 10) {
+        points.push({
+            color: mainWindow.colors.foregroundColor,
+            position: math.multiply(r, [lineLength*1.1,0, 0]),
+            size: 0,
+            text: 'R',
+            alpha: 1,
+        })
+    }
     points.push({
-        color: mainWindow.colors.foregroundColor,
-        position: math.multiply(r, [lineLength*1.1,0, 0]),
-        size: 0,
-        text: 'R',
-        alpha: 1,
-    },{
         color: mainWindow.colors.foregroundColor,
         position: math.multiply(r, [0,lineLength*1.1, 0]),
         size: 0,
@@ -8591,6 +8636,32 @@ function draw3dScene(az = azD, el = elD) {
     points.forEach(p => {
         let viewDistance = mainWindow.plotWidth/2
         if (p.position[0].length !== undefined) {
+            if (p.position[0].length > 3) {
+                // Solid fill
+                // console.log('solid', p.position[0]);
+                ctx.globalAlpha = 1
+                ctx.fillStyle = p.color
+                ctx.strokeStyle = mainWindow.colors.foregroundColor
+                ctx.lineWidth = 0.25
+                let zIndexes = p.position[0].map(pos => (viewDistance*f3d - pos[2])/viewDistance/f3d)
+                if (zIndexes.filter(s => s < 0.25).length > 0) return
+                ctx.beginPath()
+                p.position[0].forEach((pos, iI) => {
+                    let posPix = mainWindow.convertToPixels(pos).ri
+                    let zRatio = zIndexes[iI]
+                    posPix = [posPix.x-mainWindow.cnvs.width/2, posPix.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
+                    posPix = {
+                        x: posPix[0] + mainWindow.cnvs.width/2,
+                        y: posPix[1] + mainWindow.cnvs.height/2
+                    }
+                    if (iI === 0) ctx.moveTo(posPix.x,posPix.y)
+                    else ctx.lineTo(posPix.x,posPix.y)
+                })
+                ctx.closePath()
+                ctx.fill()
+                ctx.stroke()
+                return
+            }
             // Line
             ctx.strokeStyle = p.color
             ctx.lineWidth = p.size
@@ -9381,8 +9452,8 @@ function openInstructionWindow() {
                 </li>
                 <li>3D View Considerations
                     <ul>
-                        <liClick and drag will assume the burn takes place in RI frame</li>
-                        <li>Currently, only way to plan cross-track is to right-click and alter manually</li>
+                        <li>Click and drag now works in 3D view</li>
+                        <li>Algorithm will choose whether planning in RI plane or cross-track based on where view is, if view shows more cross-track, cross-track planning will occur.</li>
                     </ul>
                 </li>
                 <li>Burns can be deleted by ctrl-clicking on the burn point</li>
@@ -9426,6 +9497,7 @@ function openInstructionWindow() {
                 <li><kbd>T</kbd> - Open Time Panel</li>
                 <li><kbd>F</kbd> - Open Polar Plot</li>
                 <li><kbd>X</kbd> - Open 3D View</li>
+                <li><kbd>V</kbd> - Snap 3D View between RI and CI orientation</li>
                 <li><kbd>G</kbd> - Switch to ground-track view</li>
                 <li><kbd>Ctrl</kbd> + <kbd>h</kbd> - Run sim with HPOP</li>
                 <li><kbd>Shift</kbd> + <kbd>L</kbd> - Open save window</li>
