@@ -1406,6 +1406,7 @@ class Satellite {
         this.name = name;
         this.side = side;
         this.area = area
+        this.lastCurPosUpdateTime = -1000
         this.a = a === undefined ? this.thrust / this.mass / 1000 : Number(a); // km/s/s
         this.originDate = Date.now()
         this.locked = locked
@@ -5093,7 +5094,7 @@ function calcBurns() {
     if (!this.mousePosition) return;
     let mousePosition = threeD ? get3dClickRicPosition(this.mousePosition[0], this.mousePosition[1]) : this.convertToRic(this.mousePosition);
     if (!this.mousePosition || !mousePosition || !mousePosition[this.burnStatus.frame]) return;
-    if (mainWindow.burnStatus.type === 'waypoint' && sat.a > 0.000001 && sat.burns[this.burnStatus.burn].waypoint !== false) {
+    if (mainWindow.burnStatus.type === 'waypoint' && sat.a > 0.000001 && sat.burns[this.burnStatus.burn].waypoint !== false && !cross) {
         let originAtTime = propToTimeAnalytic(mainWindow.originOrbit, sat.burns[this.burnStatus.burn].time+sat.burns[this.burnStatus.burn].waypoint.tranTime)
         let target= Eci2Ric(originAtTime.slice(0,3), originAtTime.slice(3,6), sat.burns[this.burnStatus.burn].waypoint.target.slice(0,3), [0,0,0])
         target = [
@@ -8085,7 +8086,7 @@ function satClusterK(nClusters = mainWindow.nLane, sats = mainWindow.satellites,
     }
 }
 setSun()
-let f3d = 10
+let f3d = 10 // arbitrary number to ensure update
 function get3dLinePoints(points = [[100,200, 100],[300,400,200], [900,500,-100]], options = {}) {
     let {closed = false, color = '#ff00000', size = 2.5} = options
     let outPoints = []
@@ -8110,13 +8111,7 @@ function get3dLinePoints(points = [[100,200, 100],[300,400,200], [900,500,-100]]
 
 
 function draw3dScene(az = azD, el = elD) {
-    // let sensors = [{
-    //     sat: 0,
-    //     range: 500,
-    //     halfAngle: 50,
-    //     sensorR: [1,0,0],
-    //     color: '#aaaaaa'
-    // }]
+    // console.time('start')
     let sensors = []
     mainWindow.satellites.forEach(sat => sensors.push(...sat.conicVolumes))
     el = 90 - el
@@ -8140,6 +8135,8 @@ function draw3dScene(az = azD, el = elD) {
         
     let thetaGmst = astro.siderealTime(jd_UTI)
     let w = astro.rot(-thetaGmst, 3)
+    // console.timeEnd('start')
+    // console.time('cov')
     // Draw Covariance
     for (let index = 0; index < mainWindow.satellites.length; index++) {
         if (mainWindow.satellites[index].cov === undefined) continue
@@ -8252,6 +8249,8 @@ function draw3dScene(az = azD, el = elD) {
             lastPoints = [point1, point2, point3, point4, point5, point6, point7]
         }
     }
+    // console.timeEnd('cov')
+    // console.time('reach')
     // Draw Reachability
     for (let index = 0; index < mainWindow.satellites.length; index++) {
         if (mainWindow.satellites[index].reach === undefined) continue
@@ -8364,6 +8363,7 @@ function draw3dScene(az = azD, el = elD) {
             lastPoints = [point1, point2, point3, point4, point5, point6, point7]
         }
     }
+    // console.timeEnd('reach')
 
     // Draw rudimentary 3d earth if coastlines is on (will slow down considerably for now)
     if (mainWindow.showRicCoastlines) {
@@ -8429,6 +8429,7 @@ function draw3dScene(az = azD, el = elD) {
         }
 
     }
+    // console.time('axis')
         // Show Distance Markers
     for (let index = 1; index <= 5; index++) {
         let baseNumber = mainWindow.plotWidth/6
@@ -8502,19 +8503,27 @@ function draw3dScene(az = azD, el = elD) {
             alpha: 1,
         })
     }
-    mainWindow.satellites.forEach(sat => {
+
+    // console.timeEnd('axis')
+    // console.time('satellites')
+
+    mainWindow.satellites.forEach((sat, satIi) => {
         if (sat.stateHistory === undefined) sat.calcTraj()
-        let cur = sat.currentPosition(mainWindow.scenarioTime);
-        cur = {r: cur[0], i: cur[1], c: cur[2], rd: cur[3], id: cur[4], cd: cur[5]};
-        sat.curPos = cur;
+        if (math.abs(mainWindow.scenarioTime - sat.lastCurPosUpdateTime) > 1e-3 || mainWindow.burnStatus.sat == satIi || sat.curPos === undefined) {
+            let cur = sat.currentPosition(mainWindow.scenarioTime);
+            cur = {r: cur[0], i: cur[1], c: cur[2], rd: cur[3], id: cur[4], cd: cur[5]};
+            sat.curPos = cur;
+        }
+        sat.lastCurPosUpdateTime = mainWindow.scenarioTime
         if (!sat.locked) {
-            sat.stateHistory.forEach(point => {
-                points.push({
-                    color: sat.color,
-                    position: math.multiply(r, [point.position[0], point.position[1], point.position[2]]),
-                    size: mainWindow.trajSize*2
-                })
-            })
+            // sat.stateHistory.forEach(point => {
+            //     points.push({
+            //         color: sat.color,
+            //         position: math.multiply(r, [point.position[0], point.position[1], point.position[2]]),
+            //         size: mainWindow.trajSize*2
+            //     })
+            // })
+            points.push(...get3dLinePoints(sat.stateHistory.map(point => math.multiply(r, [point.position[0], point.position[1], point.position[2]])), {color: sat.color}))
             sat.burns.forEach(burn => {
                 if (burn.time > mainWindow.scenarioTime) return
                 let burnPosition = math.multiply(r, burn.location)
@@ -8559,7 +8568,9 @@ function draw3dScene(az = azD, el = elD) {
             shape: sat.shape
         })
     })
+    // console.timeEnd('satellites')
     // Draw sensors
+    // console.time('sensors')
     sensors.forEach(sens => {
         let color = sens.color
         let sensorCenter = Object.values(mainWindow.satellites[sens.sat].curPos).slice(0,3)
@@ -8628,13 +8639,16 @@ function draw3dScene(az = azD, el = elD) {
         })
         // Draw spherical lines to define end of sensor volume
     })
+    // console.timeEnd('sensors')
+    // console.time('sort')
     points = points.sort((a,b) => a.position[2] - b.position[2])
+    // console.timeEnd('sort')
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.strokeStyle = mainWindow.colors.foregroundColor
 
+    // console.time('draw')
     points.forEach(p => {
-        let viewDistance = mainWindow.plotWidth/2
         if (p.position[0].length !== undefined) {
             if (p.position[0].length > 3) {
                 // Solid fill
@@ -8665,8 +8679,15 @@ function draw3dScene(az = azD, el = elD) {
             // Line
             ctx.strokeStyle = p.color
             ctx.lineWidth = p.size
-            let pos1 = mainWindow.convertToPixels(p.position[0]).ri
-            let pos2 = mainWindow.convertToPixels(p.position[1]).ri
+            // Convert to pixels using same equation as RI
+            let pos1 = {
+                x: -(p.position[0][1] - mainWindow.plotCenter) * mainWindow.cnvs.width  / mainWindow.plotWidth + mainWindow.cnvs.width * mainWindow.frameCenter.ri.x,
+                y: mainWindow.cnvs.height * mainWindow.frameCenter.ri.y - p.position[0][0] * mainWindow.cnvs.height / mainWindow.plotHeight
+            }
+            let pos2 = {
+                x: -(p.position[1][1] - mainWindow.plotCenter) * mainWindow.cnvs.width  / mainWindow.plotWidth + mainWindow.cnvs.width * mainWindow.frameCenter.ri.x,
+                y: mainWindow.cnvs.height * mainWindow.frameCenter.ri.y - p.position[1][0] * mainWindow.cnvs.height / mainWindow.plotHeight
+            }
             let zRatio1 = (viewDistance*f3d - p.position[0][2])/viewDistance/f3d
             let zRatio2 = (viewDistance*f3d - p.position[1][2])/viewDistance/f3d
             if (zRatio1 < 0.25 && zRatio2 < 0.25) return
@@ -8692,7 +8713,10 @@ function draw3dScene(az = azD, el = elD) {
             ctx.stroke()
             return
         }
-        let pos = mainWindow.convertToPixels(p.position).ri
+        let pos = {
+            x: -(p.position[1] - mainWindow.plotCenter) * mainWindow.cnvs.width  / mainWindow.plotWidth + mainWindow.cnvs.width * mainWindow.frameCenter.ri.x,
+            y: mainWindow.cnvs.height * mainWindow.frameCenter.ri.y - p.position[0] * mainWindow.cnvs.height / mainWindow.plotHeight
+        }
         let zRatio = (viewDistance*f3d - p.position[2])/viewDistance/f3d
         pos = [pos.x-mainWindow.cnvs.width/2, pos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
         pos = {
@@ -8718,13 +8742,15 @@ function draw3dScene(az = azD, el = elD) {
             ctx.fillRect(pos.x - size / 2, pos.y - size / 2,size,size)
         }
         if (p.text !== undefined && p.shape === undefined) {
-            ctx.font = `bold ${textSize*3}px serif`
+            ctx.font = `bold ${textSize*1.5}px serif`
             ctx.fillStyle = p.color
             ctx.globalAlpha = p.alpha
             ctx.fillText(p.text, pos.x, pos.y - size*3)
         }
         ctx.globalAlpha = 1
     })
+    
+    // console.timeEnd('draw')
 }
 
 function hcwFiniteBurnTwoBurn(stateInit = {x: 0, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, stateFinal = {x: 10, y: 0, z: 0, xd: 0, yd: 0, zd: 0}, tf = 7200, a0 = 0.00001, n = mainWindow.mm) {
