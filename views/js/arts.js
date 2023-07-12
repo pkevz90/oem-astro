@@ -1525,18 +1525,16 @@ class Satellite {
         this.covTime = mainWindow.desired.scenarioTime
         this.curCov = JSON.parse(JSON.stringify(cov))
     }
-    checkClickProximity(position, burns = false) {
+    checkClickProximity(position, burns = false, all  = false) {
         // Check if clicked on current position of object, if burns flag is true, check click to current object burns
         let out = {};
         let pixelLimit = 20
         let distLimit = mainWindow.getPlotWidth() * pixelLimit / mainWindow.cnvs.width
         if (position.ri) {
             if (burns) {
-                let burnsCheck = false
-                this.burns.forEach((burn, ii) => {
-                    burnsCheck = math.norm([burn.location[0] - position.ri.r, burn.location[1] - position.ri.i]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
-                })
-                out = burnsCheck
+                out = this.burns.map((burn, ii) => {
+                    return [ii, math.norm([burn.location[0] - position.ri.r, burn.location[1] - position.ri.i]) < (mainWindow.getPlotWidth() / 80)]
+                }).filter(s => s[1]).map(s => s[0])
             }
             else {
                 out.ri = math.norm([this.curPos.r - position.ri.r, this.curPos.i - position.ri.i]) < distLimit
@@ -1544,11 +1542,9 @@ class Satellite {
         }
         if (position.ci) {
             if (burns) {
-                let burnsCheck = false
-                this.burns.forEach((burn, ii) => {
-                    burnsCheck = math.norm([burn.location[2] - position.ci.c, burn.location[1] - position.ci.i]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
-                })
-                out = burnsCheck
+                out = this.burns.map((burn, ii) => {
+                    return [ii, math.norm([burn.location[2] - position.ci.c, burn.location[1] - position.ci.i]) < (mainWindow.getPlotWidth() / 80)]
+                }).filter(s => s[1]).map(s => s[0])
             }
             else {
                 out.ci = math.norm([this.curPos.c - position.ci.c, this.curPos.i - position.ci.i]) < distLimit
@@ -1561,10 +1557,15 @@ class Satellite {
                     burnsCheck = math.norm([burn.location[2] - position.rc.c, burn.location[0] - position.rc.r]) < (mainWindow.getPlotWidth() / 80) ? ii : burnsCheck
                 })
                 out = burnsCheck
+                out = this.burns.map((burn, ii) => {
+                    return [ii, math.norm([burn.location[2] - position.rc.c, burn.location[0] - position.rc.r]) < (mainWindow.getPlotWidth() / 80)]                }).filter(s => s[1]).map(s => s[0])
             }
             else {
                 out.rc = math.norm([this.curPos.c - position.rc.c, this.curPos.r - position.rc.r]) < distLimit
             }
+        }
+        if (burns) {
+            out = all ? out : out[out.length-1]
         }
         if (out.ri || out.ci || out.rc) {
             lastHiddenSatClicked = lastHiddenSatClicked === false ? {name: this.name, ii: 0} : lastHiddenSatClicked
@@ -2524,6 +2525,45 @@ function alterEditableSiteChar(action) {
     mainWindow.groundSites[site][element] = newEl
 }
 
+function generateBurnContextMenu(satIndex = 0,burnIndex = 0, alt = false, shift = false) {
+    let burn = mainWindow.satellites[satIndex].burns[burnIndex]
+    let burnDir = burn.direction.map(s => s*1000)
+    let targetRic
+    if (burn.waypoint !== false) {
+        let targetOriginEci = propToTimeAnalytic(mainWindow.originOrbit, burn.time + burn.waypoint.tranTime)
+        targetRic = ConvEciToRic(targetOriginEci, [...burn.waypoint.target,0,0,0]).slice(0,3)
+    }
+    let burnDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000)
+    let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
+    let uploadDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000 - 900000)
+    let outHtml = `
+        <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[satIndex].name}</div>
+        <div class="context-item" onclick="handleContextClick(this)" sat="${satIndex}" burn="${burnIndex}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
+        <div style="background-color: white; cursor: default; width: 100%; height: 2px; margin: 2.5px 0px"></div>
+        <div style="font-size: 0.9em; padding: 2.5px 15px; color: white; cursor: default;">${burnTime}</div>
+        <div dir="${burnDir.join('_')}" id="change-burn"sat="${satIndex}" burn="${burnIndex}" type="direction" onclick="handleContextClick(this)" class="context-item" title="Direction" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnDir[0].toFixed(2)} I: ${burnDir[1].toFixed(2)} C: ${burnDir[2].toFixed(2)} m/s</div>
+        ${burn.waypoint !== false ? `<div dir="${burnDir.join('_')}" way="${targetRic.join('_')}"id="change-burn"sat="${satIndex}" burn="${burnIndex}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${targetRic[0].toFixed(2)} I: ${targetRic[1].toFixed(2)} C: ${targetRic[2].toFixed(2)} km TT: ${(burn.waypoint.tranTime/3600).toFixed(2)} hrs</div>`: ''}
+        <div dir="${burnDir.join('_')}" id="change-burn"sat="${satIndex}" burn="${burnIndex}" onclick="handleContextClick(this)" type="angle" class="context-item" title="Az,El,Mag" style="font-size: 0.9em; margin-bottom: 10px; padding: 2.5px 15px; color: white;">Az: ${(math.atan2(burnDir[1], burnDir[0])*180 / Math.PI).toFixed(2)}<sup>o</sup>, El: ${(math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))*180/Math.PI).toFixed(2)}<sup>o</sup>, M: ${math.norm(burnDir).toFixed(2)} m/s</div>
+        `
+    let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
+    let padNumber = function(n) {
+        return n < 10 ? '0' + n : n
+    }
+     if (alt && shift) {
+        outText = `-. E${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
+        // outText = `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
+    }
+    else if (shift) {
+        outText = burnTime + 'x' + Object.values(burn.waypoint.target).map(x => x.toFixed(4)).join('x') + 'x' + burn.waypoint.tranTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
+    }
+    else if (alt) {
+        // outText = `X. E${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
+        outText = `U${padNumber(uploadDate.getHours())}--z; ${mainWindow.satellites[satIndex].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
+    }
+    navigator.clipboard.writeText(outText)
+    return outHtml
+}
+
 function startContextClick(event) {
     if (event.pointerType === 'touch' && mainWindow.aciveTouches.length > 1) return event.preventDefault()
     if (event.clientX === undefined) {
@@ -2581,22 +2621,19 @@ function startContextClick(event) {
     }
     // Check if clicked on burn
     // If so, find index of satellite burn clicked on
-    let burnIndexSat, activeBurn
+    let checkBurnProximity, activeBurns = []
     if (threeD) {
-        checkProxSats = mainWindow.satellites.map((sat, satIi) => {
-            return {satIi, burnsClicked: sat.burns.map((b, bIi) => { return {clicked: math.norm(math.subtract([event.clientX, event.clientY], Object.values(b.pixelPos))) < 20, bIi}}).filter(b => b.clicked).map(b => b.bIi)}
-        }).filter(sat => sat.burnsClicked.length > 0)
-        activeBurn = checkProxSats.length > 0 ? {sat: checkProxSats[0].satIi, burn: checkProxSats[0].burnsClicked[checkProxSats[0].burnsClicked.length-1]} : false
+        checkBurnProximity = mainWindow.satellites.map((sat, satIi) => {
+            return [satIi, sat.burns.map((b, bIi) => { return {clicked: math.norm(math.subtract([event.clientX, event.clientY], Object.values(b.pixelPos))) < 20, bIi}}).filter(b => b.clicked).map(b => b.bIi)]
+        }).filter(sat => sat[1].length > 0)
     }
     else {
-        checkProxSats = mainWindow.satellites.map(sat => sat.checkClickProximity(ricCoor, true))
-        burnIndexSat = checkProxSats.findIndex(sat => sat !== false)
-        activeBurn = burnIndexSat === -1 ? false : {sat: burnIndexSat, burn: checkProxSats[burnIndexSat]}
+        checkBurnProximity = mainWindow.satellites.map((sat, satIi) => [satIi, sat.checkClickProximity(ricCoor, true, true)]).filter(s => s[1].length > 0)
     }
     // If in ground track mode, can't select burns
-    activeBurn = mainWindow.latLongMode ? false : activeBurn
-
-
+    checkBurnProximity.forEach(sat => activeBurns.push(...sat[1].map(s => [sat[0], s])))
+    activeBurns = mainWindow.latLongMode ? [] : activeBurns
+    
     let ctxMenu;
     if (document.getElementById('context-menu') === null) {
         ctxMenu = document.createElement('div');
@@ -2804,43 +2841,15 @@ function startContextClick(event) {
         navigator.clipboard.writeText(toStkFormat((new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))).toString())+'x'+Object.values(getCurrentInertial(activeSat)).join('x'))
         ctxMenu.innerHTML = newInnerHTML
     }
-    else if (activeBurn !== false) {
+    else if (activeBurns.length > 1) {
+        // User could have selected multiple burns
+        ctxMenu.innerHTML = activeBurns.map(burn => {
+            return `<div class="context-item" onclick="handleContextClick(this)" sat="${burn[0]}" burn="${burn[1]}" id="burn-select-options">${mainWindow.satellites[burn[0]].name}: Burn #${burn[1]+1}</div>`
+        })
+    }
+    else if (activeBurns.length > 0) {
         // User clicked on burn, generate burn option menu
-        let burn = mainWindow.satellites[activeBurn.sat].burns[activeBurn.burn]
-        let burnDir = burn.direction.map(s => s*1000)
-        let targetRic
-        if (burn.waypoint !== false) {
-            let targetOriginEci = propToTimeAnalytic(mainWindow.originOrbit, burn.time + burn.waypoint.tranTime)
-            targetRic = ConvEciToRic(targetOriginEci, [...burn.waypoint.target,0,0,0]).slice(0,3)
-        }
-        let burnDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000)
-        let burnTime = toStkFormat(new Date(mainWindow.startDate.getTime() + burn.time * 1000).toString())
-        let uploadDate = new Date(mainWindow.startDate.getTime() + burn.time * 1000 - 900000)
-        ctxMenu.innerHTML = `
-            <div style="margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">${mainWindow.satellites[activeBurn.sat].name}</div>
-            <div class="context-item" onclick="handleContextClick(this)" sat="${activeBurn.sat}" burn="${activeBurn.burn}" id="change-time">Change Time <input type="Number" style="width: 3em; font-size: 1em" placeholder="0"> min</div>
-            <div style="background-color: white; cursor: default; width: 100%; height: 2px; margin: 2.5px 0px"></div>
-            <div style="font-size: 0.9em; padding: 2.5px 15px; color: white; cursor: default;">${burnTime}</div>
-            <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" type="direction" onclick="handleContextClick(this)" class="context-item" title="Direction" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${burnDir[0].toFixed(2)} I: ${burnDir[1].toFixed(2)} C: ${burnDir[2].toFixed(2)} m/s</div>
-            ${burn.waypoint !== false ? `<div dir="${burnDir.join('_')}" way="${targetRic.join('_')}"id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="waypoint" class="context-item" title="Waypoint" style="font-size: 0.9em; padding: 2.5px 15px; color: white;">R: ${targetRic[0].toFixed(2)} I: ${targetRic[1].toFixed(2)} C: ${targetRic[2].toFixed(2)} km TT: ${(burn.waypoint.tranTime/3600).toFixed(2)} hrs</div>`: ''}
-            <div dir="${burnDir.join('_')}" id="change-burn"sat="${activeBurn.sat}" burn="${activeBurn.burn}" onclick="handleContextClick(this)" type="angle" class="context-item" title="Az,El,Mag" style="font-size: 0.9em; margin-bottom: 10px; padding: 2.5px 15px; color: white;">Az: ${(math.atan2(burnDir[1], burnDir[0])*180 / Math.PI).toFixed(2)}<sup>o</sup>, El: ${(math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))*180/Math.PI).toFixed(2)}<sup>o</sup>, M: ${math.norm(burnDir).toFixed(2)} m/s</div>
-            `
-        let outText = burnTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
-        let padNumber = function(n) {
-            return n < 10 ? '0' + n : n
-        }
-         if (event.altKey && event.shiftKey) {
-            outText = `-. E${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
-            // outText = `UXXXXz; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
-        }
-        else if (event.shiftKey) {
-            outText = burnTime + 'x' + Object.values(burn.waypoint.target).map(x => x.toFixed(4)).join('x') + 'x' + burn.waypoint.tranTime + 'x' + burnDir.map(x => x.toFixed(4)).join('x')
-        }
-        else if (event.altKey) {
-            // outText = `X. E${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; A${(180 / Math.PI * math.atan2(burnDir[1], burnDir[0])).toFixed(2)}, E${(180 / Math.PI * math.atan2(burnDir[2], math.norm(burnDir.slice(0,2)))).toFixed(2)}, M${math.norm(burnDir).toFixed(2)}, U----z`
-            outText = `U${padNumber(uploadDate.getHours())}--z; ${mainWindow.satellites[activeBurn.sat].name} MNVR @ ${padNumber(burnDate.getHours())}${padNumber(burnDate.getMinutes())}z; R: ${burnDir[0].toFixed(2)}, I: ${burnDir[1].toFixed(2)}, C: ${burnDir[2].toFixed(2)} Mag: ${math.norm(burnDir).toFixed(2)} m/s`
-        }
-        navigator.clipboard.writeText(outText)
+        ctxMenu.innerHTML = generateBurnContextMenu(activeBurns[0][0], activeBurns[0][1], event.altKey, event.shiftKey)
     }
     else {
         ctxMenu.innerHTML = mainWindow.ephemViewerMode ? 
@@ -2923,6 +2932,11 @@ function handleContextClick(button) {
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'burn-select-options') {
+        let sat = button.getAttribute('sat')
+        let burn = button.getAttribute('burn')
+        button.parentElement.innerHTML = generateBurnContextMenu(sat, burn)
     }
     if (button.id === 'set-covariance') {
         let sat = button.getAttribute('sat')
@@ -8525,7 +8539,6 @@ function draw3dScene(az = azD, el = elD) {
             // })
             points.push(...get3dLinePoints(sat.stateHistory.map(point => math.multiply(r, [point.position[0], point.position[1], point.position[2]])), {color: sat.color}))
             sat.burns.forEach(burn => {
-                if (burn.time > mainWindow.scenarioTime) return
                 let burnPosition = math.multiply(r, burn.location)
                 let zRatioBurn = (viewDistance*f3d - burnPosition[2])/viewDistance/f3d
                 let burnPixelPos = mainWindow.convertToPixels(burnPosition).ri
@@ -8537,6 +8550,7 @@ function draw3dScene(az = azD, el = elD) {
                 let burnVector = math.add(burn.location, burn.direction.map(s => s*3000))
                 burnVector = math.multiply(r, burnVector)
                 burn.pixelPos = burnPixelPos
+                if (burn.time > mainWindow.scenarioTime) return
                 points.push({
                     color: sat.color,
                     position: burnPosition,
