@@ -2968,6 +2968,11 @@ function handleContextClick(button) {
         let sat = button.getAttribute('sat')
         // button.parentElement.innerHTML = ''
         button.parentElement.innerHTML = `
+            ${mainWindow.satellites[sat].conicVolumes.map((vol, volIi) => {
+                let target = vol.sensorR.length === 3 ? `[${vol.sensorR.join(', ')}]` : mainWindow.satellites[vol.sensorR].name
+                return `<div sat="${sat}" vol=${volIi} class="context-item" onclick="handleContextClick(this)" id="delete-conic-volume">Sensor #${volIi}&rarr;${target}</div>`
+            }).join('')}
+            ${mainWindow.satellites[sat].conicVolumes.length > 0 ? '<div style="height: 20px";></div>' : ''}
             <div class="context-item" >Pointing <select style="font-size: 1em; width: 50%;"><option value="-1">RIC Coordinate</option>${mainWindow.satellites.map((satIn, satIi) => {
                 return satIi == sat ? '' : `<option value="${satIi}">${satIn.name}</option>`
             }).join('')}</select></div>
@@ -3002,6 +3007,17 @@ function handleContextClick(button) {
         mainWindow.satellites[sat].conicVolumes.push(volume)
         document.getElementById('context-menu')?.remove();
         
+    }
+    if (button.id === 'delete-conic-volume') {
+        if (button.innerText === 'Confirm Delete?') {
+            let sat = button.getAttribute('sat')
+            let vol = button.getAttribute('vol')
+            mainWindow.satellites[sat].conicVolumes.splice(vol,1)
+            document.getElementById('context-menu')?.remove();
+        }
+        else {
+            button.innerText = 'Confirm Delete?'
+        }
     }
     if (button.id === 'save-reachability') {
         let sat = button.getAttribute('sat')
