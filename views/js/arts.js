@@ -397,7 +397,21 @@ class windowCanvas {
             })
             ctx.stroke()
         })
-        
+        // Draw longitudes
+        let screenWidth = 360 / this.groundTrackLimits.zoom
+        let longitudeUnits = math.floor(screenWidth / 6 / 5)*5
+        longitudeUnits = longitudeUnits === 0 ? math.floor(screenWidth / 6 ) : longitudeUnits
+        longitudeUnits = longitudeUnits === 0 ? 0.5 : longitudeUnits
+        ctx.textBaseline = 'middle'
+        ctx.textAlign = 'center'
+        ctx.fillStyle = this.colors.foregroundColor
+        ctx.globalAlpha = 0.25
+        math.range(0,360,longitudeUnits)._data.map(long => [long, this.latLong2Pixel({lat: 0, long})]).forEach(coor => {
+            let eastWest = coor[0] > 180 ? 'W' : 'E'
+            coor[0] = coor[0] > 180 ? -(coor[0]-360) : coor[0]
+            ctx.fillText(coor[0]+eastWest, coor[1][0], 20+coor[1][1])
+        })
+        ctx.globalAlpha = 1
         let satellitesToDraw = [] // draw satellites in reverse order of altitude
         for (let index = 0; index < this.satellites.length; index++) {
             if (mainWindow.satellites[index].stateHistory === undefined) {
@@ -1197,13 +1211,15 @@ class windowCanvas {
             if (!this.mousePosition) return;
             if (mainWindow.latLongMode) {
                 let latLong = this.pixel2LatLong(this.mousePosition)
-                while (latLong.long < -180) {
+                while (latLong.long < 0) {
                     latLong.long += 360
                 }
-                while (latLong.long > 180) {
+                while (latLong.long > 360) {
                     latLong.long -= 360
                 }
-                ctx.fillText(`Lat: ${latLong.lat.toFixed(1)} Long: ${latLong.long.toFixed(1)}`, this.cnvs.width - 10, this.cnvs.height -  10)
+                let eastWest = latLong.long > 180 ? 'W' : 'E'
+                latLong.long = latLong.long > 180 ? -(latLong.long-360) : latLong.long
+                ctx.fillText(`Lat: ${latLong.lat.toFixed(1)} Long: ${latLong.long.toFixed(1)}`+eastWest, this.cnvs.width - 10, this.cnvs.height -  10)
                 return
             }
             let ricCoor = this.convertToRic(this.mousePosition);
@@ -2762,7 +2778,16 @@ function startContextClick(event) {
         ctxMenu.sat = activeSat;
         let ricPosition = mainWindow.satellites[activeSat].curPos
         let groundPosition = astro.eci2latlong(Object.values(getCurrentInertial(activeSat)).slice(0,3), new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime)))
-        groundPosition = `Lat: ${(groundPosition.lat*180/Math.PI).toFixed(1)}<sup>o</sup>, Long: ${(groundPosition.long*180/Math.PI).toFixed(1)}<sup>o</sup>, <abbr title="Distance to Earth's Center">R</abbr>: ${math.norm(groundPosition.r_ecef).toFixed(1)} km`
+        let lat = groundPosition.lat*180/Math.PI, long = groundPosition.long*180/Math.PI
+        while (long > 360) {
+            long -= 360
+        }
+        while (long < 0) {
+            long += 360
+        }
+        let eastWest = long > 180 ? 'W' : 'E'
+        long = long > 180 ? -(long-360) : long
+        groundPosition = `Lat: ${(lat).toFixed(2)}<sup>o</sup>, Long: ${(long).toFixed(2)+eastWest}<sup>o</sup>, <abbr title="Distance to Earth's Center">R</abbr>: ${math.norm(groundPosition.r_ecef).toFixed(1)} km`
         let newInnerHTML = `
             <div sat="${activeSat}" style="display: flex; justify-content: space-between; margin-top: 10px; padding: 5px 15px; color: white; cursor: default;">
                 <div>
