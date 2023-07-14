@@ -842,6 +842,7 @@ class windowCanvas {
         }
     }
     pixel2LatLong(pixel = [100,100]) {
+        pixel = pixel.slice()
         pixel[0] = (pixel[0]-this.cnvs.width/2) / this.groundTrackLimits.zoom+this.cnvs.width/2
         pixel[1] = (pixel[1]-this.cnvs.height/2) / this.groundTrackLimits.zoom+this.cnvs.height/2
         let center = this.groundTrackLimits.center
@@ -1211,6 +1212,7 @@ class windowCanvas {
             if (!this.mousePosition) return;
             if (mainWindow.latLongMode) {
                 let latLong = this.pixel2LatLong(this.mousePosition)
+                // console.log(this.groundTrackLimits.zoom, this.groundTrackLimits.center, this.mousePosition);
                 while (latLong.long < 0) {
                     latLong.long += 360
                 }
@@ -4452,8 +4454,8 @@ function changeSatelliteInputType(el) {
             date = `${date.getFullYear()}-${padNumber(date.getMonth()+1)}-${padNumber(date.getDate())}T${padNumber(date.getHours())}:${padNumber(date.getMinutes())}:${padNumber(date.getSeconds())}`
             satInputs[0].innerHTML = mainWindow.satellites.length === 0 ? `Epoch <input class="sat-input" style="width: 20ch; font-size: 1.25em;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">` : ''
             satInputs[1].innerHTML = `Longitude <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
-            satInputs[2].innerHTML = `Drift Rate<input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg/day</div>`
-            satInputs[3].innerHTML = ``
+            satInputs[2].innerHTML = `Inclination <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
+            satInputs[3].innerHTML = `Drift Rate <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg/day</div>`
             satInputs[4].innerHTML = ``
             satInputs[5].innerHTML = ``
             satInputs[6].innerHTML = ``
@@ -5245,7 +5247,7 @@ function initStateFunction(el) {
     else if (el.id === 'add-satellite-button') {
         let inputs = [...document.querySelectorAll('.sat-input')]
         let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-        let eciState, ricState, eciOrigin, startDate, relOrigin, date, dt, coeState, long, driftRate
+        let eciState, ricState, eciOrigin, startDate, relOrigin, date, dt, coeState, long, driftRate, inclination
         switch (radioId) {
             case 'ric-sat-input':
                 relOrigin = Number(document.querySelector('#sat-input-origin').value)
@@ -5323,14 +5325,16 @@ function initStateFunction(el) {
                     date = new Date(inputs[0].value)
                     mainWindow.startDate = date
                     long = Number(inputs[1].value)
-                    driftRate = Number(inputs[2].value)
+                    inclination = Number(inputs[2].value)
+                    driftRate = Number(inputs[3].value)
                 }
                 else {
                     long = Number(inputs[0].value)
-                    driftRate = Number(inputs[1].value)
+                    inclination = Number(inputs[1].value)
+                    driftRate = Number(inputs[2].value)
                 }
-                console.log(date, long, driftRate);
-                eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(long, date, driftRate)))
+                console.log(date, long, driftRate, inclination);
+                eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(long, date, inclination, driftRate)))
                 break
         }
         let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
@@ -11493,7 +11497,7 @@ function displayHpopTraj(update = false, sat = false) {
     })
 }
 
-function geoSatelliteAtLongitude(long = 0, date = mainWindow.startDate, drift = 0) {
+function geoSatelliteAtLongitude(long = 0, date = mainWindow.startDate, inclination = 0, drift = 0) {
     let sidAngle = astro.siderealTime(astro.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds()))
     let a = (360+drift)*Math.PI/180 / 86164
     a = (398600.4418/a**2)**(1/3)
@@ -11512,7 +11516,7 @@ function geoSatelliteAtLongitude(long = 0, date = mainWindow.startDate, drift = 
     }
 
     return {
-        a, e: 0, i: 0, raan: 0, arg: 0, tA
+        a, e: 0, i: inclination*Math.PI/180, raan: 0, arg: 0, tA
     }
 }
 function getGroundSwatchCircleCoordinates(rEci = [42164, 0, 0], lat = 0, long = 0, nPoints = 100) {
