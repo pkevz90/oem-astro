@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDA</title>
+    <script src="../SupportLibraries/math.js"></script>
+    <script src="./Media/coastline.js"></script>
+    <script src="./js/astro_vz.js"></script>
+    <script src="./js/sda_sensors.js"></script>
+    <script src="./js/sda_v3.js" defer></script>
+
+    <link rel="stylesheet" href="./css/sda_v2.css">
+</head>
+<body class="noselect">
+    <div id="main-display">
+        <div id="results-display">
+            <div><h2>Satellite State Info</h2></div>
+            <div><span style="margin-right: 40px;">Epoch</span> <input type="datetime-local" name="" id="sat-epoch-input" oninput="timeChange(this)"></div>
+            <div style="display: flex; justify-content: space-between;"id="coe-display">
+                <div style="margin: 0px 10px;"><em style="font-size: 1.5em;">a </em><input title="km" type="number" style="text-align: center; width: 6ch;"></div>
+                <div style="margin: 0px 10px;"><em style="font-size: 1.5em;">e </em><input type="number" style="text-align: center; width: 6ch;"></div>
+                <div style="margin: 0px 10px;"><em style="font-size: 1.5em;">i </em><input title="deg" type="number" style="text-align: center; width: 6ch;"></div>
+                <div style="margin: 0px 10px;"><em style="font-size: 1.5em;">&Omega; </em><input title="deg" type="number" style="text-align: center; width: 6ch;"></div>
+                <div style="margin: 0px 10px;"><em style="font-size: 1.5em;">&omega; </em><input title="deg" type="number" style="text-align: center; width: 6ch;"></div>
+                <div style="margin: 0px 10px;"><em style="font-size: 1.5em;">&nu; </em><input title="deg" type="number" style="text-align: center; width: 6ch;"></div>
+            </div>
+            <div><h2>Simulation Parameters</h2></div>
+            <div><span style="margin-right: 40px;">Start Tracking</span> <input type="datetime-local" name="" id="sim-start-input" oninput="timeChange(this)"></div>
+            <div><span style="margin-right: 40px;">End Tracking</span> <input type="datetime-local" name="" id="sim-finish-input" oninput="timeChange(this)"></div>
+            <div><span style="margin-right: 40px;">Scaling Factor</span> <input type="number" name="" id="scaling-input" value="100" style="width: 4ch;"> %</div>
+            
+            <div><button style="width: 100%; font-size: 1.25em;" onclick="showMap()">Display Map</button></div>
+            <div><button style="width: 100%; font-size: 1.25em;" onclick="showMap()">Run Simulation</button></div>
+            <div style="display: flex; justify-content: space-between;">
+                <button style="width: 45%;" onclick="estimateCovariance()">Estimate Covariance</button>
+                <button style="width: 45%;" onclick="openSensorDialog()">Add Sensor</button>
+            </div>
+            <div id="cov-display" onclick="showCovariance()"></div>
+            <div class="no-scroll" id="ob-list"></div>
+        </div>
+        <div class="no-scroll" id="sensor-list"></div>
+        <dialog>Hey</dialog>
+    </div>
+</body>
+</html>

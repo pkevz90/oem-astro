@@ -409,7 +409,7 @@ class windowCanvas {
         math.range(0,360,longitudeUnits)._data.map(long => [long, this.latLong2Pixel({lat: 0, long})]).forEach(coor => {
             let eastWest = coor[0] > 180 ? 'W' : 'E'
             coor[0] = coor[0] > 180 ? -(coor[0]-360) : coor[0]
-            ctx.fillText(coor[0]+eastWest, coor[1][0], 20+coor[1][1])
+            ctx.fillText(coor[0]+eastWest, coor[1][0], 20+this.cnvs.height/2)
         })
         ctx.globalAlpha = 1
         let satellitesToDraw = [] // draw satellites in reverse order of altitude
@@ -842,7 +842,7 @@ class windowCanvas {
         }
     }
     pixel2LatLong(pixel = [100,100]) {
-        pixel = pixel.slice()
+        pixel = pixel.slice() // removing *pointer* so mouse position isn't altered when accounting for zoom
         pixel[0] = (pixel[0]-this.cnvs.width/2) / this.groundTrackLimits.zoom+this.cnvs.width/2
         pixel[1] = (pixel[1]-this.cnvs.height/2) / this.groundTrackLimits.zoom+this.cnvs.height/2
         let center = this.groundTrackLimits.center
@@ -2892,6 +2892,7 @@ function startContextClick(event) {
             ${mainWindow.satellites.length > 1 ? `<div class="context-item" onclick="openSatellitePanel()">Open Satellite Panel</div>` : ''}
             <div class="context-item" onclick="openPanel(this)" id="options">Options Menu</div>
             ${mainWindow.latLongMode ? `<div class="context-item" onclick="openSensorAccessPanel()">Open Access Panel</div>` : ``}
+            ${mainWindow.latLongMode ? `<div class="context-item" onclick="handleContextClick(this)" id="add-site-group">Add Site Group</div>` : ``}
             ${mainWindow.latLongMode ? `<div lat="${latLongClick.lat}" long="${latLongClick.long}" class="context-item" id="add-ground-site" onclick="handleContextClick(this)">Add Ground Site</div>` : `<div class="context-item"><label style="cursor: pointer" for="plan-type">Waypoint Planning</label> <input id="plan-type" name="plan-type" onchange="changePlanType(this)" ${mainWindow.burnType === 'waypoint' ? 'checked' : ""} type="checkbox" style="height: 1.5em; width: 1.5em"/></div>`}
             <div class="context-item"><label style="cursor: pointer" for="upload-options-button">Import States</label><input style="display: none;" id="upload-options-button" type="file" accept="*.sas, *.sasm" onchange="uploadTles(event)"></div>
             <div class="context-item" onclick="openInstructionWindow()" id="instructions">Instructions</div>
@@ -3013,6 +3014,24 @@ function handleContextClick(button) {
         let elHeight = cm.offsetHeight
         let elTop =  Number(cm.style.top.split('p')[0])
         cm.style.top = (window.innerHeight - elHeight) < elTop ? (window.innerHeight - elHeight) + 'px' : cm.style.top
+    }
+    if (button.id === 'add-site-group') {
+        // button.parentElement.innerHTML = ''
+        button.parentElement.innerHTML = Object.keys(sensorGroups).map(group => {
+            return `<div class="context-item" group=${group} onclick="handleContextClick(this)" id="add-site-group-submit">${group.toUpperCase()}</div>`
+        })
+    }
+    if (button.id === 'add-site-group-submit') {
+        let group = button.getAttribute('group')
+        sensorGroups[group].forEach(sens => {
+            mainWindow.groundSites.push(new GroundSite({
+                name: sens[0],
+                long: sens[1][1],
+                lat: sens[1][0],
+                color: '#E17D64'
+            }))
+        })
+        document.getElementById('context-menu')?.remove();
     }
     if (button.id === 'save-conic-volume') {
         let sat = button.getAttribute('sat')
@@ -5273,7 +5292,8 @@ function initStateFunction(el) {
                 eciState = inputs.slice(1,7).map(s => s.value === '' ? Number(s.placeholder) : Number(s.value))
                 dt = (mainWindow.startDate - date) / 1000
                 // If not first satellte, prop to scenario start time
-                eciState = mainWindow.satellites.length === 0 ? eciState : propToTime(eciState, dt)
+                let h = new Propagator()
+                eciState = mainWindow.satellites.length === 0 ? eciState : h.propToTime(eciState, date, dt).state
                 break
             case 'coe-sat-input':
                 date = new Date(inputs[0].value)
@@ -7015,6 +7035,23 @@ function getCurrentInertial(sat = 0, time = mainWindow.scenarioTime) {
     }
 }
 
+function getCurrentInertialRic(satPos = [0,0,0,0,0,0], time = mainWindow.scenarioTime) {
+    let inertChief = mainWindow.originHistory.filter(s => s.t <= time)
+    inertChief = inertChief[inertChief.length-1]
+    inertChief = propToTime(inertChief.position, time-inertChief.t, false)
+    while (satPos.length < 6) satPos.push(0)
+    satPos = Ric2Eci(satPos.slice(0,3), satPos.slice(3,6), inertChief.slice(0,3), inertChief.slice(3,6))
+    return {
+        r: satPos.rEcci[0],
+        i: satPos.rEcci[1],
+        c: satPos.rEcci[2],
+        rd: satPos.drEci[0],
+        id: satPos.drEci[1],
+        cd: satPos.drEci[2]
+    }
+}
+
+
 function generateJ2000File(team=1, time = mainWindow.scenarioTime, dontExport = []) {
     let satellites = calculateSatErrorStates(team, time).map((s,ii) => [mainWindow.satellites[ii].name, s.trackedState])
     let startEphem = `Time (UTCG)              x (km)           y (km)         z (km)     vx (km/sec)    vy (km/sec)    vz (km/sec)
@@ -7112,8 +7149,14 @@ function impulsiveHcwProp(p1 = [[1],[0],[0]], v1 =[[0],[0],[0]], dt = 3600) {
     return math.multiply(phi, state)
 }
 
-function optimizeMultiBurn(burns = 4, start = [0, 400, 0, 0, 0, 0], end = [0,-30,0,0,0,0], dt = 6*3600, options = {}) {
-    let {a = 0.001, maxBurn = 30, sat = null, uniformity = 4, bias = 0, logId = null} = options
+function heavisideFunction(value = 3, limit = 0, order = 3) {
+    return value < limit ? value : value + (value-limit) * order
+}
+
+function optimizeMultiBurn(burns = 4, satIn = 1, end = [-0,-50,0,0,0,0], dt = 6*3600, options = {}) {
+    let {a = 0.001, maxBurn = 0.013, sat = null, uniformity = 10, bias = 0, logId = null} = options
+    let start = Object.values(mainWindow.satellites[satIn].curPos)
+    console.log(start);
     let dist = math.norm(math.subtract(start.slice(0,3), end.slice(0,3))) * 0.333
     // console.log(start, end, sat, dt);
     let vNom =  proxOpsTargeter(math.transpose([start.slice(0,3)]), math.transpose([end.slice(0,3)]), dt)[0]
@@ -7151,18 +7194,26 @@ function optimizeMultiBurn(burns = 4, start = [0, 400, 0, 0, 0, 0], end = [0,-30
         let outWaypoints = []
         for (let index = 0; index < waypoints.length - 1; index++) {
             let wayT = index !== waypoints.length - 2 ? x[index] : 1
+            if (show) console.log('\n\ntran time & waypoint',dt * (wayT - curT)/3600, math.squeeze(waypoints[index]), math.squeeze(waypoints[index+1]));
             outWaypoints.push({
                 time: curT * dt,
                 dt: dt * (wayT - curT),
                 point: math.squeeze(waypoints[index+1])
             })
             let vels = proxOpsTargeter(waypoints[index], waypoints[index+1], dt * (wayT - curT)).map(v => math.squeeze(v))
+            if (show) console.log('Delta V',math.norm(math.subtract(vels[0], curV)));
             dV.push(math.norm(math.subtract(vels[0], curV)))
             curV = vels[1]
             curT = x[index]
         }
+        if (show) console.log('\n\nLast Burn',math.norm(math.subtract(end.slice(3), curV)));
         dV.push(math.norm(math.subtract(end.slice(3), curV)))
-        return show ? outWaypoints : dV.map((v, ii) => ((ii + 1) ** bias) * v ** uniformity).reduce((a,b) => a + b)
+        if (show)console.log(dV.map((v, ii) => {
+            return heavisideFunction(v, maxBurn)
+        }))
+        
+        return show ? outWaypoints : dV.map((v, ii) => (ii**bias)*heavisideFunction(v, maxBurn)).reduce((a,b) => a + b)
+        // return show ? outWaypoints : dV.map((v, ii) => ((ii + 1) ** bias) * v ** uniformity).reduce((a,b) => a + b)
     }   
     let iterations = 200
     let iterationCount = 0
@@ -7176,57 +7227,36 @@ function optimizeMultiBurn(burns = 4, start = [0, 400, 0, 0, 0, 0], end = [0,-30
             let points = opt.opt_fuction(opt.bestGlobalPosition, true)
             console.log(opt.bestGlobalPosition)
             console.log({r: start[0], i: start[1], c: start[2], rd: start[3], id: start[4], cd: start[5]})
-            if (sat == null) {
-                let newSat = new Satellite({
-                    a,
-                    position: {r: start[0], i: start[1], c: start[2], rd: start[3], id: start[4], cd: start[5]}
+            console.log(points);
+            mainWindow.satellites[satIn].burns = mainWindow.satellites[satIn].burns.filter(burn => burn.time < mainWindow.scenarioTime)
+            points = points.map(p => {
+                let waypoint = Object.values(getCurrentInertialRic(p.point, p.time + mainWindow.scenarioTime+p.dt))
+                console.log(waypoint);
+                return {
+                    time: p.time + mainWindow.scenarioTime,
+                    dt: p.dt,
+                    waypoint
+                }
+            })
+            // return points
+            // console.log(mainWindow.satellites[satIn], satIn, mainWindow.satellites);
+            points.forEach(p => {
+                mainWindow.satellites[satIn].burns.push({
+                    time: p.time,
+                    direction: {
+                        r: 0,
+                        i: 0,
+                        c: 0
+                    },
+                    waypoint: {
+                        tranTime: p.dt,
+                        target: p.waypoint.slice(0,3)
+                    }
                 })
-                // return
-                points.forEach(p => {
-                    newSat.burns.push({
-                        time: p.time,
-                        direction: {
-                            r: 0,
-                            i: 0,
-                            c: 0
-                        },
-                        waypoint: {
-                            tranTime: p.dt,
-                            target: {
-                                r: p.point[0],
-                                i: p.point[1],
-                                c: p.point[2]
-                            }
-                        }
-                    })
-                    newSat.genBurns()
-                })
-                mainWindow.satellites.push(newSat)
-                mainWindow.desired.plotWidth = 900
-            }
-            else {
-                mainWindow.satellites[sat].burns.filter(burn => burn.time < mainWindow.scenarioTime)
-                points.forEach(p => {
-                    mainWindow.satellites[sat].burns.push({
-                        time: p.time + mainWindow.scenarioTime,
-                        direction: {
-                            r: 0,
-                            i: 0,
-                            c: 0
-                        },
-                        waypoint: {
-                            tranTime: p.dt,
-                            target: {
-                                r: p.point[0],
-                                i: p.point[1],
-                                c: p.point[2]
-                            }
-                        }
-                    })
-                    mainWindow.satellites[sat].genBurns()
-                })
-        
-            }
+                console.log(mainWindow.satellites[satIn].burns);
+                mainWindow.satellites[satIn].calcTraj(true)
+                mainWindow.satellites[satIn].calcTraj()
+            })
             mainWindow.desired.scenarioTime += dt 
         }
     }
@@ -7652,6 +7682,7 @@ function tellInputStateFileType(file) {
     }
     else if (file.search('EphemerisTimePosVel') !== -1) return 'ephem'
     else if (file.search(/[l|L]at/) !== -1 && file.search(/[l|L]on/) !== -1) return 'site'
+    else if (file.search(/ECI Position/i)) return 'ecilist'
     return 'j2000'
 }
 
@@ -7766,7 +7797,10 @@ function handleTleFile(file) {
 }
 
 function importStates(states, time,  options = {}) {
-    let {colors, shapes, names, origin = 0} = options
+    let {colors, shapes, names, origin = 0, resetScenario = true} = options
+    if (!resetScenario) {
+        time = mainWindow.startDate
+    }
     let satCopies = JSON.parse(JSON.stringify(mainWindow.satellites))
     let originII = origin
     mainWindow.groundTrackLimits.focus = origin
@@ -7791,10 +7825,12 @@ function importStates(states, time,  options = {}) {
     let baseEpoch = time
     let baseUTCDiff = baseEpoch.getUTCHours() - baseEpoch.getHours()
     mainWindow.startDate = baseEpoch
+    let h = new Propagator()
+    console.log(h);
     states = states.map((s,ii) => {
         let utcDiff = s.epoch.getUTCHours() - s.epoch.getHours()
-        if (ii === originII) {
-            let originOrbit = propToTimeAnalytic(s.orbit, (baseEpoch - s.epoch) / 1000)
+        if (ii === originII && resetScenario) {
+            let originOrbit = h.propToTime(Object.values(Coe2PosVelObject(s.orbit)), s.epoch, (baseEpoch - s.epoch) / 1000).state
             mainWindow.updateOrigin(PosVel2CoeNew(originOrbit.slice(0,3), originOrbit.slice(3,6)), false)
             if (mainWindow.originOrbit.a < 15000) {
                 mainWindow.scenarioLength = ((2 * Math.PI) / mainWindow.mm * 4)/3600
@@ -7807,7 +7843,7 @@ function importStates(states, time,  options = {}) {
         }
         return {
             name: s.name,
-            orbit: propToTimeAnalytic(s.orbit, (baseEpoch - s.epoch) / 1000)
+            orbit: h.propToTime(Object.values(Coe2PosVelObject(s.orbit)), s.epoch, (baseEpoch - s.epoch) / 1000).state //propToTimeAnalytic(s.orbit, (baseEpoch - s.epoch) / 1000)
         }
 
     })
@@ -7820,7 +7856,7 @@ function importStates(states, time,  options = {}) {
             waypoint: false
         }
     }))
-    mainWindow.satellites = []
+    if (resetScenario) {mainWindow.satellites = []}
     states.forEach((st, iiSt) => {
         let position = PosVel2CoeNew(st.orbit.slice(0,3), st.orbit.slice(3,6))
         let existingSat = satCopies.filter(sat => sat.name.match(st.name) !== null)
@@ -9250,7 +9286,7 @@ function openCovPrompt(sat = 0) {
     let initCov = math.diag([1,1,1,0.001,0.001,0.001])
     let inner = `
         <div style="display: flex; justify-content: space-around;">
-            <div>
+            <div id="cov-inputs">
                 <div style="text-align: center; font-size: 2.5em;">Covariance Info for ${mainWindow.satellites[sat].name} at Current Time [km & km/s]</div>
                 ${initCov.map((row, rowIi) => {
                     return `<div class="cov-row">${row.map((inputNum, inIi) => `<input ${rowIi > inIi ? 'tabindex=-1' : ''} type="Number" style="width: 10ch; font-size: 1.25vw;" placeholder="${inputNum}"/>`).slice(0,rowIi+1).join('')}</div>`
@@ -9258,6 +9294,7 @@ function openCovPrompt(sat = 0) {
                 <div id="cov-warning-message" style="text-align: center; color: red;"></div>
             </div>
         </div>
+        <div><input oninput="importCovData(this)" style="width: 80%; margin-left: 10%; margin-top: 20px; font-size: 2em;" placeholder="ACS Data String"/></div>
         <div style="display: flex; justify-content: space-around; margin-top: 20px;">
             <div><button sat="${sat}" onclick="validateCovData(this)" id="cov-confirm" style="font-size: 3em;">Confirm</button></div><div><button onclick="validateCovData(this)" id="cov-cancel" style="font-size: 3em;">Cancel</button></div>
         </div>
@@ -9266,6 +9303,27 @@ function openCovPrompt(sat = 0) {
         </div>
     `
     openQuickWindow(inner, {width: '50%'})
+}
+
+function importCovData(el) {
+    let std
+    try {
+        std = JSON.parse(el.value)
+    } catch (error) {
+       el.value = '' 
+       el.placeholder = 'Not a valid Covariance Input' 
+       setTimeout(() => {
+           el.placeholder = 'ACS Data String'
+       }, 2000)
+    }
+    console.log(std, std.len);
+    if (std.length === 6 && std.filter(s => s.length === 6).length === 6) {
+        console.log(std);
+    }
+    let inputs = [...el.parentElement.parentElement.parentElement.querySelectorAll('.cov-row')].map(s => [...s.querySelectorAll('input')])
+    
+    el.value = '' 
+    el.placeholder = 'Covariance Input Accepted' 
 }
 
 function validateCovData(el) {
@@ -9907,6 +9965,8 @@ function openTleWindow(tleSatellites, tleNames = {}) {
         }
         let states = []
         let els = el.parentElement.parentElement.querySelectorAll('.tle-sat-div')
+        let radioInputs = [...el.parentElement.parentElement.querySelector('#import-type-choice-div').querySelectorAll('input')].filter(s => s.checked)[0].id
+        let resetScenario = radioInputs === 'import-tles-new'
         for (let index = 0; index < els.length; index++) {
             let name = els[index].querySelector('.sat-name-span').innerText
             let tleOptions = els[index].querySelectorAll('.tle-option-div')
@@ -9942,6 +10002,13 @@ function openTleWindow(tleSatellites, tleNames = {}) {
             }
             return val
         })
+        // Uncheck if only adding to existing scenario and satellites already exists
+        importCheckboxes = importCheckboxes.map((check, checkIi) => {
+            let importName = importNames[checkIi]
+            if (resetScenario) return check
+            if (mainWindow.satellites.filter(sat => importName.match(sat.name) !== null).length > 0) return false
+            return check
+        })
         let importTime = new Date(el.parentElement.parentElement.querySelector('#tle-import-time').value)
         console.log(importCheckboxes);
         states = states.filter((s, filterIi) => importCheckboxes[filterIi])
@@ -9958,7 +10025,8 @@ function openTleWindow(tleSatellites, tleNames = {}) {
             names: importNames,
             shapes: importShapes,
             colors: importColors,
-            origin
+            origin,
+            resetScenario
         })
     }
     tleWindow.importTlesAsViewer = (el) => {
@@ -10072,12 +10140,13 @@ function openTleWindow(tleSatellites, tleNames = {}) {
     
     let uniqueSats = tleSatellites.filter((element, index, array) => array.findIndex(el => el.name === element.name) === index).map(sat => sat.name)
     tleWindow.tleSatellites = tleSatellites
-    let defaultEpoch = convertTimeToDateTimeInput(tleSatellites[0].epoch)
-    console.log(defaultEpoch);
+    let importEpoch = tleSatellites[0].epoch
+    importEpoch = new Date(importEpoch.getFullYear(), importEpoch.getMonth(), importEpoch.getDate(), importEpoch.getHours())
+    let defaultEpoch = convertTimeToDateTimeInput(importEpoch)
     tleWindow.document.body.innerHTML = `
         <div style="text-align: center; font-size: 2em; margin-bottom: 10px; width: 100%;">ARTS TLE Import Tool</div>
         <div style="width: 100%; text-align: center;">Import Time <input onchange="changeImportTime(this)" id="tle-import-time" type="datetime-local" value=${defaultEpoch}></div>
-        
+        <div id="import-type-choice-div" style="margin: 10px;"><label for="import-tles-new">Import as new Scenario</label><input checked type="radio" id="import-tles-new" name="tle-import-option"/><label style="margin-left: 20px;" for="import-tles-existing" title="Only import TLE states that do not exist in the scenario currently">Import Added into Existing Scenario</label><input id="import-tles-existing" type="radio" name="tle-import-option"/></div>
         <div class="no-scroll" style="max-height: 85%; overflow-y: scroll">
         ${uniqueSats.map((satName, satIi) => {
             let existingShape = 'delta', existingColor = '#ff5555', existingName = tleNames[satName] === undefined ? '' : tleNames[satName]
@@ -10266,7 +10335,8 @@ function updateJ200Window() {
             closestTimeState = sat.state[closestTimeState].slice()
         }
         let stateTime = closestTimeState.shift()
-        closestTimeState = propToTime(closestTimeState.map(s => s / (j2000Window.km ? 1 : 1000)), (time - stateTime) / 1000, false)
+        let h = new Propagator()
+        closestTimeState = h.propToTime(closestTimeState.map(s => s / (j2000Window.km ? 1 : 1000)), stateTime, (time - stateTime) / 1000).state
         let coes = PosVel2CoeNew(closestTimeState.slice(0,3), closestTimeState.slice(3,6))
         coes.raan *= 180 / Math.PI
         coes.i *= 180 / Math.PI
@@ -10398,7 +10468,7 @@ function calculateSatErrorStates(team = 1, time = mainWindow.desired.scenarioTim
             range: relData.range
         }
     })
-    console.log(teamSats);
+    // console.log(teamSats);
 
     // Calculate combined covariance of all "groupings" (satellites looking at the same target)
     // Get unique targets
@@ -11179,6 +11249,7 @@ function handleImportTextFile(inText) {
         let fileType = tellInputStateFileType(inText)
         
         if (fileType === 'j2000') return handleStkJ200File(inText)
+        if (fileType === 'ecilist') return handleEciList(inText)
         if (fileType === 'ephem') return handleEphemFile(inText)
         if (fileType === 'site') return handleSiteFile(inText)
         else return handleTleFile(inText)
@@ -11186,6 +11257,42 @@ function handleImportTextFile(inText) {
     else {
         mainWindow.loadDate(objectFromText)
     }
+}
+
+function handleEciList(inText) {
+    inText = inText.split('\n').map(s => s.replace('\r','')).filter(s => s.length > 0)
+    let satellitesInText = inText.map((s,ii) => [ii, s]).filter(s => s[1].search(/name/i) !== -1).map(s => s[0])
+    let sats = []
+    for (let sat = 0; sat < satellitesInText.length; sat++) {
+        if (sat === satellitesInText.length-1) sats.push(inText.slice(satellitesInText[sat]))
+        else sats.push(inText.slice(satellitesInText[sat], satellitesInText[sat+1]))
+        
+    }
+    // Remove parenthesis, semi-colons
+    sats = sats.map(sat => {
+        console.log(sat);
+        return sat.map(line => {
+            let testDate = new Date(line.replace('z',''))
+            if (line.search(/name/i) !== -1) return line.split(/name/i)[1].replace(':','').trim()
+            else if (testDate == 'Invalid Date') return line.replaceAll(':', '').replaceAll(')', '').replaceAll('(', '').replaceAll(/[A-Za-z]/ig,'').split(/ {1,}/).filter(s => s.length > 0).map(s => Number(s)).filter(s => !isNaN(s))
+            return testDate
+        })
+    })
+    sats = sats.map(s => {
+        let states = (s.length-1)/3
+        let stateList = []
+        for (let index = 0; index < states; index++) {
+            stateList.push([s[1+index*3],...s[1+index*3+1], ...s[1+index*3+2]])
+        }
+        return {
+            name: s[0],
+            state: stateList
+        }
+    })
+    
+    loadEphemFileInViewer(sats, {
+        endTime: 176000
+    });
 }
 
 function handleEphemFile(text) {
@@ -11672,4 +11779,21 @@ function colaAnalysis(sat1 = 0, sat2 = 1, options = {}) {
         if (math.norm(math.subtract(point1, point2)) < distanceLimit) colaEvents++;
     }
     console.log((colaEvents*100/points).toFixed(4)+'%');
+}
+
+let sensorGroups = {
+    ssn: [
+        ['Eglin', [30.57, -86.21]],
+        ['Clear', [64.29, -149.19]],
+        ['Cape Cod', [41.75, -70.54]],
+        ['Thule', [76.57, -68.3]],
+        ['Cavalier', [48.72, -97.9]],
+        ['Beale', [39.14, -121.35]],
+        ['Fylingdales', [54.37, -0.67]],
+        ['Socorro', [33.82, -106.66]],
+        ['Maui', [20.71, -156.26]],
+        ['Diego Garcia', [-7.41, 72.45]],
+        ['Kwajalein', [9.39, 167.48]],
+        ['Millstone', [42.62, -71.49]]
+    ]
 }

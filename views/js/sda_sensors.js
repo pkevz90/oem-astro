@@ -108,7 +108,7 @@ let sensors = [
         azMask: [],
         elMask: [20,90],
         maxRange: 60000,
-        active: false
+        active: true
     },
     {
         type: 'optical',
@@ -121,7 +121,7 @@ let sensors = [
         azMask: [],
         elMask: [20,90],
         maxRange: 60000,
-        active: false
+        active: true
     },
     {
         type: 'radar',
@@ -148,7 +148,7 @@ let sensors = [
         azMask: [],
         elMask: [20,90],
         maxRange: 60000,
-        active: false
+        active: true
     },
     {
         type: 'radar',

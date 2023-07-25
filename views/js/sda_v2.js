@@ -218,7 +218,7 @@ function rotationMatrices(angle = 0, axis = 1, type = 'deg') {
     return rotMat;
 }
 
-function estimateCovariance(sat = 0, returnDecomp = false) {
+function estimateCovariance(sat = 0, returnDecomp = false, returnEciCov = false) {
     let scale = Number(document.querySelector('#cov-scale-input').value) / 100
     if (scale < 0) { scale = 1 }
     scale = scale ** 2
@@ -226,13 +226,16 @@ function estimateCovariance(sat = 0, returnDecomp = false) {
     let blsMatrices = createJacobian(sat)
     // Convert jacobian into matrix that contains covariance information along with sensor noise data
     let a = math.inv(math.multiply(math.transpose(blsMatrices.jac), blsMatrices.w, blsMatrices.jac))
+    if (returnEciCov) return a
+    let sigData = propEciCovariance(mainWindow.satellites[0].origState, a, 0)
+    
+    console.log(a, choleskyDecomposition(a), sigData);
     // Convert to RIC frame
     let r = Eci2Ric()
     a = math.multiply(math.transpose(r), a, r)
     // Scale with value (defaults to 100% but user can make as high or low as possible)
     a = a.map(row => row.map(val => val * scale))
     lastCov = a
-    console.log(a, choleskyDecomposition(a));
     if (returnDecomp) return choleskyDecomposition(a)
     try {
         console.log(math.eigs(a));
@@ -240,9 +243,8 @@ function estimateCovariance(sat = 0, returnDecomp = false) {
         console.log(error.values);
     }
     navigator.clipboard.writeText(JSON.stringify({ time: mainWindow.startTime, std: a }))
-    let sigData = createSigmaPoints(mainWindow.satellites[0].origState, a)
     let div = document.getElementById('cov-display')
-    div.innerHTML = `StD Position Error: ${sigData.aveRange.toFixed(2)} km, StD Velocity Error: ${(sigData.aveRelVel * 1000).toFixed(2)} m/s`
+    div.innerHTML = `StD Position Error: ${(sigData.pRange**0.5).toFixed(3)} km, StD Velocity Error: ${((sigData.pVel**0.5) * 1000).toFixed(3)} m/s`
     return a
 }
 
@@ -1364,7 +1366,7 @@ function fk5ReductionTranspose(r = [-1033.479383, 7901.2952754, 6380.3565958], d
     return math.squeeze(r)
 }
 
-function razel(r_eci = [-5505.504883, 56.449170, 3821.871726], date = new Date(1995, 4, 20, 3, 17, 02, 000), lat = 39.007, long = -104.883, h = 2.187) {
+function razel(r_eci = [-5505.504883, 56.449170, 3821.871726], date = new Date(1995, 4, 20, 3, 17, 2, 0), lat = 39.007, long = -104.883, h = 2.187) {
     let r_ecef = fk5ReductionTranspose(r_eci, date)
     let r_site_ecef = sensorGeodeticPosition(lat, long, h).r
     let rho = math.transpose([math.subtract(r_ecef, r_site_ecef)])
@@ -1390,16 +1392,15 @@ function getAllIndexes(arr, label = 'active') {
 
 function showCovariance() {
     let newDiv = document.createElement('div')
-    let cov = estimateCovariance(0, true).map(s => s.map(v => v.toFixed(4)))
-    let covNum = estimateCovariance(0, true)
-    covNum = math.multiply(covNum, math.transpose(covNum))
+    let cov = estimateCovariance(0, true).map(s => s.map(v => v.toFixed(6)))
+    let covNum = estimateCovariance(0, false, true)
     let timeEst = []
     for (let index = 0; index <= 12 * 3600; index += 7200) {
-        timeEst.push([index, createSigmaPoints(mainWindow.satellites[0].origState, covNum, index)]);
+        timeEst.push([index, propEciCovariance(mainWindow.satellites[0].origState, covNum, index)])
     }
     // console.log(timeEst.map(t => [t[1].aveRange, t[1].aveRelVel]));
     newDiv.innerHTML = `
-        <div id="cov-div">
+        <div style="background-color: #111122; font-size: 2em;" id="cov-div">
             <div onclick="closeCovariance(this)" class="exit-button">X</div>
             <div>
                 <div style="text-align: center; padding-bottom: 10px; font-weight: 900;">Cholesky Decomposition of Covariance</div>
@@ -1426,11 +1427,15 @@ function showCovariance() {
             </div>
             <div>
                 <div style="text-align: center; padding-bottom: 10px; font-weight: 900;">Future Uncertainty</div>
-                ${timeEst.map(est => `<div>${est[0] / 3600} hr ${est[1].aveRange.toFixed(2)} km</div>`).join('\n')}
+                ${timeEst.map(est => `<div>${est[0] / 3600} hr ${(est[1].pRange**0.5).toFixed(2)} km</div>`).join('\n')}
             </div>
         </div>
     `
+    
+    
     document.getElementsByTagName('body')[0].append(newDiv)
+
+    
 }
 
 function closeCovariance(el) {
@@ -2159,3 +2164,34 @@ function drawOnMapWindow(time = 0) {
     ctx.stroke()
 }
 
+function propEciCovariance(state=[42164, 0, 0, 0, 3.071, 0], cov, tf=3600) {
+    cov = cov === undefined ? math.diag([1,1,1,0.001,0.001,0.001].map(s => s ** 2)) : cov
+    cov = astro.choleskyDecomposition(cov)
+   
+    let L = 6
+    
+    let sigmaPoints = [state], w = [0.2]
+    let waj = (1-w[0])/2/L, c = (L/(1-w[0]))**0.5
+    cov = math.transpose(cov)
+    for (let index = 0; index < L; index++) {
+       sigmaPoints.push(math.add(state, cov[index].map(s => s*c)))
+       sigmaPoints.push(math.subtract(state, cov[index].map(s => s*c)))
+       w.push(waj)
+       w.push(waj)
+    }
+    console.log(sigmaPoints.map(s => s.slice()));
+    sigmaPoints = sigmaPoints.map(s => propToTime(s, tf))
+    console.log(sigmaPoints.map(s => s.slice()));
+    let P = math.zeros([6,6])
+    let pRange = 0
+    let pVel = 0
+    //let aveRange = 0
+    for (let index = 0; index < 2*L; index++) {
+       // console.log(math.transpose([math.subtract(sigmaPoints[index], sigmaPoints[0])]), [math.subtract(sigmaPoints[index], sigmaPoints[0])]);
+       P = math.add(P, math.dotMultiply(w[index],math.multiply(math.transpose([math.subtract(sigmaPoints[index], sigmaPoints[0])]), [math.subtract(sigmaPoints[index], sigmaPoints[0])])))
+       pRange += w[index]*(math.norm(math.subtract(sigmaPoints[index].slice(0,3), sigmaPoints[0].slice(0,3)))**2)
+       pVel += w[index]*(math.norm(math.subtract(sigmaPoints[index].slice(3), sigmaPoints[0].slice(3)))**2)
+    }
+   //  console.log(astro.choleskyDecomposition(P));
+    return {P, sigmaPoints, pRange, pVel}
+}
