@@ -406,3 +406,5 @@ function dragElement(elmnt) {
       document.onpointermove = null;
     }
   }
+
+  openOrbitDiv()
