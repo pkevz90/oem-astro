@@ -6,8 +6,18 @@ let mainWindow = {
     moonFrame: true,
     mousePosition: undefined,
     mouseDown: false,
+    epsilon: 1e-10,
     timeUnit: 382981,
     dt: 1000,
+    eigEpsilon: 1e-6,
+    eigPropTime: 30,
+    lagrangePoints: [
+        [0.83691513, 0,0],
+        [1.15568217, 0,0],
+        [-1.00506265, 0,0],
+        [0.48784941, 0.86602540,0],
+        [0.48784941, -0.86602540,0]
+    ],
     lengthUnit: 389703,
     mu: 0.012150585609624039,//0.012144393564364623,
     zAxis: false,
@@ -27,7 +37,7 @@ let mainWindow = {
         massMoon: 7.342e22
     },
     state: [0.8,0,0,0,0,0],
-    stateHistory: undefined,
+    stateHistory: [undefined, undefined, undefined],
     moonHistory: undefined,
     cnvs: document.querySelector('canvas')
 }
@@ -36,14 +46,19 @@ function animationLoop() {
 
     try {
         drawScene()
-        // mainWindow.scenarioTime += 3600
+        mainWindow.scenarioTime += 3600
         // console.log((mainWindow.scenarioTime/86400).toFixed(1));
         // mainWindow.view.el -= 1
         // mainWindow.view.az += 1
+        // console.log(mainWindown.scenarioTime/86400 , mainWindow.scenarioLength);
+        if (mainWindow.scenarioTime/86400 > mainWindow.scenarioLength) {
+            mainWindow.scenarioTime = 0
+        }
         window.requestAnimationFrame(animationLoop)
     } catch (error) {
+        console.log(error);
         mainWindow.scenarioTime = 0
-        animationLoop()
+        // animationLoop()
     }
 }
 animationLoop()
@@ -70,7 +85,7 @@ function crtbpAcceleration(state) {
     ]
 }
 
-function rkf45(state = [0.5,0,0,0,0,0], h = 0.01, epsilon = 1e-3) {
+function rkf45(state = [mainWindow.lagrangePoints[0][0],0,0,0,0,0], h = 0.01, epsilon = 1e-3) {
     let k1 = math.dotMultiply(h, crtbpAcceleration(state))
     let k2 = math.dotMultiply(h, crtbpAcceleration(math.add(state,math.dotMultiply(2/9,k1))))
     let k3 = math.dotMultiply(h, crtbpAcceleration(math.add(state,math.dotMultiply(1/12,k1),math.dotMultiply(1/4,k2))))
@@ -126,8 +141,8 @@ function calculateStateHistoryOld(state = mainWindow.state, length = mainWindow.
     return history
 }
 
-function calculateStateHistory(state = mainWindow.state, length = mainWindow.scenarioLength) {
-    let t = 0, dt = mainWindow.dt, totalError = 0, filterNum = 3, filterTrack = -1, history = []
+function calculateStateHistory(state = mainWindow.state, length = mainWindow.scenarioLength, error = mainWindow.epsilon) {
+    let t = 0, dt = mainWindow.dt, history = []
     dt /= mainWindow.timeUnit
     length *= 86400/mainWindow.timeUnit
     // length = 2000/tu
@@ -135,17 +150,18 @@ function calculateStateHistory(state = mainWindow.state, length = mainWindow.sce
         history.push({
             t, state: state.slice()
         })
-        let timeStep = 0, proppedState
-        if (timeStep === 0) {
-            proppedState = rkf45(state, dt, 2.5660567149855146e-7)
-            // console.log(proppedState.te, dt);
-            dt = proppedState.hnew
-            timeStep = proppedState.dt
-        }
+        let proppedState = rkf45(state, dt, error)
+        // console.log(proppedState.te, dt);
+        dt = proppedState.hnew
         state = proppedState.y
         t += proppedState.dt
     } 
-    console.log(history.length);
+    let proppedState = rkf45(state, length-t, error)
+        
+    history.push({
+        t: length, state: proppedState.y
+    })
+    // console.log(history.length);
     return history
 }
 
@@ -154,12 +170,22 @@ function updateCnvsSize() {
     mainWindow.cnvs.height = window.innerHeight
 }
 
+function getCurrentState(history, time) {
+
+    let currentTime = time / mainWindow.timeUnit
+    let states = history.filter(s => s.t <= currentTime)
+    // console.log(states.length);
+    states = states[states.length-1]
+    // console.log(states.state, currentTime-states.t, 100);
+    return rkf45(states.state, currentTime-states.t, 100).y
+}
+
 function drawScene() {
     updateCnvsSize()
     let center = mainWindow.view.center
     let rot3d = math.multiply( astro.rot(90-mainWindow.view.el, 1), astro.rot(-mainWindow.view.az, 3))
-    if (mainWindow.stateHistory === undefined) {
-        mainWindow.stateHistory = calculateStateHistory()
+    if (mainWindow.stateHistory[0] === undefined) {
+        mainWindow.stateHistory[0] = calculateStateHistory()
     }
     let screenDistance = mainWindow.view.zoom
     let width = window.innerHeight < window.innerWidth ? screenDistance * window.innerWidth / window.innerHeight : screenDistance 
@@ -182,6 +208,16 @@ function drawScene() {
         x: cnvs.width/2 + (earthPosition[0])*(cnvs.width/2)/width,
         y: cnvs.height/2 - (earthPosition[1])*(cnvs.height/2)/height
     }
+    // Draw sat current position
+    let currentSatPosition = getCurrentState(mainWindow.stateHistory[0], mainWindow.scenarioTime)
+    // findStateEigenvectors(currentSatPosition, 1)
+
+    currentSatPosition = math.multiply(rot3d, math.subtract(currentSatPosition.slice(0,3), center))
+    let pixelStateSat = {
+        x: cnvs.width/2 + (currentSatPosition[0])*(cnvs.width/2)/width,
+        y: cnvs.height/2 - (currentSatPosition[1])*(cnvs.height/2)/height
+    }
+    // console.log(currentSatPosition.slice(0,3));
     // // console.log(pixelStateMoon, moonPosition);
     ctx.fillStyle = '#111111'
     ctx.strokeStyle = '#aa1111'
@@ -210,20 +246,24 @@ function drawScene() {
     ctx.beginPath()
     ctx.arc(pixelStateMoon.x, pixelStateMoon.y, moonRadius, 0, 2*Math.PI)
     ctx.fill()
+    ctx.fillRect(pixelStateSat.x-5, pixelStateSat.y-5, 10,10)
     ctx.strokeStyle = '#111111'
-    ctx.beginPath()
-    mainWindow.stateHistory.forEach((state, ii) => {
-        let pointRot = math.multiply(rot3d, math.subtract(state.state.slice(0,3),center))
-        let pixelState = {
-            x: cnvs.width/2 + (pointRot[0])*(cnvs.width/2)/width,
-            y: cnvs.height/2 - (pointRot[1])*(cnvs.height/2)/height
-        }
-        if (ii === 0) ctx.moveTo(pixelState.x,pixelState.y)
-        else ctx.lineTo(pixelState.x,pixelState.y)
+    mainWindow.stateHistory.forEach(stateHist => {
+        if (stateHist === undefined) return
+        ctx.beginPath()
+        stateHist.forEach((state, ii) => {
+            let pointRot = math.multiply(rot3d, math.subtract(state.state.slice(0,3),center))
+            let pixelState = {
+                x: cnvs.width/2 + (pointRot[0])*(cnvs.width/2)/width,
+                y: cnvs.height/2 - (pointRot[1])*(cnvs.height/2)/height
+            }
+            if (ii === 0) ctx.moveTo(pixelState.x,pixelState.y)
+            else ctx.lineTo(pixelState.x,pixelState.y)
+        })
         
+        ctx.stroke()
     })
-    ctx.closePath()
-    ctx.stroke()
+    // ctx.closePath()
 }
 
 function resetState(state = [7, 0, 0, 0, 0, 0]) {
@@ -239,13 +279,13 @@ function switchMoonState() {
 
 function placeObject(orbit = '8.7592140310093525E-1	-1.5903151798662925E-26	1.9175810982939320E-1	-2.9302531087896767E-14	2.3080031482213192E-1	7.3649704261223776E-14	2.9980065578489898E+0	2.1783120807931518E+0	9.6557033429115222E+0	1.0000000000218601E+0') {
     mainWindow.scenarioTime = 0
-    console.log(orbit.split(/ +/))
+    // console.log(orbit.split(/ +/))
     let lu = 389703, tu = 382981, nMoon = 2*Math.PI/27.321661/86400
     // let orbit = `1147	8.2339081983651485E-1	-1.9017764504099543E-28	9.8941366235910004E-4	-2.3545391932685812E-15	1.2634272983881797E-1	2.2367029429442455E-16	3.1743435193301202E+0	2.7430007981241529E+0	1.2158772936893689E+1	1.1804065333857600E+3`.split('\t').map(s => Number(s))
     orbit = orbit.split(/ +/).filter(s => s.length > 0).map(s => Number(s))
-    console.log(orbit, orbit.slice(0,6));
+    // console.log(orbit, orbit.slice(0,6));
     mainWindow.state = orbit.slice(0,6)
-    mainWindow.stateHistory = undefined
+    mainWindow.stateHistory[0] = undefined
     mainWindow.scenarioLength = orbit[7]*mainWindow.timeUnit/86400
     drawScene()
 }
@@ -256,7 +296,7 @@ function placeObject(orbit = '8.7592140310093525E-1	-1.5903151798662925E-26	1.91
 //     placeObject(c)
 
 // },2000)
-placeObject(l2_halo_southern[250].join('   '))
+placeObject(l2_halo_southern[1250].join('   '))
 
 document.querySelector('canvas').addEventListener('pointerdown', event => {
     mainWindow.mouseDown = true
@@ -294,7 +334,7 @@ function changeOrbit(el) {
    console.log(radioInputs);
    let dataLength = math.floor(orbits[radioInputs].length*rangeInput);
    let data = orbits[radioInputs][dataLength]
-   console.log(data);
+//    console.log(data);
    placeObject(data.join('   '))
 }
 
@@ -406,5 +446,97 @@ function dragElement(elmnt) {
       document.onpointermove = null;
     }
   }
+
+function createJacobian(state=[0.5,0,0,0,0,0]) {
+    let x = state[0], y = state[1], z = state[2]
+    let mu = mainWindow.mu
+    let r1 = ((x+mu)**2+y**2+z**2)
+    let r2 = ((x+mu-1)**2+y**2+z**2)
+    let dxdd_dx = (mu-1)/r1**1.5 - 3*(mu-1)*(x+mu)**2/r1**2.5-mu/r2**1.5+3*mu*(x+mu-1)**2/r2**2.5+1
+    let dxdd_dy = 3*mu*(x+mu-1)*y/r2**2.5-3*(mu-1)*(x+mu)*y/r1**2.5
+    let dxdd_dz = 3*mu*(x+mu-1)*z/r2**2.5-3*(mu-1)*(x+mu)*z/r1**2.5
+    
+    let dydd_dx = 3*mu*y*(x+mu-1)/r2**2.5-3*(mu-1)*y*(x+mu)/r1**2.5
+    let dydd_dy = (mu-1)/r1**1.5 - 3*(mu-1)*y**2/r1**2.5-mu/r2**1.5+3*mu*y**2/r2**2.5+1
+    let dydd_dz = 3*mu*y*z/r2**2.5-3*(mu-1)*y*z/r1**2.5
+    
+    let dzdd_dx = 3*(1-mu)*z*(mu+x)/r1**2.5+3*mu*z*(x+mu-1)/r2**2.5
+    let dzdd_dy = 3*mu*z*y*(1-mu)/r1**2.5+3*mu*z*y/r2**2.5
+    let dzdd_dz = (mu-1)/r1**1.5 - 3*(mu-1)*z**2/r1**2.5-mu/r2**1.5+3*mu*z**2/r2**2.5
+    
+    return [
+        [0,0,0,1,0,0],
+        [0,0,0,0,1,0],
+        [0,0,0,0,0,1],
+        [dxdd_dx, dxdd_dy, dxdd_dz,0,2,0],
+        [dydd_dx, dydd_dy, dydd_dz,-2,0,0],
+        [dzdd_dx, dzdd_dy, dzdd_dz,0,0,0]
+    ]
+}
+
+function powerMethod(matrix = [[3,-1,0],[-2,4,-3],[0,-1,1]], guess = [1,1,1], shifted = 3) {
+    // console.log(math.eigs(matrix));
+    let a = matrix.map(s => s.slice())
+    if (shifted !== false) {
+        a = math.subtract(a, math.dotMultiply(shifted, math.identity([matrix.length])))
+        a = math.inv(a)
+    }
+    let maxValue, v, lastMaxValue = 100000
+    for (let index = 0; index < 1000; index++) {
+        v = math.multiply(a, guess)
+        maxValue = v.findIndex(s => Math.abs(s) === math.max(v.map(s => Math.abs(s))))
+        maxValue = v[maxValue]
+        v = v.map(s => s/maxValue)
+        guess = v
+        if (math.abs(maxValue-lastMaxValue) < 1e-4) break
+    }
+    if (shifted !== false) {
+        maxValue = 1/maxValue +shifted
+    }
+    return {value: maxValue, vector: v}
+}
+
+function propagateCrtbp(state=[0.5,0,0,0,0,0], propTime=-30, error = 1e-8) {
+    propTime *= 86400/mainWindow.timeUnit
+    let dt = Math.sign(propTime)*3600/mainWindow.timeUnit, t = 0
+    while (math.abs(t) <= math.abs(propTime)) {
+        let proppedState = rkf45(state, dt, error)
+        // console.log(proppedState.te, dt);
+        dt = proppedState.hnew
+        state = proppedState.y
+        t += proppedState.dt
+    } 
+    state = rkf45(state, propTime - t, error)
+    return state.y
+}
+
+window.addEventListener('keydown', event => {
+    if (event.key === 'm' || event.key === 'M') {
+        let curState = getCurrentState(mainWindow.stateHistory[0], mainWindow.scenarioTime)
+        findStateEigenvectors(curState)
+    }
+})
+
+function findStateEigenvectors(state = [mainWindow.lagrangePoints[1][0],mainWindow.lagrangePoints[1][1],0,0,0,0], dir = 1) {
+    let jac = createJacobian(state), eig
+    // console.log(jac);
+    try {
+        // let m = new mlMatrix.Matrix(jac)
+        // eig = new mlMatrix.EigenvalueDecomposition(m)
+        eig = powerMethod(jac, [1,1,1,0,0,0], -3)
+    } catch (error) {
+        console.log(error);
+        console.log(error.values, error.vectors);
+    }
+    // console.log(eig);
+    let perturbedState = math.add(state, math.dotMultiply(dir*mainWindow.eigEpsilon, eig.vector))
+    perturbedState = propagateCrtbp(perturbedState, -mainWindow.eigPropTime, 1e-10)
+    mainWindow.stateHistory[1] = calculateStateHistory(perturbedState, mainWindow.eigPropTime,1e-10).filter((time,ii) => ii % 3 === 0)
+    perturbedState = math.add(state, math.dotMultiply(-dir*mainWindow.eigEpsilon, eig.vector))
+    perturbedState = propagateCrtbp(perturbedState, -mainWindow.eigPropTime, 1e-10)
+    mainWindow.stateHistory[2] = calculateStateHistory(perturbedState, mainWindow.eigPropTime,1e-10).filter((time,ii) => ii % 3 === 0)
+    // mainWindow.scenarioLength = 90
+    // return perturbedState
+}
 
   openOrbitDiv()

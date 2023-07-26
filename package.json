@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "ml-matrix": "^6.10.4"
+  }
+}
