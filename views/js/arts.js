@@ -8610,6 +8610,7 @@ function draw3dScene(az = azD, el = elD) {
             sat.curPos = cur;
         }
         sat.lastCurPosUpdateTime = mainWindow.scenarioTime
+        let curPos = math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c])
         if (!sat.locked) {
             // sat.stateHistory.forEach(point => {
             //     points.push({
@@ -8618,7 +8619,17 @@ function draw3dScene(az = azD, el = elD) {
             //         size: mainWindow.trajSize*2
             //     })
             // })
-            points.push(...get3dLinePoints(sat.stateHistory.map(point => math.multiply(r, [point.position[0], point.position[1], point.position[2]])), {color: sat.color}))
+            points.push(...get3dLinePoints([...sat.stateHistory.filter(s => s.t < mainWindow.scenarioTime).map(point => math.multiply(r, [point.position[0], point.position[1], point.position[2]])), curPos], {color: sat.color}))
+            
+            points.push(...sat.stateHistory.filter(s => s.t > mainWindow.scenarioTime).map(point => {
+                let pos = math.multiply(r, [point.position[0], point.position[1], point.position[2]])
+                return {
+                    color: sat.color,
+                    position: pos,
+                    size: sat.size,
+                    alpha: 1
+                }
+            }))
             sat.burns.forEach(burn => {
                 let burnPosition = math.multiply(r, burn.location)
                 let zRatioBurn = (viewDistance*f3d - burnPosition[2])/viewDistance/f3d
@@ -8645,9 +8656,8 @@ function draw3dScene(az = azD, el = elD) {
                 })
             })
         }
-        let pos = math.multiply(r, [sat.curPos.r, sat.curPos.i, sat.curPos.c])
-        let zRatio = (viewDistance*f3d - pos[2])/viewDistance/f3d
-        let pixelPos = mainWindow.convertToPixels(pos).ri
+        let zRatio = (viewDistance*f3d - curPos[2])/viewDistance/f3d
+        let pixelPos = mainWindow.convertToPixels(curPos).ri
         pixelPos = [pixelPos.x-mainWindow.cnvs.width/2, pixelPos.y-mainWindow.cnvs.height/2].map(s => s/zRatio)
         pixelPos = {
             x: pixelPos[0] + mainWindow.cnvs.width/2,
@@ -8656,7 +8666,7 @@ function draw3dScene(az = azD, el = elD) {
         sat.pixelPos = pixelPos
         points.push({
             color: sat.color,
-            position: pos,
+            position: curPos,
             size: sat.size*5,
             text: shortenString(sat.name),
             alpha: 1,
