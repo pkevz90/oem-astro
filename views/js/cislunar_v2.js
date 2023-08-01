@@ -344,7 +344,7 @@ function drawInertialScene() {
         rotEci = astro.rot(-mainWindow.scenarioTime/mainWindow.timeUnit,3,false)
     }
     // console.log(rotEci);
-    let center = mainWindow.view.center
+    let center = [0,0,0]
     let rot3d = math.multiply( astro.rot(90-mainWindow.view.el, 1), astro.rot(-mainWindow.view.az, 3))
     if (mainWindow.stateHistory[0] === undefined) {
         mainWindow.stateHistory[0] = calculateStateHistory()
@@ -434,6 +434,39 @@ function drawInertialScene() {
         
         ctx.stroke()
     })
+    
+    mainWindow.satellites.forEach(sat => {
+        if (sat.stateHistory === undefined) {
+            sat.stateHistory = calculateStateHistory(sat.state, mainWindow.scenarioLength)
+        }
+        ctx.beginPath()
+        sat.stateHistory.forEach((state, ii) => {
+            let rotState = math.identity([3])
+            if (!mainWindow.moonFrame){
+                rotState = astro.rot(-state.t,3,false)
+            }
+            let pointRot = math.multiply(rot3d, rotState, math.subtract(state.state.slice(0,3),center))
+            let pixelState = {
+                x: cnvs.width/2 + (pointRot[0])*(cnvs.width/2)/width,
+                y: cnvs.height/2 - (pointRot[1])*(cnvs.height/2)/height
+            }
+            if (ii === 0) ctx.moveTo(pixelState.x,pixelState.y)
+            else ctx.lineTo(pixelState.x,pixelState.y)
+        })
+        
+        ctx.stroke()
+
+        // Draw sat current position
+        let currentSatPosition = getCurrentState(sat.stateHistory, mainWindow.scenarioTime)
+        // findStateEigenvectors(currentSatPosition, 1)
+
+        currentSatPosition = math.multiply(rot3d,rotEci,math.subtract(currentSatPosition.slice(0,3), center))
+        let pixelStateSat = {
+            x: cnvs.width/2 + (currentSatPosition[0])*(cnvs.width/2)/width,
+            y: cnvs.height/2 - (currentSatPosition[1])*(cnvs.height/2)/height
+        }
+        ctx.fillRect(pixelStateSat.x-5, pixelStateSat.y-5, 10,10)
+    })
     mainWindow.displayedPoints.forEach(point => {
         let pointRot = math.multiply(rot3d, rotEci,math.subtract(point.slice(0,3),center))
         let pixelState = {
@@ -507,8 +540,23 @@ function placeCirlcularOrbitMoon(r = 8000, ang = 0) {
     mainWindow.stateHistory[0] = undefined
 }
 
-function synodic2eci(date = new Date()) {
-
+function synodic2eci(time = 0, sat = 0) {
+    let date = new Date(mainWindow.startTime - (-1000*time))
+    let moonEci = astro.moonEciFromTime(date)
+    
+    let moonEci2 = astro.moonEciFromTime(new Date(date - (-1000)))
+    let moonVel = math.subtract(moonEci2, moonEci)
+    let moonX = moonEci.map(s => s/math.norm(moonEci))
+    let moonZ = math.cross(moonEci, moonVel).map(s => s/math.norm(moonEci)/math.norm(moonVel))
+    let moonY = math.cross(moonZ, moonX)
+    let r = math.transpose([moonX, moonY, moonZ])
+    let position = mainWindow.satellites[sat].state.slice(0,3)
+    let velocity = mainWindow.satellites[sat].state.slice(3)
+    velocity = math.add(velocity, math.cross([0,0,1],position))
+    position = math.subtract(position, [-mainWindow.mu,0,0])
+    let stateInertial = [...position.map(s => s*mainWindow.lengthUnit), ...velocity.map(s => s*mainWindow.lengthUnit/mainWindow.timeUnit)]
+    stateInertial = [...math.multiply(r, stateInertial.slice(0,3)), ...math.multiply(r, stateInertial.slice(3))]
+    return stateInertial
 }
 
 function placeObject(orbit = l2_halo_southern[1250].join('   '), sat = 0) {
@@ -922,6 +970,7 @@ function startContextClick(event) {
         <div onclick="setViewCenter(0.48784941, 0.8660254, 0)" style="cursor: pointer; color: white; padding-left: 20px;">L4</div>
         <div onclick="setViewCenter(0.48784941, -0.8660254, 0)" style="cursor: pointer; color: white; padding-left: 20px;">L5</div>
         <div onclick="addSatellite()" style="cursor: pointer; color: white;">Insert Satellite</div>
+        <div onclick="switchFrame()" style="cursor: pointer; color: white;">Show ${mainWindow.moonFrame ? 'Inertial' : 'Synodic'} Frame</div>
 
     `
     if ((ctxMenu.offsetHeight + event.clientY) > window.innerHeight) {
@@ -932,6 +981,11 @@ function startContextClick(event) {
     }
     setTimeout(() => ctxMenu.style.transform = 'scale(1)', 10);
     return false;
+}
+
+function switchFrame() {
+    mainWindow.moonFrame = !mainWindow.moonFrame
+    document.getElementById('context-menu')?.remove();
 }
 
 function addSatellite() {
