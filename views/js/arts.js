@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.8'
+let appAcr = 'ROTS 2.9.1'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '6 Jul 2023'
+let cao = '1 Aug 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -245,7 +245,12 @@ class windowCanvas {
         this.originMoon = results.moonHistory
         this.burnType = newOrigin.a < 15000 ? 'manual' : this.burnType
         if (!updateSats) return
-        this.satellites.forEach(sat => sat.calcTraj(true))
+        this.satellites.forEach(sat => {
+            sat.calcTraj(true)
+            let cur = sat.currentPosition(mainWindow.scenarioTime);
+            cur = {r: cur[0], i: cur[1], c: cur[2], rd: cur[3], id: cur[4], cd: cur[5]};
+            sat.curPos = cur
+        })
     }
     changeTime(newTime = 3600, immediate = false) {
         if (newTime < 0 || newTime > (this.scenarioLength*3600)) return
