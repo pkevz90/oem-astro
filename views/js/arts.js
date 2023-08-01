@@ -1168,6 +1168,9 @@ class windowCanvas {
                         case 'position':
                             span.innerText = relDataIn[span.getAttribute('type')].map(s => s.toFixed(1)).join(',')
                             break;
+                        case 'velocity':
+                            span.innerText = relDataIn[span.getAttribute('type')].map(s => s.toFixed(1)).join(',')
+                            break;
                         default:
                             span.innerText = relDataIn[span.getAttribute('type')].toFixed(2)
                             break;
@@ -2705,9 +2708,12 @@ function startContextClick(event) {
         dataCurrent = dataCurrent.data
         ctxMenu.innerHTML = `
         <div style="color: black; background-color: white; padding: 5px; font-family: Courier; cursor: default;">
+        <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'position') ? 'checked' : ''} id="position" type="checkbox"/> <label style="cursor: pointer" for="position">RIC Position</label></div>
+        <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'velocity') ? 'checked' : ''} id="velocity" type="checkbox"/> <label style="cursor: pointer" for="velocity">RIC Velocity</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'range') ? 'checked' : ''} id="range" type="checkbox"/> <label style="cursor: pointer" for="range">Range</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'rangeRate') ? 'checked' : ''} id="rangeRate" type="checkbox"/> <label style="cursor: pointer" for="rangeRate">Range Rate</label></div>
-            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'relativeVelocity') ? 'checked' : ''} id="relativeVelocity" type="checkbox"/> <label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'relativeVelocity') ? 'checked' : ''} id="relativeVelocity" type="checkbox"/> <label style="cursor: pointer" for="relativeVelocity">Inertial Rel Vel</label></div>
+            <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'ricVel') ? 'checked' : ''} id="ricVel" type="checkbox"/> <label style="cursor: pointer" for="ricVel">RIC Rel Vel</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'poca') ? 'checked' : ''} id="poca" type="checkbox"/> <label style="cursor: pointer" for="poca">POCA</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'sunAngle') ? 'checked' : ''} id="sunAngle" type="checkbox"/> <label style="cursor: pointer" for="sunAngle">CATS</label></div>
             <div><input style="cursor: pointer;" ${undefined !== dataCurrent.find(s => s === 'moonAngle') ? 'checked' : ''} id="moonAngle" type="checkbox"/> <label style="cursor: pointer" for="moonAngle">CATM</label></div>
@@ -3293,9 +3299,11 @@ function handleContextClick(button) {
         let out  = `
            <div class="context-item" onclick="handleContextClick(this)" id="display-data-3">Confirm</div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="position"/><label style="cursor: pointer" for="position">RIC Position</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="velocity"/><label style="cursor: pointer" for="velocity">RIC Velocity</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="range"/><label style="cursor: pointer" for="range">Range</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="rangeRate"/><label style="cursor: pointer" for="rangeRate">Range Rate</label></div>
-           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="relativeVelocity"/><label style="cursor: pointer" for="relativeVelocity">Relative Velocity</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="relativeVelocity"/><label style="cursor: pointer" for="relativeVelocity">Inertial Rel Vel</label></div>
+           <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="ricVel"/><label style="cursor: pointer" for="ricVel">RIC Rel Vel</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="poca"/><label title="Point of Closest Approach" style="cursor: pointer" for="poca">POCA</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="sunAngle"/><label title="Camera-Angle-Target-Sun" style="cursor: pointer" for="sunAngle">CATS</label></div>
            <div style="color: white; padding: 5px" id="display-data-2"><input type="checkbox" id="moonAngle"/><label title="Camera-Angle-Target-Moon" style="cursor: pointer" for="moonAngle">CATM</label></div>
@@ -3664,20 +3672,14 @@ function handleContextClick(button) {
         changeOrigin(sat)
     }
     else if (button.id === 'multi-maneuver') {
-        let sat = button.parentElement.sat;
         let html = `
-            <div class="context-item" >TOF: <input placeholder="6" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
+            <div class="context-item" >TOF: <input placeholder="8" type="Number" style="width: 3em; font-size: 1em"> hrs</div>
             <div class="context-item" >Target P: (<input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">) km</div>
             <div class="context-item" >Target V: (<input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">, <input placeholder="0" type="Number" style="width: 3em; font-size: 1em">) m/s</div>
-            <div title="Higher the number, more optimizer will try and make all burns the same magnitude" class="context-item" >Burn Uniformity: <input placeholder="2" type="Number" style="width: 3em; font-size: 1em"></div>
-            <div title="Higher the number, more optimizer will stack larger burns at beginning" class="context-item" >Burn Relative Size: <input placeholder="0" type="Number" style="width: 3em; font-size: 1em"></div>
+            <div title="Optimizer will attempt to keep all burns under this magnitude" class="context-item" >Max Burn Mag: <input placeholder="2" type="Number" style="width: 3em; font-size: 1em"></div>
             <div class="context-item" >N Burns: <input placeholder="4" type="Number" style="width: 3em; font-size: 1em"></div>
             <div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="origin" id="execute-multi" tabindex="0">RIC Origin</div>
         `
-        for (let ii = 0; ii < mainWindow.satellites.length; ii++) {
-            if (sat === ii) continue
-            html += `<div class="context-item" onclick="handleContextClick(this)" onkeydown="handleContextClick(this)" target="${ii}" id="execute-multi" tabindex="0">${mainWindow.satellites[ii].name}</div>`
-        }
         button.parentElement.innerHTML = html
         document.getElementsByClassName('context-item')[0].getElementsByTagName('input')[0].focus();
     }
@@ -3686,7 +3688,11 @@ function handleContextClick(button) {
         let inputs = button.parentElement.getElementsByTagName('input');
         for (let ii = 0; ii < inputs.length; ii++) inputs[ii].value = inputs[ii].value === '' ? inputs[ii].placeholder : inputs[ii].value
         let sat = button.parentElement.sat;
-        let startPoint = math.squeeze(Object.values(mainWindow.satellites[sat].curPos))
+        pastActions.push({
+            sat,
+            oldBurns: JSON.parse(JSON.stringify(mainWindow.satellites[sat].burns)),
+            time: mainWindow.desired.scenarioTime
+        })
         let origin = target === 'origin' ? {r: [0], i: [0], c: [0], rd: [0], id: [0], cd: [0]} : mainWindow.satellites[target].currentPosition({
             time: mainWindow.desired.scenarioTime + Number(inputs[0].value) * 3600
         })
@@ -3694,10 +3700,9 @@ function handleContextClick(button) {
         let targetPoint = []
         for (let index = 1; index < 7; index++) targetPoint.push((index > 3 ? 0.001 : 1) * Number(inputs[index].value))
         origin = math.add(origin, targetPoint)
-        console.log(startPoint);
-        setTimeout(optimizeMultiBurn(Number(inputs[9].value), startPoint, origin, Number(inputs[0].value) * 3600, {
-            sat, uniformity: Number(inputs[7].value), bias: Number(inputs[8].value), logId: document.getElementById('it-count')
-        }), 100)
+        setTimeout(optimizeMultiBurn(Number(inputs[8].value), sat, origin, Number(inputs[0].value) * 3600, {
+            sat, maxBurn: Number(inputs[7].value)/1000, bias: Number(inputs[8].value)
+        }))
         document.getElementById('time-slider-range').value = mainWindow.desired.scenarioTime
         document.getElementById('context-menu')?.remove();
     }
@@ -5758,7 +5763,7 @@ function drawSatellite(satellite = {}) {
 }
 
 function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
-    let sunAngle, moonAngle, rangeRate, range, poca, toca, tanRate, rangeStd, relPos, relVel, relPosHis, interceptData;
+    let sunAngle, moonAngle, rangeRate, range, poca, toca, tanRate, rangeStd, relPos, relVel, relPosHis, interceptData, ricVel, velocity;
     try {
         let pos1 = Object.values(getCurrentInertial(n_origin)), pos2 = Object.values(getCurrentInertial(n_target))
         let currentTime = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
@@ -5785,7 +5790,10 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
 
         poca = math.min(relPosHis);
         toca = relPosHis.findIndex(element => element === poca) * mainWindow.timeDelta;
-        position = math.squeeze(Eci2Ric(pos1.slice(0,3), pos1.slice(3),pos2.slice(0,3), pos2.slice(3)).rHcw)
+        let ricState = Eci2Ric(pos1.slice(0,3), pos1.slice(3),pos2.slice(0,3), pos2.slice(3))
+        position = math.squeeze(ricState.rHcw)
+        velocity = math.squeeze(ricState.drHcw).map(s => s*1000)
+        ricVel = math.norm(velocity)
         if (intercept !== false) {
             let point1 = mainWindow.satellites[n_target].currentPosition()
             let point2 = mainWindow.satellites[n_origin].currentPosition({time: mainWindow.scenarioTime + intTime*3600})
@@ -5845,6 +5853,8 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
             tanRate: 0,
             relativeVelocity: 0,
             position: [0,0,0],
+            velocity: [0,0,0],
+            ricVel: 0,
             interceptData: '\nOutside of\nKinematic\nReach'
         }
     }
@@ -5858,6 +5868,8 @@ function getRelativeData(n_target, n_origin, intercept = true, intTime = 1) {
         toca,
         tanRate,
         position,
+        velocity,
+        ricVel,
         relativeVelocity: math.norm(relVel)*1000,
         interceptData
     }
@@ -7149,7 +7161,7 @@ function impulsiveHcwProp(p1 = [[1],[0],[0]], v1 =[[0],[0],[0]], dt = 3600) {
     return math.multiply(phi, state)
 }
 
-function heavisideFunction(value = 3, limit = 0, order = 3) {
+function heavisideFunction(value = 3, limit = 0, order = 5) {
     return value < limit ? value : value + (value-limit) * order
 }
 
@@ -7211,8 +7223,7 @@ function optimizeMultiBurn(burns = 4, satIn = 1, end = [-0,-50,0,0,0,0], dt = 6*
         if (show)console.log(dV.map((v, ii) => {
             return heavisideFunction(v, maxBurn)
         }))
-        
-        return show ? outWaypoints : dV.map((v, ii) => (ii**bias)*heavisideFunction(v, maxBurn)).reduce((a,b) => a + b)
+        return show ? outWaypoints : dV.map((v, ii) => heavisideFunction(v, maxBurn)).reduce((a,b) => a + b)
         // return show ? outWaypoints : dV.map((v, ii) => ((ii + 1) ** bias) * v ** uniformity).reduce((a,b) => a + b)
     }   
     let iterations = 200
@@ -10703,8 +10714,10 @@ function openDataDiv(options = {}) {
     } = options
     let properTerms = {
         range: {name: 'Range', units: 'km'},
-        position: {name: 'RIC', units: 'km'},
-        relativeVelocity: {name: 'Rel Vel', units: 'm/s'},
+        position: {name: 'RIC P', units: 'km'},
+        velocity: {name: 'RIC V', units: 'm/s'},
+        relativeVelocity: {name: 'Inert Rel Vel', units: 'm/s'},
+        ricVel: {name: 'RIC Rel Vel', units: 'm/s'},
         sunAngle: {name: 'CATS', units: 'deg'},
         moonAngle: {name: 'CATM', units: 'deg'},
         poca: {name: 'POCA', units: 'km'},
