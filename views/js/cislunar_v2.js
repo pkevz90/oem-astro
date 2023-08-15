@@ -12,6 +12,7 @@ let mainWindow = {
     eigEpsilon: 100,
     eigPropTime: 50,
     zBoundaryLevel: 0,
+    initSunPosition: [1,0,0],
     lagrangePoints: [
         [0.83691513, 0,0],
         [1.15568217, 0,0],
@@ -20,7 +21,7 @@ let mainWindow = {
         [0.48784941, -0.86602540,0]
     ],
     lengthUnit: 389703,
-    mu: 0.012150585609624039,//0.012144393564364623,
+    mu: 0.012150585609624039,
     zAxis: false,
     view: {
         el: 90,
@@ -52,6 +53,7 @@ let mainWindow = {
     moonHistory: undefined,
     cnvs: document.querySelector('canvas')
 }
+let dt = 3600
 let timeFunction = false
 function animationLoop() {
 
@@ -59,13 +61,13 @@ function animationLoop() {
         if (timeFunction) console.time()
         if (mainWindow.moonFrame) drawScene()
         else drawInertialScene()
-        mainWindow.scenarioTime += 3600
+        // mainWindow.scenarioTime += dt
         // console.log((mainWindow.scenarioTime/86400).toFixed(1));
         // mainWindow.view.el -= 1
         // mainWindow.view.az += 1
         // console.log(mainWindown.scenarioTime/86400 , mainWindow.scenarioLength);
         if (mainWindow.scenarioTime/86400 > mainWindow.scenarioLength) {
-            mainWindow.scenarioTime = 0
+            mainWindow.scenarioTime = mainWindow.scenarioLength*84600
         }
         if (timeFunction) console.timeEnd()
         window.requestAnimationFrame(animationLoop)
@@ -145,7 +147,7 @@ function calculateStateHistory(state = mainWindow.satellites[0].state, length = 
 }
 
 function calculateStateHistoryToValue(state = mainWindow.state, length = mainWindow.scenarioLength, error = mainWindow.epsilon, value = {}) {
-    let {xLimit = false, yLimit = false, zLimit = false} = value
+    let {xLimit = false, tolerance = 1e-6, returnHistory = true, objFunction = false, objFunctionValue} = value
     let t = 0, dt = math.sign(length)*mainWindow.dt, history = []
     dt /= mainWindow.timeUnit
     length *= 86400/mainWindow.timeUnit
@@ -159,15 +161,36 @@ function calculateStateHistoryToValue(state = mainWindow.state, length = mainWin
         // console.log(proppedState.te, dt);
         dt = proppedState.hnew
         state = proppedState.y
-        if (xLimit) {
-            if ((stateOld[0] - xLimit)*(state[0] - xLimit) < 0) {
-                break
+        t += proppedState.dt
+        // console.log(t);
+        // console.log(objFunction);
+        if (objFunction !== false) {
+            let oldValue = objFunction(stateOld)-objFunctionValue
+            let newValue = objFunction(state)-objFunctionValue
+            if (oldValue*newValue < 0) {
+                let tol = 1000, limit = 100, lim = 0
+                while (tol > tolerance && lim < limit) {
+                    dt /=-2
+                    oldValue = newValue
+                    while (oldValue*newValue > 0) {
+                        state = rkf45(state, dt, error).y
+                        t += dt
+                        newValue = objFunction(state)-objFunctionValue
+                    }
+                    tol = math.abs(objFunction(state)-objFunctionValue)
+                    // console.log(tol, lim, limit, objFunctionValue, newValue);
+                    lim++
+                }
+                history.push({
+                    t, state
+                })
+                // console.log(newValue, math.norm(math.subtract(state.slice(0,3),[-mainWindow.mu, 0, 0]))*mainWindow.lengthUnit);
+                return history
             }
         }
-        t += proppedState.dt
     } 
+    console.log('no solution');
     let proppedState = rkf45(state, length-t, error)
-        
     history.push({
         t: length, state: proppedState.y
     })
@@ -194,8 +217,14 @@ function drawScene() {
     updateCnvsSize()
     // console.log(rotEci);
     let center = mainWindow.view.center
-    let rot3d = math.multiply( astro.rot(90-mainWindow.view.el, 1), astro.rot(-mainWindow.view.az, 3))
+    
 
+
+    let rot3d = math.multiply( astro.rot(90-mainWindow.view.el, 1), astro.rot(-mainWindow.view.az, 3))
+    // console.log(astro.rot(mainWindow.scenarioTime/mainWindow.timeUnit*360,3));
+    
+
+    // console.log(sunPos);
     let screenDistance = mainWindow.view.zoom
     let width = window.innerHeight < window.innerWidth ? screenDistance * window.innerWidth / window.innerHeight : screenDistance 
     let height = width * window.innerHeight / window.innerWidth
@@ -204,6 +233,56 @@ function drawScene() {
     let ctx = cnvs.getContext('2d')
     ctx.fillStyle = '#111122'
     ctx.fillRect(0,0,cnvs.width,cnvs.height)
+
+    let sunPos = astro.sunEciFromTime(new Date(mainWindow.startTime - (-1000*mainWindow.scenarioTime)))
+    sunPos = eci2synodicUnitless([...sunPos,0,0,0], new Date(mainWindow.startTime - (-1000*mainWindow.scenarioTime))).slice(0,3)
+    try {
+        let selects = [...document.querySelectorAll('.pointing-select')].map(s => {
+            return {
+                sat: Number(s.getAttribute('sat')),
+                value: Number(s.value),
+                el: s,
+                displays: s.parentElement.parentElement.querySelectorAll('.data-display')
+            }
+        })
+        selects.forEach(s => {
+            if (s.value === -1) {
+                s.el.parentElement.parentElement.querySelector('.pointing-display').style.display = 'none'
+                return
+            }
+            else {
+                s.el.parentElement.parentElement.querySelector('.pointing-display').style.display = ''
+            }
+            let origin = getCurrentState(mainWindow.satellites[s.sat].stateHistory, mainWindow.scenarioTime)
+            let target = getCurrentState(mainWindow.satellites[s.value].stateHistory, mainWindow.scenarioTime)
+            let relativePosition = math.subtract(target, origin).slice(0,3)
+            let relativeEarth = math.subtract([-mainWindow.mu,0,0], origin.slice(0,3))
+            let relativeMoon = math.subtract([1-mainWindow.mu,0,0], origin.slice(0,3))
+            let relativeSun = math.subtract(sunPos, origin.slice(0,3))
+            let moonAngle = Math.acos(math.dot(relativeMoon, relativePosition)/math.norm(relativeMoon)/math.norm(relativePosition))*180/Math.PI
+            let earthAngle = Math.acos(math.dot(relativeEarth, relativePosition)/math.norm(relativeEarth)/math.norm(relativePosition))*180/Math.PI
+            let sunAngle = Math.acos(math.dot(relativeSun, relativePosition)/math.norm(relativeSun)/math.norm(relativePosition))*180/Math.PI
+            s.displays[0].innerText = math.norm(relativePosition.map(s => s*mainWindow.lengthUnit)).toFixed(2) + ' km'
+            s.displays[1].innerText = earthAngle.toFixed(2) + ' deg'
+            s.displays[2].innerText = sunAngle.toFixed(2) + ' deg'
+            s.displays[3].innerText = moonAngle.toFixed(2) + ' deg'
+        })
+    } catch (error) {
+        
+    }
+    let sunNorm = math.norm(sunPos)
+    sunPos = sunPos.map(s => s*(1-mainWindow.mu)/sunNorm)
+    // console.log(sunPos);
+    sunPos = math.multiply(rot3d,math.subtract(sunPos, center))
+    let pixelStateSun = {
+        x: cnvs.width/2 + (sunPos[0])*(cnvs.width/2)/width,
+        y: cnvs.height/2 - (sunPos[1])*(cnvs.height/2)/height
+    }
+    ctx.strokeStyle = 'orange'
+    ctx.beginPath()
+    ctx.moveTo(cnvs.width/2, cnvs.height/2)
+    ctx.lineTo(pixelStateSun.x, pixelStateSun.y)
+    ctx.stroke()
     let moonPosition = [1-mainWindow.mu, 0, 0]
     moonPosition = math.multiply(rot3d,math.subtract(moonPosition,center))
     let moonRadius = mainWindow.physicalConstants.rMoon/mainWindow.lengthUnit/width/2*window.innerWidth
@@ -346,9 +425,6 @@ function drawInertialScene() {
     // console.log(rotEci);
     let center = [0,0,0]
     let rot3d = math.multiply( astro.rot(90-mainWindow.view.el, 1), astro.rot(-mainWindow.view.az, 3))
-    if (mainWindow.stateHistory[0] === undefined) {
-        mainWindow.stateHistory[0] = calculateStateHistory()
-    }
     let screenDistance = mainWindow.view.zoom
     let width = window.innerHeight < window.innerWidth ? screenDistance * window.innerWidth / window.innerHeight : screenDistance 
     let height = width * window.innerHeight / window.innerWidth
@@ -375,15 +451,6 @@ function drawInertialScene() {
     let currentTime = astro.toStkDateFormat(new Date(mainWindow.startTime - (-1000*mainWindow.scenarioTime)))
     document.querySelector('#time-display').innerText = currentTime
     
-    // Draw sat current position
-    let currentSatPosition = getCurrentState(mainWindow.stateHistory[0], mainWindow.scenarioTime)
-    // findStateEigenvectors(currentSatPosition, 1)
-
-    currentSatPosition = math.multiply(rot3d, rotEci,math.subtract(currentSatPosition.slice(0,3), center))
-    let pixelStateSat = {
-        x: cnvs.width/2 + (currentSatPosition[0])*(cnvs.width/2)/width,
-        y: cnvs.height/2 - (currentSatPosition[1])*(cnvs.height/2)/height
-    }
     // console.log(currentSatPosition.slice(0,3));
     // // console.log(pixelStateMoon, moonPosition);
     ctx.fillStyle = '#bbbbbb'
@@ -413,27 +480,7 @@ function drawInertialScene() {
     ctx.beginPath()
     ctx.arc(pixelStateMoon.x, pixelStateMoon.y, moonRadius, 0, 2*Math.PI)
     ctx.fill()
-    ctx.fillRect(pixelStateSat.x-5, pixelStateSat.y-5, 10,10)
     ctx.strokeStyle = '#aaaaaa'
-    mainWindow.stateHistory.forEach(stateHist => {
-        if (stateHist === undefined) return
-        ctx.beginPath()
-        stateHist.forEach((state, ii) => {
-            let rotState = math.identity([3])
-            if (!mainWindow.moonFrame){
-                rotState = astro.rot(-state.t,3,false)
-            }
-            let pointRot = math.multiply(rot3d, rotState,math.subtract(state.state.slice(0,3),center))
-            let pixelState = {
-                x: cnvs.width/2 + (pointRot[0])*(cnvs.width/2)/width,
-                y: cnvs.height/2 - (pointRot[1])*(cnvs.height/2)/height
-            }
-            if (ii === 0) ctx.moveTo(pixelState.x,pixelState.y)
-            else ctx.lineTo(pixelState.x,pixelState.y)
-        })
-        
-        ctx.stroke()
-    })
     
     mainWindow.satellites.forEach(sat => {
         if (sat.stateHistory === undefined) {
@@ -540,14 +587,16 @@ function placeCirlcularOrbitMoon(r = 8000, ang = 0) {
     mainWindow.stateHistory[0] = undefined
 }
 
-function synodic2eci(time = 0, sat = 0) {
+function synodicUnitless2eci(time = 0, sat = 0) {
     let date = new Date(mainWindow.startTime - (-1000*time))
+    // console.log(date);
     let moonEci = astro.moonEciFromTime(date)
-    
-    let moonEci2 = astro.moonEciFromTime(new Date(date - (-1000)))
-    let moonVel = math.subtract(moonEci2, moonEci)
+    let moonEciDel = astro.moonEciFromTime(new Date(date-(-1)))
+    let moonVel = math.subtract(moonEciDel, moonEci).map(s => s/0.001)
+
     let moonX = moonEci.map(s => s/math.norm(moonEci))
-    let moonZ = math.cross(moonEci, moonVel).map(s => s/math.norm(moonEci)/math.norm(moonVel))
+    let moonZ = math.cross(moonEci, moonVel)
+    moonZ = moonZ.map(s => s/math.norm(moonZ))
     let moonY = math.cross(moonZ, moonX)
     let r = math.transpose([moonX, moonY, moonZ])
     let position = mainWindow.satellites[sat].state.slice(0,3)
@@ -555,8 +604,95 @@ function synodic2eci(time = 0, sat = 0) {
     velocity = math.add(velocity, math.cross([0,0,1],position))
     position = math.subtract(position, [-mainWindow.mu,0,0])
     let stateInertial = [...position.map(s => s*mainWindow.lengthUnit), ...velocity.map(s => s*mainWindow.lengthUnit/mainWindow.timeUnit)]
+    
     stateInertial = [...math.multiply(r, stateInertial.slice(0,3)), ...math.multiply(r, stateInertial.slice(3))]
     return stateInertial
+}
+
+function open2Dgraph(x = math.range(0,25,0.1)._data, y = math.range(0,25,0.1)._data.map(s => s**2), options = {}) {
+    let {yLimits, xLimits, colors=[], xlabel= 'X Axis', ylabel='Y Axis', title='2D Plot'} = options
+    let graphDiv = document.createElement('div')
+    graphDiv.style.position = 'fixed'
+    graphDiv.style.zIndex = 50
+    graphDiv.style.left = '20vw'
+    graphDiv.style.top = '20vh'
+    graphDiv.style.width = '60vw'
+    graphDiv.style.height = '60vh'
+    graphDiv.style.border = '2px solid white'
+    graphDiv.style.backgroundColor = '#1111aa'
+    graphDiv.innerHTML = `
+        <canvas style="width: 100%; height: 100%;" id="graph-canvas"></canvas>
+    `
+    document.body.append(graphDiv)
+    let cnvs = document.querySelector('#graph-canvas')
+    cnvs.onclick = function(el) {el.target.parentElement.remove()}
+    let ctx = cnvs.getContext('2d')
+    cnvs.width = cnvs.clientWidth
+    cnvs.height = cnvs.clientHeight
+    let xRange = math.max(x)-math.min(x)
+    let yRange = math.max(y)-math.min(y)
+    let graphLimits = {
+        xPixel: [cnvs.width*0.1, cnvs.width*0.9],
+        yPixel: [cnvs.height*0.1, cnvs.height-cnvs.width*0.1],
+        x: xLimits === undefined ? [math.min(x)-xRange*0.1, math.max(x)+xRange*0.1] : xLimits,
+        y: yLimits === undefined ? [math.min(y)-yRange*0.1, math.max(y)+yRange*0.1] : yLimits
+    }
+    console.log(graphLimits.y, graphLimits.x);
+    // Draw X and Y Axis
+    ctx.fillStyle = 'white'
+    ctx.strokeStyle = 'white'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(cnvs.width*0.1, cnvs.height*0.1)
+    ctx.lineTo(cnvs.width*0.1, cnvs.height-cnvs.width*0.1)
+    ctx.lineTo(cnvs.width*0.9, cnvs.height-cnvs.width*0.1)
+    ctx.stroke()
+    ctx.textBaseline = 'bottom'
+    ctx.textAlign = 'center'
+    ctx.font = 'bold +'+cnvs.height/20+'px serif'
+    ctx.fillText(xlabel, cnvs.width/2, cnvs.height)
+    
+    ctx.save();
+    ctx.translate(0, cnvs.height/2)
+    ctx.rotate(Math.PI/2)
+    ctx.fillText(ylabel, 0, 0)
+    ctx.restore();
+    ctx.font = 'bold +'+cnvs.height/15+'px serif'
+    ctx.textBaseline = 'top'
+    ctx.fillText(title, cnvs.width/2, 4)
+    for (let point = 0; point < x.length; point++) {
+        ctx.strokeStyle = colors[point] === undefined ? 'white' : colors[point]
+        let graphedPoint = [x[point], y[point]]
+        let pixel = {
+            x: (graphedPoint[0]-graphLimits.x[0])*(graphLimits.xPixel[1]-graphLimits.xPixel[0])/(graphLimits.x[1]-graphLimits.x[0])+graphLimits.xPixel[0],
+            y: graphLimits.yPixel[1]-(graphedPoint[1]-graphLimits.y[0])*(graphLimits.yPixel[1]-graphLimits.yPixel[0])/(graphLimits.y[1]-graphLimits.y[0])
+        }
+        ctx.beginPath()
+        ctx.arc(pixel.x, pixel.y, 0.5, 0, 2*Math.PI)
+        ctx.stroke()
+    }
+    
+}
+
+function eci2synodicUnitless(state = synodicUnitless2eci(), date = mainWindow.startTime) {
+    // console.log(date);
+    let moonEci = astro.moonEciFromTime(date)
+    let moonEciDel = astro.moonEciFromTime(new Date(date-(-1)))
+    let moonVel = math.subtract(moonEciDel, moonEci).map(s => s/0.001)
+    let moonX = moonEci.map(s => s/math.norm(moonEci))
+    let moonZ = math.cross(moonEci, moonVel)
+    moonZ = moonZ.map(s => s/math.norm(moonZ))
+    let moonY = math.cross(moonZ, moonX)
+    let r = [moonX, moonY, moonZ]
+    // console.log(r.map(s => math.norm(s)));
+    state = [...math.multiply(r, state.slice(0,3)), ...math.multiply(r, state.slice(3))]
+    let position = state.slice(0,3).map(s => s/mainWindow.lengthUnit)
+    let velocity = state.slice(3).map(s => s*mainWindow.timeUnit/mainWindow.lengthUnit)
+    position = math.add(position, [-mainWindow.mu,0,0])
+    velocity = math.subtract(velocity, math.cross([0,0,1],position))
+    // let position = mainWindow.satellites[sat].state.slice(0,3)
+    // let velocity = mainWindow.satellites[sat].state.slice(3)
+    return [...position, ...velocity]
 }
 
 function placeObject(orbit = l2_halo_southern[1250].join('   '), sat = 0) {
@@ -623,7 +759,7 @@ function changeOrbit(el) {
 function openOrbitDiv(sat=0) {
     let newDiv = document.createElement('div')
     newDiv.style.position = 'fixed'
-    newDiv.style.padding = '40px 10px 10px 10px'
+    newDiv.style.padding = '1vh 0.5vh'
     newDiv.style.zIndex = 100
     newDiv.style.top = '20px'
     newDiv.style.left = '20px'
@@ -639,7 +775,7 @@ function openOrbitDiv(sat=0) {
     newDiv.innerHTML = `
     <div id="orbit-drag-div-${sat}header" style="text-align: center; cursor: move;">Satellite</div>
     <div style="text-align: center">
-        <div><h3 style="margin: 10px 5px;">Orbit Type</h3></div>
+        <div><h3 style="margin: 0px 5px;">Orbit Type</h3></div>
         <select oninput="changeOrbit(this)" style="font-size: 1.5vh">
         ${Object.keys(orbits).map((key,ii) => {
             return `
@@ -650,14 +786,15 @@ function openOrbitDiv(sat=0) {
     </div>
     <div>
         <div>Jacobi's Constant: <span>0</span></div>
-        <div><input oninput="changeOrbit(this)" type="range" style="width: 95%; height: 30px;" min="0" max="1" value="0.71" step="0.01"/></div>
+        <div><input oninput="changeOrbit(this)" type="range" style="width: 95%; height: 10px;" min="0" max="1" value="0.71" step="0.01"/></div>
     </div>
     <div style="text-align: center">
-        <div><h3 style="margin: 10px 5px;">Show Manifolds</h3></div>
+        <div><h3 style="margin: 0px 5px;">Show Manifolds</h3></div>
         <div style="display: flex; justify-content: space-around;">   
             <div>
                 <div>Instant</div>
                 <div><button onclick="showManifold(this)" sat="${sat}" mantype="stable-instant" style="font-size: 1em;">Stable</button></div>
+                <div style="margin-bottom: 5px;"><button onclick="enterStableManifold(${sat}, -1)" style="font-size: 0.75em;">Enter -X</button><button onclick="enterStableManifold(${sat}, 1)" style="font-size: 0.75em;">Enter +X</button></div>
                 <div><button onclick="showManifold(this)" sat="${sat}" mantype="unstable-instant" style="font-size: 1em;">Unstable</button></div>
             </div>
             <div>
@@ -665,7 +802,36 @@ function openOrbitDiv(sat=0) {
                 <div><button onclick="showManifold(this)" sat="${sat}" mantype="stable-all" style="font-size: 1em;">Stable</button></div>
                 <div><button onclick="showManifold(this)" sat="${sat}" mantype="unstable-all" style="font-size: 1em;">Unstable</button></div>
             </div>
-        <div>
+        </div>
+    </div>
+    <div>
+        <div>Pointing: <select class="pointing-select" sat="${sat}">
+            <option value="-1">None</option>
+            ${math.range(0,mainWindow.satellites.length-1)._data.map(s => {
+                return `
+                    <option value="${s}">${s}</option>
+                `
+            }).join('')}
+            </select>
+        </div>
+        <div class="pointing-display">
+            <div style="display: flex; justify-content: space-between;">
+                <div>r</div>
+                <div class="data-display">10000 km</div>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <div>Earth</div>
+                <div class="data-display">10 deg</div>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <div>Sun</div>
+                <div class="data-display">10 deg</div>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <div>Moon</div>
+                <div class="data-display">10 deg</div>
+            </div>
+        </div>
     </div>
     `
     newDiv.id = 'orbit-drag-div-'+sat
@@ -718,25 +884,30 @@ function showManifold(el) {
 
 }
 
+function setTime(fractionTime = 0) {
+    mainWindow.scenarioTime = mainWindow.scenarioLength*86400*fractionTime
+}
+
 function openDraggableDiv(innerHTML, id = 'time-drag-div') {
     let newDiv = document.createElement('div')
     newDiv.style.position = 'fixed'
-    newDiv.style.padding = '40px 10px 10px 10px'
+    newDiv.style.padding = '0px 10px 10px 10px'
     newDiv.style.zIndex = 100
-    newDiv.style.cursor = 'move'
     newDiv.style.top = '80vh'
     newDiv.style.left = '20px'
     newDiv.style.width = 'auto'
     newDiv.style.height = 'auto'
     newDiv.style.fontFamily = 'Courier'
-    newDiv.style.fontSize = '40px'
+    newDiv.style.fontSize = '20px'
     newDiv.style.backgroundColor = 'white'
     newDiv.style.border = '1px solid black'
     newDiv.style.borderRadius = '10px'
     newDiv.style.boxShadow = '5px 5px 7px #575757'
     newDiv.style.touchAction = 'none'
     newDiv.innerHTML = innerHTML || `
+        <div style="cursor: move; padding-left: 40px;" id="time-drag-divheader">Time Display</div>
         <div id="time-display">${astro.toStkDateFormat(new Date())}</div>
+        <div style="width: 100%"><input oninput="setTime(this.value)" style="width: 100%" type="range" value="0" min="0" max="1" step="0.001"/></div>
     `
     newDiv.id = id
     let fontSizeButton = document.createElement('div')
@@ -875,7 +1046,7 @@ window.addEventListener('keydown', event => {
 
 })
 
-function findStateEigenvectors(state = [mainWindow.lagrangePoints[1][0],mainWindow.lagrangePoints[1][1],0,0,0,0], dir = 1, stable = true) {
+function findStateEigenvectors(state = [mainWindow.lagrangePoints[1][0],mainWindow.lagrangePoints[1][1],0,0,0,0], dir = 1, stable = true, objFunction = false, objFunctionValue) {
     let jac = createJacobian(state), eig
     // console.log(jac);
     try {
@@ -892,7 +1063,9 @@ function findStateEigenvectors(state = [mainWindow.lagrangePoints[1][0],mainWind
     // console.log(pertEpsilon);
     let perturbedState = math.add(state, math.dotMultiply(dir*pertEpsilon, eig.vector))
     // perturbedState = propagateCrtbp(perturbedState, -mainWindow.eigPropTime, 1e-10)
-    return calculateStateHistoryToValue(perturbedState, (stable ? -1 : 1) * mainWindow.eigPropTime,1e-9).filter((time,ii) => ii % 3 === 0)
+    return calculateStateHistoryToValue(perturbedState, (stable ? -1 : 1) * mainWindow.eigPropTime,1e-9, {
+        objFunction, objFunctionValue
+    }).filter((time,ii) => ii % (objFunction ? 1 : 3) === 0)
     // return calculateStateHistoryToValue(perturbedState, (stable ? -1 : 1) * mainWindow.eigPropTime,1e-9, {xLimit: 1-mainWindow.mu}).filter((time,ii) => ii % 3 === 0)
     // mainWindow.scenarioLength = 90
     // return perturbedState
@@ -908,6 +1081,95 @@ function showTubeManifold(stable = true, dir = 1, sat = 0) {
         mainWindow.satellites[sat].manifolds.push(findStateEigenvectors(state, dir, stable))
     })
 
+}
+
+function plotManifold(stable = true, dir = 1, sat1 = 0, sat2 = 1) {
+    // mainWindow.displayedPoints = []
+    let initState1 = mainWindow.satellites[sat1].state.slice()
+    let initState2 = mainWindow.satellites[sat2].state.slice()
+    let times = math.range(0, mainWindow.scenarioLength, mainWindow.scenarioLength/150)
+    let objFunction = state => {
+        return state[0]
+    }
+    let points = []
+    times.forEach(time => {
+        // console.log(time);
+        let state = propagateCrtbp(initState1, time, 1e-8)
+        // mainWindow.displayedPoints.push(state)
+        let manifoldState = findStateEigenvectors(state, dir, !stable, objFunction, 1-mainWindow.mu)
+        points.push([manifoldState[manifoldState.length-1].state, '#aa1111']);
+        // mainWindow.satellites[sat].manifolds.push(findStateEigenvectors(state, dir, stable))
+    })
+    times.forEach(time => {
+        // console.log(time);
+        let state = propagateCrtbp(initState2, time, 1e-8)
+        // mainWindow.displayedPoints.push(state)
+        let manifoldState = findStateEigenvectors(state, -dir, stable, objFunction, 1-mainWindow.mu)
+        points.push([manifoldState[manifoldState.length-1].state, '#11aa11']);
+        // mainWindow.satellites[sat].manifolds.push(findStateEigenvectors(state, dir, stable))
+    })
+    open2Dgraph(points.map(s => s[0][1]), points.map(s => math.norm(s[0].slice(3))), {
+        yLimits: [-1.5, 2.5], 
+        colors: points.map(s => s[1]),
+        xlabel: 'Position',
+        ylabel: 'Velocity',
+        title: 'Poincaré Map'
+    })
+}
+
+function useRealDynamics() {
+    let h = new Propagator({
+        atmDrag: false
+    })
+    mainWindow.satellites.forEach((sat, satIi) => {
+        let state = synodicUnitless2eci(0,satIi)
+        console.log(state);
+        let stateHistory = h.propToTimeHistory(state, mainWindow.startTime, 16*86400, 0.001)
+        console.log(stateHistory);
+        stateHistory = stateHistory.map(state => {
+            return {
+                t: (state.date-mainWindow.startTime) / 1000 / mainWindow.timeUnit,
+                state: eci2synodicUnitless(state.state, state.date)
+            }
+        })
+        sat.stateHistory = stateHistory
+    })
+
+}
+
+function enterStableManifold(sat = 0, dir = -1) {
+    let state =getCurrentState(mainWindow.satellites[sat].stateHistory, mainWindow.scenarioTime)
+    let stableHist = findStateEigenvectors(state, dir, true)
+    state = stableHist[0].state
+    state = propagateCrtbp(state, -mainWindow.scenarioLength*2)
+    mainWindow.satellites[sat].state = state
+    mainWindow.satellites[sat].manifolds = []
+    mainWindow.satellites[sat].stateHistory = undefined
+    mainWindow.scenarioLength *=3//undefined
+}
+
+function showInjectionOptions(sat = 0) {
+    let state =getCurrentState(mainWindow.satellites[sat].stateHistory, mainWindow.scenarioTime)
+    let v = state.slice(3,6)
+    let vMag = math.norm(v)
+    v = v.map(s => s/math.norm(v))
+    let burns = math.range(-vMag*2,0,0.1,true).map(s => s*mainWindow.timeUnit/mainWindow.lengthUnit)
+    console.log(burns);
+    mainWindow.satellites[sat].manifolds = []
+    let objFunction = state => {
+        state = math.subtract(state, [-mainWindow.mu, 0, 0, 0, 0, 0])
+        return math.dot(state.slice(0,3), state.slice(3))
+    }
+    burns.forEach(b => {
+        let vBurn = v.map(s => s*b)
+        let vState = math.add(state, [0,0,0,...vBurn])
+        let hist = calculateStateHistoryToValue(vState, -8,1e-9,{
+            objFunction,
+            objFunctionValue: 0,
+            tol: 1e-6
+        }).filter((time,ii) => ii % 3 === 0)
+        mainWindow.satellites[sat].manifolds.push(hist)
+    })
 }
 
 document.oncontextmenu = startContextClick
@@ -996,6 +1258,14 @@ function addSatellite() {
         manifolds: [],
         color: '#1111aa'
     })
+    let selects = [...document.querySelectorAll('.pointing-select')]
+
+    selects.forEach(s => {
+        let opt = document.createElement('option')
+        opt.value = n
+        opt.innerText = n
+        s.append(opt)
+    })
     openOrbitDiv(n)
     changeOrbit(document.querySelector('#orbit-drag-div-'+n+'header'))
 }
@@ -1025,7 +1295,7 @@ function solveJacobiBoundaries(state = mainWindow.state, c) {
     let r1 = ((state[0]+mu)**2+state[1]**2+state[2]**2)**0.5
     let r2 = ((state[0]+mu-1)**2+state[1]**2+state[2]**2)**0.5
     c = c || -state.slice(3).reduce((a,b) => a + b**2,0)+state[0]**2+state[1]**2+2*(1-mu)/r1+2*mu/r2
-    console.log(c);
+    // console.log(c);
     // console.log(c);
     let boundaryConnections = {
         l1: f(mainWindow.lagrangePoints[0][0],0,mainWindow.zBoundaryLevel,mu,c) < 0,
