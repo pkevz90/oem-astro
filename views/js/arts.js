@@ -1,6 +1,6 @@
-let appAcr = 'ROTS 2.9.1'
+let appAcr = 'ROTS 2.9.2'
 let appName = 'Relative Orbital Trajectory System'
-let cao = '1 Aug 2023'
+let cao = '21 Aug 2023'
 document.title = appAcr
 // Various housekeepin to not change html
 document.getElementById('add-satellite-panel').getElementsByTagName('span')[0].classList.add('ctrl-switch');
@@ -4493,6 +4493,7 @@ function changeSatelliteInputType(el) {
     }
     document.getElementById(el.id).checked = true
     document.querySelectorAll('.sat-input[type="number"]')[0].focus()
+    return el.id
 }
 
 function checkJ200StringValid(string) {
@@ -4703,11 +4704,25 @@ function openPanel(button) {
             id: mainWindow.satellites.length === 0 ? 'coe-sat-input' : 'ric-sat-input'
         })
         let selectEl = document.getElementById('edit-select');
+        selectEl.addEventListener('input', importSelectedEditSatellite)
+        // Don't display edit satellite selection if no satellites in scenario
+        if (mainWindow.satellites.length === 0) {
+            selectEl.parentElement.style.display = 'none'
+        }
+        else {
+            selectEl.parentElement.style.display = ''
+        }
         selectEl.parentNode.parentNode.getElementsByTagName('input')[2].value = '';
         document.getElementById('parse-text').value = "";
         while (selectEl.firstChild) {
             selectEl.removeChild(selectEl.firstChild);
         }
+        // Add select option
+        let addedElement = document.createElement('option')
+        addedElement.value = -1;
+        addedElement.textContent = 'Select...'
+        addedElement.style.color = '#000000';
+        selectEl.appendChild(addedElement);
         mainWindow.satellites.forEach((sat, ii) => {
             addedElement = document.createElement('option');
             addedElement.value = ii;
@@ -4732,6 +4747,91 @@ function openPanel(button) {
     }
     document.getElementById(button.id + '-panel').classList.toggle("hidden");
     // mainWindow.panelOpen = true;
+}
+
+function importSelectedEditSatellite(el) {
+    let satInputs = [...document.querySelectorAll('.satellite-input')]
+    console.log(satInputs);
+    let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
+    let sat = Number(el.target.value)
+    if (sat === -1) return
+    let stateCurrent = Object.values(getCurrentInertial(sat))
+    let stateStart = Object.values(getCurrentInertial(sat, 0))
+    let originCurrent = Object.values(getCurrentInertialRic())
+    let originStart = Object.values(getCurrentInertialRic([0,0,0,0,0,0], 0))
+    let coeStateCurrent = astro.j20002Coe(stateCurrent)
+    let coeStateStart = astro.j20002Coe(stateStart)
+    let ricState, date = convertTimeToDateTimeInput(new Date(mainWindow.startDate-(-1000*mainWindow.scenarioTime)))
+    // Don't have calcs for state to rmoe yet, switch to ric state
+    if (radioId === 'rmoe-sat-input') {
+        changeSatelliteInputType({
+            id: 'ric-sat-input'
+        })
+        radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
+    }
+    // If nowhere near GEO orbit, don't do GEO calculations for input
+    if (radioId === 'geo-sat-input' && (coeStateStart.a < 35000 || coeStateStart.a > 46000)) {
+        changeSatelliteInputType({
+            id: 'coe-sat-input'
+        })
+        radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
+    
+    }
+
+    switch (radioId) {
+        case 'ric-sat-input':
+            // use current state
+            ricState = Eci2Ric(originCurrent.slice(0,3), originCurrent.slice(3), stateCurrent.slice(0,3), stateCurrent.slice(3))
+            ricState = math.squeeze([...ricState.rHcw, ...ricState.drHcw.map(s => s*1000)]).map(s => Number(s.toFixed(3)))
+
+            satInputs[1].innerHTML = `R <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${ricState[0].toFixed(3)}"> km</div>`
+            satInputs[2].innerHTML = `I <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${ricState[1].toFixed(3)}"> km</div>`
+            satInputs[3].innerHTML = `C <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${ricState[2].toFixed(3)}"> km</div>`
+            satInputs[4].innerHTML = `dR <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${ricState[3].toFixed(3)}"> m/s</div>`
+            satInputs[5].innerHTML = `dI <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${ricState[4].toFixed(3)}"> m/s</div>`
+            satInputs[6].innerHTML = `dC <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${ricState[5].toFixed(3)}"> m/s</div>`
+            
+            break
+        case 'eci-sat-input':
+            satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">`
+            satInputs[1].innerHTML = `X <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${stateCurrent[0].toFixed(8)}"> km</div>`
+            satInputs[2].innerHTML = `Y <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${stateCurrent[1].toFixed(8)}"> km</div>`
+            satInputs[3].innerHTML = `Z <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${stateCurrent[2].toFixed(8)}"> km</div>`
+            satInputs[4].innerHTML = `dX <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${stateCurrent[3].toFixed(8)}"> km/s</div>`
+            satInputs[5].innerHTML = `dY <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${stateCurrent[4].toFixed(8)}"> km/s</div>`
+            satInputs[6].innerHTML = `dZ <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${stateCurrent[5].toFixed(8)}"> km/s</div>`
+            
+            break
+        case 'coe-sat-input':
+            satInputs[0].innerHTML = `Epoch <input class="sat-input" style="width: 20ch;" type="datetime-local" id="start-time" name="meeting-time" value="${date}">`
+            satInputs[1].innerHTML = `a <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${coeStateCurrent.a.toFixed(4)}"> km</div>`
+            satInputs[2].innerHTML = `e <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${coeStateCurrent.e.toFixed(4)}"></div>`
+            satInputs[3].innerHTML = `i <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(coeStateCurrent.i*180/Math.PI).toFixed(4)}"> deg</div>`
+            satInputs[4].innerHTML = `&Omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(coeStateCurrent.raan*180/Math.PI).toFixed(4)}"> deg</div>`
+            satInputs[5].innerHTML = `&omega; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(coeStateCurrent.arg*180/Math.PI).toFixed(4)}"> deg</div>`
+            satInputs[6].innerHTML = `&nu; <input class="sat-input" style="font-size: 1em; width: 15ch;" type="Number" placeholder="${(coeStateCurrent.tA*180/Math.PI).toFixed(4)}"> deg</div>`
+            
+            break
+        case 'rmoe-sat-input':
+            // Not yet started
+            break
+        case 'geo-sat-input':           
+            let cloneCoes = JSON.parse(JSON.stringify(coeStateStart))
+            cloneCoes.raan += cloneCoes.arg
+            cloneCoes.arg = 0
+            let cloneJ2000State = astro.coe2J2000(cloneCoes)
+            let coordinates = astro.eci2latlong(cloneJ2000State.slice(0,3), mainWindow.startDate)
+            let long = Number(coordinates.long*180/Math.PI.toFixed(3))
+            let meanMotion = (398600.4418/cloneCoes.a**3)**0.5
+            let drift = 180/Math.PI*(meanMotion-(398600.4418/42164**3)**0.5)*86400
+            
+            satInputs[1].innerHTML = `Longitude <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="${long.toFixed(2)}"> deg</div>`
+            satInputs[2].innerHTML = `Inclination <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="${(cloneCoes.i*180/Math.PI).toFixed(3)}"> deg</div>`
+            satInputs[3].innerHTML = `Drift Rate <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="${drift.toFixed(2)}"> deg/day</div>`
+            satInputs[4].innerHTML = `Eccentricity <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="${(cloneCoes.e).toFixed(5)}"></div>`
+            satInputs[5].innerHTML = `Arg Latitude <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="${(coeStateStart.arg*180/Math.PI).toFixed(3)}"></div>`
+            break
+    }   
 }
 
 function changeOriginInput(el) {
@@ -5281,12 +5381,12 @@ function initStateFunction(el) {
             case 'ric-sat-input':
                 relOrigin = Number(document.querySelector('#sat-input-origin').value)
                 ricState = [
-                    Number(inputs[0].value),
-                    Number(inputs[1].value),
-                    Number(inputs[2].value),
-                    Number(inputs[3].value) / 1000,
-                    Number(inputs[4].value) / 1000,
-                    Number(inputs[5].value) / 1000,
+                    Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value),
+                    Number(inputs[1].value === '' ? inputs[1].placeholder : inputs[1].value),
+                    Number(inputs[2].value === '' ? inputs[2].placeholder : inputs[2].value),
+                    Number(inputs[3].value === '' ? inputs[3].placeholder : inputs[3].value) / 1000,
+                    Number(inputs[4].value === '' ? inputs[4].placeholder : inputs[4].value) / 1000,
+                    Number(inputs[5].value === '' ? inputs[5].placeholder : inputs[5].value) / 1000,
                 ]
                 relOrigin = relOrigin > -1 ? mainWindow.satellites[relOrigin].position : mainWindow.originOrbit
                 eciOrigin = Object.values(Coe2PosVelObject(relOrigin))
@@ -5354,19 +5454,19 @@ function initStateFunction(el) {
                 if (mainWindow.satellites.length === 0) {
                     date = new Date(inputs[0].value)
                     mainWindow.startDate = date
-                    long = Number(inputs[1].value)
-                    inclination = Number(inputs[2].value)
-                    driftRate = Number(inputs[3].value)
-                    eccentricity = Number(inputs[4].value)
-                    argLat = Number(inputs[5].value)
+                    long = Number(inputs[1].value === '' ? inputs[1].placeholder : inputs[1].value)
+                    inclination = Number(inputs[2].value === '' ? inputs[2].placeholder : inputs[2].value)
+                    driftRate = Number(inputs[3].value === '' ? inputs[3].placeholder : inputs[3].value)
+                    eccentricity = Number(inputs[4].value === '' ? inputs[4].placeholder : inputs[4].value)
+                    argLat = Number(inputs[5].value === '' ? inputs[5].placeholder : inputs[5].value)
                     
                 }
                 else {
-                    long = Number(inputs[0].value)
-                    inclination = Number(inputs[1].value)
-                    driftRate = Number(inputs[2].value)
-                    eccentricity = Number(inputs[3].value)
-                    argLat = Number(inputs[4].value)
+                    long = Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value)
+                    inclination = Number(inputs[1].value === '' ? inputs[1].placeholder : inputs[1].value)
+                    driftRate = Number(inputs[2].value === '' ? inputs[2].placeholder : inputs[2].value)
+                    eccentricity = Number(inputs[3].value === '' ? inputs[3].placeholder : inputs[3].value)
+                    argLat = Number(inputs[4].value === '' ? inputs[4].placeholder : inputs[4].value)
                 }
                 eccentricity = eccentricity > 0.9 ? 0.9 : eccentricity
                 eccentricity = eccentricity < 0 ? 0 : eccentricity
@@ -5456,7 +5556,8 @@ function editSatellite(button) {
         closeAll();
         return;
     }
-    if (button.nextSibling.selectedIndex < 0) return;
+    console.log(button.nextSibling.value);
+    if (button.nextSibling.value < 0) return;
     let inputs = [...document.querySelectorAll('.sat-input')]
     let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
     let originState = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
@@ -5465,12 +5566,12 @@ function editSatellite(button) {
         case 'ric-sat-input':
             relOrigin = Number(document.querySelector('#sat-input-origin').value)
             ricState = [
-                Number(inputs[0].value),
-                Number(inputs[1].value),
-                Number(inputs[2].value),
-                Number(inputs[3].value) / 1000,
-                Number(inputs[4].value) / 1000,
-                Number(inputs[5].value) / 1000,
+                Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value),
+                Number(inputs[1].value === '' ? inputs[1].placeholder : inputs[1].value),
+                Number(inputs[2].value === '' ? inputs[2].placeholder : inputs[2].value),
+                Number(inputs[3].value === '' ? inputs[3].placeholder : inputs[3].value) / 1000,
+                Number(inputs[4].value === '' ? inputs[4].placeholder : inputs[4].value) / 1000,
+                Number(inputs[5].value === '' ? inputs[5].placeholder : inputs[5].value) / 1000,
             ]
             relOrigin = relOrigin > -1 ? mainWindow.satellites[relOrigin].position : mainWindow.originOrbit
             eciOrigin = Object.values(Coe2PosVelObject(relOrigin))
@@ -5533,21 +5634,23 @@ function editSatellite(button) {
             eciState = [...eciState.rEcci, ...eciState.drEci]
             break
         case 'geo-sat-input':           
-            long = Number(inputs[0].value)
-            inclination = Number(inputs[1].value)
-            driftRate = Number(inputs[2].value)
-            eccentricity = Number(inputs[3].value)
-            argLat = Number(inputs[4].value)
+            long = Number(inputs[0].value === '' ? inputs[0].placeholder : inputs[0].value)
+            inclination = Number(inputs[1].value === '' ? inputs[1].placeholder : inputs[1].value)
+            driftRate = Number(inputs[2].value === '' ? inputs[2].placeholder : inputs[2].value)
+            eccentricity = Number(inputs[3].value === '' ? inputs[3].placeholder : inputs[3].value)
+            argLat = Number(inputs[4].value === '' ? inputs[4].placeholder : inputs[4].value)
             eccentricity = eccentricity > 0.9 ? 0.9 : eccentricity
             eccentricity = eccentricity < 0 ? 0 : eccentricity
             eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(long, mainWindow.startDate, inclination, driftRate, eccentricity, argLat)))
             break
     }   
     eciState = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
-    let color = mainWindow.satellites[button.nextSibling.selectedIndex].color;
-    let name = mainWindow.satellites[button.nextSibling.selectedIndex].name;
-    let shape = mainWindow.satellites[button.nextSibling.selectedIndex].shape;
-    let a = mainWindow.satellites[button.nextSibling.selectedIndex].a;
+    
+    let satIndex = button.nextSibling.value
+    let color = mainWindow.satellites[satIndex].color;
+    let name = mainWindow.satellites[satIndex].name;
+    let shape = mainWindow.satellites[satIndex].shape;
+    let a = mainWindow.satellites[satIndex].a;
     let sat = new Satellite({
         position: eciState,
         color,
@@ -5555,11 +5658,11 @@ function editSatellite(button) {
         a,
         name
     });
-    mainWindow.satellites[button.nextSibling.selectedIndex] = sat;
-    mainWindow.satellites[button.nextSibling.selectedIndex].calcTraj();
-    let curPos = mainWindow.satellites[button.nextSibling.selectedIndex].currentPosition();
-    mainWindow.satellites[button.nextSibling.selectedIndex].curPos = {r: curPos[0], i: curPos[1], c: curPos[2], rd: curPos[3], id: curPos[4], cd: curPos[5]}
-    mainWindow.satellites[button.nextSibling.selectedIndex].originDate = Date.now()
+    mainWindow.satellites[satIndex] = sat;
+    mainWindow.satellites[satIndex].calcTraj();
+    let curPos = mainWindow.satellites[satIndex].currentPosition();
+    mainWindow.satellites[satIndex].curPos = {r: curPos[0], i: curPos[1], c: curPos[2], rd: curPos[3], id: curPos[4], cd: curPos[5]}
+    mainWindow.satellites[satIndex].originDate = Date.now()
     closeAll();
 }
 
