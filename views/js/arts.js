@@ -4485,8 +4485,8 @@ function changeSatelliteInputType(el) {
             satInputs[1].innerHTML = `Longitude <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
             satInputs[2].innerHTML = `Inclination <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg</div>`
             satInputs[3].innerHTML = `Drift Rate <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"> deg/day</div>`
-            satInputs[4].innerHTML = ``
-            satInputs[5].innerHTML = ``
+            satInputs[4].innerHTML = `Eccentricity <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"></div>`
+            satInputs[5].innerHTML = `Arg Latitude <input class="sat-input" style="font-size: 1.25em; width: 10ch;" type="Number" placeholder="0"></div>`
             satInputs[6].innerHTML = ``
             
             break
@@ -5276,7 +5276,7 @@ function initStateFunction(el) {
     else if (el.id === 'add-satellite-button') {
         let inputs = [...document.querySelectorAll('.sat-input')]
         let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
-        let eciState, ricState, eciOrigin, startDate, relOrigin, date, dt, coeState, long, driftRate, inclination
+        let eciState, ricState, argLat, eciOrigin, startDate, relOrigin, date, dt, coeState, long, driftRate, inclination, eccentricity
         switch (radioId) {
             case 'ric-sat-input':
                 relOrigin = Number(document.querySelector('#sat-input-origin').value)
@@ -5357,14 +5357,21 @@ function initStateFunction(el) {
                     long = Number(inputs[1].value)
                     inclination = Number(inputs[2].value)
                     driftRate = Number(inputs[3].value)
+                    eccentricity = Number(inputs[4].value)
+                    argLat = Number(inputs[5].value)
+                    
                 }
                 else {
                     long = Number(inputs[0].value)
                     inclination = Number(inputs[1].value)
                     driftRate = Number(inputs[2].value)
+                    eccentricity = Number(inputs[3].value)
+                    argLat = Number(inputs[4].value)
                 }
+                eccentricity = eccentricity > 0.9 ? 0.9 : eccentricity
+                eccentricity = eccentricity < 0 ? 0 : eccentricity
                 console.log(date, long, driftRate, inclination);
-                eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(long, date, inclination, driftRate)))
+                eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(long, date, inclination, driftRate, eccentricity, argLat)))
                 break
         }
         let position = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
@@ -5453,7 +5460,7 @@ function editSatellite(button) {
     let inputs = [...document.querySelectorAll('.sat-input')]
     let radioId = [...document.getElementsByName('sat-input-radio')].filter(s => s.checked)[0].id
     let originState = Object.values(Coe2PosVelObject(mainWindow.originOrbit))
-    let eciState, ricState, eciOrigin, startDate, relOrigin, date, dt, coeState
+    let eciState, ricState, long, inclination, driftRate, eccentricity, argLat, eciOrigin, startDate, relOrigin, date, dt, coeState
     switch (radioId) {
         case 'ric-sat-input':
             relOrigin = Number(document.querySelector('#sat-input-origin').value)
@@ -5525,8 +5532,15 @@ function editSatellite(button) {
             eciState = Ric2Eci(ricState.slice(0,3), ricState.slice(3,6), eciOrigin.slice(0,3), eciOrigin.slice(3,6))
             eciState = [...eciState.rEcci, ...eciState.drEci]
             break
-        case 'geo-sat-input':
-            eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(Number(inputs[0].value))))
+        case 'geo-sat-input':           
+            long = Number(inputs[0].value)
+            inclination = Number(inputs[1].value)
+            driftRate = Number(inputs[2].value)
+            eccentricity = Number(inputs[3].value)
+            argLat = Number(inputs[4].value)
+            eccentricity = eccentricity > 0.9 ? 0.9 : eccentricity
+            eccentricity = eccentricity < 0 ? 0 : eccentricity
+            eciState = Object.values(Coe2PosVelObject(geoSatelliteAtLongitude(long, mainWindow.startDate, inclination, driftRate, eccentricity, argLat)))
             break
     }   
     eciState = PosVel2CoeNew(eciState.slice(0,3), eciState.slice(3,6))
@@ -8239,13 +8253,13 @@ function draw3dScene(az = azD, el = elD) {
     let originEci = propToTimeAnalytic(mainWindow.originOrbit, mainWindow.scenarioTime)
     let rOriginEci = math.norm(originEci.slice(0,3))
     // let rCameraEci = (rOriginEci+mainWindow.plotWidth/2)/rOriginEci
-    let originEciCamera = originEci.map(s => s*rOriginEci)
-    let rEci2Ric = Eci2Ric(originEci.slice(0,3), originEci.slice(3),0,0,true)
-    let curDate = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
-    let jd_UTI = astro.julianDate(curDate.getFullYear(), curDate.getMonth()+1, curDate.getDate(), curDate.getHours(), curDate.getMinutes(), curDate.getSeconds()+curDate.getMilliseconds()/1000) 
+    // let originEciCamera = originEci.map(s => s*rOriginEci)
+    // let rEci2Ric = Eci2Ric(originEci.slice(0,3), originEci.slice(3),0,0,true)
+    // let curDate = new Date(mainWindow.startDate - (-1000*mainWindow.scenarioTime))
+    // let jd_UTI = astro.julianDate(curDate.getFullYear(), curDate.getMonth()+1, curDate.getDate(), curDate.getHours(), curDate.getMinutes(), curDate.getSeconds()+curDate.getMilliseconds()/1000) 
         
-    let thetaGmst = astro.siderealTime(jd_UTI)
-    let w = astro.rot(-thetaGmst, 3)
+    // let thetaGmst = astro.siderealTime(jd_UTI)
+    // let w = astro.rot(-thetaGmst, 3)
     // console.timeEnd('start')
     // console.time('cov')
     // Draw Covariance
@@ -8680,6 +8694,8 @@ function draw3dScene(az = azD, el = elD) {
             y: pixelPos[1] + mainWindow.cnvs.height/2
         }
         sat.pixelPos = pixelPos
+        // Ensure satellite drawn over other lines in same location
+        curPos[2] += 0.1*mainWindow.plotWidth
         points.push({
             color: sat.color,
             position: curPos,
@@ -11632,26 +11648,26 @@ function displayHpopTraj(update = false, sat = false) {
     })
 }
 
-function geoSatelliteAtLongitude(long = 0, date = mainWindow.startDate, inclination = 0, drift = 0) {
+function geoSatelliteAtLongitude(long = 0, date = mainWindow.startDate, inclination = 0, drift = 0, eccentricity = 0, argLat = 30) {
     let sidAngle = astro.siderealTime(astro.julianDate(date.getFullYear(), date.getMonth()+1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds()))
     let a = (360+drift)*Math.PI/180 / 86164
     a = (398600.4418/a**2)**(1/3)
-    let tA = sidAngle * Math.PI / 180 + long * Math.PI / 180
+    let raan = sidAngle * Math.PI / 180 + long * Math.PI / 180
 
     for (let index = 0; index < 10; index++) {
-        let tA2 = tA + 0.01
+        let raan2 = raan + 0.01
         let state1 = astro.eci2latlong(Object.values(Coe2PosVelObject({
-            a, e: 0, i: 0, raan: 0, arg: 0, tA
+            a, e: eccentricity, i: 0, raan: raan, arg: 0, tA: 0
         })).slice(0,3), mainWindow.startDate).long
         let state2 = astro.eci2latlong(Object.values(Coe2PosVelObject({
-            a, e: 0, i: 0, raan: 0, arg: 0, tA: tA2
+            a, e: eccentricity, i: 0, raan: raan2, arg: 0, tA: 0
         })).slice(0,3), mainWindow.startDate).long
         let del = (state2 - state1) / 0.01
-        tA += (long*Math.PI / 180 - state1) / del
+        raan += (long*Math.PI / 180 - state1) / del
     }
 
     return {
-        a, e: 0, i: inclination*Math.PI/180, raan: 0, arg: 0, tA
+        a, e: eccentricity, i: inclination*Math.PI/180, raan: raan-argLat*Math.PI/180, arg: argLat*Math.PI/180, tA: 0
     }
 }
 function getGroundSwatchCircleCoordinates(rEci = [42164, 0, 0], lat = 0, long = 0, nPoints = 100) {
@@ -11825,3 +11841,35 @@ let sensorGroups = {
         ['Millstone', [42.62, -71.49]]
     ]
 }
+
+// function createSideMenu() {
+//     let sideDiv = document.createElement('div')
+//     sideDiv.style.display = 'flex'
+//     sideDiv.style.flexDirection = 'column'
+//     sideDiv.style.justifyContent = 'space-around'
+//     sideDiv.style.padding = '0 5px'
+//     sideDiv.style.position = 'fixed'
+//     sideDiv.style.right = '0vw'
+//     sideDiv.style.height = '80vh'
+//     sideDiv.style.top = '10vh'
+//     sideDiv.style.backgroundColor = '#111155'
+//     sideDiv.innerHTML = `
+//         <div style="width: 5vh; height: 5vh; border: 1px solid black"><canvas title="3D View" id="threeD-cnvs-button" style="height: 100%; width: 100%;"></canvas></div>
+//         <div style="width: 5vh; height: 5vh; border: 1px solid black"><canvas id="site-access-cnvs-button" style="height: 100%; width: 100%;"></canvas></div>
+//         <div style="width: 5vh; height: 5vh; border: 1px solid black"><canvas id="sat-cnvs-button" style="height: 100%; width: 100%;"></canvas></div>
+//     `
+//     document.body.append(sideDiv)
+//     let cnvs = document.querySelector('#threeD-cnvs-button')
+//     let ctx = cnvs.getContext('2d')
+//     cnvs.height = cnvs.clientHeight
+//     cnvs.width = cnvs.clientWidth
+//     ctx.strokeStyle = 'white'
+//     ctx.beginPath()
+//     ctx.moveTo(cnvs.width*0.9, cnvs.height*0.9)
+//     ctx.lineTo(cnvs.width*0.5, cnvs.height*0.5)
+//     ctx.lineTo(cnvs.width*0.8, cnvs.height*0.1)
+//     ctx.moveTo(cnvs.width*0.5, cnvs.height*0.5)
+//     ctx.lineTo(cnvs.width*0.1, cnvs.height*0.6)
+//     ctx.stroke()
+// }
+// createSideMenu()
